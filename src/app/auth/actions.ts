@@ -45,9 +45,17 @@ export async function signup(formData: FormData) {
   }
 
   if (data.user) {
-    // Insert extended profile in public.users if it doesn't exist
-    // Note: In a production app with OAuth, a DB trigger on auth.users is recommended instead.
-    const { error: insertError } = await supabase.from('users').upsert({
+    // Insert extended profile in public.users
+    // We need a way to bypass RLS.
+    // Wait, createClient uses cookies, it doesn't bypass RLS.
+    // Let's create an admin client directly from supabase-js
+    const { createClient: createAdminClient } = await import('@supabase/supabase-js')
+    const adminClient = createAdminClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
+    const { error: insertError } = await adminClient.from('users').upsert({
       id: data.user.id,
       email: data.user.email,
       full_name: fullName,

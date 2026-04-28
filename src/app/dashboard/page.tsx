@@ -1,23 +1,130 @@
-import { getUser } from '@/utils/supabase/auth'
+import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
+import ContentCard from '@/components/ContentCard'
+
+function CategoryCard({ title, slug, desc }: { title: string, slug: string, desc: string }) {
+  return (
+    <Link href={`/library?category=${slug}`} className="block no-underline">
+      <div className="bg-bg-secondary border-[0.5px] border-border rounded-xl p-8 hover:bg-[#F0F0F0] transition-colors h-full flex flex-col justify-center text-center">
+        <h3 className="text-[18px] font-medium mb-2">{title}</h3>
+        <p className="text-[13px] text-text-secondary">{desc}</p>
+      </div>
+    </Link>
+  )
+}
 
 export default async function DashboardPage() {
-  const user = await getUser()
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
     redirect('/login')
   }
 
+  // Obtener los últimos 6 contenidos publicados
+  const { data: latestContents } = await supabase
+    .from('content')
+    .select('id, title, subtitle, slug, category, tiempo_lectura_min, body_que_saber')
+    .eq('published', true)
+    .order('created_at', { ascending: false })
+    .limit(6)
+
   return (
-    <div className="min-h-screen bg-bg-secondary p-8">
-      <div className="max-w-[1080px] mx-auto bg-bg-primary p-8 rounded-xl border-[0.5px] border-border">
-        <h1 className="text-[24px] font-medium tracking-[-0.01em] mb-4">
-          Bienvenido al Dashboard
-        </h1>
-        <p className="text-text-secondary">
-          Estás logueado con el email: {user.email}
-        </p>
-      </div>
+    <div className="min-h-screen bg-bg-primary flex flex-col">
+      {/* HEADER */}
+      <header className="py-6 border-b-[0.5px] border-border sticky top-0 bg-bg-primary/80 backdrop-blur-md z-10">
+        <div className="w-full max-w-[1080px] mx-auto px-8 flex justify-between items-center">
+          <Link href="/dashboard" className="text-[20px] font-medium tracking-[-0.01em] no-underline text-text-primary">
+            reason<span className="text-accent">.</span>
+          </Link>
+          <nav className="flex items-center gap-6">
+            <Link href="/library" className="text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+              Biblioteca
+            </Link>
+            <Link href="/account" className="text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+              Mi cuenta
+            </Link>
+            <form action="/auth/signout" method="post">
+              <button className="text-[14px] text-text-secondary hover:text-text-primary transition-colors bg-transparent border-none cursor-pointer">
+                Cerrar sesión
+              </button>
+            </form>
+          </nav>
+        </div>
+      </header>
+
+      {/* MAIN CONTENT */}
+      <main className="flex-grow w-full max-w-[1080px] mx-auto px-8 py-12">
+        <div className="mb-12">
+          <h1 className="text-[32px] font-medium tracking-[-0.02em] mb-2">
+            Hola, {user.user_metadata?.full_name || 'Suscriptor'}
+          </h1>
+          <p className="text-text-secondary text-[16px]">
+            Bienvenido a tu espacio de aprendizaje clínico.
+          </p>
+        </div>
+
+        {/* ÚLTIMOS CONTENIDOS */}
+        <section className="mb-16">
+          <div className="flex justify-between items-end mb-6">
+            <h2 className="text-[20px] font-medium">Últimos contenidos</h2>
+            <Link href="/library" className="text-[13px] text-accent hover:underline">
+              Ver todos →
+            </Link>
+          </div>
+          
+          {latestContents && latestContents.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {latestContents.map((item) => (
+                <ContentCard key={item.id} item={item} />
+              ))}
+            </div>
+          ) : (
+            <div className="bg-bg-secondary rounded-xl p-12 text-center border-[0.5px] border-border">
+              <p className="text-text-secondary">Todavía no hay contenidos publicados.</p>
+            </div>
+          )}
+        </section>
+
+        {/* POR CATEGORÍA */}
+        <section className="mb-16">
+          <h2 className="text-[20px] font-medium mb-6">Explorar por categoría</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <CategoryCard 
+              title="Resúmenes Comentados" 
+              slug="resumen_comentado" 
+              desc="La literatura actual destilada" 
+            />
+            <CategoryCard 
+              title="Aplicaciones Clínicas" 
+              slug="aplicacion_clinica" 
+              desc="De la teoría a la práctica" 
+            />
+            <CategoryCard 
+              title="Protocolos" 
+              slug="protocolo" 
+              desc="Pasos claros para actuar" 
+            />
+            <CategoryCard 
+              title="Casos Reales" 
+              slug="caso_real" 
+              desc="Experiencia de consultorio" 
+            />
+          </div>
+        </section>
+      </main>
+
+      {/* FOOTER */}
+      <footer className="py-8 border-t-[0.5px] border-border mt-auto">
+        <div className="w-full max-w-[1080px] mx-auto px-8 flex justify-between items-center text-[12px] text-text-tertiary">
+          <span>© {new Date().getFullYear()} Reason. Todos los derechos reservados.</span>
+          <div className="flex gap-4">
+            <Link href="#" className="hover:text-text-primary transition-colors">Términos</Link>
+            <Link href="#" className="hover:text-text-primary transition-colors">Privacidad</Link>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }
