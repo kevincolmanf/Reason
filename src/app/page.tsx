@@ -1,101 +1,460 @@
-import Image from "next/image";
-
-export default function Home() {
+export default function LandingPage() {
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <>
+      <header className="py-8 border-b-[0.5px] border-border">
+        <div className="w-full max-w-[1080px] mx-auto px-8">
+          <div className="flex justify-between items-center">
+            <div className="text-[18px] font-medium tracking-[-0.01em]">
+              reason<span className="text-accent">.</span>
+            </div>
+            <a
+              href="/signup"
+              className="text-[13px] text-text-primary no-underline py-2 px-4 border-[0.5px] border-border-strong rounded-lg"
+            >
+              Suscribirse
+            </a>
+          </div>
+        </div>
+      </header>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
+      <section className="pt-[120px] pb-[96px]">
+        <div className="w-full max-w-[1080px] mx-auto px-8">
+          <h1 className="text-[64px] font-medium tracking-[-0.02em] leading-[1.1] mb-6">
+            Criterio clínico aplicado.
+          </h1>
+          <p className="text-[20px] text-text-secondary leading-[1.5] max-w-[600px] mb-10">
+            Reason traduce evidencia en decisiones de consultorio. Para kinesiólogos que
+            ya están atendiendo y quieren decidir mejor.
+          </p>
+          <div className="flex gap-4 items-center">
+            <a
+              href="/signup"
+              className="bg-accent text-bg-primary py-[14px] px-7 rounded-lg text-[14px] font-medium no-underline inline-block border-none cursor-pointer"
+            >
+              Suscribirse
+            </a>
+            <a
+              href="#como-funciona"
+              className="text-text-primary text-[14px] no-underline py-[14px] px-0"
+            >
+              Ver cómo funciona →
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-[96px] border-t-[0.5px] border-border">
+        <div className="w-full max-w-[1080px] mx-auto px-8">
+          <div className="mb-16 max-w-[720px]">
+            <h2 className="text-[40px] font-medium tracking-[-0.02em] leading-[1.15] mb-4">
+              No te falta información. Te falta criterio para usarla.
+            </h2>
+            <p className="text-[18px] text-text-secondary leading-[1.5]">
+              Reason no suma contenido al ruido. Sintetiza lo que importa, descarta lo
+              que no, y te muestra cómo se piensa cada decisión clínica.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+            <div className="p-8 rounded-xl bg-bg-primary border-[0.5px] border-border">
+              <div className="text-[11px] font-medium text-text-secondary tracking-[0.05em] uppercase mb-6">
+                Lo que ya tenés
+              </div>
+              <ul className="list-none">
+                <li className="py-4 text-[15px] text-text-primary border-b-[0.5px] border-border">
+                  Papers acumulados sin leer
+                </li>
+                <li className="py-4 text-[15px] text-text-primary border-b-[0.5px] border-border">
+                  Cursos que no llegaste a aplicar
+                </li>
+                <li className="py-4 text-[15px] text-text-primary border-b-[0.5px] border-border">
+                  Información dispersa en mil lugares
+                </li>
+                <li className="py-4 text-[15px] text-text-primary">
+                  Decisiones que tomás sin estar seguro
+                </li>
+              </ul>
+            </div>
+            <div className="p-8 rounded-xl bg-bg-secondary border-[0.5px] border-border">
+              <div className="text-[11px] font-medium text-text-secondary tracking-[0.05em] uppercase mb-6">
+                Lo que te falta
+              </div>
+              <ul className="list-none">
+                <li className="py-4 text-[15px] text-text-primary border-b-[0.5px] border-border">
+                  Criterio clínico aplicado a casos reales
+                </li>
+                <li className="py-4 text-[15px] text-text-primary border-b-[0.5px] border-border">
+                  Decisiones claras en formato breve
+                </li>
+                <li className="py-4 text-[15px] text-text-primary border-b-[0.5px] border-border">
+                  Razonamiento expuesto, no recetas
+                </li>
+                <li className="py-4 text-[15px] text-text-primary">
+                  Tiempo recuperado para tu consultorio
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-[96px] bg-bg-secondary" id="como-funciona">
+        <div className="w-full max-w-[1080px] mx-auto px-8">
+          <div className="mb-16 max-w-[720px]">
+            <h2 className="text-[40px] font-medium tracking-[-0.02em] leading-[1.15] mb-4">
+              Cada contenido te lleva a una decisión.
+            </h2>
+            <p className="text-[18px] text-text-secondary leading-[1.5]">
+              Estructura fija. Lectura de 2 a 3 minutos. Visualizaciones cuando ayudan
+              a pensar mejor que el texto.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-8">
+              <div className="h-[80px] mb-6 flex items-center justify-start">
+                <div className="flex flex-col gap-[6px]">
+                  <div className="w-[80px] h-[6px] bg-border-strong rounded-[3px]"></div>
+                  <div className="w-[50px] h-[6px] bg-border-strong rounded-[3px]"></div>
+                  <div className="w-[65px] h-[6px] bg-border-strong rounded-[3px]"></div>
+                  <div className="w-[80px] h-[6px] bg-border-strong rounded-[3px]"></div>
+                  <div className="w-[50px] h-[6px] bg-border-strong rounded-[3px]"></div>
+                </div>
+              </div>
+              <h3 className="text-[18px] font-medium mb-3 text-text-primary">
+                Estructura fija
+              </h3>
+              <p className="text-[14px] text-text-secondary leading-[1.55]">
+                Cada contenido sigue la misma arquitectura: qué tenés que saber,
+                interpretación, aplicación, qué evitar, conclusión. Sabés dónde
+                encontrar cada cosa, siempre.
+              </p>
+            </div>
+
+            <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-8">
+              <div className="h-[80px] mb-6 flex items-center justify-start">
+                <div className="font-mono text-[48px] font-medium text-text-primary tracking-[-0.02em]">
+                  2-3<span className="text-[16px] text-text-secondary ml-1 font-sans">min</span>
+                </div>
+              </div>
+              <h3 className="text-[18px] font-medium mb-3 text-text-primary">
+                Formato breve
+              </h3>
+              <p className="text-[14px] text-text-secondary leading-[1.55]">
+                Diseñado para leer entre paciente y paciente. Si te lleva más de tres
+                minutos, está mal escrito.
+              </p>
+            </div>
+
+            <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-8">
+              <div className="h-[80px] mb-6 flex items-center justify-start">
+                <svg viewBox="0 0 100 60" className="w-full h-full">
+                  <rect x="35" y="5" width="30" height="14" rx="3" fill="#FFFFFF" stroke="#5C5B57" strokeWidth="0.5" />
+                  <line x1="50" y1="19" x2="50" y2="27" stroke="#5C5B57" strokeWidth="0.8" />
+                  <rect x="10" y="27" width="30" height="14" rx="3" fill="#FFFFFF" stroke="#5C5B57" strokeWidth="0.5" />
+                  <rect x="60" y="27" width="30" height="14" rx="3" fill="rgba(194,90,44,0.08)" stroke="#C25A2C" strokeWidth="0.5" />
+                  <line x1="40" y1="34" x2="60" y2="34" stroke="#5C5B57" strokeWidth="0.5" strokeDasharray="2,2" />
+                  <rect x="35" y="46" width="30" height="14" rx="3" fill="rgba(194,90,44,0.08)" stroke="#C25A2C" strokeWidth="0.5" />
+                  <line x1="75" y1="41" x2="50" y2="46" stroke="#5C5B57" strokeWidth="0.8" />
+                </svg>
+              </div>
+              <h3 className="text-[18px] font-medium mb-3 text-text-primary">
+                Visualizaciones
+              </h3>
+              <p className="text-[14px] text-text-secondary leading-[1.55]">
+                Árboles de decisión, tablas comparativas, líneas de tiempo. Cuando un
+                razonamiento se ve, se aplica mejor que cuando se lee.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-[96px]">
+        <div className="w-full max-w-[1080px] mx-auto px-8">
+          <div className="mb-16 max-w-[720px]">
+            <h2 className="text-[40px] font-medium tracking-[-0.02em] leading-[1.15] mb-4">
+              Mirá cómo se ve un contenido de Reason.
+            </h2>
+            <p className="text-[18px] text-text-secondary leading-[1.5]">
+              Un caso completo, abierto. Para que decidas si Reason vale la suscripción
+              antes de pagarla.
+            </p>
+          </div>
+
+          <div className="bg-bg-primary border-[0.5px] border-border rounded-2xl p-12 mt-8">
+            <div className="flex gap-2 mb-6 flex-wrap">
+              <span className="bg-bg-secondary text-text-secondary text-[12px] py-[6px] px-3 rounded-md">
+                Aplicación clínica
+              </span>
+              <span className="bg-bg-secondary text-text-secondary text-[12px] py-[6px] px-3 rounded-md">
+                Lumbar
+              </span>
+              <span className="bg-bg-secondary text-text-secondary text-[12px] py-[6px] px-3 rounded-md">
+                3 min de lectura
+              </span>
+            </div>
+
+            <h3 className="text-[28px] font-medium leading-[1.2] mb-2 tracking-[-0.01em]">
+              Dolor lumbar inespecífico en primera consulta
+            </h3>
+            <p className="text-[18px] text-text-secondary mb-8">
+              Qué descartar y qué hacer
+            </p>
+
+            <div className="text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em] mt-8 mb-3">
+              Qué tenés que saber
+            </div>
+            <ul className="list-none mb-2">
+              <li className="py-[6px] pl-4 text-[15px] leading-[1.6] relative before:content-['·'] before:absolute before:left-0 before:text-text-secondary">
+                El 90% de las consultas por dolor lumbar son inespecíficas. No hay
+                estructura responsable y eso está bien.
+              </li>
+              <li className="py-[6px] pl-4 text-[15px] leading-[1.6] relative before:content-['·'] before:absolute before:left-0 before:text-text-secondary">
+                Las banderas rojas son raras pero hay que descartarlas siempre.
+              </li>
+              <li className="py-[6px] pl-4 text-[15px] leading-[1.6] relative before:content-['·'] before:absolute before:left-0 before:text-text-secondary">
+                La irradiación con déficit cambia el manejo, no lo invalida.
+              </li>
+              <li className="py-[6px] pl-4 text-[15px] leading-[1.6] relative before:content-['·'] before:absolute before:left-0 before:text-text-secondary">
+                Lo que más mejora el cuadro es lo más simple: educación, movimiento,
+                tiempo.
+              </li>
+            </ul>
+
+            <div className="text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em] mt-8 mb-3">
+              Interpretación clínica
+            </div>
+            <p className="text-[15px] leading-[1.65] mb-3">
+              Llega un paciente con resonancia de hace una semana. Trae la palabra
+              &quot;protrusión&quot; subrayada y los ojos lavados de tres noches sin dormir. Lo
+              más útil que vas a hacer en esa consulta probablemente no sea lo que
+              vino a buscar.
+            </p>
+            <p className="text-[15px] leading-[1.65] mb-3">
+              El dolor lumbar inespecífico es la categoría diagnóstica más
+              subestimada de la práctica musculoesquelética. &quot;Inespecífico&quot; suena a
+              &quot;no sabemos lo que tiene&quot;. En realidad significa otra cosa: no hay una
+              estructura claramente identificable como causa, y la evidencia muestra
+              que buscarla en exceso empeora los resultados clínicos. La resonancia no
+              predice mejor el pronóstico que una buena conversación.
+            </p>
+
+            <div className="bg-bg-secondary rounded-xl p-8 my-4">
+              <div className="text-[11px] font-medium text-text-secondary tracking-[0.05em] uppercase mb-1">
+                Aplicación práctica
+              </div>
+              <div className="text-[13px] text-text-tertiary mb-6">
+                Árbol de decisión clínica
+              </div>
+              <svg viewBox="0 0 600 720" width="100%" className="block">
+                <defs>
+                  <marker
+                    id="chev"
+                    viewBox="0 0 10 10"
+                    refX="8"
+                    refY="5"
+                    markerWidth="6"
+                    markerHeight="6"
+                    orient="auto-start-reverse"
+                  >
+                    <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" strokeWidth="1" strokeLinecap="round" />
+                  </marker>
+                </defs>
+                <rect x="200" y="20" width="200" height="56" rx="8" fill="#F8F7F4" stroke="#5C5B57" strokeWidth="0.5" />
+                <text x="300" y="44" fontFamily="Geist, sans-serif" fontSize="14" fontWeight="500" fill="#1A1A1A" textAnchor="middle">Paciente con dolor lumbar</text>
+                <text x="300" y="62" fontFamily="Geist, sans-serif" fontSize="12" fontWeight="400" fill="#5C5B57" textAnchor="middle">Primera consulta</text>
+                <line x1="300" y1="76" x2="300" y2="120" stroke="#1A1A1A" strokeWidth="1" markerEnd="url(#chev)" />
+                <rect x="180" y="120" width="240" height="56" rx="8" fill="#F8F7F4" stroke="#5C5B57" strokeWidth="0.5" />
+                <text x="300" y="144" fontFamily="Geist, sans-serif" fontSize="14" fontWeight="500" fill="#1A1A1A" textAnchor="middle">¿Hay banderas rojas?</text>
+                <text x="300" y="162" fontFamily="Geist, sans-serif" fontSize="12" fontWeight="400" fill="#5C5B57" textAnchor="middle">Trauma, fiebre, déficit, edad</text>
+                <text x="170" y="200" fontFamily="Geist, sans-serif" fontSize="11" fontWeight="400" fill="#5C5B57" textAnchor="middle">Sí</text>
+                <line x1="240" y1="176" x2="135" y2="220" stroke="#1A1A1A" strokeWidth="1" markerEnd="url(#chev)" />
+                <text x="430" y="200" fontFamily="Geist, sans-serif" fontSize="11" fontWeight="400" fill="#5C5B57" textAnchor="middle">No</text>
+                <line x1="360" y1="176" x2="465" y2="220" stroke="#1A1A1A" strokeWidth="1" markerEnd="url(#chev)" />
+                <rect x="40" y="220" width="200" height="56" rx="8" fill="#F8F7F4" stroke="#A33D2D" strokeWidth="0.5" />
+                <text x="140" y="244" fontFamily="Geist, sans-serif" fontSize="14" fontWeight="500" fill="#1A1A1A" textAnchor="middle">Derivar a médico</text>
+                <text x="140" y="262" fontFamily="Geist, sans-serif" fontSize="12" fontWeight="400" fill="#5C5B57" textAnchor="middle">No iniciar kinesiología sola</text>
+                <rect x="360" y="220" width="200" height="56" rx="8" fill="#F8F7F4" stroke="#5C5B57" strokeWidth="0.5" />
+                <text x="460" y="244" fontFamily="Geist, sans-serif" fontSize="14" fontWeight="500" fill="#1A1A1A" textAnchor="middle">¿Hay irradiación neuro?</text>
+                <text x="460" y="262" fontFamily="Geist, sans-serif" fontSize="12" fontWeight="400" fill="#5C5B57" textAnchor="middle">Déficit motor, sensitivo</text>
+                <text x="370" y="305" fontFamily="Geist, sans-serif" fontSize="11" fontWeight="400" fill="#5C5B57" textAnchor="middle">Sí</text>
+                <line x1="420" y1="276" x2="320" y2="328" stroke="#1A1A1A" strokeWidth="1" markerEnd="url(#chev)" />
+                <text x="555" y="350" fontFamily="Geist, sans-serif" fontSize="11" fontWeight="400" fill="#5C5B57" textAnchor="middle">No</text>
+                <line x1="495" y1="276" x2="495" y2="430" stroke="#1A1A1A" strokeWidth="1" markerEnd="url(#chev)" />
+                <rect x="200" y="328" width="240" height="56" rx="8" fill="#F8F7F4" stroke="#5C5B57" strokeWidth="0.5" />
+                <text x="320" y="352" fontFamily="Geist, sans-serif" fontSize="14" fontWeight="500" fill="#1A1A1A" textAnchor="middle">Evaluar y monitorear déficit</text>
+                <text x="320" y="370" fontFamily="Geist, sans-serif" fontSize="12" fontWeight="400" fill="#5C5B57" textAnchor="middle">Co-manejo con médico</text>
+                <rect x="380" y="430" width="220" height="56" rx="8" fill="rgba(194,90,44,0.08)" stroke="#C25A2C" strokeWidth="0.5" />
+                <text x="490" y="454" fontFamily="Geist, sans-serif" fontSize="14" fontWeight="500" fill="#1A1A1A" textAnchor="middle">Dolor lumbar inespecífico</text>
+                <text x="490" y="472" fontFamily="Geist Mono, monospace" fontSize="12" fontWeight="400" fill="#5C5B57" textAnchor="middle">≈90% de los casos</text>
+                <line x1="490" y1="486" x2="490" y2="540" stroke="#1A1A1A" strokeWidth="1" markerEnd="url(#chev)" />
+                <rect x="320" y="540" width="280" height="80" rx="8" fill="rgba(194,90,44,0.08)" stroke="#C25A2C" strokeWidth="0.5" />
+                <text x="460" y="566" fontFamily="Geist, sans-serif" fontSize="14" fontWeight="500" fill="#1A1A1A" textAnchor="middle">Educación + movimiento + tiempo</text>
+                <text x="460" y="588" fontFamily="Geist, sans-serif" fontSize="12" fontWeight="400" fill="#5C5B57" textAnchor="middle">Tranquilizar, evitar reposo</text>
+                <text x="460" y="606" fontFamily="Geist, sans-serif" fontSize="12" fontWeight="400" fill="#5C5B57" textAnchor="middle">Volver a actividad gradual</text>
+                <line x1="460" y1="620" x2="460" y2="660" stroke="#1A1A1A" strokeWidth="1" markerEnd="url(#chev)" />
+                <rect x="320" y="660" width="280" height="56" rx="8" fill="#F8F7F4" stroke="#5C5B57" strokeWidth="0.5" />
+                <text x="460" y="684" fontFamily="Geist, sans-serif" fontSize="14" fontWeight="500" fill="#1A1A1A" textAnchor="middle">¿Persiste &gt; 6 semanas?</text>
+                <text x="460" y="702" fontFamily="Geist, sans-serif" fontSize="12" fontWeight="400" fill="#5C5B57" textAnchor="middle">Reconsiderar factores contextuales</text>
+              </svg>
+            </div>
+
+            <div className="text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em] mt-8 mb-3">
+              Qué evitar
+            </div>
+            <ul className="list-none mb-2">
+              <li className="py-[6px] pl-4 text-[15px] leading-[1.6] relative before:content-['·'] before:absolute before:left-0 before:text-text-secondary">
+                Pedir resonancia de entrada en ausencia de banderas rojas. Es la
+                decisión que más cronifica casos.
+              </li>
+              <li className="py-[6px] pl-4 text-[15px] leading-[1.6] relative before:content-['·'] before:absolute before:left-0 before:text-text-secondary">
+                Tratar el dolor lumbar inespecífico como si fuera siempre lo mismo.
+              </li>
+              <li className="py-[6px] pl-4 text-[15px] leading-[1.6] relative before:content-['·'] before:absolute before:left-0 before:text-text-secondary">
+                Tranquilizar sin marco. &quot;No tenés nada&quot; deja al paciente con dolor real
+                y sin explicación.
+              </li>
+            </ul>
+
+            <div className="border-l-[3px] border-text-primary py-4 px-6 mt-8 bg-bg-secondary">
+              <div className="text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em] mb-2">
+                Conclusión accionable
+              </div>
+              <p className="text-[18px] leading-[1.5] font-medium">
+                En lumbar inespecífico, el primer movimiento clínico no es buscar la causa. Es ordenar la conversación.
+              </p>
+            </div>
+          </div>
+
+          <div className="text-center mt-12">
+            <a
+              href="/signup"
+              className="bg-accent text-bg-primary py-[18px] px-9 rounded-[10px] text-[16px] font-medium no-underline inline-block"
+            >
+              Empezar suscripción y acceder al catálogo completo
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-[96px] bg-bg-secondary">
+        <div className="w-full max-w-[1080px] mx-auto px-8">
+          <div className="grid grid-cols-1 md:grid-cols-[200px_1fr] gap-12 items-center">
+            <div className="w-[200px] h-[200px] bg-border-strong rounded-xl flex items-center justify-center text-text-secondary text-[12px]">
+              [Foto B&N]
+            </div>
+            <div>
+              <h2 className="text-[32px] font-medium tracking-[-0.02em] mb-3">
+                Reason lo escribe Kevin Colman.
+              </h2>
+              <p className="text-[16px] text-text-secondary leading-[1.55] mb-4">
+                Kinesiólogo, autor de &quot;Movimiento mata dolor&quot;. Director de Build, donde forma estudiantes y atiende pacientes todas las mañanas.
+              </p>
+              <p className="text-[15px] leading-[1.6] text-text-primary">
+                Reason no es contenido genérico. Es el sistema de pensamiento que
+                aplico todos los días en consultorio, sistematizado para que lo
+                apliques en el tuyo.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-[96px]" id="pricing">
+        <div className="w-full max-w-[1080px] mx-auto px-8">
+          <div className="mb-16 max-w-[720px]">
+            <h2 className="text-[40px] font-medium tracking-[-0.02em] leading-[1.15] mb-4">
+              Una suscripción. Todo el catálogo.
+            </h2>
+            <p className="text-[18px] text-text-secondary leading-[1.5]">
+              Sin niveles. Sin contenido bloqueado para &quot;premium&quot;. Lo que pagás es acceso completo a Reason.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-12">
+            <div className="bg-bg-primary border-[0.5px] border-border rounded-2xl p-10 relative">
+              <div className="text-[12px] font-medium text-text-secondary uppercase tracking-[0.05em] mb-4">
+                Mensual
+              </div>
+              <div className="font-mono text-[36px] font-medium text-text-primary mb-2 tracking-[-0.02em]">
+                <span className="text-[18px] text-text-secondary font-normal">ARS</span> 18.000<span className="text-[16px] text-text-secondary font-normal"> /mes</span>
+              </div>
+              <div className="font-mono text-[13px] text-text-secondary mb-6">&nbsp;</div>
+              <p className="text-[14px] text-text-secondary leading-[1.55] mb-8 min-h-[40px]">
+                Acceso completo al catálogo. Cancelás cuando quieras.
+              </p>
+              <a
+                href="/signup"
+                className="w-full py-[14px] rounded-lg text-[14px] font-medium text-center no-underline block border-[0.5px] border-border-strong text-text-primary bg-bg-primary"
+              >
+                Empezar suscripción mensual
+              </a>
+            </div>
+
+            <div className="bg-bg-primary border-[1px] border-accent rounded-2xl p-10 relative">
+              <div className="absolute -top-[12px] left-6 bg-accent text-bg-primary text-[11px] font-medium py-1 px-3 rounded tracking-[0.03em] uppercase">
+                Recomendado · Ahorro 30%
+              </div>
+              <div className="text-[12px] font-medium text-text-secondary uppercase tracking-[0.05em] mb-4">
+                Anual
+              </div>
+              <div className="font-mono text-[36px] font-medium text-text-primary mb-2 tracking-[-0.02em]">
+                <span className="text-[18px] text-text-secondary font-normal">ARS</span> 150.000<span className="text-[16px] text-text-secondary font-normal"> /año</span>
+              </div>
+              <div className="font-mono text-[13px] text-text-secondary mb-6">≈ ARS 12.500 / mes</div>
+              <p className="text-[14px] text-text-secondary leading-[1.55] mb-8 min-h-[40px]">
+                Acceso completo al catálogo durante 12 meses.
+              </p>
+              <a
+                href="/signup"
+                className="w-full py-[14px] rounded-lg text-[14px] font-medium text-center no-underline block border-none bg-accent text-bg-primary"
+              >
+                Empezar suscripción anual
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-[120px] bg-bg-tertiary text-center">
+        <div className="w-full max-w-[720px] mx-auto px-8">
+          <h2 className="text-[40px] font-medium tracking-[-0.02em] leading-[1.15] mb-4">
+            Empezá a decidir mejor desde el lunes.
+          </h2>
+          <p className="text-[18px] text-text-secondary leading-[1.5] mb-10">
+            Cancelás cuando quieras. Acceso inmediato a todo el catálogo.
+          </p>
           <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="/signup"
+            className="bg-accent text-bg-primary py-[18px] px-9 rounded-[10px] text-[16px] font-medium no-underline inline-block"
           >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
+            Suscribirse
           </a>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
+      </section>
+
+      <footer className="py-12 border-t-[0.5px] border-border">
+        <div className="w-full max-w-[1080px] mx-auto px-8">
+          <div className="flex justify-between items-center flex-wrap gap-6">
+            <div className="text-[18px] font-medium tracking-[-0.01em]">
+              reason<span className="text-accent">.</span>
+            </div>
+            <div className="flex gap-6">
+              <a href="#" className="text-text-secondary text-[13px] no-underline">
+                Términos
+              </a>
+              <a href="#" className="text-text-secondary text-[13px] no-underline">
+                Privacidad
+              </a>
+              <a href="#" className="text-text-secondary text-[13px] no-underline">
+                Contacto
+              </a>
+            </div>
+            <div className="text-[13px] text-text-tertiary">
+              © 2026 Reason. Por Kevin Colman.
+            </div>
+          </div>
+        </div>
       </footer>
-    </div>
+    </>
   );
 }
