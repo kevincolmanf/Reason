@@ -265,10 +265,9 @@ export default function LandingPage() {
                 <line x1="300" y1="76" x2="300" y2="120" stroke="#1A1A1A" strokeWidth="1" markerEnd="url(#chev)" />
                 <rect x="180" y="120" width="240" height="56" rx="8" fill="#F8F7F4" stroke="#5C5B57" strokeWidth="0.5" />
                 <text x="300" y="144" fontFamily="Geist, sans-serif" fontSize="14" fontWeight="500" fill="#1A1A1A" textAnchor="middle">¿Hay banderas rojas?</text>
-                <text x="300" y="162" fontFamily="Geist, sans-serif" fontSize="12" fontWeight="400" fill="#5C5B57" textAnchor="middle">Trauma, fiebre, déficit, edad</text>
-                <text x="170" y="200" fontFamily="Geist, sans-serif" fontSize="11" fontWeight="400" fill="#5C5B57" textAnchor="middle">Sí</text>
+                <text x="300" y="162" fontFamily="Geist, sans-serif" fontSize="12" fontWeight="400" f                <text x="155" y="190" fontFamily="Geist, sans-serif" fontSize="11" fontWeight="400" fill="#5C5B57" textAnchor="middle">Sí</text>
                 <line x1="240" y1="176" x2="135" y2="220" stroke="#1A1A1A" strokeWidth="1" markerEnd="url(#chev)" />
-                <text x="430" y="200" fontFamily="Geist, sans-serif" fontSize="11" fontWeight="400" fill="#5C5B57" textAnchor="middle">No</text>
+                <text x="445" y="190" fontFamily="Geist, sans-serif" fontSize="11" fontWeight="400" fill="#5C5B57" textAnchor="middle">No</text>
                 <line x1="360" y1="176" x2="465" y2="220" stroke="#1A1A1A" strokeWidth="1" markerEnd="url(#chev)" />
                 <rect x="40" y="220" width="200" height="56" rx="8" fill="#F8F7F4" stroke="#A33D2D" strokeWidth="0.5" />
                 <text x="140" y="244" fontFamily="Geist, sans-serif" fontSize="14" fontWeight="500" fill="#1A1A1A" textAnchor="middle">Derivar a médico</text>
@@ -276,9 +275,9 @@ export default function LandingPage() {
                 <rect x="360" y="220" width="200" height="56" rx="8" fill="#F8F7F4" stroke="#5C5B57" strokeWidth="0.5" />
                 <text x="460" y="244" fontFamily="Geist, sans-serif" fontSize="14" fontWeight="500" fill="#1A1A1A" textAnchor="middle">¿Hay irradiación neuro?</text>
                 <text x="460" y="262" fontFamily="Geist, sans-serif" fontSize="12" fontWeight="400" fill="#5C5B57" textAnchor="middle">Déficit motor, sensitivo</text>
-                <text x="370" y="305" fontFamily="Geist, sans-serif" fontSize="11" fontWeight="400" fill="#5C5B57" textAnchor="middle">Sí</text>
+                <text x="355" y="295" fontFamily="Geist, sans-serif" fontSize="11" fontWeight="400" fill="#5C5B57" textAnchor="middle">Sí</text>
                 <line x1="420" y1="276" x2="320" y2="328" stroke="#1A1A1A" strokeWidth="1" markerEnd="url(#chev)" />
-                <text x="555" y="350" fontFamily="Geist, sans-serif" fontSize="11" fontWeight="400" fill="#5C5B57" textAnchor="middle">No</text>
+                <text x="505" y="350" fontFamily="Geist, sans-serif" fontSize="11" fontWeight="400" fill="#5C5B57" textAnchor="middle">No</text>
                 <line x1="495" y1="276" x2="495" y2="430" stroke="#1A1A1A" strokeWidth="1" markerEnd="url(#chev)" />
                 <rect x="200" y="328" width="240" height="56" rx="8" fill="#F8F7F4" stroke="#5C5B57" strokeWidth="0.5" />
                 <text x="320" y="352" fontFamily="Geist, sans-serif" fontSize="14" fontWeight="500" fill="#1A1A1A" textAnchor="middle">Evaluar y monitorear déficit</text>
@@ -293,7 +292,7 @@ export default function LandingPage() {
                 <text x="460" y="606" fontFamily="Geist, sans-serif" fontSize="12" fontWeight="400" fill="#5C5B57" textAnchor="middle">Volver a actividad gradual</text>
                 <line x1="460" y1="620" x2="460" y2="660" stroke="#1A1A1A" strokeWidth="1" markerEnd="url(#chev)" />
                 <rect x="320" y="660" width="280" height="56" rx="8" fill="#F8F7F4" stroke="#5C5B57" strokeWidth="0.5" />
-                <text x="460" y="684" fontFamily="Geist, sans-serif" fontSize="14" fontWeight="500" fill="#1A1A1A" textAnchor="middle">¿Persiste &gt; 6 semanas?</text>
+                <text x="460" y="684" fontFamily="Geist, sans-serif" fontSize="14" fontWeight="500" fill="#1A1A1A" textAnchor="middle">¿Persiste > 6 semanas?</text>
                 <text x="460" y="702" fontFamily="Geist, sans-serif" fontSize="12" fontWeight="400" fill="#5C5B57" textAnchor="middle">Reconsiderar factores contextuales</text>
               </svg>
             </div>
@@ -320,7 +319,7 @@ export default function LandingPage() {
                 Conclusión accionable
               </div>
               <p className="text-[18px] leading-[1.5] font-medium">
-                En lumbar inespecífico, el primer movimiento clínico no es buscar la causa. Es ordenar la conversación.
+                En dolor lumbar inespecífico, el primer movimiento clínico no es buscar la causa. Es ordenar la conversación.
               </p>
             </div>
           </div>
