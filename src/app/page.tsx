@@ -256,44 +256,44 @@ export default function LandingPage() {
                     markerHeight="6"
                     orient="auto-start-reverse"
                   >
-                    <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" strokeWidth="1" strokeLinecap="round" />
+                    <path d="M2 1L8 5L2 9" fill="none" stroke="var(--color-text-primary)" strokeWidth="1" strokeLinecap="round" />
                   </marker>
                 </defs>
-                <rect x="200" y="20" width="200" height="56" rx="8" fill="#F8F7F4" stroke="#5C5B57" strokeWidth="0.5" />
-                <text x="300" y="44" fontFamily="Geist, sans-serif" fontSize="14" fontWeight="500" fill="#1A1A1A" textAnchor="middle">Paciente con dolor lumbar</text>
-                <text x="300" y="62" fontFamily="Geist, sans-serif" fontSize="12" fontWeight="400" fill="#5C5B57" textAnchor="middle">Primera consulta</text>
-                <line x1="300" y1="76" x2="300" y2="120" stroke="#1A1A1A" strokeWidth="1" markerEnd="url(#chev)" />
-                <rect x="180" y="120" width="240" height="56" rx="8" fill="#F8F7F4" stroke="#5C5B57" strokeWidth="0.5" />
-                <text x="300" y="144" fontFamily="Geist, sans-serif" fontSize="14" fontWeight="500" fill="#1A1A1A" textAnchor="middle">¿Hay banderas rojas?</text>
-                <text x="300" y="162" fontFamily="Geist, sans-serif" fontSize="12" fontWeight="400" f                <text x="155" y="190" fontFamily="Geist, sans-serif" fontSize="11" fontWeight="400" fill="#5C5B57" textAnchor="middle">Sí</text>
-                <line x1="240" y1="176" x2="135" y2="220" stroke="#1A1A1A" strokeWidth="1" markerEnd="url(#chev)" />
-                <text x="445" y="190" fontFamily="Geist, sans-serif" fontSize="11" fontWeight="400" fill="#5C5B57" textAnchor="middle">No</text>
-                <line x1="360" y1="176" x2="465" y2="220" stroke="#1A1A1A" strokeWidth="1" markerEnd="url(#chev)" />
-                <rect x="40" y="220" width="200" height="56" rx="8" fill="#F8F7F4" stroke="#A33D2D" strokeWidth="0.5" />
-                <text x="140" y="244" fontFamily="Geist, sans-serif" fontSize="14" fontWeight="500" fill="#1A1A1A" textAnchor="middle">Derivar a médico</text>
-                <text x="140" y="262" fontFamily="Geist, sans-serif" fontSize="12" fontWeight="400" fill="#5C5B57" textAnchor="middle">No iniciar kinesiología sola</text>
-                <rect x="360" y="220" width="200" height="56" rx="8" fill="#F8F7F4" stroke="#5C5B57" strokeWidth="0.5" />
-                <text x="460" y="244" fontFamily="Geist, sans-serif" fontSize="14" fontWeight="500" fill="#1A1A1A" textAnchor="middle">¿Hay irradiación neuro?</text>
-                <text x="460" y="262" fontFamily="Geist, sans-serif" fontSize="12" fontWeight="400" fill="#5C5B57" textAnchor="middle">Déficit motor, sensitivo</text>
-                <text x="355" y="295" fontFamily="Geist, sans-serif" fontSize="11" fontWeight="400" fill="#5C5B57" textAnchor="middle">Sí</text>
-                <line x1="420" y1="276" x2="320" y2="328" stroke="#1A1A1A" strokeWidth="1" markerEnd="url(#chev)" />
-                <text x="505" y="350" fontFamily="Geist, sans-serif" fontSize="11" fontWeight="400" fill="#5C5B57" textAnchor="middle">No</text>
-                <line x1="495" y1="276" x2="495" y2="430" stroke="#1A1A1A" strokeWidth="1" markerEnd="url(#chev)" />
-                <rect x="200" y="328" width="240" height="56" rx="8" fill="#F8F7F4" stroke="#5C5B57" strokeWidth="0.5" />
-                <text x="320" y="352" fontFamily="Geist, sans-serif" fontSize="14" fontWeight="500" fill="#1A1A1A" textAnchor="middle">Evaluar y monitorear déficit</text>
-                <text x="320" y="370" fontFamily="Geist, sans-serif" fontSize="12" fontWeight="400" fill="#5C5B57" textAnchor="middle">Co-manejo con médico</text>
-                <rect x="380" y="430" width="220" height="56" rx="8" fill="rgba(194,90,44,0.08)" stroke="#C25A2C" strokeWidth="0.5" />
-                <text x="490" y="454" fontFamily="Geist, sans-serif" fontSize="14" fontWeight="500" fill="#1A1A1A" textAnchor="middle">Dolor lumbar inespecífico</text>
-                <text x="490" y="472" fontFamily="Geist Mono, monospace" fontSize="12" fontWeight="400" fill="#5C5B57" textAnchor="middle">≈90% de los casos</text>
-                <line x1="490" y1="486" x2="490" y2="540" stroke="#1A1A1A" strokeWidth="1" markerEnd="url(#chev)" />
-                <rect x="320" y="540" width="280" height="80" rx="8" fill="rgba(194,90,44,0.08)" stroke="#C25A2C" strokeWidth="0.5" />
-                <text x="460" y="566" fontFamily="Geist, sans-serif" fontSize="14" fontWeight="500" fill="#1A1A1A" textAnchor="middle">Educación + movimiento + tiempo</text>
-                <text x="460" y="588" fontFamily="Geist, sans-serif" fontSize="12" fontWeight="400" fill="#5C5B57" textAnchor="middle">Tranquilizar, evitar reposo</text>
-                <text x="460" y="606" fontFamily="Geist, sans-serif" fontSize="12" fontWeight="400" fill="#5C5B57" textAnchor="middle">Volver a actividad gradual</text>
-                <line x1="460" y1="620" x2="460" y2="660" stroke="#1A1A1A" strokeWidth="1" markerEnd="url(#chev)" />
-                <rect x="320" y="660" width="280" height="56" rx="8" fill="#F8F7F4" stroke="#5C5B57" strokeWidth="0.5" />
-                <text x="460" y="684" fontFamily="Geist, sans-serif" fontSize="14" fontWeight="500" fill="#1A1A1A" textAnchor="middle">¿Persiste > 6 semanas?</text>
-                <text x="460" y="702" fontFamily="Geist, sans-serif" fontSize="12" fontWeight="400" fill="#5C5B57" textAnchor="middle">Reconsiderar factores contextuales</text>
+                <rect x="200" y="20" width="200" height="56" rx="8" fill="var(--color-bg-primary)" stroke="var(--color-border-strong)" strokeWidth="0.5" />
+                <text x="300" y="44" fontFamily="Geist, sans-serif" fontSize="14" fontWeight="500" fill="var(--color-text-primary)" textAnchor="middle">Paciente con dolor lumbar</text>
+                <text x="300" y="62" fontFamily="Geist, sans-serif" fontSize="12" fontWeight="400" fill="var(--color-text-secondary)" textAnchor="middle">Primera consulta</text>
+                <line x1="300" y1="76" x2="300" y2="120" stroke="var(--color-text-primary)" strokeWidth="1" markerEnd="url(#chev)" />
+                <rect x="180" y="120" width="240" height="56" rx="8" fill="var(--color-bg-primary)" stroke="var(--color-border-strong)" strokeWidth="0.5" />
+                <text x="300" y="144" fontFamily="Geist, sans-serif" fontSize="14" fontWeight="500" fill="var(--color-text-primary)" textAnchor="middle">¿Hay banderas rojas?</text>
+                <text x="300" y="162" fontFamily="Geist, sans-serif" fontSize="12" fontWeight="400" f                <text x="155" y="190" fontFamily="Geist, sans-serif" fontSize="11" fontWeight="400" fill="var(--color-text-secondary)" textAnchor="middle">Sí</text>
+                <line x1="240" y1="176" x2="135" y2="220" stroke="var(--color-text-primary)" strokeWidth="1" markerEnd="url(#chev)" />
+                <text x="445" y="190" fontFamily="Geist, sans-serif" fontSize="11" fontWeight="400" fill="var(--color-text-secondary)" textAnchor="middle">No</text>
+                <line x1="360" y1="176" x2="465" y2="220" stroke="var(--color-text-primary)" strokeWidth="1" markerEnd="url(#chev)" />
+                <rect x="40" y="220" width="200" height="56" rx="8" fill="var(--color-bg-primary)" stroke="var(--color-warning)" strokeWidth="0.5" />
+                <text x="140" y="244" fontFamily="Geist, sans-serif" fontSize="14" fontWeight="500" fill="var(--color-text-primary)" textAnchor="middle">Derivar a médico</text>
+                <text x="140" y="262" fontFamily="Geist, sans-serif" fontSize="12" fontWeight="400" fill="var(--color-text-secondary)" textAnchor="middle">No iniciar kinesiología sola</text>
+                <rect x="360" y="220" width="200" height="56" rx="8" fill="var(--color-bg-primary)" stroke="var(--color-border-strong)" strokeWidth="0.5" />
+                <text x="460" y="244" fontFamily="Geist, sans-serif" fontSize="14" fontWeight="500" fill="var(--color-text-primary)" textAnchor="middle">¿Hay irradiación neuro?</text>
+                <text x="460" y="262" fontFamily="Geist, sans-serif" fontSize="12" fontWeight="400" fill="var(--color-text-secondary)" textAnchor="middle">Déficit motor, sensitivo</text>
+                <text x="355" y="295" fontFamily="Geist, sans-serif" fontSize="11" fontWeight="400" fill="var(--color-text-secondary)" textAnchor="middle">Sí</text>
+                <line x1="420" y1="276" x2="320" y2="328" stroke="var(--color-text-primary)" strokeWidth="1" markerEnd="url(#chev)" />
+                <text x="505" y="350" fontFamily="Geist, sans-serif" fontSize="11" fontWeight="400" fill="var(--color-text-secondary)" textAnchor="middle">No</text>
+                <line x1="495" y1="276" x2="495" y2="430" stroke="var(--color-text-primary)" strokeWidth="1" markerEnd="url(#chev)" />
+                <rect x="200" y="328" width="240" height="56" rx="8" fill="var(--color-bg-primary)" stroke="var(--color-border-strong)" strokeWidth="0.5" />
+                <text x="320" y="352" fontFamily="Geist, sans-serif" fontSize="14" fontWeight="500" fill="var(--color-text-primary)" textAnchor="middle">Evaluar y monitorear déficit</text>
+                <text x="320" y="370" fontFamily="Geist, sans-serif" fontSize="12" fontWeight="400" fill="var(--color-text-secondary)" textAnchor="middle">Co-manejo con médico</text>
+                <rect x="380" y="430" width="220" height="56" rx="8" fill="rgba(194,90,44,0.08)" stroke="var(--color-accent)" strokeWidth="0.5" />
+                <text x="490" y="454" fontFamily="Geist, sans-serif" fontSize="14" fontWeight="500" fill="var(--color-text-primary)" textAnchor="middle">Dolor lumbar inespecífico</text>
+                <text x="490" y="472" fontFamily="Geist Mono, monospace" fontSize="12" fontWeight="400" fill="var(--color-text-secondary)" textAnchor="middle">≈90% de los casos</text>
+                <line x1="490" y1="486" x2="490" y2="540" stroke="var(--color-text-primary)" strokeWidth="1" markerEnd="url(#chev)" />
+                <rect x="320" y="540" width="280" height="80" rx="8" fill="rgba(194,90,44,0.08)" stroke="var(--color-accent)" strokeWidth="0.5" />
+                <text x="460" y="566" fontFamily="Geist, sans-serif" fontSize="14" fontWeight="500" fill="var(--color-text-primary)" textAnchor="middle">Educación + movimiento + tiempo</text>
+                <text x="460" y="588" fontFamily="Geist, sans-serif" fontSize="12" fontWeight="400" fill="var(--color-text-secondary)" textAnchor="middle">Tranquilizar, evitar reposo</text>
+                <text x="460" y="606" fontFamily="Geist, sans-serif" fontSize="12" fontWeight="400" fill="var(--color-text-secondary)" textAnchor="middle">Volver a actividad gradual</text>
+                <line x1="460" y1="620" x2="460" y2="660" stroke="var(--color-text-primary)" strokeWidth="1" markerEnd="url(#chev)" />
+                <rect x="320" y="660" width="280" height="56" rx="8" fill="var(--color-bg-primary)" stroke="var(--color-border-strong)" strokeWidth="0.5" />
+                <text x="460" y="684" fontFamily="Geist, sans-serif" fontSize="14" fontWeight="500" fill="var(--color-text-primary)" textAnchor="middle">¿Persiste > 6 semanas?</text>
+                <text x="460" y="702" fontFamily="Geist, sans-serif" fontSize="12" fontWeight="400" fill="var(--color-text-secondary)" textAnchor="middle">Reconsiderar factores contextuales</text>
               </svg>
             </div>
 
