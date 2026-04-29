@@ -55,7 +55,13 @@ export async function middleware(request: NextRequest) {
   )
 
   // This will refresh session if expired
-  const { data: { user } } = await supabase.auth.getUser()
+  let user = null
+  try {
+    const { data } = await supabase.auth.getUser()
+    user = data.user
+  } catch (error) {
+    console.error('Middleware Supabase Error:', error)
+  }
 
   const protectedRoutes = ['/dashboard', '/library', '/content', '/account']
   const isProtectedRoute = protectedRoutes.some(route => 
