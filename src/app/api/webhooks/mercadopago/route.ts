@@ -98,8 +98,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ status: 'ignored' })
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error procesando webhook:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 })
   }
 }

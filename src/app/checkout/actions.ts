@@ -49,7 +49,7 @@ export async function createSubscriptionPreference(planType: 'monthly' | 'annual
     } else {
       throw new Error('Mercado Pago no devolvió un link de pago válido')
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error detallado de MP:', error)
     throw new Error('No se pudo iniciar el proceso de pago. Intenta nuevamente.')
   }
