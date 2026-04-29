@@ -36,3 +36,38 @@ body {
   font-family: 'Geist', sans-serif;
   -webkit-font-smoothing: antialiased;
 }
+
+/* Fix SVG / Mermaid diagrams colors */
+svg text {
+  fill: var(--color-text-primary) !important;
+  color: var(--color-text-primary) !important;
+}
+
+svg .edgeLabel {
+  background-color: var(--color-bg-primary) !important;
+}
+
+svg .edgeLabel rect {
+  fill: var(--color-bg-primary) !important;
+  opacity: 0.9 !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  svg .node rect, 
+  svg .node circle, 
+  svg .node ellipse, 
+  svg .node polygon, 
+  svg .node path {
+    fill: var(--color-bg-secondary) !important;
+    stroke: var(--color-border-strong) !important;
+  }
+  
+  svg .edgePath path {
+    stroke: var(--color-text-secondary) !important;
+  }
+  
+  svg marker path {
+    fill: var(--color-text-secondary) !important;
+    stroke: none !important;
+  }
+}
