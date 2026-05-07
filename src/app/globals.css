@@ -28,6 +28,14 @@ svg text {
   color: var(--color-text-primary) !important;
 }
 
+/* Rects con fondo blanco hardcodeado → convertir al tema oscuro */
+svg rect[fill="#FFFFFF"],
+svg rect[fill="#ffffff"],
+svg rect[fill="white"] {
+  fill: var(--color-bg-secondary) !important;
+  stroke: var(--color-border-strong) !important;
+}
+
 svg .edgeLabel {
   background-color: var(--color-bg-primary) !important;
 }

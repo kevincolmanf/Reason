@@ -1,0 +1,27 @@
+<svg viewBox="0 0 1090 1090" xmlns="http://www.w3.org/2000/svg" role="img" style="width: 100%; margin: auto;">
+  <title style="fill:rgb(0, 0, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto">Post 4 — Las lecturas v2</title>
+
+  <defs>
+    <clipPath id="frame">
+      <rect width="1080" height="1080"/>
+    </clipPath>
+  </defs>
+
+  <!-- Fondo negro -->
+  <rect width="1080" height="1080" fill="#0A0A0A" style="fill:rgb(10, 10, 10);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- Tipografía: empieza en 80 para que la L entre, desborda por la derecha -->
+  <g clip-path="url(#frame)" style="fill:rgb(0, 0, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto">
+    <text x="80" y="520" font-family="'Geist', 'Inter', sans-serif" font-size="260" font-weight="700" fill="#FFFFFF" letter-spacing="-8" style="fill:rgb(255, 255, 255);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:Geist, Inter, sans-serif;font-size:260px;font-weight:700;text-anchor:start;dominant-baseline:auto">lecturas.</text>
+  </g>
+
+  <!-- Línea terracota -->
+  <rect x="80" y="600" width="48" height="3" fill="#C25A2C" style="fill:rgb(194, 90, 44);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- Copy -->
+  <text x="80" y="700" font-family="'Geist', 'Inter', sans-serif" font-size="48" font-weight="400" fill="#888888" style="fill:rgb(136, 136, 136);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:Geist, Inter, sans-serif;font-size:48px;font-weight:400;text-anchor:start;dominant-baseline:auto">Cada semana, seleccionadas.</text>
+  <text x="80" y="760" font-family="'Geist', 'Inter', sans-serif" font-size="48" font-weight="400" fill="#888888" style="fill:rgb(136, 136, 136);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:Geist, Inter, sans-serif;font-size:48px;font-weight:400;text-anchor:start;dominant-baseline:auto">No para estar actualizado.</text>
+
+  <text x="80" y="870" font-family="'Geist', 'Inter', sans-serif" font-size="48" font-weight="700" fill="#FFFFFF" style="fill:rgb(255, 255, 255);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:Geist, Inter, sans-serif;font-size:48px;font-weight:700;text-anchor:start;dominant-baseline:auto">Para decidir mejor</text>
+  <text x="80" y="935" font-family="'Geist', 'Inter', sans-serif" font-size="48" font-weight="700" fill="#C25A2C" style="fill:rgb(194, 90, 44);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:Geist, Inter, sans-serif;font-size:48px;font-weight:700;text-anchor:start;dominant-baseline:auto">mañana a la mañana.</text>
+</svg>

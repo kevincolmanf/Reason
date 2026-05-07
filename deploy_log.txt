@@ -1,0 +1,97 @@
+Retrieving project…
+Deploying kevincolmanf-3811s-projects/reason
+Uploading [--------------------] (0.0B/7.6KB)
+Uploading [=====---------------] (2.1KB/7.6KB)
+Uploading [===============-----] (5.7KB/7.6KB)
+Uploading [====================] (7.6KB/7.6KB)
+Inspect: https://vercel.com/kevincolmanf-3811s-projects/reason/BvUuXimbZ3NZgG21EZAQj72YMR5Y [4s]
+Production: https://reason-mtdqtr1fo-kevincolmanf-3811s-projects.vercel.app [4s]
+Building...
+Building...
+Building: Running build in Washington, D.C., USA (East) – iad1
+Building: Build machine configuration: 2 cores, 8 GB
+Building: Retrieving list of deployment files...
+Building: Downloading 68 deployment files...
+Building: Restored build cache from previous deployment (9PrYs7Z247hvvzrqbhQQMhhX2JrU)
+Building: Running "vercel build"
+Building: Vercel CLI 51.6.1
+Building: Installing dependencies...
+Building: added 6 packages in 1s
+Building: 152 packages are looking for funding
+Building: run `npm fund` for details
+Building: Detected Next.js version: 14.2.35
+Building: Running "npm run build"
+Building: > reason-app@0.1.0 build
+Building: > next build
+Building: ▲ Next.js 14.2.35
+Building: Creating an optimized production build ...
+Building: <w> [webpack.cache.PackFileCacheStrategy] Serializing big strings (231kiB) impacts deserialization performance (consider using Buffer instead and decode when needed)
+Building: ✓ Compiled successfully
+Building: Linting and checking validity of types ...
+Building: Collecting page data ...
+Building: Generating static pages (0/20) ...
+Building: Generating static pages (5/20)
+Building: Generating static pages (10/20)
+Building: Generating static pages (15/20)
+Building: ✓ Generating static pages (20/20)
+Building: Finalizing page optimization ...
+Building: Collecting build traces ...
+Building: Route (app)                              Size     First Load JS
+Building: ┌ ○ /                                    144 B          87.4 kB
+Building: ├ ○ /_not-found                          873 B          88.1 kB
+Building: ├ ƒ /account                             207 B          96.2 kB
+Building: ├ ƒ /account/subscription                207 B          96.2 kB
+Building: ├ ƒ /admin                               207 B          96.2 kB
+Building: ├ ƒ /admin/content                       207 B          96.2 kB
+Building: ├ ƒ /admin/content/[id]/edit             138 B          98.2 kB
+Building: ├ ƒ /admin/content/new                   138 B          98.2 kB
+Building: ├ ƒ /api/webhooks/mercadopago            0 B                0 B
+Building: ├ ƒ /auth/callback                       0 B                0 B
+Building: ├ ƒ /auth/signout                        0 B                0 B
+Building: ├ ƒ /checkout                            207 B          96.2 kB
+Building: ├ ƒ /content/[slug]                      207 B          96.2 kB
+Building: ├ ƒ /dashboard                           207 B          96.2 kB
+Building: ├ ƒ /forgot-password                     207 B          96.2 kB
+Building: ├ ƒ /library                             207 B          96.2 kB
+Building: ├ ƒ /login                               207 B          96.2 kB
+Building: ├ ○ /paywall                             207 B          96.2 kB
+Building: └ ƒ /signup                              207 B          96.2 kB
+Building: + First Load JS shared by all            87.3 kB
+Building: ├ chunks/117-015314f11d90cd52.js       31.7 kB
+Building: ├ chunks/fd9d1056-3eee857bde8f3b06.js  53.6 kB
+Building: └ other shared chunks (total)          1.89 kB
+Building: ƒ Middleware                             81.6 kB
+Building: ○  (Static)   prerendered as static content
+Building: ƒ  (Dynamic)  server-rendered on demand
+Building: Traced Next.js server files in: 42.184ms
+Building: Created all serverless functions in: 160.286ms
+Building: Collected static files (public/, static/, .next/static): 5.672ms
+Building: Build Completed in /vercel/output [45s]
+Building: Deploying outputs...
+Building: Deployment completed
+Building: Creating build cache...
+[2K[1A[2K[GProduction: https://reason-mtdqtr1fo-kevincolmanf-3811s-projects.vercel.app [1m]
+Completing...
+Aliased: https://reason-gamma.vercel.app [1m]
+{
+  "status": "ok",
+  "deployment": {
+    "id": "dpl_BvUuXimbZ3NZgG21EZAQj72YMR5Y",
+    "url": "https://reason-mtdqtr1fo-kevincolmanf-3811s-projects.vercel.app",
+    "inspectorUrl": "https://vercel.com/kevincolmanf-3811s-projects/reason/BvUuXimbZ3NZgG21EZAQj72YMR5Y",
+    "readyState": "READY",
+    "target": "production",
+    "deploymentApiUrl": "https://api.vercel.com/v13/deployments/dpl_BvUuXimbZ3NZgG21EZAQj72YMR5Y"
+  },
+  "message": "Deployment reason-mtdqtr1fo-kevincolmanf-3811s-projects.vercel.app ready.",
+  "next": [
+    {
+      "command": "vercel inspect reason-mtdqtr1fo-kevincolmanf-3811s-projects.vercel.app",
+      "when": "Inspect deployment"
+    },
+    {
+      "command": "vercel deploy --prod",
+      "when": "Promote to production"
+    }
+  ]
+}
