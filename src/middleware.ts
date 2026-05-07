@@ -63,30 +63,47 @@ export async function middleware(request: NextRequest) {
     console.error('Middleware Supabase Error:', error)
   }
 
-  const protectedRoutes = ['/dashboard', '/library', '/content', '/account']
-  const isProtectedRoute = protectedRoutes.some(route => 
-    request.nextUrl.pathname.startsWith(route)
-  )
-  
-  const isAdminRoute = request.nextUrl.pathname.startsWith('/admin')
+  const pathname = request.nextUrl.pathname
 
-  if ((isProtectedRoute || isAdminRoute) && !user) {
+  // Rutas que requieren solo estar logueado
+  const authRoutes = ['/dashboard', '/library', '/content', '/account', '/recursos', '/ficha']
+  const isAuthRoute = authRoutes.some(route => pathname.startsWith(route))
+
+  // Rutas que requieren suscripción activa (subscriber o admin)
+  const subscriberRoutes = ['/library', '/content', '/recursos', '/ficha', '/dashboard/ejercicios']
+  const isSubscriberRoute = subscriberRoutes.some(route => pathname.startsWith(route))
+
+  // Excepción: artículo de muestra gratuito
+  const isFreeContent = pathname === '/content/dolor-lumbar-inespecifico'
+
+  const isAdminRoute = pathname.startsWith('/admin')
+
+  // 1. Si no está logueado → login
+  if ((isAuthRoute || isAdminRoute) && !user) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
-  if (isAdminRoute && user) {
-    // Check if user has admin role
+  // 2. Si está logueado → verificar rol para rutas de suscripción y admin
+  if (user && (isSubscriberRoute || isAdminRoute) && !isFreeContent) {
     const { data: userData } = await supabase
       .from('users')
       .select('role')
       .eq('id', user.id)
       .single()
 
-    if (!userData || userData.role !== 'admin') {
+    const role = userData?.role
+
+    if (isAdminRoute && role !== 'admin') {
       const url = request.nextUrl.clone()
-      url.pathname = '/dashboard' // Redirect non-admins to dashboard
+      url.pathname = '/dashboard'
+      return NextResponse.redirect(url)
+    }
+
+    if (isSubscriberRoute && role !== 'subscriber' && role !== 'admin') {
+      const url = request.nextUrl.clone()
+      url.pathname = '/paywall'
       return NextResponse.redirect(url)
     }
   }
