@@ -411,8 +411,8 @@ export default function LandingPage() {
       <section className="py-[96px] bg-bg-secondary">
         <div className="w-full max-w-[1080px] mx-auto px-8">
           <div className="grid grid-cols-1 md:grid-cols-[200px_1fr] gap-12 items-center">
-            <div className="w-[200px] h-[200px] bg-border-strong rounded-xl flex items-center justify-center text-text-secondary text-[12px]">
-              [Foto B&N]
+            <div className="w-[200px] h-[200px] rounded-xl overflow-hidden flex-shrink-0">
+              <img src="/Photoroom_20240929_222601 2.JPG" alt="Kevin Colman" className="w-full h-full object-cover object-top" />
             </div>
             <div>
               <h2 className="text-[32px] font-medium tracking-[-0.02em] mb-3">
