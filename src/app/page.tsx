@@ -336,6 +336,78 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <section className="py-[96px] border-t-[0.5px] border-border">
+        <div className="w-full max-w-[1080px] mx-auto px-8">
+          <div className="mb-16 max-w-[720px]">
+            <h2 className="text-[40px] font-medium tracking-[-0.02em] leading-[1.15] mb-4">
+              Más que una biblioteca. Un ecosistema clínico integrado.
+            </h2>
+            <p className="text-[18px] text-text-secondary leading-[1.5]">
+              La suscripción a Reason no solo te da contenido. Te da acceso total a herramientas diseñadas específicamente para agilizar tu flujo de trabajo y mejorar el control de tus pacientes.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-8">
+              <div className="h-[60px] mb-4 flex items-center justify-start text-accent">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <line x1="16" y1="13" x2="8" y2="13"></line>
+                  <line x1="16" y1="17" x2="8" y2="17"></line>
+                  <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+              </div>
+              <h3 className="text-[18px] font-medium mb-3 text-text-primary">
+                Movement Dashboard
+              </h3>
+              <p className="text-[14px] text-text-secondary leading-[1.55]">
+                Constructor de planes con +250 ejercicios en video. Compartí links mágicos con el Modo Paciente, recibí su feedback de RPE y EVA en tiempo real, o exportalos a PDF con códigos QR automáticos.
+              </p>
+            </div>
+
+            <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-8">
+              <div className="h-[60px] mb-4 flex items-center justify-start text-accent">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34"></path>
+                  <polygon points="18 2 22 6 12 16 8 16 8 12 18 2"></polygon>
+                </svg>
+              </div>
+              <h3 className="text-[18px] font-medium mb-3 text-text-primary">
+                Ficha Kinésica Inteligente
+              </h3>
+              <p className="text-[14px] text-text-secondary leading-[1.55]">
+                Dejá de usar planillas genéricas. Evaluá a tus pacientes usando una ficha digital diseñada bajo razonamiento clínico, con exportación a PDF para que te quede el registro offline. Sin guardar datos sensibles en la nube.
+              </p>
+            </div>
+
+            <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-8">
+              <div className="h-[60px] mb-4 flex items-center justify-start text-accent">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect>
+                  <line x1="8" y1="6" x2="16" y2="6"></line>
+                  <line x1="16" y1="10" x2="16" y2="10.01"></line>
+                  <line x1="12" y1="10" x2="12" y2="10.01"></line>
+                  <line x1="8" y1="10" x2="8" y2="10.01"></line>
+                  <line x1="16" y1="14" x2="16" y2="14.01"></line>
+                  <line x1="12" y1="14" x2="12" y2="14.01"></line>
+                  <line x1="8" y1="14" x2="8" y2="14.01"></line>
+                  <line x1="16" y1="18" x2="16" y2="18.01"></line>
+                  <line x1="12" y1="18" x2="12" y2="18.01"></line>
+                  <line x1="8" y1="18" x2="8" y2="18.01"></line>
+                </svg>
+              </div>
+              <h3 className="text-[18px] font-medium mb-3 text-text-primary">
+                Calculadoras y Scores
+              </h3>
+              <p className="text-[14px] text-text-secondary leading-[1.55]">
+                Cuestionarios interactivos y calculadoras de riesgo integradas. Herramientas validadas (como STarT Back, RMQ, VISA) listas para usar en consultorio sin tener que buscarlas en Google cada vez.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section className="py-[96px] bg-bg-secondary">
         <div className="w-full max-w-[1080px] mx-auto px-8">
           <div className="grid grid-cols-1 md:grid-cols-[200px_1fr] gap-12 items-center">
