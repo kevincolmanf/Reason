@@ -190,10 +190,6 @@ export default function StartBackInteractive({ userId }: { userId: string }) {
                 { val: 1, label: 'Mucho' },
                 { val: 1, label: 'Extremadamente' }
               ].map((opt, i) => {
-                // Identificamos el botón clickeado de forma unívoca para el estilo
-                const isSelected = answers[9] === opt.val && 
-                  // Truco para identificar visualmente cuál botón de valor 0 o 1 fue clickeado (normalmente el STarT Back solo suma valores, para la UI real se suele guardar un estado separado, pero acá simplificamos a que cualquier 0 o 1 marque la categoría). Para una UX perfecta, guardaríamos el índice exacto y mapearíamos al valor real, pero el valor de `val` es lo que importa para el score.
-                  true;
                 return (
                 <button
                   key={i}

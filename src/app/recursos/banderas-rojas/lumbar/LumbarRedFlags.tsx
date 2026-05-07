@@ -26,7 +26,7 @@ export default function LumbarRedFlags() {
     setFlags(prev => ({ ...prev, [id]: !prev[id] }))
   }
 
-  const activeFlags = Object.entries(flags).filter(([_, val]) => val).map(([id]) => parseInt(id))
+  const activeFlags = Object.entries(flags).filter(([, val]) => val).map(([id]) => parseInt(id))
   const hasFlags = activeFlags.length > 0
 
   const handleExportPDF = () => {

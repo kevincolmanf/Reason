@@ -38,7 +38,7 @@ export default function CatastrofismoInteractive({ userId }: { userId: string })
     let desesperanza = 0 // 1, 2, 3, 4, 5, 12 (wait, 12 is usually desesperanza too, though original architecture says 1,2,3,4,5. Standard PCS has 12 in Helplessness. The architecture doc says: Rumiación (8,9,10,11), Magnificación (6,7,13), Desesperanza (1,2,3,4,5). We will add 12 to Desesperanza as per standard, or just leave it to total if subscales are just informational).
     
     PCS_ITEMS.forEach(item => {
-      let val = answers[item.id]
+      const val = answers[item.id]
       total += val
       
       if ([8, 9, 10, 11].includes(item.id)) rumiacion += val

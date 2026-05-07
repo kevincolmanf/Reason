@@ -1,6 +1,5 @@
 import { createClient } from '@/utils/supabase/server'
 import { notFound } from 'next/navigation'
-import Link from 'next/link'
 import Header from '@/components/Header'
 
 // Helper para renderizar texto que puede tener saltos de línea (párrafos)
