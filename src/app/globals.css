@@ -28,11 +28,23 @@ svg text {
   color: var(--color-text-primary) !important;
 }
 
-/* Rects con fondo blanco hardcodeado → convertir al tema oscuro */
-svg rect[fill="#FFFFFF"],
-svg rect[fill="#ffffff"],
-svg rect[fill="white"] {
-  fill: var(--color-bg-secondary) !important;
+/* SVGs de contenido (diagramas/árboles) — diseñados en tema claro, adaptados al oscuro */
+.content-svg-wrapper svg rect {
+  fill: var(--color-bg-tertiary) !important;
+  stroke: var(--color-border-strong) !important;
+}
+
+/* Preservar rects con color acento */
+.content-svg-wrapper svg rect[fill*="C25A2C"],
+.content-svg-wrapper svg rect[fill*="c25a2c"],
+.content-svg-wrapper svg rect[fill*="rgba(194"] {
+  fill: rgba(194, 90, 44, 0.15) !important;
+  stroke: var(--color-accent) !important;
+}
+
+/* Líneas y flechas */
+.content-svg-wrapper svg line,
+.content-svg-wrapper svg polyline {
   stroke: var(--color-border-strong) !important;
 }
 
