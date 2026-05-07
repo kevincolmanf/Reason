@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { v4 as uuidv4 } from 'uuid'
 import jsPDF from 'jspdf'
@@ -60,7 +60,8 @@ interface ActivityLog {
   logged_at: string
 }
 
-export default function PlanEditor({ initialPlan, userId }: { initialPlan: ExercisePlan, userId: string }) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export default function PlanEditor({ initialPlan, userId: _userId }: { initialPlan: ExercisePlan, userId: string }) {
   const [plan, setPlan] = useState<ExercisePlan>(initialPlan)
   const [activeSession, setActiveSession] = useState<number | 'logs'>(0)
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved')
@@ -68,6 +69,7 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
   const [targetBlock, setTargetBlock] = useState<{sessionIdx: number, blockIdx: number} | null>(null)
   
   // Search state
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [isSearching, setIsSearching] = useState(false)
@@ -177,6 +179,7 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
     setSearchQuery('')
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const addExerciseToBlock = (exercise: any) => {
     if (!targetBlock) return
     
@@ -613,7 +616,7 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
                             <div className="text-[14px] font-medium mb-1">{log.exercise_name}</div>
                             <div className="text-[12px] text-text-secondary">Sesión {log.session_id.replace('session_', '')} • Semana {log.week}</div>
                             {log.notes && (
-                              <div className="mt-2 text-[13px] text-text-secondary italic">"{log.notes}"</div>
+                              <div className="mt-2 text-[13px] text-text-secondary italic">&ldquo;{log.notes}&rdquo;</div>
                             )}
                           </div>
                           <div className="flex gap-4 items-start sm:items-center">
@@ -649,7 +652,7 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
                             <div className="text-[13px] font-medium mb-1">{new Date(log.logged_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', hour: '2-digit', minute:'2-digit' })}</div>
                             <div className="text-[12px] text-text-secondary">Sesión {log.session_id.replace('session_', '')} • Semana {log.week}</div>
                             {log.notes && (
-                              <div className="mt-2 text-[13px] text-text-secondary italic">"{log.notes}"</div>
+                              <div className="mt-2 text-[13px] text-text-secondary italic">&ldquo;{log.notes}&rdquo;</div>
                             )}
                           </div>
                           <div className="flex gap-4 items-start sm:items-center">

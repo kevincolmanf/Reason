@@ -51,7 +51,7 @@ export default function PatientPlanViewer({ planData, token }: { planData: { ses
       if (saved) {
         setReportedExercises(JSON.parse(saved))
       }
-    } catch (e) {}
+    } catch { /* empty */ }
   }, [token])
 
   const currentSession = planData.sessions[activeSession]
@@ -97,7 +97,7 @@ export default function PatientPlanViewer({ planData, token }: { planData: { ses
       } else {
         alert('Hubo un error al guardar tu reporte. Intentá de nuevo.')
       }
-    } catch (err) {
+    } catch {
       alert('Error de conexión.')
     }
     setIsSubmitting(false)
@@ -162,7 +162,6 @@ export default function PatientPlanViewer({ planData, token }: { planData: { ses
                 const weekData = ex.weeks.find(w => w.week === activeWeek)
                 if (!weekData) return null
 
-                const hasData = weekData.sets || weekData.reps || weekData.load || weekData.rest
                 const isReported = reportedExercises[`${ex.id}_${activeWeek}`]
                 const isReporting = reportingExId === ex.id
 

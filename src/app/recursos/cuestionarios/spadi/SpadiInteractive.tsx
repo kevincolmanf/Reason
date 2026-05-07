@@ -178,6 +178,7 @@ export default function SpadiInteractive({ userId }: { userId: string }) {
     doc.save('SPADI_Blank.pdf')
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const renderSlider = (item: any) => (
     <div key={item.id} className="pb-8 border-b-[0.5px] border-border last:border-0 last:pb-0">
       <div className="flex justify-between items-start mb-4">

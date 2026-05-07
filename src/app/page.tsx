@@ -293,7 +293,7 @@ export default function LandingPage() {
                 <text x="460" y="606" fontFamily="Geist, sans-serif" fontSize="12" fontWeight="400" fill="var(--color-text-secondary)" textAnchor="middle">Volver a actividad gradual</text>
                 <line x1="460" y1="620" x2="460" y2="660" stroke="var(--color-text-primary)" strokeWidth="1" markerEnd="url(#chev)" />
                 <rect x="320" y="660" width="280" height="56" rx="8" fill="var(--color-bg-primary)" stroke="var(--color-border-strong)" strokeWidth="0.5" />
-                <text x="460" y="684" fontFamily="Geist, sans-serif" fontSize="14" fontWeight="500" fill="var(--color-text-primary)" textAnchor="middle">¿Persiste > 6 semanas?</text>
+                <text x="460" y="684" fontFamily="Geist, sans-serif" fontSize="14" fontWeight="500" fill="var(--color-text-primary)" textAnchor="middle">{'¿Persiste > 6 semanas?'}</text>
                 <text x="460" y="702" fontFamily="Geist, sans-serif" fontSize="12" fontWeight="400" fill="var(--color-text-secondary)" textAnchor="middle">Reconsiderar factores contextuales</text>
               </svg>
             </div>

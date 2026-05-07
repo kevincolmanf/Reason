@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export default function HeaderClient({ userMetadata }: { userMetadata: any }) {
   const [isOpen, setIsOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
