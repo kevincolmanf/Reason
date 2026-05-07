@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import Header from '@/components/Header'
 
 export default async function AccountPage() {
   const supabase = createClient()
@@ -24,18 +25,7 @@ export default async function AccountPage() {
 
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
-      <header className="py-6 border-b-[0.5px] border-border sticky top-0 bg-bg-primary/80 backdrop-blur-md z-10">
-        <div className="w-full max-w-[1080px] mx-auto px-8 flex justify-between items-center">
-          <Link href="/dashboard" className="text-[20px] font-medium tracking-[-0.01em] no-underline text-text-primary">
-            reason<span className="text-accent">.</span> <span className="text-text-tertiary font-mono text-[11px] ml-2 uppercase">Cuenta</span>
-          </Link>
-          <nav className="flex items-center gap-6">
-            <Link href="/dashboard" className="text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
-              Volver al Dashboard
-            </Link>
-          </nav>
-        </div>
-      </header>
+      <Header />
 
       <main className="flex-grow w-full max-w-[720px] mx-auto px-8 py-12">
         <h1 className="text-[32px] font-medium tracking-[-0.02em] mb-8">

@@ -3,31 +3,16 @@
 @tailwind utilities;
 
 :root {
-  --color-bg-primary: #FFFFFF;
-  --color-bg-secondary: #F8F7F4;
-  --color-bg-tertiary: #EFEDE7;
-  --color-text-primary: #1A1A1A;
-  --color-text-secondary: #5C5B57;
-  --color-text-tertiary: #A6A49C;
-  --color-border: #E5E3DD;
-  --color-border-strong: #C4C2BA;
+  --color-bg-primary: #0F0F0E;
+  --color-bg-secondary: #1A1A18;
+  --color-bg-tertiary: #252522;
+  --color-text-primary: #F5F4F0;
+  --color-text-secondary: #A6A49C;
+  --color-text-tertiary: #6A6963;
+  --color-border: #2C2C2A;
+  --color-border-strong: #444441;
   --color-accent: #C25A2C;
   --color-warning: #A33D2D;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-bg-primary: #0F0F0E;
-    --color-bg-secondary: #1A1A18;
-    --color-bg-tertiary: #252522;
-    --color-text-primary: #F5F4F0;
-    --color-text-secondary: #A6A49C;
-    --color-text-tertiary: #6A6963;
-    --color-border: #2C2C2A;
-    --color-border-strong: #444441;
-    --color-accent: #C25A2C;
-    --color-warning: #A33D2D;
-  }
 }
 
 body {
@@ -52,22 +37,20 @@ svg .edgeLabel rect {
   opacity: 0.9 !important;
 }
 
-@media (prefers-color-scheme: dark) {
-  svg .node rect, 
-  svg .node circle, 
-  svg .node ellipse, 
-  svg .node polygon, 
-  svg .node path {
-    fill: var(--color-bg-secondary) !important;
-    stroke: var(--color-border-strong) !important;
-  }
-  
-  svg .edgePath path {
-    stroke: var(--color-text-secondary) !important;
-  }
-  
-  svg marker path {
-    fill: var(--color-text-secondary) !important;
-    stroke: none !important;
-  }
+svg .node rect, 
+svg .node circle, 
+svg .node ellipse, 
+svg .node polygon, 
+svg .node path {
+  fill: var(--color-bg-secondary) !important;
+  stroke: var(--color-border-strong) !important;
+}
+
+svg .edgePath path {
+  stroke: var(--color-text-secondary) !important;
+}
+
+svg marker path {
+  fill: var(--color-text-secondary) !important;
+  stroke: none !important;
 }

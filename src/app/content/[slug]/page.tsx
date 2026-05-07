@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import Header from '@/components/Header'
 
 // Helper para renderizar texto que puede tener saltos de línea (párrafos)
 function renderParagraphs(text: string | null) {
@@ -68,22 +69,8 @@ export default async function ContentPage({ params }: { params: { slug: string }
 
   return (
     <div className="min-h-screen bg-bg-primary">
-      {/* Header simple (igual al de la landing) */}
-      <header className="py-8 border-b-[0.5px] border-border">
-        <div className="w-full max-w-[1080px] mx-auto px-8">
-          <div className="flex justify-between items-center">
-            <Link href="/dashboard" className="text-[18px] font-medium tracking-[-0.01em] no-underline text-text-primary">
-              reason<span className="text-accent">.</span>
-            </Link>
-            <Link
-              href="/dashboard"
-              className="text-[13px] text-text-primary no-underline py-2 px-4 border-[0.5px] border-border-strong rounded-lg"
-            >
-              Volver a la biblioteca
-            </Link>
-          </div>
-        </div>
-      </header>
+      {/* HEADER */}
+      <Header />
 
       {/* Contenido principal idéntico a la sección Preview de la Landing */}
       <main className="py-[96px]">

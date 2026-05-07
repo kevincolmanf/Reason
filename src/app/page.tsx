@@ -8,10 +8,10 @@ export default function LandingPage() {
               reason<span className="text-accent">.</span>
             </div>
             <a
-              href="/signup"
+              href="/login"
               className="text-[13px] text-text-primary no-underline py-2 px-4 border-[0.5px] border-border-strong rounded-lg"
             >
-              Suscribirse
+              Ingresar / Suscribirse
             </a>
           </div>
         </div>
@@ -28,10 +28,10 @@ export default function LandingPage() {
           </p>
           <div className="flex gap-4 items-center">
             <a
-              href="/signup"
+              href="/login"
               className="bg-accent text-bg-primary py-[14px] px-7 rounded-lg text-[14px] font-medium no-underline inline-block border-none cursor-pointer"
             >
-              Suscribirse
+              Ingresar / Suscribirse
             </a>
             <a
               href="#como-funciona"
@@ -265,7 +265,8 @@ export default function LandingPage() {
                 <line x1="300" y1="76" x2="300" y2="120" stroke="var(--color-text-primary)" strokeWidth="1" markerEnd="url(#chev)" />
                 <rect x="180" y="120" width="240" height="56" rx="8" fill="var(--color-bg-primary)" stroke="var(--color-border-strong)" strokeWidth="0.5" />
                 <text x="300" y="144" fontFamily="Geist, sans-serif" fontSize="14" fontWeight="500" fill="var(--color-text-primary)" textAnchor="middle">¿Hay banderas rojas?</text>
-                <text x="300" y="162" fontFamily="Geist, sans-serif" fontSize="12" fontWeight="400" f                <text x="155" y="190" fontFamily="Geist, sans-serif" fontSize="11" fontWeight="400" fill="var(--color-text-secondary)" textAnchor="middle">Sí</text>
+                <text x="300" y="162" fontFamily="Geist, sans-serif" fontSize="12" fontWeight="400" fill="var(--color-text-secondary)" textAnchor="middle">Trauma, fiebre, déficit, edad</text>
+                <text x="155" y="190" fontFamily="Geist, sans-serif" fontSize="11" fontWeight="400" fill="var(--color-text-secondary)" textAnchor="middle">Sí</text>
                 <line x1="240" y1="176" x2="135" y2="220" stroke="var(--color-text-primary)" strokeWidth="1" markerEnd="url(#chev)" />
                 <text x="445" y="190" fontFamily="Geist, sans-serif" fontSize="11" fontWeight="400" fill="var(--color-text-secondary)" textAnchor="middle">No</text>
                 <line x1="360" y1="176" x2="465" y2="220" stroke="var(--color-text-primary)" strokeWidth="1" markerEnd="url(#chev)" />
@@ -423,10 +424,10 @@ export default function LandingPage() {
             Cancelás cuando quieras. Acceso inmediato a todo el catálogo.
           </p>
           <a
-            href="/signup"
+            href="/login"
             className="bg-accent text-bg-primary py-[18px] px-9 rounded-[10px] text-[16px] font-medium no-underline inline-block"
           >
-            Suscribirse
+            Ingresar / Suscribirse
           </a>
         </div>
       </section>
