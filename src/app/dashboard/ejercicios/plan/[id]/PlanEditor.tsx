@@ -134,6 +134,7 @@ export default function PlanEditor({ initialPlan, userId: _userId }: { initialPl
   // Cargar logs
   useEffect(() => {
     if (activeSession === 'logs') {
+      let cancelled = false
       const fetchLogs = async () => {
         setLogsLoading(true)
         const { data, error } = await supabase
@@ -141,13 +142,16 @@ export default function PlanEditor({ initialPlan, userId: _userId }: { initialPl
           .select('*')
           .eq('plan_id', plan.id)
           .order('logged_at', { ascending: false })
-        
-        if (data && !error) setLogs(data)
-        setLogsLoading(false)
+        if (!cancelled) {
+          if (data && !error) setLogs(data)
+          setLogsLoading(false)
+        }
       }
       fetchLogs()
+      return () => { cancelled = true }
     }
-  }, [activeSession, plan.id, supabase])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSession, plan.id])
 
   // Modificadores de estado
   const updatePlanInfo = (field: 'name' | 'notes' | 'start_date', value: string) => {
