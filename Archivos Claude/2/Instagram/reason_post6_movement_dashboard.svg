@@ -1,0 +1,25 @@
+<svg viewBox="0 0 1090 1090" xmlns="http://www.w3.org/2000/svg" role="img" style="width: 100%; margin: auto;">
+  <title style="fill:rgb(0, 0, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto">Post 6 — Movement Dashboard</title>
+
+  <defs>
+    <clipPath id="frame">
+      <rect width="1080" height="1080"/>
+    </clipPath>
+  </defs>
+
+  <rect width="1080" height="1080" fill="#0A0A0A" style="fill:rgb(10, 10, 10);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- Número enorme desbordando -->
+  <g clip-path="url(#frame)" style="fill:rgb(0, 0, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto">
+    <text x="80" y="480" font-family="'Geist', 'Inter', sans-serif" font-size="320" font-weight="700" fill="#FFFFFF" letter-spacing="-10" style="fill:rgb(255, 255, 255);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:Geist, Inter, sans-serif;font-size:320px;font-weight:700;text-anchor:start;dominant-baseline:auto">+1000</text>
+  </g>
+
+  <!-- Línea terracota -->
+  <rect x="80" y="540" width="48" height="3" fill="#C25A2C" style="fill:rgb(194, 90, 44);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- Copy -->
+  <text x="80" y="650" font-family="'Geist', 'Inter', sans-serif" font-size="72" font-weight="400" fill="#888888" style="fill:rgb(136, 136, 136);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:Geist, Inter, sans-serif;font-size:72px;font-weight:400;text-anchor:start;dominant-baseline:auto">ejercicios. ya clasificados.</text>
+
+  <text x="80" y="820" font-family="'Geist', 'Inter', sans-serif" font-size="100" font-weight="700" fill="#FFFFFF" style="fill:rgb(255, 255, 255);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:Geist, Inter, sans-serif;font-size:100px;font-weight:700;text-anchor:start;dominant-baseline:auto">Solo</text>
+  <text x="80" y="940" font-family="'Geist', 'Inter', sans-serif" font-size="100" font-weight="700" fill="#C25A2C" style="fill:rgb(194, 90, 44);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:Geist, Inter, sans-serif;font-size:100px;font-weight:700;text-anchor:start;dominant-baseline:auto">elegís.</text>
+</svg>

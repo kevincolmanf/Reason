@@ -32,7 +32,10 @@ interface PlanSession {
 }
 
 export default function PatientPlanViewer({ planData, token }: { planData: { sessions: PlanSession[] }, token: string }) {
-  const [activeSession, setActiveSession] = useState(0)
+  const [activeSession, setActiveSession] = useState(() => {
+    const firstValid = planData.sessions.findIndex(s => s.blocks.some(b => b.exercises.length > 0))
+    return firstValid !== -1 ? firstValid : 0
+  })
   const [activeWeek, setActiveWeek] = useState(1) // 1 to 4
   const [activeVideo, setActiveVideo] = useState<string | null>(null)
   
@@ -107,13 +110,6 @@ export default function PatientPlanViewer({ planData, token }: { planData: { ses
 
   if (availableSessions.length === 0) {
     return <div className="text-center py-12 text-text-secondary">Este plan aún no tiene ejercicios asignados.</div>
-  }
-
-  if (activeBlocks.length === 0) {
-    const firstValidIdx = planData.sessions.findIndex(s => s.blocks.some(b => b.exercises.length > 0))
-    if (firstValidIdx !== -1 && activeSession !== firstValidIdx) {
-      setActiveSession(firstValidIdx)
-    }
   }
 
   return (

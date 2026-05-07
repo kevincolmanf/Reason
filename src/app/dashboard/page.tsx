@@ -23,13 +23,21 @@ export default async function DashboardPage() {
     redirect('/login')
   }
 
-  // Obtener los últimos 6 contenidos publicados
-  const { data: latestContents } = await supabase
-    .from('content')
-    .select('id, title, subtitle, slug, category, tiempo_lectura_min, body_que_saber')
-    .eq('published', true)
-    .order('created_at', { ascending: false })
-    .limit(6)
+  const [{ data: latestContents }, { data: userData }] = await Promise.all([
+    supabase
+      .from('content')
+      .select('id, title, subtitle, slug, category, tiempo_lectura_min, body_que_saber')
+      .eq('published', true)
+      .order('created_at', { ascending: false })
+      .limit(6),
+    supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single(),
+  ])
+
+  const isFree = !userData?.role || (userData.role !== 'subscriber' && userData.role !== 'admin')
 
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
@@ -38,6 +46,23 @@ export default async function DashboardPage() {
 
       {/* MAIN CONTENT */}
       <main className="flex-grow w-full max-w-[1080px] mx-auto px-8 py-12">
+
+        {/* BANNER PARA USUARIOS FREE */}
+        {isFree && (
+          <div className="mb-10 rounded-xl border-[0.5px] border-accent bg-[#f5f9ff] px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <p className="text-[15px] font-medium text-text-primary mb-0.5">Tu cuenta está activa</p>
+              <p className="text-[13px] text-text-secondary">Suscribite para acceder a toda la biblioteca clínica.</p>
+            </div>
+            <Link
+              href="/checkout"
+              className="shrink-0 inline-block bg-accent text-bg-primary text-[13px] font-medium px-5 py-2.5 rounded-lg hover:opacity-90 transition-opacity no-underline text-center"
+            >
+              Ver planes →
+            </Link>
+          </div>
+        )}
+
         <div className="mb-12">
           <h1 className="text-[32px] font-medium tracking-[-0.02em] mb-2">
             Hola, {user.user_metadata?.full_name || 'Suscriptor'}
@@ -51,15 +76,17 @@ export default async function DashboardPage() {
         <section className="mb-16">
           <div className="flex justify-between items-end mb-6">
             <h2 className="text-[20px] font-medium">Últimos contenidos</h2>
-            <Link href="/library" className="text-[13px] text-accent hover:underline">
-              Ver todos →
-            </Link>
+            {!isFree && (
+              <Link href="/library" className="text-[13px] text-accent hover:underline">
+                Ver todos →
+              </Link>
+            )}
           </div>
-          
+
           {latestContents && latestContents.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {latestContents.map((item) => (
-                <ContentCard key={item.id} item={item} />
+                <ContentCard key={item.id} item={item} locked={isFree} />
               ))}
             </div>
           ) : (
@@ -73,25 +100,25 @@ export default async function DashboardPage() {
         <section className="mb-16">
           <h2 className="text-[20px] font-medium mb-6">Explorar por categoría</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <CategoryCard 
-              title="Resúmenes Comentados" 
-              slug="resumen_comentado" 
-              desc="La literatura actual destilada" 
+            <CategoryCard
+              title="Resúmenes Comentados"
+              slug="resumen_comentado"
+              desc="La literatura actual destilada"
             />
-            <CategoryCard 
-              title="Aplicaciones Clínicas" 
-              slug="aplicacion_clinica" 
-              desc="De la teoría a la práctica" 
+            <CategoryCard
+              title="Aplicaciones Clínicas"
+              slug="aplicacion_clinica"
+              desc="De la teoría a la práctica"
             />
-            <CategoryCard 
-              title="Protocolos" 
-              slug="protocolo" 
-              desc="Pasos claros para actuar" 
+            <CategoryCard
+              title="Protocolos"
+              slug="protocolo"
+              desc="Pasos claros para actuar"
             />
-            <CategoryCard 
-              title="Casos Reales" 
-              slug="caso_real" 
-              desc="Experiencia de consultorio" 
+            <CategoryCard
+              title="Casos Reales"
+              slug="caso_real"
+              desc="Experiencia de consultorio"
             />
           </div>
         </section>

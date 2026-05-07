@@ -136,9 +136,9 @@ export default async function ContentPage({ params }: { params: { slug: string }
 
               {/* Si hay un SVG guardado, lo renderizamos de forma segura usando dangerouslySetInnerHTML */}
               {content.body_aplicacion_visual && (
-                <div 
-                  className="mb-6 w-full overflow-x-auto"
-                  dangerouslySetInnerHTML={{ __html: content.body_aplicacion_visual }} 
+                <div
+                  className="mb-6 w-full overflow-x-auto content-svg-wrapper"
+                  dangerouslySetInnerHTML={{ __html: content.body_aplicacion_visual }}
                 />
               )}
 
