@@ -87,7 +87,7 @@ export default function AyudaPage() {
           <p className="text-[13px] text-text-secondary">
             ¿Tenés alguna duda que no está cubierta acá?{' '}
             <a
-              href="mailto:soporte@reason.com.ar"
+              href="mailto:reasoncontacto@gmail.com"
               className="text-accent hover:opacity-80 transition-opacity no-underline"
             >
               Escribinos
