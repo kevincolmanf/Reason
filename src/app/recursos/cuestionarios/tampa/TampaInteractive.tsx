@@ -199,10 +199,33 @@ export default function TampaInteractive({ userId }: { userId: string }) {
               <span className="text-[40px] font-medium tracking-[-0.02em]">{score}</span>
               <span className="text-[16px] text-text-secondary">/ 68</span>
             </div>
-            <div className="text-[18px] font-medium text-accent mb-6">
+            <div className="text-[18px] font-medium text-accent mb-3">
               {getInterpretation(score)}
             </div>
-            
+
+            {/* Interpretación clínica */}
+            <div className="mb-6 space-y-3">
+              <div>
+                <div className="flex justify-between text-[10px] text-text-secondary mb-1">
+                  <span>17</span><span>30</span><span>37</span><span>44</span><span>68</span>
+                </div>
+                <div className="relative w-full h-2 rounded-full overflow-hidden bg-bg-primary">
+                  <div className="absolute inset-0" style={{ background: 'linear-gradient(to right, #34d399, #facc15, #ef4444)' }} />
+                  <div className="absolute top-0 h-full w-0.5 bg-white shadow" style={{ left: `${((score - 17) / 51) * 100}%` }} />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="bg-bg-primary rounded-lg p-3 border-[0.5px] border-border">
+                  <div className="text-[10px] uppercase tracking-[0.05em] text-text-secondary mb-1">MCID / Punto de corte</div>
+                  <div className="text-[13px] font-medium">≥ 37 puntos — ≥ 6 de cambio</div>
+                </div>
+                <div className="bg-bg-primary rounded-lg p-3 border-[0.5px] border-border">
+                  <div className="text-[10px] uppercase tracking-[0.05em] text-text-secondary mb-1">Implicancia clínica</div>
+                  <div className="text-[12px] text-text-secondary leading-[1.5]">Kinesiofobia alta se asocia con mayor discapacidad y cronificación del dolor. Requiere abordaje cognitivo-conductual.</div>
+                </div>
+              </div>
+            </div>
+
             <div className="flex flex-wrap gap-4">
               <button onClick={handleSaveResult} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium">
                 Confirmar y Registrar Uso

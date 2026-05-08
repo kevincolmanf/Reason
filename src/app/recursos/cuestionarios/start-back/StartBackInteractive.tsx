@@ -227,10 +227,28 @@ export default function StartBackInteractive({ userId }: { userId: string }) {
               </div>
             </div>
             
-            <div className="text-[18px] font-medium text-accent mb-6">
+            <div className="text-[18px] font-medium text-accent mb-3">
               {getInterpretation(scoreData.total, scoreData.psicosocial)}
             </div>
-            
+
+            {/* Interpretación clínica */}
+            <div className="mb-6 space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="bg-bg-primary rounded-lg p-3 border-[0.5px] border-border">
+                  <div className="text-[10px] uppercase tracking-[0.05em] text-text-secondary mb-1">Abordaje sugerido</div>
+                  <div className="text-[12px] font-medium leading-[1.5]">
+                    {scoreData.total < 4 && 'Tratamiento simple y conservador: educación y ejercicio.'}
+                    {scoreData.total >= 4 && scoreData.psicosocial <= 3 && 'Fisioterapia con enfoque combinado físico-psicológico.'}
+                    {scoreData.total >= 4 && scoreData.psicosocial > 3 && 'Intervención psicológica intensiva + programa físico estructurado.'}
+                  </div>
+                </div>
+                <div className="bg-bg-primary rounded-lg p-3 border-[0.5px] border-border">
+                  <div className="text-[10px] uppercase tracking-[0.05em] text-text-secondary mb-1">Implicancia clínica</div>
+                  <div className="text-[12px] text-text-secondary leading-[1.5]">Herramienta de cribado, no de diagnóstico. El subscore psicosocial (ítems 5-9) es clave para estratificar el riesgo.</div>
+                </div>
+              </div>
+            </div>
+
             <div className="flex flex-wrap gap-4">
               <button onClick={handleSaveResult} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium">
                 Confirmar y Registrar Uso

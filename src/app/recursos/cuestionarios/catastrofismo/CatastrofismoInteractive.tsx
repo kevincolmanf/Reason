@@ -203,8 +203,31 @@ export default function CatastrofismoInteractive({ userId }: { userId: string })
               <span className="text-[40px] font-medium tracking-[-0.02em]">{scoreData.total}</span>
               <span className="text-[16px] text-text-secondary">/ 52</span>
             </div>
-            <div className={`text-[18px] font-medium mb-6 ${scoreData.total > 30 ? 'text-warning' : 'text-text-primary'}`}>
+            <div className={`text-[18px] font-medium mb-3 ${scoreData.total > 30 ? 'text-warning' : 'text-text-primary'}`}>
               {getInterpretation(scoreData.total)}
+            </div>
+
+            {/* Interpretación clínica */}
+            <div className="mb-6 space-y-3">
+              <div>
+                <div className="flex justify-between text-[10px] text-text-secondary mb-1">
+                  <span>0</span><span>13</span><span>26</span><span>30</span><span>52</span>
+                </div>
+                <div className="relative w-full h-2 rounded-full overflow-hidden bg-bg-primary">
+                  <div className="absolute inset-0" style={{ background: 'linear-gradient(to right, #34d399, #facc15, #ef4444)' }} />
+                  <div className="absolute top-0 h-full w-0.5 bg-white shadow" style={{ left: `${(scoreData.total / 52) * 100}%` }} />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="bg-bg-primary rounded-lg p-3 border-[0.5px] border-border">
+                  <div className="text-[10px] uppercase tracking-[0.05em] text-text-secondary mb-1">MCID / Punto de corte</div>
+                  <div className="text-[13px] font-medium">&gt; 30 significativo — ≈ 10 de cambio</div>
+                </div>
+                <div className="bg-bg-primary rounded-lg p-3 border-[0.5px] border-border">
+                  <div className="text-[10px] uppercase tracking-[0.05em] text-text-secondary mb-1">Implicancia clínica</div>
+                  <div className="text-[12px] text-text-secondary leading-[1.5]">La subescala Desesperanza es el predictor más fuerte de discapacidad a largo plazo. Scores altos se asocian con mayor uso de analgésicos.</div>
+                </div>
+              </div>
             </div>
 
             <div className="grid grid-cols-3 gap-4 mb-8 pt-6 border-t-[0.5px] border-border">
