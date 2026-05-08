@@ -28,20 +28,25 @@ export default function RecursosPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <ResourceCard 
-            title="Cuestionarios Validados" 
+          <ResourceCard
+            title="Cuestionarios Validados"
             desc="Cuestionarios interactivos con cálculo automático de score e interpretación clínica."
             href="/recursos/cuestionarios"
           />
-          <ResourceCard 
-            title="Calculadoras" 
-            desc="Cálculo rápido de métricas clínicas como 1RM con tablas de porcentajes."
+          <ResourceCard
+            title="Calculadoras"
+            desc="Cálculo rápido de métricas clínicas como 1RM, IMC, VO2max y zonas de FC."
             href="/recursos/calculadoras"
           />
-          <ResourceCard 
-            title="Banderas Rojas" 
+          <ResourceCard
+            title="Banderas Rojas"
             desc="Checklists de referencia rápida para descartar patologías severas."
             href="/recursos/banderas-rojas"
+          />
+          <ResourceCard
+            title="Dinamómetro (HHD)"
+            desc="Evaluación bilateral de fuerza muscular con cálculo automático del LSI y ratio H:Q."
+            href="/recursos/dinamometro"
           />
         </div>
       </main>

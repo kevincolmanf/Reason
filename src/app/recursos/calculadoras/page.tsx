@@ -33,10 +33,25 @@ export default function CalculadorasPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <CalculatorCard 
-            title="Calculadora 1RM" 
+          <CalculatorCard
+            title="Calculadora 1RM"
             desc="Estima el peso máximo y genera tabla de porcentajes de trabajo (Epley & Brzycki)."
             href="/recursos/calculadoras/1rm"
+          />
+          <CalculatorCard
+            title="Zonas FC — Karvonen"
+            desc="Calculá las 5 zonas de entrenamiento por FC de reserva para prescripción del ejercicio."
+            href="/recursos/calculadoras/karvonen"
+          />
+          <CalculatorCard
+            title="IMC"
+            desc="Índice de Masa Corporal con categorización clínica y barra visual."
+            href="/recursos/calculadoras/imc"
+          />
+          <CalculatorCard
+            title="VO2max Estimado"
+            desc="Estimación del consumo máximo de oxígeno por test de Rockport o fórmula de FC."
+            href="/recursos/calculadoras/vo2max"
           />
         </div>
       </main>
