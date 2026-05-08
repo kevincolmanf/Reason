@@ -720,10 +720,10 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
             </div>
 
             {/* Filtro de categorías */}
-            <div className="px-4 py-3 border-b-[0.5px] border-border bg-bg-secondary flex gap-2 overflow-x-auto hide-scrollbar">
+            <div className="px-4 py-3 border-b-[0.5px] border-border bg-bg-secondary flex flex-wrap gap-2">
               <button
                 onClick={() => setSearchCategory('')}
-                className={`whitespace-nowrap px-3 py-1.5 rounded-full text-[11px] font-medium transition-colors border-[0.5px] ${searchCategory === '' ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-primary border-border text-text-secondary hover:text-text-primary'}`}
+                className={`px-3 py-1.5 rounded-full text-[11px] font-medium transition-colors border-[0.5px] ${searchCategory === '' ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-primary border-border text-text-secondary hover:text-text-primary'}`}
               >
                 Todas
               </button>
