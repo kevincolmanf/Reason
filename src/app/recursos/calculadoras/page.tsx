@@ -44,11 +44,6 @@ export default function CalculadorasPage() {
             href="/recursos/calculadoras/karvonen"
           />
           <CalculatorCard
-            title="IMC"
-            desc="Índice de Masa Corporal con categorización clínica y barra visual."
-            href="/recursos/calculadoras/imc"
-          />
-          <CalculatorCard
             title="VO2max Estimado"
             desc="Estimación del consumo máximo de oxígeno por test de Rockport o fórmula de FC."
             href="/recursos/calculadoras/vo2max"
