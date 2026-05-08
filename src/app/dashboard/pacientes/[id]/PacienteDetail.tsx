@@ -38,6 +38,24 @@ interface QuestionnaireResult {
   result_data: any
 }
 
+interface DynamoResult {
+  id: string
+  unit: string
+  muscle_results: Record<string, { right: string, left: string }>
+  notes: string | null
+  created_at: string
+}
+
+const MUSCLE_LABELS: Record<string, string> = {
+  quad: 'Cuádriceps',
+  hamstring: 'Isquiotibiales',
+  hip_abductor: 'Abd. Cadera',
+  hip_ext_rotator: 'RE Cadera',
+  shoulder_ext_rotator: 'RE Hombro',
+  shoulder_abductor: 'Abd. Hombro',
+  elbow_flexor: 'Flex. Codo',
+}
+
 const QUESTIONNAIRE_NAMES: Record<string, { label: string; unit: string }> = {
   spadi: { label: 'SPADI', unit: '/ 100' },
   ndi: { label: 'NDI', unit: '/ 50' },
@@ -60,6 +78,8 @@ export default function PacienteDetail({ patient: initialPatient, userId: _userI
   const [fichasLoading, setFichasLoading] = useState(true)
   const [questionnaireResults, setQuestionnaireResults] = useState<QuestionnaireResult[]>([])
   const [qResultsLoading, setQResultsLoading] = useState(true)
+  const [dynamoResults, setDynamoResults] = useState<DynamoResult[]>([])
+  const [dynamoLoading, setDynamoLoading] = useState(true)
   const [creatingFicha, setCreatingFicha] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editForm, setEditForm] = useState({ name: initialPatient.name, age: initialPatient.age?.toString() || '', occupation: initialPatient.occupation || '' })
@@ -104,11 +124,24 @@ export default function PacienteDetail({ patient: initialPatient, userId: _userI
     setQResultsLoading(false)
   }, [supabase, patient.id])
 
+  const fetchDynamoResults = useCallback(async () => {
+    setDynamoLoading(true)
+    const { data, error } = await supabase
+      .from('dynamometer_results')
+      .select('id, unit, muscle_results, notes, created_at')
+      .eq('patient_id', patient.id)
+      .order('created_at', { ascending: false })
+
+    if (!error && data) setDynamoResults(data)
+    setDynamoLoading(false)
+  }, [supabase, patient.id])
+
   useEffect(() => {
     fetchPlans()
     fetchFichas()
     fetchQuestionnaireResults()
-  }, [fetchPlans, fetchFichas, fetchQuestionnaireResults])
+    fetchDynamoResults()
+  }, [fetchPlans, fetchFichas, fetchQuestionnaireResults, fetchDynamoResults])
 
   const handleNewFicha = async () => {
     setCreatingFicha(true)
@@ -167,6 +200,12 @@ export default function PacienteDetail({ patient: initialPatient, userId: _userI
     if (!confirm('¿Eliminar este resultado? No se puede deshacer.')) return
     const { error } = await supabase.from('questionnaire_results').delete().eq('id', resultId)
     if (!error) setQuestionnaireResults(prev => prev.filter(r => r.id !== resultId))
+  }
+
+  const handleDeleteDynamo = async (dynamoId: string) => {
+    if (!confirm('¿Eliminar esta evaluación? No se puede deshacer.')) return
+    const { error } = await supabase.from('dynamometer_results').delete().eq('id', dynamoId)
+    if (!error) setDynamoResults(prev => prev.filter(d => d.id !== dynamoId))
   }
 
   const formatScore = (result: QuestionnaireResult): string => {
@@ -378,6 +417,73 @@ export default function PacienteDetail({ patient: initialPatient, userId: _userI
                   </div>
                   <button
                     onClick={() => handleDeleteResult(result.id)}
+                    className="text-text-secondary hover:text-warning text-[12px] opacity-0 group-hover:opacity-100 transition-opacity ml-4 shrink-0"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* DINAMOMETRÍA */}
+      <div className="mb-12">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-[20px] font-medium">Dinamometría</h2>
+          <Link
+            href="/recursos/dinamometro"
+            className="text-accent text-[13px] font-medium hover:opacity-80 no-underline"
+          >
+            Ir a Dinamómetro →
+          </Link>
+        </div>
+
+        {dynamoLoading ? (
+          <div className="text-text-secondary text-[14px]">Cargando evaluaciones...</div>
+        ) : dynamoResults.length === 0 ? (
+          <div className="text-center py-10 bg-bg-secondary rounded-xl border-[0.5px] border-dashed border-border">
+            <p className="text-[15px] font-medium text-text-primary mb-1">Sin evaluaciones todavía</p>
+            <p className="text-[13px] text-text-secondary max-w-[400px] mx-auto">
+              Realizá una evaluación desde{' '}
+              <Link href="/recursos/dinamometro" className="text-accent hover:underline">
+                Dinamómetro HHD
+              </Link>{' '}
+              y guardala en este paciente.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {dynamoResults.map(d => {
+              const muscles = Object.keys(d.muscle_results ?? {}).filter(k => {
+                const v = d.muscle_results[k]
+                return (v.right && parseFloat(v.right) > 0) || (v.left && parseFloat(v.left) > 0)
+              })
+              return (
+                <div key={d.id} className="flex items-center justify-between bg-bg-primary border-[0.5px] border-border rounded-xl px-5 py-4 hover:bg-bg-secondary transition-colors group">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <span className="text-[14px] font-medium text-text-primary">
+                        {new Date(d.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                      </span>
+                      <span className="text-[12px] text-text-secondary">{muscles.length} grupos · {d.unit}</span>
+                    </div>
+                    {muscles.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {muscles.map(k => (
+                          <span key={k} className="text-[11px] bg-bg-secondary border-[0.5px] border-border rounded-full px-2 py-0.5 text-text-secondary">
+                            {MUSCLE_LABELS[k] ?? k}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {d.notes && (
+                      <div className="text-[12px] text-text-secondary mt-1 truncate max-w-[400px]">{d.notes}</div>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => handleDeleteDynamo(d.id)}
                     className="text-text-secondary hover:text-warning text-[12px] opacity-0 group-hover:opacity-100 transition-opacity ml-4 shrink-0"
                   >
                     Eliminar

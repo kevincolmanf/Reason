@@ -33,10 +33,25 @@ export default function BanderasRojasPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <FlagCard 
-            title="Banderas Rojas Lumbares" 
+          <FlagCard
+            title="Banderas Rojas Lumbares"
             desc="Cribado de patologías graves de la columna lumbar (fracturas, infección, cauda equina, tumor)."
             href="/recursos/banderas-rojas/lumbar"
+          />
+          <FlagCard
+            title="Banderas Rojas Cervicales"
+            desc="Cribado de patologías graves de la columna cervical (fractura, mielopatía, insuficiencia vertebrobasilar, tumor)."
+            href="/recursos/banderas-rojas/cervical"
+          />
+          <FlagCard
+            title="Banderas Rojas de Hombro"
+            desc="Cribado de patologías graves de hombro (Pancoast, artritis séptica, fractura, referido cardíaco/visceral)."
+            href="/recursos/banderas-rojas/hombro"
+          />
+          <FlagCard
+            title="Banderas Rojas de Rodilla"
+            desc="Cribado de fracturas, artritis séptica, síndrome compartimental y trombosis venosa profunda en rodilla."
+            href="/recursos/banderas-rojas/rodilla"
           />
         </div>
       </main>
