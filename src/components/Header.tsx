@@ -19,9 +19,6 @@ export default async function Header() {
           <Link href="/recursos" className="text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
             Recursos
           </Link>
-          <Link href="/ficha" className="text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
-            Ficha Kinésica
-          </Link>
           <Link href="/dashboard/ejercicios" className="text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
             Ejercicios
           </Link>

@@ -21,11 +21,20 @@ interface Plan {
   start_date: string | null
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+interface Ficha {
+  id: string
+  fecha: string | null
+  created_at: string
+  ficha_data: { motivoConsulta?: string }
+}
+
 export default function PacienteDetail({ patient: initialPatient, userId: _userId }: { patient: Patient, userId: string }) {
   const [patient, setPatient] = useState<Patient>(initialPatient)
   const [plans, setPlans] = useState<Plan[]>([])
   const [plansLoading, setPlansLoading] = useState(true)
+  const [fichas, setFichas] = useState<Ficha[]>([])
+  const [fichasLoading, setFichasLoading] = useState(true)
+  const [creatingFicha, setCreatingFicha] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editForm, setEditForm] = useState({ name: initialPatient.name, age: initialPatient.age?.toString() || '', occupation: initialPatient.occupation || '' })
   const [saving, setSaving] = useState(false)
@@ -45,9 +54,47 @@ export default function PacienteDetail({ patient: initialPatient, userId: _userI
     setPlansLoading(false)
   }, [supabase, patient.id])
 
+  const fetchFichas = useCallback(async () => {
+    setFichasLoading(true)
+    const { data, error } = await supabase
+      .from('patient_fichas')
+      .select('id, fecha, created_at, ficha_data')
+      .eq('patient_id', patient.id)
+      .order('fecha', { ascending: false })
+
+    if (!error && data) setFichas(data)
+    setFichasLoading(false)
+  }, [supabase, patient.id])
+
   useEffect(() => {
     fetchPlans()
-  }, [fetchPlans])
+    fetchFichas()
+  }, [fetchPlans, fetchFichas])
+
+  const handleNewFicha = async () => {
+    setCreatingFicha(true)
+    const { data, error } = await supabase
+      .from('patient_fichas')
+      .insert({
+        patient_id: patient.id,
+        user_id: _userId,
+        fecha: new Date().toISOString().split('T')[0],
+        ficha_data: {},
+      })
+      .select()
+      .single()
+
+    if (!error && data) {
+      router.push(`/dashboard/pacientes/${patient.id}/fichas/${data.id}`)
+    }
+    setCreatingFicha(false)
+  }
+
+  const handleDeleteFicha = async (fichaId: string) => {
+    if (!confirm('¿Eliminar esta ficha? No se puede deshacer.')) return
+    const { error } = await supabase.from('patient_fichas').delete().eq('id', fichaId)
+    if (!error) setFichas(prev => prev.filter(f => f.id !== fichaId))
+  }
 
   const handleSaveEdit = async () => {
     if (!editForm.name.trim()) return
@@ -165,6 +212,64 @@ export default function PacienteDetail({ patient: initialPatient, userId: _userI
                 Eliminar
               </button>
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* FICHAS KINÉSICAS */}
+      <div className="mb-12">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-[20px] font-medium">Fichas Kinésicas</h2>
+          <button
+            onClick={handleNewFicha}
+            disabled={creatingFicha}
+            className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
+          >
+            {creatingFicha ? 'Creando...' : '+ Nueva Ficha'}
+          </button>
+        </div>
+
+        {fichasLoading ? (
+          <div className="text-text-secondary text-[14px]">Cargando fichas...</div>
+        ) : fichas.length === 0 ? (
+          <div className="text-center py-10 bg-bg-secondary rounded-xl border-[0.5px] border-dashed border-border">
+            <p className="text-[15px] font-medium text-text-primary mb-1">Sin fichas todavía</p>
+            <p className="text-[13px] text-text-secondary">Hacé clic en &quot;Nueva Ficha&quot; para crear la primera.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {fichas.map(f => (
+              <div key={f.id} className="flex items-center justify-between bg-bg-primary border-[0.5px] border-border rounded-xl px-5 py-4 hover:bg-bg-secondary transition-colors group">
+                <Link href={`/dashboard/pacientes/${patient.id}/fichas/${f.id}`} className="flex-grow no-underline">
+                  <div className="flex items-center gap-4">
+                    <div>
+                      <div className="text-[14px] font-medium text-text-primary">
+                        {f.fecha ? new Date(f.fecha + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' }) : 'Sin fecha'}
+                      </div>
+                      {f.ficha_data?.motivoConsulta && (
+                        <div className="text-[12px] text-text-secondary mt-0.5 truncate max-w-[400px]">
+                          {f.ficha_data.motivoConsulta}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </Link>
+                <div className="flex items-center gap-3">
+                  <Link
+                    href={`/dashboard/pacientes/${patient.id}/fichas/${f.id}`}
+                    className="text-accent text-[13px] font-medium opacity-0 group-hover:opacity-100 transition-opacity no-underline"
+                  >
+                    Abrir →
+                  </Link>
+                  <button
+                    onClick={() => handleDeleteFicha(f.id)}
+                    className="text-text-secondary hover:text-warning text-[12px] opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
