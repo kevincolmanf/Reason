@@ -21,7 +21,8 @@ interface Plan {
   start_date: string | null
 }
 
-export default function PacienteDetail({ patient: initialPatient, userId }: { patient: Patient, userId: string }) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export default function PacienteDetail({ patient: initialPatient, userId: _userId }: { patient: Patient, userId: string }) {
   const [patient, setPatient] = useState<Patient>(initialPatient)
   const [plans, setPlans] = useState<Plan[]>([])
   const [plansLoading, setPlansLoading] = useState(true)
