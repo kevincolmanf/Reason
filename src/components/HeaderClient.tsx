@@ -48,12 +48,19 @@ export default function HeaderClient({ userMetadata }: { userMetadata: any }) {
           >
             Mi cuenta
           </Link>
-          <Link 
-            href="/account/subscription" 
+          <Link
+            href="/account/subscription"
             onClick={closeMenu}
             className="block px-4 py-2 text-[14px] text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline"
           >
             Gestionar suscripción
+          </Link>
+          <Link
+            href="/account/ayuda"
+            onClick={closeMenu}
+            className="block px-4 py-2 text-[14px] text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline"
+          >
+            Ayuda
           </Link>
           <form action="/auth/signout" method="post" className="mt-2 border-t-[0.5px] border-border pt-2">
             <button 
