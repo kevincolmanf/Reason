@@ -1,0 +1,25 @@
+<svg viewBox="0 0 1090 1090" xmlns="http://www.w3.org/2000/svg" role="img" style="width: 100%; margin: auto;">
+  <title style="fill:rgb(0, 0, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto">Post 5 — La zona de evaluación v3</title>
+
+  <defs>
+    <clipPath id="frame">
+      <rect width="1080" height="1080"/>
+    </clipPath>
+  </defs>
+
+  <rect width="1080" height="1080" fill="#0A0A0A" style="fill:rgb(10, 10, 10);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <g clip-path="url(#frame)" style="fill:rgb(0, 0, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto">
+    <text x="80" y="480" font-family="'Geist', 'Inter', sans-serif" font-size="168" font-weight="700" fill="#FFFFFF" letter-spacing="-5" style="fill:rgb(255, 255, 255);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:Geist, Inter, sans-serif;font-size:168px;font-weight:700;text-anchor:start;dominant-baseline:auto">evaluación.</text>
+  </g>
+
+  <!-- Línea terracota -->
+  <rect x="80" y="545" width="48" height="3" fill="#C25A2C" style="fill:rgb(194, 90, 44);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- Copy -->
+  <text x="80" y="645" font-family="'Geist', 'Inter', sans-serif" font-size="46" font-weight="400" fill="#888888" style="fill:rgb(136, 136, 136);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:Geist, Inter, sans-serif;font-size:46px;font-weight:400;text-anchor:start;dominant-baseline:auto">Mil preguntas en un momento.</text>
+
+  <text x="80" y="780" font-family="'Geist', 'Inter', sans-serif" font-size="46" font-weight="700" fill="#FFFFFF" style="fill:rgb(255, 255, 255);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:Geist, Inter, sans-serif;font-size:46px;font-weight:700;text-anchor:start;dominant-baseline:auto">Reason te ayuda a pensarlas antes</text>
+  <text x="80" y="840" font-family="'Geist', 'Inter', sans-serif" font-size="46" font-weight="700" fill="#FFFFFF" style="fill:rgb(255, 255, 255);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:Geist, Inter, sans-serif;font-size:46px;font-weight:700;text-anchor:start;dominant-baseline:auto">y a registrarlas</text>
+  <text x="80" y="900" font-family="'Geist', 'Inter', sans-serif" font-size="46" font-weight="700" fill="#C25A2C" style="fill:rgb(194, 90, 44);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:Geist, Inter, sans-serif;font-size:46px;font-weight:700;text-anchor:start;dominant-baseline:auto">mientras suceden.</text>
+</svg>

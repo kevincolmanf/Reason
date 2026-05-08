@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Reason — Línea de tiempo: cicatrización tisular</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Geist', sans-serif;
+    background: #FFFFFF;
+    color: #1A1A1A;
+    padding: 40px 20px;
+    line-height: 1.5;
+  }
+  .container {
+    max-width: 720px;
+    margin: 0 auto;
+  }
+  .label {
+    font-size: 11px;
+    font-weight: 500;
+    color: #5C5B57;
+    margin-bottom: 4px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .sublabel {
+    font-size: 13px;
+    color: #A6A49C;
+    margin-bottom: 24px;
+  }
+  .visualization {
+    background: #F8F7F4;
+    border-radius: 12px;
+    padding: 32px;
+  }
+  .viz-title {
+    font-size: 18px;
+    font-weight: 500;
+    color: #1A1A1A;
+    margin-bottom: 32px;
+    letter-spacing: -0.01em;
+  }
+
+  .timeline {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0;
+    position: relative;
+  }
+
+  .phase {
+    padding: 0 16px;
+    position: relative;
+  }
+  .phase + .phase::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 24px;
+    bottom: 0;
+    width: 1.5px;
+    background: #C4C2BA;
+  }
+
+  .phase-time {
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    color: #A6A49C;
+    margin-bottom: 4px;
+    letter-spacing: 0.01em;
+  }
+  .phase-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: #1A1A1A;
+    margin-bottom: 20px;
+  }
+
+  .block {
+    background: #FFFFFF;
+    border: 0.5px solid #E5E3DD;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  .block-label {
+    font-size: 11px;
+    font-weight: 400;
+    color: #5C5B57;
+    margin-bottom: 8px;
+    letter-spacing: 0.01em;
+  }
+  .block-content {
+    font-size: 12px;
+    color: #1A1A1A;
+    line-height: 1.55;
+  }
+  .block-content ul {
+    list-style: none;
+    padding: 0;
+  }
+  .block-content li {
+    margin-bottom: 4px;
+    padding-left: 12px;
+    position: relative;
+  }
+  .block-content li::before {
+    content: "·";
+    position: absolute;
+    left: 0;
+    color: #5C5B57;
+  }
+  .block-content li:last-child {
+    margin-bottom: 0;
+  }
+
+  .block.action {
+    background: rgba(194, 90, 44, 0.06);
+    border-color: rgba(194, 90, 44, 0.25);
+  }
+
+  .timeline-axis {
+    margin-top: 24px;
+    height: 1px;
+    background: linear-gradient(to right, #C4C2BA, #C4C2BA);
+    position: relative;
+  }
+  .axis-marker {
+    position: absolute;
+    top: -3px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #1A1A1A;
+  }
+  .axis-marker.start { left: 0; }
+  .axis-marker.t1 { left: 33.33%; transform: translateX(-50%); }
+  .axis-marker.t2 { left: 66.66%; transform: translateX(-50%); }
+  .axis-marker.end { right: 0; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="label">Aplicación práctica</div>
+  <div class="sublabel">Línea de tiempo / fases</div>
+
+  <div class="visualization">
+    <h1 class="viz-title">Cicatrización tisular: tres fases, tres decisiones</h1>
+
+    <div class="timeline">
+
+      <div class="phase">
+        <div class="phase-time">DÍAS 0–5</div>
+        <div class="phase-name">Inflamatoria</div>
+
+        <div class="block">
+          <div class="block-label">Qué pasa en el tejido</div>
+          <div class="block-content">
+            <ul>
+              <li>Hemostasia inicial</li>
+              <li>Llegada de células inmunes</li>
+              <li>Limpieza de restos celulares</li>
+              <li>Edema, calor, dolor</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="block action">
+          <div class="block-label">Qué hacer en consultorio</div>
+          <div class="block-content">
+            <ul>
+              <li>Educar: la inflamación es necesaria</li>
+              <li>Movilidad temprana tolerable</li>
+              <li>Evitar inmovilización absoluta</li>
+              <li>Carga mínima sin agravar síntomas</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="phase">
+        <div class="phase-time">DÍAS 5–21</div>
+        <div class="phase-name">Proliferativa</div>
+
+        <div class="block">
+          <div class="block-label">Qué pasa en el tejido</div>
+          <div class="block-content">
+            <ul>
+              <li>Síntesis de colágeno tipo III</li>
+              <li>Angiogénesis</li>
+              <li>Formación de tejido de granulación</li>
+              <li>Cicatriz inicial débil</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="block action">
+          <div class="block-label">Qué hacer en consultorio</div>
+          <div class="block-content">
+            <ul>
+              <li>Carga progresiva por respuesta</li>
+              <li>Movilidad activa en rango disponible</li>
+              <li>Trabajo de fuerza submáximo</li>
+              <li>Volver a actividades cotidianas</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="phase">
+        <div class="phase-time">3 SEM – 1 AÑO</div>
+        <div class="phase-name">Remodelación</div>
+
+        <div class="block">
+          <div class="block-label">Qué pasa en el tejido</div>
+          <div class="block-content">
+            <ul>
+              <li>Reemplazo por colágeno tipo I</li>
+              <li>Reorientación según líneas de carga</li>
+              <li>Aumento progresivo de resistencia</li>
+              <li>Adaptación funcional</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="block action">
+          <div class="block-label">Qué hacer en consultorio</div>
+          <div class="block-content">
+            <ul>
+              <li>Carga específica al deporte o tarea</li>
+              <li>Trabajo de fuerza máxima</li>
+              <li>Velocidad y reactividad</li>
+              <li>Vuelta a la actividad plena</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="timeline-axis">
+      <div class="axis-marker start"></div>
+      <div class="axis-marker t1"></div>
+      <div class="axis-marker t2"></div>
+      <div class="axis-marker end"></div>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>

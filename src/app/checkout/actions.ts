@@ -18,14 +18,6 @@ export async function createSubscriptionPreference(planType: 'monthly' | 'annual
   })
   const preApproval = new PreApproval(client)
 
-  const planId = planType === 'annual' 
-    ? process.env.MP_PLAN_ANNUAL_ID 
-    : process.env.MP_PLAN_MONTHLY_ID
-
-  if (!planId) {
-    throw new Error('Falta configurar los IDs de los planes en el entorno')
-  }
-
   let initPoint = ''
 
   try {
@@ -34,7 +26,7 @@ export async function createSubscriptionPreference(planType: 'monthly' | 'annual
         reason: planType === 'annual' ? "Suscripción Anual Reason" : "Suscripción Mensual Reason",
         external_reference: user.id,
         payer_email: user.email || '',
-        back_url: "https://www.mercadopago.com.ar",
+        back_url: "https://www.reason.com.ar/dashboard",
         auto_recurring: {
           frequency: planType === 'annual' ? 12 : 1,
           frequency_type: "months",

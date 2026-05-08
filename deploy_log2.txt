@@ -1,0 +1,38 @@
+Retrieving project…
+Deploying kevincolmanf-3811s-projects/reason
+Uploading [--------------------] (0.0B/33.4KB)
+Uploading [=============-------] (22.5KB/33.4KB)
+Uploading [====================] (33.4KB/33.4KB)
+Inspect: https://vercel.com/kevincolmanf-3811s-projects/reason/5r1KSVNfJ3ttwL3dAhMsZrN9niuu [4s]
+Production: https://reason-c4dmbmewb-kevincolmanf-3811s-projects.vercel.app [4s]
+Building...
+Building...
+Building: Running build in Washington, D.C., USA (East) – iad1
+Building: Build machine configuration: 2 cores, 8 GB
+Building: Retrieving list of deployment files...
+Building: Downloading 69 deployment files...
+Building: Restored build cache from previous deployment (BvUuXimbZ3NZgG21EZAQj72YMR5Y)
+Building: Running "vercel build"
+Building: Vercel CLI 51.6.1
+Building: Installing dependencies...
+Building: up to date in 1s
+Building: 152 packages are looking for funding
+Building: run `npm fund` for details
+Building: Detected Next.js version: 14.2.35
+Building: Running "npm run build"
+Building: > reason-app@0.1.0 build
+Building: > next build
+Building: ▲ Next.js 14.2.35
+Building: Creating an optimized production build ...
+{
+  "status": "error",
+  "reason": "deploy_failed",
+  "message": "Command \"npm run build\" exited with 1",
+  "next": [
+    {
+      "command": "vercel deploy",
+      "when": "retry deploy"
+    }
+  ]
+}
+Error: Command "npm run build" exited with 1
