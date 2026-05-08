@@ -47,6 +47,7 @@ interface ExercisePlan {
   start_date: string | null
   plan_data: PlanData
   share_token: string | null
+  patient_id: string | null
 }
 
 interface ActivityLog {
@@ -87,6 +88,9 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
   const [searchCategory, setSearchCategory] = useState('')
   const [isSearching, setIsSearching] = useState(false)
 
+  // Patients state
+  const [patients, setPatients] = useState<{id: string, name: string}[]>([])
+
   // Logs state
   const [logs, setLogs] = useState<ActivityLog[]>([])
   const [logsLoading, setLogsLoading] = useState(false)
@@ -94,6 +98,15 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
   
   const supabase = createClient()
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Cargar pacientes del usuario
+  useEffect(() => {
+    const fetchPatients = async () => {
+      const { data } = await supabase.from('patients').select('id, name').order('name')
+      if (data) setPatients(data)
+    }
+    fetchPatients()
+  }, [supabase])
 
   // Autoguardado
   useEffect(() => {
@@ -107,7 +120,8 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
           name: plan.name,
           notes: plan.notes,
           start_date: plan.start_date,
-          plan_data: plan.plan_data
+          plan_data: plan.plan_data,
+          patient_id: plan.patient_id
         })
         .eq('id', plan.id)
         
@@ -405,13 +419,26 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
             </div>
             <div className="flex-grow">
               <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Observaciones Generales</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={plan.notes || ''}
                 onChange={(e) => updatePlanInfo('notes', e.target.value)}
                 placeholder="Ej: Evitar impacto en semana 1..."
                 className="w-full bg-bg-secondary border-[0.5px] border-border rounded-lg p-2 text-[13px] focus:outline-none focus:border-accent"
               />
+            </div>
+            <div className="w-full sm:w-[200px]">
+              <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Paciente</label>
+              <select
+                value={plan.patient_id || ''}
+                onChange={e => setPlan(prev => ({ ...prev, patient_id: e.target.value || null }))}
+                className="w-full bg-bg-secondary border-[0.5px] border-border rounded-lg p-2 text-[13px] focus:outline-none focus:border-accent appearance-none"
+              >
+                <option value="">Sin paciente</option>
+                {patients.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
             </div>
           </div>
         </div>
