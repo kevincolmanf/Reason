@@ -60,18 +60,31 @@ interface ActivityLog {
   logged_at: string
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export default function PlanEditor({ initialPlan, userId: _userId }: { initialPlan: ExercisePlan, userId: string }) {
+const CATEGORIES = [
+  { value: 'lower_body', label: 'Lower Body' },
+  { value: 'upper_body', label: 'Upper Body' },
+  { value: 'trunk_core', label: 'Trunk & Core' },
+  { value: 'jump', label: 'Jump' },
+  { value: 'speed', label: 'Speed' },
+  { value: 'mobility_stretch', label: 'Mobility & Stretch' },
+  { value: 'conditioning', label: 'Conditioning' },
+  { value: 'testing', label: 'Testing' },
+  { value: 'adjuntos', label: 'Adjuntos (Build)' },
+  { value: 'mis_ejercicios', label: 'Mis Ejercicios' },
+]
+
+export default function PlanEditor({ initialPlan, userId }: { initialPlan: ExercisePlan, userId: string }) {
   const [plan, setPlan] = useState<ExercisePlan>(initialPlan)
   const [activeSession, setActiveSession] = useState<number | 'logs'>(0)
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved')
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [targetBlock, setTargetBlock] = useState<{sessionIdx: number, blockIdx: number} | null>(null)
-  
+
   // Search state
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [searchQuery, setSearchQuery] = useState('')
+  const [searchCategory, setSearchCategory] = useState('')
   const [isSearching, setIsSearching] = useState(false)
 
   // Logs state
@@ -116,20 +129,26 @@ export default function PlanEditor({ initialPlan, userId: _userId }: { initialPl
     const searchExercises = async () => {
       if (!isSearchOpen) return
       setIsSearching(true)
-      
-      let query = supabase.from('exercises').select('id, name, category, equipment, youtube_url').limit(30)
-      if (searchQuery) {
-        query = query.ilike('name', `%${searchQuery}%`)
+
+      if (searchCategory === 'mis_ejercicios') {
+        let query = supabase.from('user_exercises').select('id, name, youtube_url').eq('user_id', userId).limit(50)
+        if (searchQuery) query = query.ilike('name', `%${searchQuery}%`)
+        const { data } = await query
+        if (data) setSearchResults(data.map(e => ({ ...e, category: 'mis_ejercicios', equipment: null })))
+      } else {
+        let query = supabase.from('exercises').select('id, name, category, equipment, youtube_url').limit(30)
+        if (searchQuery) query = query.ilike('name', `%${searchQuery}%`)
+        if (searchCategory) query = query.eq('category', searchCategory)
+        const { data } = await query
+        if (data) setSearchResults(data)
       }
-      
-      const { data } = await query
-      if (data) setSearchResults(data)
+
       setIsSearching(false)
     }
-    
+
     const debounce = setTimeout(searchExercises, 300)
     return () => clearTimeout(debounce)
-  }, [searchQuery, isSearchOpen, supabase])
+  }, [searchQuery, searchCategory, isSearchOpen, supabase, userId])
 
   // Cargar logs
   useEffect(() => {
@@ -181,6 +200,7 @@ export default function PlanEditor({ initialPlan, userId: _userId }: { initialPl
     setTargetBlock({ sessionIdx: sIdx, blockIdx: bIdx })
     setIsSearchOpen(true)
     setSearchQuery('')
+    setSearchCategory('')
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -682,10 +702,11 @@ export default function PlanEditor({ initialPlan, userId: _userId }: { initialPl
 
       {/* MODAL BUSCADOR DE EJERCICIOS */}
       {isSearchOpen && (
-        <div className="fixed inset-0 bg-bg-primary/90 backdrop-blur-sm z-50 flex items-start justify-center p-4 sm:p-8 pt-24" onClick={() => setIsSearchOpen(false)}>
-          <div className="bg-bg-primary border-[0.5px] border-border rounded-xl overflow-hidden w-full max-w-[600px] shadow-2xl flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-bg-primary/90 backdrop-blur-sm z-50 flex items-start justify-center p-4 sm:p-8 pt-16" onClick={() => setIsSearchOpen(false)}>
+          <div className="bg-bg-primary border-[0.5px] border-border rounded-xl overflow-hidden w-full max-w-[640px] shadow-2xl flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
+            {/* Header: buscador */}
             <div className="p-4 border-b-[0.5px] border-border flex gap-4 items-center bg-bg-secondary">
-              <input 
+              <input
                 type="text"
                 autoFocus
                 value={searchQuery}
@@ -693,26 +714,53 @@ export default function PlanEditor({ initialPlan, userId: _userId }: { initialPl
                 placeholder="Buscar ejercicio para agregar..."
                 className="flex-grow bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent"
               />
-              <button onClick={() => setIsSearchOpen(false)} className="text-text-secondary hover:text-text-primary p-2">
+              <button onClick={() => setIsSearchOpen(false)} className="text-text-secondary hover:text-text-primary p-2 text-[13px] whitespace-nowrap">
                 Cerrar
               </button>
             </div>
-            
+
+            {/* Filtro de categorías */}
+            <div className="px-4 py-3 border-b-[0.5px] border-border bg-bg-secondary flex gap-2 overflow-x-auto hide-scrollbar">
+              <button
+                onClick={() => setSearchCategory('')}
+                className={`whitespace-nowrap px-3 py-1.5 rounded-full text-[11px] font-medium transition-colors border-[0.5px] ${searchCategory === '' ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-primary border-border text-text-secondary hover:text-text-primary'}`}
+              >
+                Todas
+              </button>
+              {CATEGORIES.map(c => (
+                <button
+                  key={c.value}
+                  onClick={() => setSearchCategory(c.value)}
+                  className={`whitespace-nowrap px-3 py-1.5 rounded-full text-[11px] font-medium transition-colors border-[0.5px] ${searchCategory === c.value ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-primary border-border text-text-secondary hover:text-text-primary'}`}
+                >
+                  {c.label}
+                </button>
+              ))}
+            </div>
+
             <div className="overflow-y-auto flex-grow p-4 space-y-2">
               {isSearching ? (
                 <div className="text-center py-8 text-text-secondary text-[13px]">Buscando...</div>
               ) : searchResults.length === 0 ? (
-                <div className="text-center py-8 text-text-secondary text-[13px]">No hay resultados. Buscá por nombre.</div>
+                <div className="text-center py-8 text-text-secondary text-[13px]">
+                  {searchCategory === 'mis_ejercicios'
+                    ? 'No tenés ejercicios propios aún. Podés agregarlos desde la Biblioteca.'
+                    : 'No hay resultados. Buscá por nombre o cambiá la categoría.'}
+                </div>
               ) : (
                 searchResults.map(ex => (
-                  <button 
+                  <button
                     key={ex.id}
                     onClick={() => addExerciseToBlock(ex)}
                     className="w-full text-left bg-bg-secondary border-[0.5px] border-border rounded-lg p-4 hover:border-accent transition-colors flex justify-between items-center group"
                   >
                     <div>
                       <div className="text-[14px] font-medium text-text-primary">{ex.name}</div>
-                      <div className="text-[11px] text-text-secondary mt-1">{ex.category.replace('_', ' ').toUpperCase()} • {ex.equipment || 'Sin equipo'}</div>
+                      <div className="text-[11px] text-text-secondary mt-1">
+                        {ex.category === 'mis_ejercicios'
+                          ? 'MIS EJERCICIOS'
+                          : `${ex.category.replace(/_/g, ' ').toUpperCase()} • ${ex.equipment || 'Sin equipo'}`}
+                      </div>
                     </div>
                     <div className="text-accent text-[20px] opacity-0 group-hover:opacity-100 transition-opacity">
                       +

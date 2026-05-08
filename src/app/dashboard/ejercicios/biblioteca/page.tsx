@@ -44,7 +44,7 @@ export default async function BibliotecaPage() {
           </div>
         </div>
 
-        <BibliotecaInteractive equipments={uniqueEquipment as string[]} />
+        <BibliotecaInteractive equipments={uniqueEquipment as string[]} userId={user.id} />
       </main>
     </div>
   )
