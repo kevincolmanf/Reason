@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { jsPDF } from 'jspdf'
+import SaveToPatient from '@/components/SaveToPatient'
 
 const NDI_SECTIONS = [
   { id: 1, title: 'Intensidad del dolor', text: 'Sección 1: Intensidad del dolor' },
@@ -209,6 +210,14 @@ export default function NdiInteractive({ userId }: { userId: string }) {
                 Limpiar
               </button>
             </div>
+
+            <SaveToPatient
+              questionnaireType="ndi"
+              questionnaireName="NDI"
+              score={scoreData.total}
+              interpretation={getInterpretation(scoreData.total)}
+              resultData={{ score: scoreData.total, percentage: scoreData.percentage }}
+            />
           </div>
         )}
       </div>

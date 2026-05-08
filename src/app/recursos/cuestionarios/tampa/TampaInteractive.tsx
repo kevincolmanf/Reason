@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { jsPDF } from 'jspdf'
+import SaveToPatient from '@/components/SaveToPatient'
 
 const TAMPA_ITEMS = [
   { id: 1, text: 'Tengo miedo de lesionarme si hago ejercicio.', inverted: false },
@@ -240,9 +241,17 @@ export default function TampaInteractive({ userId }: { userId: string }) {
                 Nueva Sesión
               </button>
             </div>
+
+            <SaveToPatient
+              questionnaireType="tampa"
+              questionnaireName="Tampa (TSK)"
+              score={score}
+              interpretation={getInterpretation(score)}
+              resultData={{ score }}
+            />
           </div>
         )}
-        
+
         {!isComplete && (
           <div className="mt-8 text-[13px] text-text-secondary text-center py-4 bg-bg-secondary rounded-lg">
             Faltan responder {TAMPA_ITEMS.length - Object.keys(answers).length} ítems para ver el resultado.

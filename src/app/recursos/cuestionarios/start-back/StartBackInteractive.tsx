@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { jsPDF } from 'jspdf'
+import SaveToPatient from '@/components/SaveToPatient'
 
 const START_ITEMS_1_TO_8 = [
   { id: 1, text: 'Mi dolor de espalda se ha propagado por la pierna(s) en algún momento de las últimas 2 semanas.' },
@@ -263,6 +264,14 @@ export default function StartBackInteractive({ userId }: { userId: string }) {
                 Nueva Sesión
               </button>
             </div>
+
+            <SaveToPatient
+              questionnaireType="start_back"
+              questionnaireName="Start Back"
+              score={scoreData.total < 4 ? 0 : scoreData.psicosocial <= 3 ? 1 : 2}
+              interpretation={getInterpretation(scoreData.total, scoreData.psicosocial)}
+              resultData={{ total: scoreData.total, psicosocial: scoreData.psicosocial }}
+            />
           </div>
         )}
       </div>

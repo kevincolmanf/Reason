@@ -28,12 +28,38 @@ interface Ficha {
   ficha_data: { motivoConsulta?: string }
 }
 
+interface QuestionnaireResult {
+  id: string
+  questionnaire_type: string
+  score: number | null
+  interpretation: string | null
+  created_at: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  result_data: any
+}
+
+const QUESTIONNAIRE_NAMES: Record<string, { label: string; unit: string }> = {
+  spadi: { label: 'SPADI', unit: '/ 100' },
+  ndi: { label: 'NDI', unit: '/ 50' },
+  roland_morris: { label: 'Roland Morris', unit: '/ 24' },
+  start_back: { label: 'Start Back', unit: '(riesgo)' },
+  tampa: { label: 'Tampa (TSK)', unit: '/ 68' },
+  catastrofismo: { label: 'Catastrofismo (PCS)', unit: '/ 52' },
+  oswestry: { label: 'Oswestry (ODI)', unit: '%' },
+  dash: { label: 'DASH', unit: '/ 100' },
+  lefs: { label: 'LEFS', unit: '/ 80' },
+  psfs: { label: 'PSFS', unit: '/ 10' },
+  fabq: { label: 'FABQ', unit: '(PA / Trabajo)' },
+}
+
 export default function PacienteDetail({ patient: initialPatient, userId: _userId }: { patient: Patient, userId: string }) {
   const [patient, setPatient] = useState<Patient>(initialPatient)
   const [plans, setPlans] = useState<Plan[]>([])
   const [plansLoading, setPlansLoading] = useState(true)
   const [fichas, setFichas] = useState<Ficha[]>([])
   const [fichasLoading, setFichasLoading] = useState(true)
+  const [questionnaireResults, setQuestionnaireResults] = useState<QuestionnaireResult[]>([])
+  const [qResultsLoading, setQResultsLoading] = useState(true)
   const [creatingFicha, setCreatingFicha] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editForm, setEditForm] = useState({ name: initialPatient.name, age: initialPatient.age?.toString() || '', occupation: initialPatient.occupation || '' })
@@ -66,10 +92,23 @@ export default function PacienteDetail({ patient: initialPatient, userId: _userI
     setFichasLoading(false)
   }, [supabase, patient.id])
 
+  const fetchQuestionnaireResults = useCallback(async () => {
+    setQResultsLoading(true)
+    const { data, error } = await supabase
+      .from('questionnaire_results')
+      .select('id, questionnaire_type, score, interpretation, created_at, result_data')
+      .eq('patient_id', patient.id)
+      .order('created_at', { ascending: false })
+
+    if (!error && data) setQuestionnaireResults(data)
+    setQResultsLoading(false)
+  }, [supabase, patient.id])
+
   useEffect(() => {
     fetchPlans()
     fetchFichas()
-  }, [fetchPlans, fetchFichas])
+    fetchQuestionnaireResults()
+  }, [fetchPlans, fetchFichas, fetchQuestionnaireResults])
 
   const handleNewFicha = async () => {
     setCreatingFicha(true)
@@ -122,6 +161,22 @@ export default function PacienteDetail({ patient: initialPatient, userId: _userI
     if (!confirm(`¿Eliminar a ${patient.name}? Los planes asociados quedarán sin paciente asignado.`)) return
     const { error } = await supabase.from('patients').delete().eq('id', patient.id)
     if (!error) router.push('/dashboard/pacientes')
+  }
+
+  const handleDeleteResult = async (resultId: string) => {
+    if (!confirm('¿Eliminar este resultado? No se puede deshacer.')) return
+    const { error } = await supabase.from('questionnaire_results').delete().eq('id', resultId)
+    if (!error) setQuestionnaireResults(prev => prev.filter(r => r.id !== resultId))
+  }
+
+  const formatScore = (result: QuestionnaireResult): string => {
+    if (result.questionnaire_type === 'fabq') {
+      const pa = result.result_data?.pa_score ?? '?'
+      const work = result.result_data?.work_score ?? '?'
+      return `${pa} / ${work}`
+    }
+    if (result.score === null) return '—'
+    return String(result.score)
   }
 
   return (
@@ -270,6 +325,66 @@ export default function PacienteDetail({ patient: initialPatient, userId: _userI
                 </div>
               </div>
             ))}
+          </div>
+        )}
+      </div>
+
+      {/* CUESTIONARIOS */}
+      <div className="mb-12">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-[20px] font-medium">Cuestionarios</h2>
+          <Link
+            href="/recursos/cuestionarios"
+            className="text-accent text-[13px] font-medium hover:opacity-80 no-underline"
+          >
+            Ir a Cuestionarios →
+          </Link>
+        </div>
+
+        {qResultsLoading ? (
+          <div className="text-text-secondary text-[14px]">Cargando cuestionarios...</div>
+        ) : questionnaireResults.length === 0 ? (
+          <div className="text-center py-10 bg-bg-secondary rounded-xl border-[0.5px] border-dashed border-border">
+            <p className="text-[15px] font-medium text-text-primary mb-1">Sin cuestionarios todavía</p>
+            <p className="text-[13px] text-text-secondary max-w-[400px] mx-auto">
+              Completá un cuestionario desde{' '}
+              <Link href="/recursos/cuestionarios" className="text-accent hover:underline">
+                Recursos
+              </Link>{' '}
+              y guardalo en este paciente.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {questionnaireResults.map(result => {
+              const meta = QUESTIONNAIRE_NAMES[result.questionnaire_type] ?? { label: result.questionnaire_type, unit: '' }
+              return (
+                <div key={result.id} className="flex items-center justify-between bg-bg-primary border-[0.5px] border-border rounded-xl px-5 py-4 hover:bg-bg-secondary transition-colors group">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <span className="text-[14px] font-medium text-text-primary">{meta.label}</span>
+                      <span className="text-[14px] text-text-secondary">
+                        {formatScore(result)} <span className="text-[12px] opacity-70">{meta.unit}</span>
+                      </span>
+                      {result.interpretation && (
+                        <span className="text-[12px] bg-bg-secondary border-[0.5px] border-border rounded-full px-2.5 py-0.5 text-text-secondary">
+                          {result.interpretation}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[12px] text-text-secondary mt-1">
+                      {new Date(result.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleDeleteResult(result.id)}
+                    className="text-text-secondary hover:text-warning text-[12px] opacity-0 group-hover:opacity-100 transition-opacity ml-4 shrink-0"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              )
+            })}
           </div>
         )}
       </div>

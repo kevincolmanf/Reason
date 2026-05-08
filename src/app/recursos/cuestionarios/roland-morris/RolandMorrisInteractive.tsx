@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { jsPDF } from 'jspdf'
+import SaveToPatient from '@/components/SaveToPatient'
 
 const RM_ITEMS = [
   { id: 1, text: 'Me quedo en casa la mayor parte del tiempo por el dolor de espalda.' },
@@ -212,6 +213,14 @@ export default function RolandMorrisInteractive({ userId }: { userId: string }) 
               Limpiar
             </button>
           </div>
+
+          <SaveToPatient
+            questionnaireType="roland_morris"
+            questionnaireName="Roland Morris"
+            score={score}
+            interpretation={getInterpretation(score)}
+            resultData={{ score }}
+          />
         </div>
       </div>
 
