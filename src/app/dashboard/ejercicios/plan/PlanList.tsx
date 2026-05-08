@@ -11,7 +11,8 @@ interface ExercisePlan {
   updated_at: string
   share_token: string | null
   patient_id: string | null
-  patients: { name: string } | null
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  patients: any
 }
 
 const initialPlanData = {
