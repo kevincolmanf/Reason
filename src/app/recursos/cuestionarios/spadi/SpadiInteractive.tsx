@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { jsPDF } from 'jspdf'
+import SaveToPatient from '@/components/SaveToPatient'
 
 const SPADI_PAIN = [
   { id: 1, text: 'En su peor momento', desc: '0=Ningún dolor, 10=El peor dolor imaginable' },
@@ -284,6 +285,14 @@ export default function SpadiInteractive({ userId }: { userId: string }) {
                 Nueva Sesión
               </button>
             </div>
+
+            <SaveToPatient
+              questionnaireType="spadi"
+              questionnaireName="SPADI"
+              score={scoreData.total}
+              interpretation={getInterpretation(scoreData.total)}
+              resultData={{ pain: scoreData.pain, disability: scoreData.disability, score: scoreData.total }}
+            />
           </div>
         )}
       </div>

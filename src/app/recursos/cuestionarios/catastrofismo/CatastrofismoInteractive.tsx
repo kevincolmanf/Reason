@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { jsPDF } from 'jspdf'
+import SaveToPatient from '@/components/SaveToPatient'
 
 const PCS_ITEMS = [
   { id: 1, text: 'Me preocupo continuamente sobre si el dolor terminará.' },
@@ -259,9 +260,17 @@ export default function CatastrofismoInteractive({ userId }: { userId: string })
                 Nueva Sesión
               </button>
             </div>
+
+            <SaveToPatient
+              questionnaireType="catastrofismo"
+              questionnaireName="Catastrofismo (PCS)"
+              score={scoreData.total}
+              interpretation={getInterpretation(scoreData.total)}
+              resultData={{ score: scoreData.total, rumiacion: scoreData.rumiacion, magnificacion: scoreData.magnificacion, desesperanza: scoreData.desesperanza }}
+            />
           </div>
         )}
-        
+
         {!isComplete && (
           <div className="mt-8 text-[13px] text-text-secondary text-center py-4 bg-bg-secondary rounded-lg">
             Faltan responder {PCS_ITEMS.length - Object.keys(answers).length} ítems para ver el resultado.
