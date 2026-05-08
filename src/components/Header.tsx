@@ -25,6 +25,9 @@ export default async function Header() {
           <Link href="/dashboard/ejercicios" className="text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
             Ejercicios
           </Link>
+          <Link href="/dashboard/pacientes" className="text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+            Pacientes
+          </Link>
           
           {user ? (
             <HeaderClient userMetadata={user.user_metadata} />

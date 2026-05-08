@@ -10,6 +10,8 @@ interface ExercisePlan {
   name: string
   updated_at: string
   share_token: string | null
+  patient_id: string | null
+  patients: { name: string } | null
 }
 
 const initialPlanData = {
@@ -34,7 +36,7 @@ export default function PlanList({ userId }: { userId: string }) {
     setLoading(true)
     const { data, error } = await supabase
       .from('exercise_plans')
-      .select('id, name, updated_at, share_token')
+      .select('id, name, updated_at, share_token, patient_id, patients(name)')
       .order('updated_at', { ascending: false })
 
     if (!error && data) {
@@ -154,6 +156,9 @@ export default function PlanList({ userId }: { userId: string }) {
                   )}
                 </div>
                 
+                {plan.patients && (
+                  <p className="text-[12px] text-accent mb-1">{plan.patients.name}</p>
+                )}
                 <p className="text-[12px] text-text-secondary mb-6">
                   Modificado: {new Date(plan.updated_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}
                 </p>
