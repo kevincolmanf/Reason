@@ -168,10 +168,33 @@ export default function NdiInteractive({ userId }: { userId: string }) {
               <span className="text-[40px] font-medium tracking-[-0.02em]">{scoreData.total}</span>
               <span className="text-[16px] text-text-secondary">/ 50 ({scoreData.percentage}%)</span>
             </div>
-            <div className="text-[18px] font-medium text-accent mb-6">
+            <div className="text-[18px] font-medium text-accent mb-3">
               {getInterpretation(scoreData.total)}
             </div>
-            
+
+            {/* Interpretación clínica */}
+            <div className="mb-6 space-y-3">
+              <div>
+                <div className="flex justify-between text-[10px] text-text-secondary mb-1">
+                  <span>0</span><span>10</span><span>20</span><span>30</span><span>40</span><span>50</span>
+                </div>
+                <div className="relative w-full h-2 rounded-full overflow-hidden bg-bg-primary">
+                  <div className="absolute inset-0" style={{ background: 'linear-gradient(to right, #34d399, #facc15, #f97316, #ef4444)' }} />
+                  <div className="absolute top-0 h-full w-0.5 bg-white shadow" style={{ left: `${(scoreData.total / 50) * 100}%` }} />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="bg-bg-primary rounded-lg p-3 border-[0.5px] border-border">
+                  <div className="text-[10px] uppercase tracking-[0.05em] text-text-secondary mb-1">MCID</div>
+                  <div className="text-[13px] font-medium">≥ 5 puntos (10%) de cambio</div>
+                </div>
+                <div className="bg-bg-primary rounded-lg p-3 border-[0.5px] border-border">
+                  <div className="text-[10px] uppercase tracking-[0.05em] text-text-secondary mb-1">Implicancia clínica</div>
+                  <div className="text-[12px] text-text-secondary leading-[1.5]">Puntajes en rango moderado-severo suelen requerir abordaje multimodal. El NDI es sensible al cambio con tratamiento.</div>
+                </div>
+              </div>
+            </div>
+
             <div className="flex flex-wrap gap-4">
               <button onClick={handleSaveResult} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium">
                 Registrar Uso

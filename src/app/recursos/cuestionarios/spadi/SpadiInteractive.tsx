@@ -232,8 +232,31 @@ export default function SpadiInteractive({ userId }: { userId: string }) {
             <div className="flex items-baseline gap-3 mb-2">
               <span className="text-[40px] font-medium tracking-[-0.02em]">{scoreData.total}%</span>
             </div>
-            <div className="text-[18px] font-medium text-accent mb-6">
+            <div className="text-[18px] font-medium text-accent mb-3">
               {getInterpretation(scoreData.total)}
+            </div>
+
+            {/* Interpretación clínica */}
+            <div className="mb-6 space-y-3">
+              <div>
+                <div className="flex justify-between text-[10px] text-text-secondary mb-1">
+                  <span>0%</span><span>20%</span><span>40%</span><span>60%</span><span>80%</span><span>100%</span>
+                </div>
+                <div className="relative w-full h-2 rounded-full overflow-hidden bg-bg-primary">
+                  <div className="absolute inset-0" style={{ background: 'linear-gradient(to right, #34d399, #facc15, #f97316, #ef4444)' }} />
+                  <div className="absolute top-0 h-full w-0.5 bg-white shadow" style={{ left: `${scoreData.total}%` }} />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="bg-bg-primary rounded-lg p-3 border-[0.5px] border-border">
+                  <div className="text-[10px] uppercase tracking-[0.05em] text-text-secondary mb-1">MCID</div>
+                  <div className="text-[13px] font-medium">≥ 13 puntos de cambio</div>
+                </div>
+                <div className="bg-bg-primary rounded-lg p-3 border-[0.5px] border-border">
+                  <div className="text-[10px] uppercase tracking-[0.05em] text-text-secondary mb-1">Implicancia clínica</div>
+                  <div className="text-[12px] text-text-secondary leading-[1.5]">Scores &gt; 50% indican limitación funcional significativa. La subescala de discapacidad correlaciona mejor con los resultados funcionales.</div>
+                </div>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4 mb-8 pt-6 border-t-[0.5px] border-border">
