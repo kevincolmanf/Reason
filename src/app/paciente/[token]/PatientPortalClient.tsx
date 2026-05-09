@@ -90,7 +90,7 @@ function formatShortDate(dateStr: string): string {
   return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' })
 }
 
-export default function PatientPortalClient({ patient, token, plans, recentSessions }: Props) {
+export default function PatientPortalClient({ patient: _patient, token, plans, recentSessions }: Props) {
   const [activePlanIdx, setActivePlanIdx] = useState(0)
 
   // Form state
