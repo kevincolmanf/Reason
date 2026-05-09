@@ -2,6 +2,8 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import PatientPortalClient from './PatientPortalClient'
 import { notFound } from 'next/navigation'
 
+export const dynamic = 'force-dynamic'
+
 export const metadata = {
   title: 'Portal del Paciente | Reason',
 }
@@ -21,12 +23,14 @@ export default async function PatientPortalPage({ params }: { params: { token: s
   }
 
   // Últimos 3 planes de ejercicio del paciente
-  const { data: plans } = await supabase
+  const { data: plans, error: plansError } = await supabase
     .from('exercise_plans')
     .select('id, name, plan_data, start_date, notes')
     .eq('patient_id', patient.id)
     .order('updated_at', { ascending: false })
     .limit(3)
+
+  if (plansError) console.error('[PatientPortal] plans error:', plansError.message)
 
   // Últimas 30 sesiones de carga del paciente
   const { data: recentSessions } = await supabase
