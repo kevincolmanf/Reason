@@ -423,51 +423,6 @@ export default function PacienteDetail({ patient: initialPatient, userId: _userI
         )}
       </div>
 
-      {/* PORTAL DEL PACIENTE */}
-      <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 mb-8">
-        <div className="flex justify-between items-center mb-3">
-          <h2 className="text-[16px] font-medium">Portal del Paciente</h2>
-        </div>
-        {patient.load_share_token ? (
-          <div>
-            <p className="text-[13px] text-text-secondary mb-3">
-              Compartí este link con {patient.name} para que vea sus ejercicios y registre sus sesiones de entrenamiento.
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(`${window.location.origin}/paciente/${patient.load_share_token}`)
-                  alert('Link copiado')
-                }}
-                className="bg-[#24342A] border-[0.5px] border-[#34D399]/50 text-[#34D399] px-4 py-2 rounded-lg text-[13px] font-medium flex-grow truncate"
-              >
-                Enviar link al paciente
-              </button>
-              <button
-                onClick={revokePortalToken}
-                className="bg-bg-secondary border-[0.5px] border-border px-3 py-2 rounded-lg text-[13px] text-text-secondary hover:text-warning"
-                title="Revocar"
-              >
-                X
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div>
-            <p className="text-[13px] text-text-secondary mb-3">
-              Generá un link único para que {patient.name} pueda ver sus ejercicios y registrar sus sesiones desde el celular.
-            </p>
-            <button
-              onClick={generatePortalToken}
-              disabled={generatingToken}
-              className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40"
-            >
-              {generatingToken ? 'Generando...' : 'Generar link para el paciente'}
-            </button>
-          </div>
-        )}
-      </div>
-
       {/* FICHAS KINÉSICAS */}
       <div className="mb-12">
         <div className="flex justify-between items-center mb-4">
@@ -586,72 +541,6 @@ export default function PacienteDetail({ patient: initialPatient, userId: _userI
         )}
       </div>
 
-      {/* RETORNO AL DEPORTE (RTS) */}
-      <div className="mb-12">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-[20px] font-medium">Retorno al Deporte — RTS</h2>
-          <Link
-            href={`/dashboard/pacientes/${patient.id}/rts`}
-            className="text-accent text-[13px] font-medium hover:opacity-80 no-underline"
-          >
-            Nueva Evaluación RTS →
-          </Link>
-        </div>
-
-        {rtsLoading ? (
-          <div className="text-text-secondary text-[14px]">Cargando evaluaciones...</div>
-        ) : rtsEvals.length === 0 ? (
-          <div className="text-center py-10 bg-bg-secondary rounded-xl border-[0.5px] border-dashed border-border">
-            <p className="text-[15px] font-medium text-text-primary mb-1">Sin evaluaciones RTS todavía</p>
-            <p className="text-[13px] text-text-secondary max-w-[420px] mx-auto">
-              El protocolo RTS evalúa fuerza muscular, hop tests, saltos verticales y cuestionarios validados (ACL-RSI, KOOS-Sport) para determinar si el paciente está listo para retornar al deporte.
-            </p>
-            <Link
-              href={`/dashboard/pacientes/${patient.id}/rts`}
-              className="inline-block mt-4 text-accent text-[13px] font-medium hover:opacity-80 no-underline"
-            >
-              Iniciar primera evaluación →
-            </Link>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {rtsEvals.map(ev => {
-              const { passed, total } = computeRtsCriteriaSummary(ev)
-              const allPassed = total > 0 && passed === total
-              return (
-                <Link
-                  key={ev.id}
-                  href={`/dashboard/pacientes/${patient.id}/rts`}
-                  className="flex items-center justify-between bg-bg-primary border-[0.5px] border-border rounded-xl px-5 py-4 hover:bg-bg-secondary transition-colors group no-underline"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <span className="text-[14px] font-medium text-text-primary">
-                        {new Date(ev.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })}
-                      </span>
-                      {total > 0 && (
-                        <span className={`text-[12px] font-medium px-2.5 py-0.5 rounded-full border-[0.5px] ${allPassed ? 'text-[#4ade80] border-[#4ade8040] bg-[#4ade8010]' : 'text-[#fb923c] border-[#fb923c40] bg-[#fb923c10]'}`}>
-                          {passed}/{total} criterios
-                        </span>
-                      )}
-                      <span className="text-[12px] text-text-secondary capitalize">{ev.affected_side === 'left' ? 'Izquierdo' : ev.affected_side === 'right' ? 'Derecho' : ev.affected_side}</span>
-                    </div>
-                    {ev.surgery_date && (
-                      <div className="text-[12px] text-text-secondary mt-1">
-                        Cirugía: {new Date(ev.surgery_date + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}
-                      </div>
-                    )}
-                  </div>
-                  <span className="text-accent text-[13px] font-medium opacity-0 group-hover:opacity-100 transition-opacity ml-4 shrink-0">
-                    Ver →
-                  </span>
-                </Link>
-              )
-            })}
-          </div>
-        )}
-      </div>
-
       {/* DINAMOMETRÍA */}
       <div className="mb-12">
         <div className="flex justify-between items-center mb-4">
@@ -719,6 +608,72 @@ export default function PacienteDetail({ patient: initialPatient, userId: _userI
         )}
       </div>
 
+      {/* RETORNO AL DEPORTE (RTS) */}
+      <div className="mb-12">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-[20px] font-medium">Retorno al Deporte — RTS</h2>
+          <Link
+            href={`/dashboard/pacientes/${patient.id}/rts`}
+            className="text-accent text-[13px] font-medium hover:opacity-80 no-underline"
+          >
+            Nueva Evaluación RTS →
+          </Link>
+        </div>
+
+        {rtsLoading ? (
+          <div className="text-text-secondary text-[14px]">Cargando evaluaciones...</div>
+        ) : rtsEvals.length === 0 ? (
+          <div className="text-center py-10 bg-bg-secondary rounded-xl border-[0.5px] border-dashed border-border">
+            <p className="text-[15px] font-medium text-text-primary mb-1">Sin evaluaciones RTS todavía</p>
+            <p className="text-[13px] text-text-secondary max-w-[420px] mx-auto">
+              El protocolo RTS evalúa fuerza muscular, hop tests, saltos verticales y cuestionarios validados (ACL-RSI, KOOS-Sport) para determinar si el paciente está listo para retornar al deporte.
+            </p>
+            <Link
+              href={`/dashboard/pacientes/${patient.id}/rts`}
+              className="inline-block mt-4 text-accent text-[13px] font-medium hover:opacity-80 no-underline"
+            >
+              Iniciar primera evaluación →
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {rtsEvals.map(ev => {
+              const { passed, total } = computeRtsCriteriaSummary(ev)
+              const allPassed = total > 0 && passed === total
+              return (
+                <Link
+                  key={ev.id}
+                  href={`/dashboard/pacientes/${patient.id}/rts`}
+                  className="flex items-center justify-between bg-bg-primary border-[0.5px] border-border rounded-xl px-5 py-4 hover:bg-bg-secondary transition-colors group no-underline"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <span className="text-[14px] font-medium text-text-primary">
+                        {new Date(ev.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                      </span>
+                      {total > 0 && (
+                        <span className={`text-[12px] font-medium px-2.5 py-0.5 rounded-full border-[0.5px] ${allPassed ? 'text-[#4ade80] border-[#4ade8040] bg-[#4ade8010]' : 'text-[#fb923c] border-[#fb923c40] bg-[#fb923c10]'}`}>
+                          {passed}/{total} criterios
+                        </span>
+                      )}
+                      <span className="text-[12px] text-text-secondary capitalize">{ev.affected_side === 'left' ? 'Izquierdo' : ev.affected_side === 'right' ? 'Derecho' : ev.affected_side}</span>
+                    </div>
+                    {ev.surgery_date && (
+                      <div className="text-[12px] text-text-secondary mt-1">
+                        Cirugía: {new Date(ev.surgery_date + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-accent text-[13px] font-medium opacity-0 group-hover:opacity-100 transition-opacity ml-4 shrink-0">
+                    Ver →
+                  </span>
+                </Link>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
       {/* MONITOREO DE CARGA */}
       <div className="mb-12">
         <div className="flex justify-between items-center mb-4">
@@ -745,7 +700,7 @@ export default function PacienteDetail({ patient: initialPatient, userId: _userI
       </div>
 
       {/* PLANES ASOCIADOS */}
-      <div>
+      <div className="mb-12">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-[20px] font-medium">Planes de Ejercicio</h2>
           <Link
@@ -790,6 +745,51 @@ export default function PacienteDetail({ patient: initialPatient, userId: _userI
                 </div>
               </Link>
             ))}
+          </div>
+        )}
+      </div>
+
+      {/* PORTAL DEL PACIENTE */}
+      <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 mb-8">
+        <div className="flex justify-between items-center mb-3">
+          <h2 className="text-[16px] font-medium">Portal del Paciente</h2>
+        </div>
+        {patient.load_share_token ? (
+          <div>
+            <p className="text-[13px] text-text-secondary mb-3">
+              Compartí este link con {patient.name} para que vea sus ejercicios y registre sus sesiones de entrenamiento.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(`${window.location.origin}/paciente/${patient.load_share_token}`)
+                  alert('Link copiado')
+                }}
+                className="bg-[#24342A] border-[0.5px] border-[#34D399]/50 text-[#34D399] px-4 py-2 rounded-lg text-[13px] font-medium flex-grow truncate"
+              >
+                Enviar link al paciente
+              </button>
+              <button
+                onClick={revokePortalToken}
+                className="bg-bg-secondary border-[0.5px] border-border px-3 py-2 rounded-lg text-[13px] text-text-secondary hover:text-warning"
+                title="Revocar"
+              >
+                X
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <p className="text-[13px] text-text-secondary mb-3">
+              Generá un link único para que {patient.name} pueda ver sus ejercicios y registrar sus sesiones desde el celular.
+            </p>
+            <button
+              onClick={generatePortalToken}
+              disabled={generatingToken}
+              className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40"
+            >
+              {generatingToken ? 'Generando...' : 'Generar link para el paciente'}
+            </button>
           </div>
         )}
       </div>
