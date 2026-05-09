@@ -719,6 +719,31 @@ export default function PacienteDetail({ patient: initialPatient, userId: _userI
         )}
       </div>
 
+      {/* MONITOREO DE CARGA */}
+      <div className="mb-12">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-[20px] font-medium">Monitoreo de Carga</h2>
+          <Link
+            href={`/dashboard/pacientes/${patient.id}/carga`}
+            className="text-accent text-[13px] font-medium hover:opacity-80 no-underline"
+          >
+            Ver monitoreo →
+          </Link>
+        </div>
+        <div className="text-center py-10 bg-bg-secondary rounded-xl border-[0.5px] border-dashed border-border">
+          <p className="text-[15px] font-medium text-text-primary mb-1">Seguimiento de carga semanal</p>
+          <p className="text-[13px] text-text-secondary max-w-[420px] mx-auto">
+            Registrá sesiones, calculá ACWR y monitoreá la evolución del dolor post-sesión.
+          </p>
+          <Link
+            href={`/dashboard/pacientes/${patient.id}/carga`}
+            className="inline-block mt-4 text-accent text-[13px] font-medium hover:opacity-80 no-underline"
+          >
+            Ir al módulo de carga →
+          </Link>
+        </div>
+      </div>
+
       {/* PLANES ASOCIADOS */}
       <div>
         <div className="flex justify-between items-center mb-4">
