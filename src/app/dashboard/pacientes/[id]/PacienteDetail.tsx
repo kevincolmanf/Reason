@@ -441,7 +441,7 @@ export default function PacienteDetail({ patient: initialPatient, userId: _userI
                 }}
                 className="bg-[#24342A] border-[0.5px] border-[#34D399]/50 text-[#34D399] px-4 py-2 rounded-lg text-[13px] font-medium flex-grow truncate"
               >
-                Copiar link del portal
+                Enviar link al paciente
               </button>
               <button
                 onClick={revokePortalToken}
@@ -462,7 +462,7 @@ export default function PacienteDetail({ patient: initialPatient, userId: _userI
               disabled={generatingToken}
               className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40"
             >
-              {generatingToken ? 'Generando...' : 'Generar link del portal'}
+              {generatingToken ? 'Generando...' : 'Generar link para el paciente'}
             </button>
           </div>
         )}

@@ -246,55 +246,6 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
     setTargetBlock(null)
   }
 
-  // Generar link modo paciente
-  const generateShareLink = async () => {
-    if (plan.share_token) {
-      if (confirm('Este plan ya está compartido. ¿Querés copiar el link?')) {
-        navigator.clipboard.writeText(`${window.location.origin}/plan/${plan.share_token}`)
-        alert('Copiado al portapapeles')
-      }
-      return
-    }
-
-    const token = uuidv4()
-    // Vence en 90 días
-    const expiresAt = new Date()
-    expiresAt.setDate(expiresAt.getDate() + 90)
-
-    const { error } = await supabase
-      .from('exercise_plans')
-      .update({
-        share_token: token,
-        share_token_expires_at: expiresAt.toISOString()
-      })
-      .eq('id', plan.id)
-
-    if (!error) {
-      setPlan(prev => ({ ...prev, share_token: token }))
-      navigator.clipboard.writeText(`${window.location.origin}/plan/${token}`)
-      alert('Link generado y copiado al portapapeles. Vence en 90 días.')
-    } else {
-      alert('Error al generar el link')
-    }
-  }
-
-  const revokeShareLink = async () => {
-    if (!confirm('¿Revocar acceso? El paciente ya no podrá ver el plan.')) return
-
-    const { error } = await supabase
-      .from('exercise_plans')
-      .update({
-        share_token: null,
-        share_token_expires_at: null
-      })
-      .eq('id', plan.id)
-
-    if (!error) {
-      setPlan(prev => ({ ...prev, share_token: null }))
-      alert('Acceso revocado')
-    }
-  }
-
   const handleExportPDF = async () => {
     const doc = new jsPDF()
     doc.setFont('helvetica', 'bold')
@@ -456,30 +407,6 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
             >
               Exportar PDF
             </button>
-            {plan.share_token ? (
-              <div className="flex gap-2 w-full">
-                <button 
-                  onClick={() => {
-                    navigator.clipboard.writeText(`${window.location.origin}/plan/${plan.share_token}`)
-                    alert('Link copiado')
-                  }}
-                  className="bg-[#24342A] border-[0.5px] border-[#34D399]/50 text-[#34D399] px-4 py-2 rounded-lg text-[13px] font-medium flex-grow truncate"
-                  title="Copiar link"
-                >
-                  Link Activo
-                </button>
-                <button onClick={revokeShareLink} className="bg-bg-secondary border-[0.5px] border-border px-3 py-2 rounded-lg text-[13px] text-text-secondary hover:text-warning" title="Revocar">
-                  X
-                </button>
-              </div>
-            ) : (
-              <button 
-                onClick={generateShareLink}
-                className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 w-full"
-              >
-                Generar link de ejercicios
-              </button>
-            )}
           </div>
         </div>
       </div>
