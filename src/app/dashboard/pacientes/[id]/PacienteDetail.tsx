@@ -46,6 +46,35 @@ interface DynamoResult {
   created_at: string
 }
 
+interface RtsEvalSummary {
+  id: string
+  created_at: string
+  surgery_date: string | null
+  affected_side: string
+  quad_affected: number | null
+  quad_unaffected: number | null
+  hamstring_affected: number | null
+  hamstring_unaffected: number | null
+  acl_rsi: number | null
+  koos_sport: number | null
+  effusion: number | null
+  rom_extension: number | null
+  rom_flexion: number | null
+  pain_vas: number | null
+  single_hop_affected: number | null
+  single_hop_unaffected: number | null
+  triple_hop_affected: number | null
+  triple_hop_unaffected: number | null
+  crossover_hop_affected: number | null
+  crossover_hop_unaffected: number | null
+  timed_hop_affected: number | null
+  timed_hop_unaffected: number | null
+  slcmj_affected: number | null
+  slcmj_unaffected: number | null
+  drop_jump_quality: string | null
+  grs: number | null
+}
+
 const MUSCLE_LABELS: Record<string, string> = {
   quad: 'Cuádriceps',
   hamstring: 'Isquiotibiales',
@@ -80,6 +109,8 @@ export default function PacienteDetail({ patient: initialPatient, userId: _userI
   const [qResultsLoading, setQResultsLoading] = useState(true)
   const [dynamoResults, setDynamoResults] = useState<DynamoResult[]>([])
   const [dynamoLoading, setDynamoLoading] = useState(true)
+  const [rtsEvals, setRtsEvals] = useState<RtsEvalSummary[]>([])
+  const [rtsLoading, setRtsLoading] = useState(true)
   const [creatingFicha, setCreatingFicha] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editForm, setEditForm] = useState({ name: initialPatient.name, age: initialPatient.age?.toString() || '', occupation: initialPatient.occupation || '' })
@@ -136,12 +167,26 @@ export default function PacienteDetail({ patient: initialPatient, userId: _userI
     setDynamoLoading(false)
   }, [supabase, patient.id])
 
+  const fetchRtsEvals = useCallback(async () => {
+    setRtsLoading(true)
+    const { data, error } = await supabase
+      .from('rts_evaluations')
+      .select('id, created_at, surgery_date, affected_side, quad_affected, quad_unaffected, hamstring_affected, hamstring_unaffected, acl_rsi, koos_sport, effusion, rom_extension, rom_flexion, pain_vas, single_hop_affected, single_hop_unaffected, triple_hop_affected, triple_hop_unaffected, crossover_hop_affected, crossover_hop_unaffected, timed_hop_affected, timed_hop_unaffected, slcmj_affected, slcmj_unaffected, drop_jump_quality, grs')
+      .eq('patient_id', patient.id)
+      .order('created_at', { ascending: false })
+      .limit(3)
+
+    if (!error && data) setRtsEvals(data)
+    setRtsLoading(false)
+  }, [supabase, patient.id])
+
   useEffect(() => {
     fetchPlans()
     fetchFichas()
     fetchQuestionnaireResults()
     fetchDynamoResults()
-  }, [fetchPlans, fetchFichas, fetchQuestionnaireResults, fetchDynamoResults])
+    fetchRtsEvals()
+  }, [fetchPlans, fetchFichas, fetchQuestionnaireResults, fetchDynamoResults, fetchRtsEvals])
 
   const handleNewFicha = async () => {
     setCreatingFicha(true)
@@ -206,6 +251,48 @@ export default function PacienteDetail({ patient: initialPatient, userId: _userI
     if (!confirm('¿Eliminar esta evaluación? No se puede deshacer.')) return
     const { error } = await supabase.from('dynamometer_results').delete().eq('id', dynamoId)
     if (!error) setDynamoResults(prev => prev.filter(d => d.id !== dynamoId))
+  }
+
+  const computeRtsCriteriaSummary = (ev: RtsEvalSummary): { passed: number; total: number } => {
+    let passed = 0
+    let total = 0
+
+    // Surgery date / time criterion
+    if (ev.surgery_date) {
+      total++
+      const months = Math.floor((new Date().getTime() - new Date(ev.surgery_date).getTime()) / (1000 * 60 * 60 * 24 * 30.44))
+      if (months >= 9) passed++
+    }
+    if (ev.effusion !== null && ev.effusion !== undefined) { total++; if (ev.effusion <= 1) passed++ }
+    if (ev.rom_extension !== null && ev.rom_extension !== undefined) { total++; if (ev.rom_extension === 0) passed++ }
+    if (ev.rom_flexion !== null && ev.rom_flexion !== undefined) { total++; if (ev.rom_flexion >= 120) passed++ }
+    if (ev.pain_vas !== null && ev.pain_vas !== undefined) { total++; if (ev.pain_vas <= 2) passed++ }
+
+    const computeLSI = (aff: number | null, unaff: number | null) => (!aff || !unaff || unaff === 0) ? null : (aff / unaff) * 100
+    const qLSI = computeLSI(ev.quad_affected, ev.quad_unaffected)
+    const hLSI = computeLSI(ev.hamstring_affected, ev.hamstring_unaffected)
+    const hqRatio = (ev.hamstring_affected && ev.quad_affected && ev.quad_affected > 0) ? ev.hamstring_affected / ev.quad_affected : null
+    const singleLSI = computeLSI(ev.single_hop_affected, ev.single_hop_unaffected)
+    const tripleLSI = computeLSI(ev.triple_hop_affected, ev.triple_hop_unaffected)
+    const crossLSI = computeLSI(ev.crossover_hop_affected, ev.crossover_hop_unaffected)
+    const timedLSI = (ev.timed_hop_affected && ev.timed_hop_unaffected && ev.timed_hop_affected > 0)
+      ? (ev.timed_hop_unaffected / ev.timed_hop_affected) * 100 : null
+    const slcmjLSI = computeLSI(ev.slcmj_affected, ev.slcmj_unaffected)
+
+    if (qLSI !== null) { total++; if (qLSI >= 90) passed++ }
+    if (hLSI !== null) { total++; if (hLSI >= 90) passed++ }
+    if (hqRatio !== null) { total++; if (hqRatio >= 0.60) passed++ }
+    if (singleLSI !== null) { total++; if (singleLSI >= 90) passed++ }
+    if (tripleLSI !== null) { total++; if (tripleLSI >= 90) passed++ }
+    if (crossLSI !== null) { total++; if (crossLSI >= 90) passed++ }
+    if (timedLSI !== null) { total++; if (timedLSI >= 90) passed++ }
+    if (slcmjLSI !== null) { total++; if (slcmjLSI >= 90) passed++ }
+    if (ev.drop_jump_quality) { total++; if (ev.drop_jump_quality === 'good') passed++ }
+    if (ev.koos_sport !== null && ev.koos_sport !== undefined) { total++; if (ev.koos_sport >= 89) passed++ }
+    if (ev.acl_rsi !== null && ev.acl_rsi !== undefined) { total++; if (ev.acl_rsi >= 65) passed++ }
+    if (ev.grs !== null && ev.grs !== undefined) { total++; if (ev.grs >= 90) passed++ }
+
+    return { passed, total }
   }
 
   const formatScore = (result: QuestionnaireResult): string => {
@@ -422,6 +509,72 @@ export default function PacienteDetail({ patient: initialPatient, userId: _userI
                     Eliminar
                   </button>
                 </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* RETORNO AL DEPORTE (RTS) */}
+      <div className="mb-12">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-[20px] font-medium">Retorno al Deporte — RTS</h2>
+          <Link
+            href={`/dashboard/pacientes/${patient.id}/rts`}
+            className="text-accent text-[13px] font-medium hover:opacity-80 no-underline"
+          >
+            Nueva Evaluación RTS →
+          </Link>
+        </div>
+
+        {rtsLoading ? (
+          <div className="text-text-secondary text-[14px]">Cargando evaluaciones...</div>
+        ) : rtsEvals.length === 0 ? (
+          <div className="text-center py-10 bg-bg-secondary rounded-xl border-[0.5px] border-dashed border-border">
+            <p className="text-[15px] font-medium text-text-primary mb-1">Sin evaluaciones RTS todavía</p>
+            <p className="text-[13px] text-text-secondary max-w-[420px] mx-auto">
+              El protocolo RTS evalúa fuerza muscular, hop tests, saltos verticales y cuestionarios validados (ACL-RSI, KOOS-Sport) para determinar si el paciente está listo para retornar al deporte.
+            </p>
+            <Link
+              href={`/dashboard/pacientes/${patient.id}/rts`}
+              className="inline-block mt-4 text-accent text-[13px] font-medium hover:opacity-80 no-underline"
+            >
+              Iniciar primera evaluación →
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {rtsEvals.map(ev => {
+              const { passed, total } = computeRtsCriteriaSummary(ev)
+              const allPassed = total > 0 && passed === total
+              return (
+                <Link
+                  key={ev.id}
+                  href={`/dashboard/pacientes/${patient.id}/rts`}
+                  className="flex items-center justify-between bg-bg-primary border-[0.5px] border-border rounded-xl px-5 py-4 hover:bg-bg-secondary transition-colors group no-underline"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <span className="text-[14px] font-medium text-text-primary">
+                        {new Date(ev.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                      </span>
+                      {total > 0 && (
+                        <span className={`text-[12px] font-medium px-2.5 py-0.5 rounded-full border-[0.5px] ${allPassed ? 'text-[#4ade80] border-[#4ade8040] bg-[#4ade8010]' : 'text-[#fb923c] border-[#fb923c40] bg-[#fb923c10]'}`}>
+                          {passed}/{total} criterios
+                        </span>
+                      )}
+                      <span className="text-[12px] text-text-secondary capitalize">{ev.affected_side === 'left' ? 'Izquierdo' : ev.affected_side === 'right' ? 'Derecho' : ev.affected_side}</span>
+                    </div>
+                    {ev.surgery_date && (
+                      <div className="text-[12px] text-text-secondary mt-1">
+                        Cirugía: {new Date(ev.surgery_date + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-accent text-[13px] font-medium opacity-0 group-hover:opacity-100 transition-opacity ml-4 shrink-0">
+                    Ver →
+                  </span>
+                </Link>
               )
             })}
           </div>
