@@ -14,6 +14,7 @@ interface LoadSession {
   vas_during: number | null
   vas_post: number | null
   notes: string | null
+  source: string
 }
 
 const RPE_LABELS: Record<number, string> = {
@@ -113,6 +114,21 @@ function VasSlider({
         <span>Máximo dolor — 100</span>
       </div>
     </div>
+  )
+}
+
+function SourceBadge({ source }: { source: string }) {
+  if (source === 'patient') {
+    return (
+      <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-accent/10 text-accent border-[0.5px] border-accent/30 whitespace-nowrap">
+        Paciente
+      </span>
+    )
+  }
+  return (
+    <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-bg-secondary text-text-secondary border-[0.5px] border-border whitespace-nowrap">
+      Kinesiólogo
+    </span>
   )
 }
 
@@ -265,8 +281,9 @@ export default function LoadMonitorClient({
         vas_during: formVasDuring,
         vas_post: formVasPost,
         notes: formNotes.trim() || null,
+        source: 'clinician',
       })
-      .select('id, session_date, activity, duration_minutes, rpe, load_units, vas_pre, vas_during, vas_post, notes')
+      .select('id, session_date, activity, duration_minutes, rpe, load_units, vas_pre, vas_during, vas_post, notes, source')
       .single()
 
     if (!error && data) {
@@ -586,8 +603,8 @@ export default function LoadMonitorClient({
         ) : (
           <div className="space-y-2">
             {/* Header */}
-            <div className="grid grid-cols-[100px_1fr_80px_60px_80px_80px_60px] gap-3 px-3 py-1">
-              {['Fecha', 'Actividad', 'Duración', 'RPE', 'Carga', 'VAS post', ''].map(h => (
+            <div className="grid grid-cols-[100px_1fr_80px_60px_80px_80px_90px_60px] gap-3 px-3 py-1">
+              {['Fecha', 'Actividad', 'Duración', 'RPE', 'Carga', 'VAS post', 'Origen', ''].map(h => (
                 <span key={h} className="text-[11px] uppercase tracking-[0.05em] text-text-secondary">{h}</span>
               ))}
             </div>
@@ -595,7 +612,7 @@ export default function LoadMonitorClient({
             {sessions.slice(0, 20).map(s => (
               <div
                 key={s.id}
-                className="grid grid-cols-[100px_1fr_80px_60px_80px_80px_60px] gap-3 items-center bg-bg-secondary rounded-lg px-3 py-3 hover:bg-bg-primary transition-colors group border-[0.5px] border-border"
+                className="grid grid-cols-[100px_1fr_80px_60px_80px_80px_90px_60px] gap-3 items-center bg-bg-secondary rounded-lg px-3 py-3 hover:bg-bg-primary transition-colors group border-[0.5px] border-border"
               >
                 <span className="text-[13px] text-text-primary">{formatShortDate(s.session_date)}</span>
                 <span className="text-[13px] text-text-secondary truncate">{s.activity || '—'}</span>
@@ -605,6 +622,7 @@ export default function LoadMonitorClient({
                 <span className={`text-[13px] ${s.vas_post !== null ? vasColor(s.vas_post) : 'text-text-secondary'}`}>
                   {s.vas_post !== null ? s.vas_post : '—'}
                 </span>
+                <SourceBadge source={s.source} />
                 <button
                   onClick={() => handleDeleteSession(s.id)}
                   className="text-text-secondary hover:text-warning text-[12px] opacity-0 group-hover:opacity-100 transition-opacity text-right"

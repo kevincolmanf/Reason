@@ -477,7 +477,7 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
                 onClick={generateShareLink}
                 className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 w-full"
               >
-                Compartir Modo Paciente
+                Generar link de ejercicios
               </button>
             )}
           </div>
