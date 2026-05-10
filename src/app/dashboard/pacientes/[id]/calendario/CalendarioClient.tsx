@@ -5,7 +5,7 @@ import { createClient } from '@/utils/supabase/client'
 
 interface PlanSession { id: string; name: string }
 interface PlanData { sessions: PlanSession[] }
-interface Plan { id: string; name: string; plan_data: unknown }
+interface Plan { id: string; name: string; start_date: string | null; plan_data: unknown }
 
 interface ScheduledSession {
   id: string
@@ -14,6 +14,7 @@ interface ScheduledSession {
   session_name: string
   plan_name: string
   scheduled_date: string
+  week: number
   completed: boolean
 }
 
@@ -54,6 +55,15 @@ function formatDayLabel(date: Date): string {
   return `${date.getDate()} ${MONTHS_ES[date.getMonth()].slice(0, 3)}`
 }
 
+function calcWeek(scheduledDate: string, planStartDate: string | null): number {
+  if (!planStartDate) return 1
+  const start = new Date(planStartDate + 'T00:00:00')
+  const scheduled = new Date(scheduledDate + 'T00:00:00')
+  const diffDays = Math.floor((scheduled.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+  if (diffDays < 0) return 1
+  return Math.min(Math.floor(diffDays / 7) + 1, 4)
+}
+
 export default function CalendarioClient({ patientId, userId, plans, initialScheduled }: Props) {
   const [weekStart, setWeekStart] = useState(() => getMondayOf(new Date()))
   const [scheduled, setScheduled] = useState<ScheduledSession[]>(initialScheduled)
@@ -89,6 +99,10 @@ export default function CalendarioClient({ patientId, userId, plans, initialSche
     return (d as unknown as PlanData).sessions
   })()
 
+  const previewWeek = modalDate && selectedPlan
+    ? calcWeek(modalDate, selectedPlan.start_date)
+    : null
+
   const openModal = (dateStr: string) => {
     setModalDate(dateStr)
     setSelectedPlanId(plans[0]?.id ?? '')
@@ -101,6 +115,8 @@ export default function CalendarioClient({ patientId, userId, plans, initialSche
     const session = planSessions.find(s => s.id === selectedSessionId)
     if (!plan || !session) return
 
+    const week = calcWeek(modalDate, plan.start_date)
+
     setSaving(true)
     const { data, error } = await supabase
       .from('scheduled_sessions')
@@ -112,6 +128,7 @@ export default function CalendarioClient({ patientId, userId, plans, initialSche
         session_name: session.name,
         plan_name: plan.name,
         scheduled_date: modalDate,
+        week,
       })
       .select()
       .single()
@@ -206,7 +223,10 @@ export default function CalendarioClient({ patientId, userId, plans, initialSche
                         >
                           {s.session_name}
                         </div>
-                        <div className="text-[11px] text-text-secondary truncate">{s.plan_name}</div>
+                        <div className="text-[11px] text-text-secondary truncate flex items-center gap-1">
+                          <span>{s.plan_name}</span>
+                          <span className="text-accent/70">· S{s.week}</span>
+                        </div>
                       </div>
                       <button
                         onClick={() => handleDelete(s.id)}
@@ -276,6 +296,21 @@ export default function CalendarioClient({ patientId, userId, plans, initialSche
                   className="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent"
                 />
               </div>
+
+              {previewWeek && selectedPlan?.start_date && (
+                <div className="bg-accent/10 border-[0.5px] border-accent/30 rounded-lg px-4 py-2.5">
+                  <p className="text-[13px] text-accent font-medium">Semana {previewWeek} del plan</p>
+                  {!selectedPlan.start_date && (
+                    <p className="text-[11px] text-text-secondary mt-0.5">Asigná una fecha de inicio al plan para calcular la semana automáticamente</p>
+                  )}
+                </div>
+              )}
+
+              {selectedPlan && !selectedPlan.start_date && (
+                <div className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-4 py-2.5">
+                  <p className="text-[12px] text-text-secondary">El plan no tiene fecha de inicio → se asigna semana 1. Podés editarla en el plan.</p>
+                </div>
+              )}
             </div>
 
             <div className="flex gap-3 mt-6">

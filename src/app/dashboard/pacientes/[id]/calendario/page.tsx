@@ -20,7 +20,7 @@ export default async function CalendarioPage({ params }: { params: { id: string 
 
   const { data: plans } = await supabase
     .from('exercise_plans')
-    .select('id, name, plan_data')
+    .select('id, name, start_date, plan_data')
     .eq('patient_id', params.id)
     .order('updated_at', { ascending: false })
 

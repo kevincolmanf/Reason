@@ -52,6 +52,7 @@ interface ExercisePlan {
 
 interface ActivityLog {
   id: string
+  exercise_id: string
   exercise_name: string
   session_id: string
   week: number
@@ -59,6 +60,26 @@ interface ActivityLog {
   eva: number
   notes: string | null
   logged_at: string
+}
+
+type TrafficLight = 'green' | 'yellow' | 'red'
+
+function getTrafficLight(rpe: number, eva: number): TrafficLight {
+  if (rpe >= 8 || eva >= 7) return 'red'
+  if (rpe >= 6 || eva >= 4) return 'yellow'
+  return 'green'
+}
+
+const TRAFFIC_COLORS: Record<TrafficLight, string> = {
+  green:  'bg-green-500',
+  yellow: 'bg-yellow-400',
+  red:    'bg-red-500',
+}
+
+const TRAFFIC_LABELS: Record<TrafficLight, string> = {
+  green:  'Bien tolerado',
+  yellow: 'Esfuerzo moderado-alto',
+  red:    'Esfuerzo muy alto o dolor',
 }
 
 const CATEGORIES = [
@@ -107,6 +128,10 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
   const [logs, setLogs] = useState<ActivityLog[]>([])
   const [logsLoading, setLogsLoading] = useState(false)
   const [logsGroupBy, setLogsGroupBy] = useState<'exercise' | 'date'>('date')
+
+  // Semáforo: último log por exercise_id
+  const [latestByExercise, setLatestByExercise] = useState<Record<string, ActivityLog>>({})
+  const [hoveredExSignal, setHoveredExSignal] = useState<string | null>(null)
   
   const supabase = createClient()
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -119,6 +144,28 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
     }
     fetchPatients()
   }, [supabase])
+
+  // Cargar últimos logs por ejercicio para semáforo
+  useEffect(() => {
+    const fetchLatestLogs = async () => {
+      const { data } = await supabase
+        .from('plan_activity_logs')
+        .select('id, exercise_id, exercise_name, session_id, week, rpe, eva, notes, logged_at')
+        .eq('plan_id', plan.id)
+        .order('logged_at', { ascending: false })
+      if (data) {
+        const latest: Record<string, ActivityLog> = {}
+        for (const log of data) {
+          if (log.exercise_id && !latest[log.exercise_id]) {
+            latest[log.exercise_id] = log
+          }
+        }
+        setLatestByExercise(latest)
+      }
+    }
+    fetchLatestLogs()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plan.id])
 
   // Autoguardado
   useEffect(() => {
@@ -275,9 +322,19 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
     setTargetBlock(null)
   }
 
+  const calcWeek = (scheduledDate: string): number => {
+    if (!plan.start_date) return 1
+    const start = new Date(plan.start_date + 'T00:00:00')
+    const scheduled = new Date(scheduledDate + 'T00:00:00')
+    const diffDays = Math.floor((scheduled.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+    if (diffDays < 0) return 1
+    return Math.min(Math.floor(diffDays / 7) + 1, 4)
+  }
+
   const handleScheduleSession = async () => {
     if (!scheduleModal || !scheduleDate || !plan.patient_id) return
     setScheduleSaving(true)
+    const week = calcWeek(scheduleDate)
     await supabase.from('scheduled_sessions').insert({
       user_id: userId,
       patient_id: plan.patient_id,
@@ -286,6 +343,7 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
       session_name: scheduleModal.sessionName,
       plan_name: plan.name,
       scheduled_date: scheduleDate,
+      week,
     })
     setScheduleSaving(false)
     setScheduleSuccess(true)
@@ -535,62 +593,73 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
                     {block.exercises.map((ex, exIdx) => (
                       <div key={ex.id} className="bg-bg-secondary border-[0.5px] border-border rounded-xl p-4">
                         <div className="flex justify-between items-start mb-4">
-                          <div>
-                            <h4 className="text-[15px] font-medium text-text-primary">{ex.exercise_name}</h4>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-[15px] font-medium text-text-primary">{ex.exercise_name}</h4>
+                              {latestByExercise[ex.id] && (() => {
+                                const log = latestByExercise[ex.id]
+                                const signal = getTrafficLight(log.rpe, log.eva)
+                                const isHovered = hoveredExSignal === ex.id
+                                return (
+                                  <div className="relative">
+                                    <button
+                                      onMouseEnter={() => setHoveredExSignal(ex.id)}
+                                      onMouseLeave={() => setHoveredExSignal(null)}
+                                      onClick={() => setHoveredExSignal(isHovered ? null : ex.id)}
+                                      className="flex items-center gap-1.5 focus:outline-none"
+                                    >
+                                      <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${TRAFFIC_COLORS[signal]}`} />
+                                    </button>
+                                    {isHovered && (
+                                      <div className="absolute left-0 top-5 z-20 bg-bg-primary border-[0.5px] border-border rounded-xl shadow-lg p-3 w-[200px]">
+                                        <div className="text-[12px] font-medium text-text-primary mb-1">{TRAFFIC_LABELS[signal]}</div>
+                                        <div className="text-[11px] text-text-secondary space-y-0.5">
+                                          <div>RPE <span className="font-medium text-text-primary">{log.rpe}</span> · EVA <span className="font-medium text-text-primary">{log.eva}</span></div>
+                                          <div>{new Date(log.logged_at).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}</div>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                )
+                              })()}
+                            </div>
                             {ex.youtube_url && (
                               <a href={ex.youtube_url} target="_blank" rel="noreferrer" className="text-[12px] text-accent hover:underline mt-1 inline-block">
                                 Ver video original
                               </a>
                             )}
                           </div>
-                          <button 
+                          <button
                             onClick={() => removeExercise(activeSession, bIdx, exIdx)}
-                            className="text-text-secondary hover:text-warning text-[18px] p-1"
+                            className="text-text-secondary hover:text-warning text-[18px] p-1 shrink-0"
                             title="Eliminar ejercicio"
                           >×</button>
                         </div>
 
-                        {/* TABLA DE SEMANAS EN DESKTOP, STACK EN MOBILE */}
-                        <div className="overflow-x-auto">
-                          <table className="w-full min-w-[700px] text-left border-collapse">
-                            <thead>
-                              <tr className="text-[11px] uppercase tracking-[0.05em] text-text-secondary border-b-[0.5px] border-border">
-                                <th className="pb-2 w-[80px]">Semana</th>
-                                <th className="pb-2 w-[80px]">Series</th>
-                                <th className="pb-2 w-[80px]">Reps</th>
-                                <th className="pb-2 w-[120px]">Carga</th>
-                                <th className="pb-2 w-[120px]">Pausa</th>
-                                <th className="pb-2 w-[80px]" title="Rating of Perceived Exertion (1-10)">RPE</th>
-                                <th className="pb-2 w-[80px]" title="Escala Visual Analógica de dolor (1-10)">EAV</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {ex.weeks.map((w, wIdx) => (
-                                <tr key={w.week} className="border-b-[0.5px] border-border/30 last:border-0">
-                                  <td className="py-2 text-[13px] font-medium text-text-secondary">Sem {w.week}</td>
-                                  <td className="py-2 pr-2">
-                                    <input type="text" value={w.sets} onChange={e => updateWeekData(activeSession, bIdx, exIdx, wIdx, 'sets', e.target.value)} className="w-full bg-bg-primary border-[0.5px] border-border rounded p-1 text-[13px] focus:border-accent outline-none" />
-                                  </td>
-                                  <td className="py-2 pr-2">
-                                    <input type="text" value={w.reps} onChange={e => updateWeekData(activeSession, bIdx, exIdx, wIdx, 'reps', e.target.value)} className="w-full bg-bg-primary border-[0.5px] border-border rounded p-1 text-[13px] focus:border-accent outline-none" />
-                                  </td>
-                                  <td className="py-2 pr-2">
-                                    <input type="text" value={w.load} onChange={e => updateWeekData(activeSession, bIdx, exIdx, wIdx, 'load', e.target.value)} placeholder="ej: 20kg" className="w-full bg-bg-primary border-[0.5px] border-border rounded p-1 text-[13px] focus:border-accent outline-none" />
-                                  </td>
-                                  <td className="py-2 pr-2">
-                                    <input type="text" value={w.rest} onChange={e => updateWeekData(activeSession, bIdx, exIdx, wIdx, 'rest', e.target.value)} placeholder="ej: 90s" className="w-full bg-bg-primary border-[0.5px] border-border rounded p-1 text-[13px] focus:border-accent outline-none" />
-                                  </td>
-                                  <td className="py-2 pr-2">
-                                    <input type="text" value={w.rpe} onChange={e => updateWeekData(activeSession, bIdx, exIdx, wIdx, 'rpe', e.target.value)} className="w-full bg-bg-primary border-[0.5px] border-border rounded p-1 text-[13px] focus:border-accent outline-none" />
-                                  </td>
-                                  <td className="py-2">
-                                    <input type="text" value={w.eav} onChange={e => updateWeekData(activeSession, bIdx, exIdx, wIdx, 'eav', e.target.value)} className="w-full bg-bg-primary border-[0.5px] border-border rounded p-1 text-[13px] focus:border-accent outline-none" />
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
+                        {/* PRESCRIPCIÓN */}
+                        {ex.weeks[0] && (
+                          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                            {[
+                              { field: 'sets' as const, label: 'Series' },
+                              { field: 'reps' as const, label: 'Reps' },
+                              { field: 'load' as const, label: 'Carga', placeholder: 'ej: 20kg' },
+                              { field: 'rest' as const, label: 'Pausa', placeholder: 'ej: 90s' },
+                              { field: 'rpe'  as const, label: 'RPE obj.' },
+                              { field: 'eav'  as const, label: 'EAV obj.' },
+                            ].map(({ field, label, placeholder }) => (
+                              <div key={field}>
+                                <label className="block text-[10px] uppercase tracking-[0.05em] text-text-secondary mb-1">{label}</label>
+                                <input
+                                  type="text"
+                                  value={ex.weeks[0][field]}
+                                  onChange={e => updateWeekData(activeSession, bIdx, exIdx, 0, field, e.target.value)}
+                                  placeholder={placeholder ?? ''}
+                                  className="w-full bg-bg-primary border-[0.5px] border-border rounded-lg px-2 py-1.5 text-[13px] focus:border-accent outline-none"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
 
                       </div>
                     ))}
@@ -843,6 +912,16 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
                 className="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent"
               />
             </div>
+
+            {scheduleDate && (
+              <div className={`mt-4 rounded-lg px-4 py-2.5 ${plan.start_date ? 'bg-accent/10 border-[0.5px] border-accent/30' : 'bg-bg-secondary border-[0.5px] border-border'}`}>
+                {plan.start_date ? (
+                  <p className="text-[13px] text-accent font-medium">Semana {calcWeek(scheduleDate)} del plan</p>
+                ) : (
+                  <p className="text-[12px] text-text-secondary">Sin fecha de inicio en el plan → se asigna semana 1. Podés editarla arriba.</p>
+                )}
+              </div>
+            )}
 
             <div className="flex gap-3 mt-5">
               <button

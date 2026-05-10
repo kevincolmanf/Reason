@@ -45,7 +45,7 @@ export default async function PatientPortalPage({ params }: { params: { token: s
   const in14 = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
   const { data: scheduledSessions } = await supabase
     .from('scheduled_sessions')
-    .select('id, session_name, plan_name, scheduled_date, completed')
+    .select('id, plan_id, session_id, session_name, plan_name, scheduled_date, week, completed')
     .eq('patient_id', patient.id)
     .gte('scheduled_date', today)
     .lte('scheduled_date', in14)
