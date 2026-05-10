@@ -13,6 +13,9 @@ interface LoadSession {
   vas_pre: number | null
   vas_during: number | null
   vas_post: number | null
+  sleep_quality: number | null
+  energy: number | null
+  stress: number | null
   notes: string | null
   source: string
 }
@@ -367,7 +370,7 @@ export default function LoadMonitorClient({
         notes: formNotes.trim() || null,
         source: 'clinician',
       })
-      .select('id, session_date, activity, duration_minutes, rpe, load_units, vas_pre, vas_during, vas_post, notes, source')
+      .select('id, session_date, activity, duration_minutes, rpe, load_units, vas_pre, vas_during, vas_post, sleep_quality, energy, stress, notes, source')
       .single()
 
     if (!error && data) {
@@ -749,24 +752,40 @@ export default function LoadMonitorClient({
                     {s.vas_post !== null && <span>VAS <span className={`font-medium ${vasColor(s.vas_post)}`}>{s.vas_post}</span></span>}
                     <SourceBadge source={s.source} />
                   </div>
+                  {(s.sleep_quality !== null || s.energy !== null || s.stress !== null) && (
+                    <div className="flex gap-x-3 mt-0.5 text-[11px] text-text-secondary">
+                      {s.sleep_quality !== null && <span>😴 <span className="font-medium text-text-primary">{s.sleep_quality}</span></span>}
+                      {s.energy !== null && <span>⚡ <span className="font-medium text-text-primary">{s.energy}</span></span>}
+                      {s.stress !== null && <span>🧠 <span className="font-medium text-text-primary">{s.stress}</span></span>}
+                    </div>
+                  )}
                   <button onClick={() => handleDeleteSession(s.id)} className="text-text-secondary hover:text-warning text-[11px] mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     Eliminar
                   </button>
                 </div>
                 {/* Desktop layout */}
-                <div className="hidden sm:grid grid-cols-[100px_1fr_80px_60px_80px_80px_90px_60px] gap-3 items-center px-3 py-3">
-                  <span className="text-[13px] text-text-primary">{formatShortDate(s.session_date)}</span>
-                  <span className="text-[13px] text-text-secondary truncate">{s.activity || '—'}</span>
-                  <span className="text-[13px] text-text-secondary">{s.duration_minutes} min</span>
-                  <span className="text-[13px] text-text-primary">{s.rpe}/10</span>
-                  <span className="text-[13px] text-text-primary">{s.load_units} UA</span>
-                  <span className={`text-[13px] ${s.vas_post !== null ? vasColor(s.vas_post) : 'text-text-secondary'}`}>
-                    {s.vas_post !== null ? s.vas_post : '—'}
-                  </span>
-                  <SourceBadge source={s.source} />
-                  <button onClick={() => handleDeleteSession(s.id)} className="text-text-secondary hover:text-warning text-[12px] opacity-0 group-hover:opacity-100 transition-opacity text-right">
-                    Eliminar
-                  </button>
+                <div className="hidden sm:block px-3 py-3">
+                  <div className="grid grid-cols-[100px_1fr_80px_60px_80px_80px_90px_60px] gap-3 items-center">
+                    <span className="text-[13px] text-text-primary">{formatShortDate(s.session_date)}</span>
+                    <span className="text-[13px] text-text-secondary truncate">{s.activity || '—'}</span>
+                    <span className="text-[13px] text-text-secondary">{s.duration_minutes} min</span>
+                    <span className="text-[13px] text-text-primary">{s.rpe}/10</span>
+                    <span className="text-[13px] text-text-primary">{s.load_units} UA</span>
+                    <span className={`text-[13px] ${s.vas_post !== null ? vasColor(s.vas_post) : 'text-text-secondary'}`}>
+                      {s.vas_post !== null ? s.vas_post : '—'}
+                    </span>
+                    <SourceBadge source={s.source} />
+                    <button onClick={() => handleDeleteSession(s.id)} className="text-text-secondary hover:text-warning text-[12px] opacity-0 group-hover:opacity-100 transition-opacity text-right">
+                      Eliminar
+                    </button>
+                  </div>
+                  {(s.sleep_quality !== null || s.energy !== null || s.stress !== null) && (
+                    <div className="flex gap-x-4 mt-1 text-[11px] text-text-secondary">
+                      {s.sleep_quality !== null && <span>😴 Sueño <span className="font-medium text-text-primary">{s.sleep_quality}/10</span></span>}
+                      {s.energy !== null && <span>⚡ Energía <span className="font-medium text-text-primary">{s.energy}/10</span></span>}
+                      {s.stress !== null && <span>🧠 Estrés <span className="font-medium text-text-primary">{s.stress}/10</span></span>}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
