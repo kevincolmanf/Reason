@@ -727,33 +727,47 @@ export default function LoadMonitorClient({
           <p className="text-[13px] text-text-secondary">Sin sesiones registradas todavía.</p>
         ) : (
           <div className="space-y-2">
-            {/* Header */}
-            <div className="grid grid-cols-[100px_1fr_80px_60px_80px_80px_90px_60px] gap-3 px-3 py-1">
+            {/* Header — solo desktop */}
+            <div className="hidden sm:grid grid-cols-[100px_1fr_80px_60px_80px_80px_90px_60px] gap-3 px-3 py-1">
               {['Fecha', 'Actividad', 'Duración', 'RPE', 'Carga', 'VAS post', 'Origen', ''].map(h => (
                 <span key={h} className="text-[11px] uppercase tracking-[0.05em] text-text-secondary">{h}</span>
               ))}
             </div>
 
             {sessions.slice(0, 20).map(s => (
-              <div
-                key={s.id}
-                className="grid grid-cols-[100px_1fr_80px_60px_80px_80px_90px_60px] gap-3 items-center bg-bg-secondary rounded-lg px-3 py-3 hover:bg-bg-primary transition-colors group border-[0.5px] border-border"
-              >
-                <span className="text-[13px] text-text-primary">{formatShortDate(s.session_date)}</span>
-                <span className="text-[13px] text-text-secondary truncate">{s.activity || '—'}</span>
-                <span className="text-[13px] text-text-secondary">{s.duration_minutes} min</span>
-                <span className="text-[13px] text-text-primary">{s.rpe}/10</span>
-                <span className="text-[13px] text-text-primary">{s.load_units} UA</span>
-                <span className={`text-[13px] ${s.vas_post !== null ? vasColor(s.vas_post) : 'text-text-secondary'}`}>
-                  {s.vas_post !== null ? s.vas_post : '—'}
-                </span>
-                <SourceBadge source={s.source} />
-                <button
-                  onClick={() => handleDeleteSession(s.id)}
-                  className="text-text-secondary hover:text-warning text-[12px] opacity-0 group-hover:opacity-100 transition-opacity text-right"
-                >
-                  Eliminar
-                </button>
+              <div key={s.id} className="group border-[0.5px] border-border rounded-lg hover:bg-bg-secondary transition-colors">
+                {/* Mobile layout */}
+                <div className="sm:hidden px-4 py-3">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <span className="text-[13px] text-text-primary truncate flex-1">{s.activity || '—'}</span>
+                    <span className="text-[12px] text-text-secondary shrink-0">{formatShortDate(s.session_date)}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[12px] text-text-secondary">
+                    {s.duration_minutes && <span>{s.duration_minutes} min</span>}
+                    <span>RPE <span className="text-text-primary font-medium">{s.rpe}</span></span>
+                    <span><span className="text-text-primary font-medium">{s.load_units}</span> UA</span>
+                    {s.vas_post !== null && <span>VAS <span className={`font-medium ${vasColor(s.vas_post)}`}>{s.vas_post}</span></span>}
+                    <SourceBadge source={s.source} />
+                  </div>
+                  <button onClick={() => handleDeleteSession(s.id)} className="text-text-secondary hover:text-warning text-[11px] mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    Eliminar
+                  </button>
+                </div>
+                {/* Desktop layout */}
+                <div className="hidden sm:grid grid-cols-[100px_1fr_80px_60px_80px_80px_90px_60px] gap-3 items-center px-3 py-3">
+                  <span className="text-[13px] text-text-primary">{formatShortDate(s.session_date)}</span>
+                  <span className="text-[13px] text-text-secondary truncate">{s.activity || '—'}</span>
+                  <span className="text-[13px] text-text-secondary">{s.duration_minutes} min</span>
+                  <span className="text-[13px] text-text-primary">{s.rpe}/10</span>
+                  <span className="text-[13px] text-text-primary">{s.load_units} UA</span>
+                  <span className={`text-[13px] ${s.vas_post !== null ? vasColor(s.vas_post) : 'text-text-secondary'}`}>
+                    {s.vas_post !== null ? s.vas_post : '—'}
+                  </span>
+                  <SourceBadge source={s.source} />
+                  <button onClick={() => handleDeleteSession(s.id)} className="text-text-secondary hover:text-warning text-[12px] opacity-0 group-hover:opacity-100 transition-opacity text-right">
+                    Eliminar
+                  </button>
+                </div>
               </div>
             ))}
           </div>
