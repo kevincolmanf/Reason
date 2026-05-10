@@ -517,7 +517,7 @@ export default function PacienteDetail({ patient: initialPatient, userId: _userI
                 href="/recursos/cuestionarios"
                 className="text-accent text-[13px] font-medium hover:opacity-80 no-underline"
               >
-                Ir a Cuestionarios →
+                + Completar cuestionario
               </Link>
             </div>
 
@@ -643,7 +643,7 @@ export default function PacienteDetail({ patient: initialPatient, userId: _userI
                 href="/recursos/dinamometro"
                 className="text-accent text-[13px] font-medium hover:opacity-80 no-underline"
               >
-                Ir a Dinamómetro →
+                + Nueva evaluación
               </Link>
             </div>
 
