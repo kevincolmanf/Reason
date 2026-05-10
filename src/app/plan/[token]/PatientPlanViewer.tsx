@@ -50,15 +50,14 @@ export default function PatientPlanViewer({ planData }: { planData: { sessions: 
   }
 
   const availableSessions = planData.sessions.filter(s => s.blocks.some(b => b.exercises.length > 0))
-
   if (availableSessions.length === 0) {
     return <div className="text-center py-12 text-text-secondary">Este plan aún no tiene ejercicios asignados.</div>
   }
 
   return (
-    <div className="pb-12">
+    <div className="pb-4">
       {/* NAVEGACIÓN SEMANAS */}
-      <div className="bg-bg-secondary border-[0.5px] border-border rounded-xl p-2 flex justify-between gap-2 mb-8 sticky top-[65px] z-10 shadow-sm backdrop-blur-md">
+      <div className="bg-bg-secondary border-[0.5px] border-border rounded-xl p-2 flex justify-between gap-2 mb-6 sticky top-[65px] z-10 shadow-sm backdrop-blur-md">
         {[1, 2, 3, 4].map(w => (
           <button
             key={w}
@@ -71,10 +70,9 @@ export default function PatientPlanViewer({ planData }: { planData: { sessions: 
       </div>
 
       {/* NAVEGACIÓN SESIONES */}
-      <div className="flex gap-2 overflow-x-auto mb-6 pb-2 hide-scrollbar">
+      <div className="flex gap-2 overflow-x-auto mb-5 pb-1 hide-scrollbar">
         {planData.sessions.map((session, idx) => {
-          const hasExercises = session.blocks.some(b => b.exercises.length > 0)
-          if (!hasExercises) return null
+          if (!session.blocks.some(b => b.exercises.length > 0)) return null
           return (
             <button
               key={session.id}
@@ -87,65 +85,51 @@ export default function PatientPlanViewer({ planData }: { planData: { sessions: 
         })}
       </div>
 
-      {/* CONTENIDO SESION */}
-      <div className="space-y-8">
+      {/* EJERCICIOS */}
+      <div className="space-y-6">
         {activeBlocks.map(block => (
           <div key={block.id} className="bg-bg-primary border-[0.5px] border-border rounded-2xl overflow-hidden">
             <div className="bg-bg-secondary px-4 py-3 border-b-[0.5px] border-border">
-              <h3 className="text-[14px] font-medium text-text-primary uppercase tracking-[0.05em]">{block.name}</h3>
+              <h3 className="text-[13px] font-medium text-text-primary uppercase tracking-[0.05em]">{block.name}</h3>
             </div>
-
             <div className="divide-y-[0.5px] divide-border">
               {block.exercises.map(ex => {
                 const weekData = ex.weeks.find(w => w.week === activeWeek)
                 if (!weekData) return null
-
                 return (
                   <div key={ex.id} className="p-4 sm:p-5 flex flex-col sm:flex-row gap-4 sm:items-center">
-                    {/* VIDEO */}
-                    <div className="flex-shrink-0 w-full sm:w-[120px]">
+                    <div className="flex-shrink-0 w-full sm:w-[110px]">
                       {ex.youtube_url ? (
                         <button
                           onClick={() => setActiveVideo(getYoutubeId(ex.youtube_url))}
-                          className="w-full aspect-video bg-bg-secondary border-[0.5px] border-border rounded-lg flex flex-col items-center justify-center gap-1 hover:border-accent hover:text-accent transition-all text-text-secondary group overflow-hidden relative"
+                          className="w-full aspect-video bg-bg-secondary border-[0.5px] border-border rounded-lg flex items-center justify-center hover:border-accent hover:text-accent transition-all text-text-secondary group overflow-hidden relative"
                         >
                           <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors"></div>
-                          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="opacity-80 group-hover:opacity-100 z-10">
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" className="opacity-80 group-hover:opacity-100 z-10">
                             <path d="M8 5v14l11-7z" />
                           </svg>
                         </button>
                       ) : (
-                        <div className="w-full aspect-video bg-bg-secondary border-[0.5px] border-border rounded-lg flex items-center justify-center text-[10px] text-text-secondary uppercase tracking-[0.05em]">
-                          Sin video
-                        </div>
+                        <div className="w-full aspect-video bg-bg-secondary border-[0.5px] border-border rounded-lg flex items-center justify-center text-[10px] text-text-secondary uppercase tracking-[0.05em]">Sin video</div>
                       )}
                       {ex.youtube_url && (
-                        <a
-                          href={ex.youtube_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="w-full text-center text-[11px] text-accent mt-2 block hover:underline"
-                        >
-                          Ver en YouTube
-                        </a>
+                        <a href={ex.youtube_url} target="_blank" rel="noreferrer" className="text-center text-[11px] text-accent mt-1.5 block hover:underline">Ver en YouTube</a>
                       )}
                     </div>
-
-                    {/* DATOS */}
                     <div className="flex-grow">
-                      <h4 className="text-[16px] font-medium text-text-primary mb-3 leading-[1.3]">{ex.exercise_name}</h4>
-                      <div className="grid grid-cols-2 gap-y-3 gap-x-4 max-w-[400px]">
+                      <h4 className="text-[15px] font-medium text-text-primary mb-2 leading-[1.3]">{ex.exercise_name}</h4>
+                      <div className="grid grid-cols-3 gap-x-4 gap-y-2">
                         <div>
-                          <div className="text-[11px] text-text-secondary uppercase tracking-[0.05em] mb-1">Series x Reps</div>
-                          <div className="text-[14px] font-medium text-accent">{weekData.sets || '-'} × {weekData.reps || '-'}</div>
+                          <div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-0.5">Series × Reps</div>
+                          <div className="text-[13px] font-medium text-accent">{weekData.sets || '-'} × {weekData.reps || '-'}</div>
                         </div>
                         <div>
-                          <div className="text-[11px] text-text-secondary uppercase tracking-[0.05em] mb-1">Carga</div>
-                          <div className="text-[14px] font-medium">{weekData.load || '-'}</div>
+                          <div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-0.5">Carga</div>
+                          <div className="text-[13px] font-medium">{weekData.load || '-'}</div>
                         </div>
                         <div>
-                          <div className="text-[11px] text-text-secondary uppercase tracking-[0.05em] mb-1">Descanso</div>
-                          <div className="text-[14px] font-medium">{weekData.rest || '-'}</div>
+                          <div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-0.5">Descanso</div>
+                          <div className="text-[13px] font-medium">{weekData.rest || '-'}</div>
                         </div>
                       </div>
                     </div>
@@ -169,15 +153,7 @@ export default function PatientPlanViewer({ planData }: { planData: { sessions: 
             </button>
           </div>
           <div className="w-full max-w-[800px] aspect-video">
-            <iframe
-              width="100%"
-              height="100%"
-              src={`https://www.youtube.com/embed/${activeVideo}?autoplay=1&playsinline=1`}
-              title="YouTube video player"
-              frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            ></iframe>
+            <iframe width="100%" height="100%" src={`https://www.youtube.com/embed/${activeVideo}?autoplay=1&playsinline=1`} title="Video" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe>
           </div>
           <div className="h-20"></div>
         </div>
