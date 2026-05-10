@@ -451,23 +451,6 @@ export default function PacienteDetail({ patient: initialPatient, userId: _userI
       {/* EVALUACIONES — Fichas, Cuestionarios, RTS, Dinamometría */}
       {activeTab === 'evaluaciones' && (
         <>
-          {/* ACCESO RÁPIDO A HERRAMIENTAS */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-10">
-            {[
-              { label: 'Cuestionarios', href: '/recursos/cuestionarios', desc: 'SPADI, NDI, DASH, Tampa...' },
-              { label: 'Dinamómetro', href: '/recursos/dinamometro', desc: 'Fuerza muscular HHD' },
-              { label: 'Banderas Rojas', href: '/recursos/banderas-rojas', desc: 'Cervical, hombro, lumbar, rodilla' },
-              { label: 'Retorno al Deporte', href: `/dashboard/pacientes/${patient.id}/rts`, desc: 'Protocolo LCA' },
-            ].map(tool => (
-              <Link key={tool.label} href={tool.href} className="block no-underline">
-                <div className="bg-bg-secondary border-[0.5px] border-border rounded-xl px-4 py-3 hover:border-border-strong hover:bg-bg-primary transition-colors">
-                  <div className="text-[13px] font-medium mb-0.5">{tool.label} →</div>
-                  <div className="text-[11px] text-text-secondary">{tool.desc}</div>
-                </div>
-              </Link>
-            ))}
-          </div>
-
           {/* FICHAS KINÉSICAS */}
           <div className="mb-12">
             <div className="flex justify-between items-center mb-4">
