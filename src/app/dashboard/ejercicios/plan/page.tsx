@@ -29,10 +29,10 @@ export default async function PlanListPage({ searchParams }: { searchParams: { p
 
   const backHref = patientId
     ? `/dashboard/pacientes/${patientId}`
-    : '/dashboard/ejercicios'
+    : '/dashboard'
   const backLabel = patientId && patientName
     ? `← ${patientName}`
-    : '← Volver al Movement Dashboard'
+    : '← Dashboard'
 
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
