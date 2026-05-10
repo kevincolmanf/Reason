@@ -14,7 +14,7 @@ interface Patient {
   load_share_token: string | null
 }
 
-export default function PacienteDetail({ patient: initialPatient, userId: _userId }: { patient: Patient, userId: string }) {
+export default function PacienteDetail({ patient: initialPatient }: { patient: Patient, userId: string }) {
   const [patient, setPatient] = useState<Patient>(initialPatient)
   const [editing, setEditing] = useState(false)
   const [editForm, setEditForm] = useState({ name: initialPatient.name, age: initialPatient.age?.toString() || '', occupation: initialPatient.occupation || '' })

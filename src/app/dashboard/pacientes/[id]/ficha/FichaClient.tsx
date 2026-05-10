@@ -149,11 +149,9 @@ const emptyFicha: FichaData = {
 
 export default function FichaClient({
   ficha: initialFicha,
-  patientId,
   patientName,
   questionnaireResults,
   dynamoResults,
-  userId: _userId,
 }: {
   ficha: PatientFicha
   patientId: string
