@@ -8,21 +8,21 @@ export default async function Header() {
 
   return (
     <header className="py-6 border-b-[0.5px] border-border sticky top-0 bg-bg-primary/80 backdrop-blur-md z-10">
-      <div className="w-full max-w-[1080px] mx-auto px-8 flex justify-between items-center">
+      <div className="w-full max-w-[1080px] mx-auto px-4 sm:px-8 flex justify-between items-center">
         <Link href="/dashboard" className="text-[20px] font-medium tracking-[-0.01em] no-underline text-text-primary">
           reason<span className="text-accent">.</span>
         </Link>
-        <nav className="flex items-center gap-6">
-          <Link href="/library" className="text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+        <nav className="flex items-center gap-3 sm:gap-6">
+          <Link href="/library" className="hidden sm:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
             Biblioteca
           </Link>
-          <Link href="/recursos" className="text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+          <Link href="/recursos" className="hidden sm:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
             Recursos
           </Link>
-          <Link href="/dashboard/ejercicios" className="text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+          <Link href="/dashboard/ejercicios" className="text-[13px] sm:text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
             Ejercicios
           </Link>
-          <Link href="/dashboard/pacientes" className="text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+          <Link href="/dashboard/pacientes" className="text-[13px] sm:text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
             Pacientes
           </Link>
           

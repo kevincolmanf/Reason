@@ -229,13 +229,13 @@ export default function PatientPortalClient({ token, plans, recentSessions }: Pr
           {/* Tipo de sesión */}
           <div>
             <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-2">Tipo de sesión</label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="flex flex-col sm:grid sm:grid-cols-3 gap-2">
               {ACTIVITY_TYPES.map(t => (
                 <button key={t.value} onClick={() => setActivityType(t.value)}
-                  className={`flex flex-col items-start px-3 py-3 rounded-xl border-[0.5px] text-left transition-all ${activityType === t.value ? 'bg-accent/10 border-accent text-text-primary' : 'bg-bg-secondary border-border text-text-secondary hover:border-text-secondary'}`}
+                  className={`flex sm:flex-col items-center sm:items-start gap-3 sm:gap-0 px-4 sm:px-3 py-3 rounded-xl border-[0.5px] text-left transition-all ${activityType === t.value ? 'bg-accent/10 border-accent text-text-primary' : 'bg-bg-secondary border-border text-text-secondary hover:border-text-secondary'}`}
                 >
-                  <span className={`text-[13px] font-medium mb-0.5 ${activityType === t.value ? 'text-accent' : ''}`}>{t.label}</span>
-                  <span className="text-[10px] leading-[1.3] opacity-70">{t.desc}</span>
+                  <span className={`text-[13px] font-medium sm:mb-0.5 whitespace-nowrap ${activityType === t.value ? 'text-accent' : ''}`}>{t.label}</span>
+                  <span className="text-[11px] sm:text-[10px] leading-[1.3] opacity-70">{t.desc}</span>
                 </button>
               ))}
             </div>
