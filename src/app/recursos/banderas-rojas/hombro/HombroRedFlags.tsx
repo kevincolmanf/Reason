@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { jsPDF } from 'jspdf'
+import SaveRedFlagsToFicha from '@/components/SaveRedFlagsToFicha'
 
 const FLAGS = [
   { id: 1, text: 'Trauma significativo reciente (caída sobre el hombro, luxación de alta energía)', category: 'Trauma' },
@@ -27,6 +28,11 @@ export default function HombroRedFlags() {
 
   const activeFlags = Object.entries(flags).filter(([, val]) => val).map(([id]) => parseInt(id))
   const hasFlags = activeFlags.length > 0
+  const anyChecked = Object.keys(flags).length > 0
+
+  const examenTestText = hasFlags
+    ? `Banderas Rojas Hombro — ${new Date().toLocaleDateString('es-AR')}\nALERTA: ${activeFlags.length} bandera(s) roja(s) detectada(s).\n${activeFlags.map(id => `• ${FLAGS.find(f => f.id === id)?.text ?? ''}`).join('\n')}\nJustifica derivación médica o estudios por imagen.`
+    : `Banderas Rojas Hombro — ${new Date().toLocaleDateString('es-AR')}\nSin banderas rojas detectadas.`
 
   const handleExportPDF = () => {
     const doc = new jsPDF()
@@ -125,6 +131,7 @@ export default function HombroRedFlags() {
               </button>
             </div>
           )}
+          {anyChecked && <SaveRedFlagsToFicha region="Hombro" examenTestText={examenTestText} />}
         </div>
       </div>
     </div>
