@@ -16,7 +16,7 @@ interface ExercisePlan {
 }
 
 const initialPlanData = {
-  sessions: [1, 2, 3, 4].map(s => ({
+  sessions: [1, 2, 3, 4, 5, 6, 7].map(s => ({
     id: `session_${s}`,
     name: `Sesión ${s}`,
     blocks: [
