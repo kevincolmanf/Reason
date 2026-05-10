@@ -40,6 +40,17 @@ export default async function PatientPortalPage({ params }: { params: { token: s
     .order('session_date', { ascending: false })
     .limit(30)
 
+  // Sesiones programadas: próximos 14 días + las de hoy
+  const today = new Date().toISOString().split('T')[0]
+  const in14 = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  const { data: scheduledSessions } = await supabase
+    .from('scheduled_sessions')
+    .select('id, session_name, plan_name, scheduled_date, completed')
+    .eq('patient_id', patient.id)
+    .gte('scheduled_date', today)
+    .lte('scheduled_date', in14)
+    .order('scheduled_date', { ascending: true })
+
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
       <header className="py-4 border-b-[0.5px] border-border bg-bg-primary/80 backdrop-blur-md sticky top-0 z-10">
@@ -59,6 +70,7 @@ export default async function PatientPortalPage({ params }: { params: { token: s
           token={params.token}
           plans={plans ?? []}
           recentSessions={recentSessions ?? []}
+          scheduledSessions={scheduledSessions ?? []}
         />
       </main>
     </div>

@@ -81,6 +81,12 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [targetBlock, setTargetBlock] = useState<{sessionIdx: number, blockIdx: number} | null>(null)
 
+  // Schedule modal state
+  const [scheduleModal, setScheduleModal] = useState<{sessionId: string, sessionName: string} | null>(null)
+  const [scheduleDate, setScheduleDate] = useState('')
+  const [scheduleSaving, setScheduleSaving] = useState(false)
+  const [scheduleSuccess, setScheduleSuccess] = useState(false)
+
   // Search state
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [searchResults, setSearchResults] = useState<any[]>([])
@@ -267,6 +273,23 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
     setPlan(newPlan)
     setIsSearchOpen(false)
     setTargetBlock(null)
+  }
+
+  const handleScheduleSession = async () => {
+    if (!scheduleModal || !scheduleDate || !plan.patient_id) return
+    setScheduleSaving(true)
+    await supabase.from('scheduled_sessions').insert({
+      user_id: userId,
+      patient_id: plan.patient_id,
+      plan_id: plan.id,
+      session_id: scheduleModal.sessionId,
+      session_name: scheduleModal.sessionName,
+      plan_name: plan.name,
+      scheduled_date: scheduleDate,
+    })
+    setScheduleSaving(false)
+    setScheduleSuccess(true)
+    setTimeout(() => { setScheduleModal(null); setScheduleSuccess(false) }, 1200)
   }
 
   const handleExportPDF = async () => {
@@ -467,13 +490,27 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
       {/* CONTENIDO DE SESION */}
       {typeof activeSession === 'number' && currentSession && (
         <div className="bg-bg-primary border-[0.5px] border-border rounded-b-xl rounded-tl-xl p-6 min-h-[500px]">
-          <div className="mb-8">
-            <input 
-              type="text" 
+          <div className="mb-8 flex items-center gap-4">
+            <input
+              type="text"
               value={currentSession.name}
               onChange={(e) => updateSessionName(activeSession, e.target.value)}
-              className="bg-transparent text-[20px] font-medium tracking-[-0.01em] text-accent focus:outline-none focus:border-b-[0.5px] border-accent"
+              className="bg-transparent text-[20px] font-medium tracking-[-0.01em] text-accent focus:outline-none focus:border-b-[0.5px] border-accent flex-1"
             />
+            {plan.patient_id && (
+              <button
+                onClick={() => {
+                  setScheduleDate(new Date().toISOString().split('T')[0])
+                  setScheduleSuccess(false)
+                  setScheduleModal({ sessionId: currentSession.id, sessionName: currentSession.name })
+                }}
+                className="shrink-0 bg-bg-secondary border-[0.5px] border-border text-text-secondary px-3 py-1.5 rounded-lg text-[12px] hover:text-accent hover:border-accent transition-colors flex items-center gap-1.5"
+                title="Programar esta sesión en el calendario"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                Programar
+              </button>
+            )}
           </div>
 
           <div className="space-y-12">
@@ -785,6 +822,39 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
                   </button>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL PROGRAMAR SESIÓN */}
+      {scheduleModal && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setScheduleModal(null)}>
+          <div className="bg-bg-primary border-[0.5px] border-border rounded-2xl p-6 w-full max-w-[340px]" onClick={e => e.stopPropagation()}>
+            <h2 className="text-[16px] font-medium mb-1">Programar sesión</h2>
+            <p className="text-[13px] text-text-secondary mb-5">{scheduleModal.sessionName}</p>
+
+            <div>
+              <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Fecha</label>
+              <input
+                type="date"
+                value={scheduleDate}
+                onChange={e => setScheduleDate(e.target.value)}
+                className="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent"
+              />
+            </div>
+
+            <div className="flex gap-3 mt-5">
+              <button
+                onClick={handleScheduleSession}
+                disabled={scheduleSaving || !scheduleDate || scheduleSuccess}
+                className="bg-accent text-bg-primary px-5 py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 flex-1"
+              >
+                {scheduleSuccess ? '✓ Guardado' : scheduleSaving ? 'Guardando...' : 'Programar'}
+              </button>
+              <button onClick={() => setScheduleModal(null)} className="text-text-secondary px-4 py-2.5 rounded-lg text-[13px] hover:text-text-primary">
+                Cancelar
+              </button>
             </div>
           </div>
         </div>
