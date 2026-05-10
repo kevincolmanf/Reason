@@ -91,6 +91,12 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
   // Patients state
   const [patients, setPatients] = useState<{id: string, name: string}[]>([])
 
+  // Create exercise state
+  const [showCreateForm, setShowCreateForm] = useState(false)
+  const [createName, setCreateName] = useState('')
+  const [createUrl, setCreateUrl] = useState('')
+  const [creating, setCreating] = useState(false)
+
   // Logs state
   const [logs, setLogs] = useState<ActivityLog[]>([])
   const [logsLoading, setLogsLoading] = useState(false)
@@ -215,6 +221,23 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
     setIsSearchOpen(true)
     setSearchQuery('')
     setSearchCategory('')
+    setShowCreateForm(false)
+    setCreateName('')
+    setCreateUrl('')
+  }
+
+  const handleCreateExercise = async () => {
+    if (!createName.trim()) return
+    setCreating(true)
+    const { data, error } = await supabase
+      .from('user_exercises')
+      .insert({ user_id: userId, name: createName.trim(), youtube_url: createUrl.trim() || null })
+      .select()
+      .single()
+    if (!error && data) {
+      addExerciseToBlock({ id: data.id, name: data.name, youtube_url: data.youtube_url, category: 'mis_ejercicios' })
+    }
+    setCreating(false)
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -698,8 +721,8 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
               ) : searchResults.length === 0 ? (
                 <div className="text-center py-8 text-text-secondary text-[13px]">
                   {searchCategory === 'mis_ejercicios'
-                    ? 'No tenés ejercicios propios aún. Podés agregarlos desde la Biblioteca.'
-                    : 'No hay resultados. Buscá por nombre o cambiá la categoría.'}
+                    ? 'No tenés ejercicios propios aún. Creá uno abajo.'
+                    : 'No hay resultados. Buscá por nombre, cambiá la categoría o creá un ejercicio nuevo abajo.'}
                 </div>
               ) : (
                 searchResults.map(ex => (
@@ -721,6 +744,46 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
                     </div>
                   </button>
                 ))
+              )}
+            </div>
+
+            {/* CREAR EJERCICIO NUEVO */}
+            <div className="border-t-[0.5px] border-border bg-bg-secondary">
+              <button
+                onClick={() => setShowCreateForm(v => !v)}
+                className="w-full flex items-center justify-between px-4 py-3 text-[13px] text-text-secondary hover:text-text-primary transition-colors"
+              >
+                <span>Crear ejercicio nuevo</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                  className={`transition-transform ${showCreateForm ? 'rotate-180' : ''}`}>
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </button>
+              {showCreateForm && (
+                <div className="px-4 pb-4 space-y-3">
+                  <input
+                    type="text"
+                    value={createName}
+                    onChange={e => setCreateName(e.target.value)}
+                    placeholder="Nombre del ejercicio *"
+                    className="w-full bg-bg-primary border-[0.5px] border-border rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:border-accent"
+                    autoFocus
+                  />
+                  <input
+                    type="text"
+                    value={createUrl}
+                    onChange={e => setCreateUrl(e.target.value)}
+                    placeholder="URL de YouTube (opcional)"
+                    className="w-full bg-bg-primary border-[0.5px] border-border rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:border-accent"
+                  />
+                  <button
+                    onClick={handleCreateExercise}
+                    disabled={creating || !createName.trim()}
+                    className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
+                  >
+                    {creating ? 'Creando...' : 'Crear y agregar al bloque'}
+                  </button>
+                </div>
               )}
             </div>
           </div>
