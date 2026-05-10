@@ -161,7 +161,7 @@ export default function PatientPortalClient({ token, plans, recentSessions }: Pr
       if (!res.ok) { setSubmitStatus('error'); setTimeout(() => setSubmitStatus('idle'), 3000); return }
 
       // 2. Submit per-exercise reports (fire-and-forget, don't block on failures)
-      const exercisePromises = [...expandedEx].map(exId => {
+      const exercisePromises = Array.from(expandedEx).map(exId => {
         const report = exReports[exId]
         const ex = allExercises.find(e => e.id === exId)
         if (!report || !ex) return Promise.resolve()
@@ -347,14 +347,14 @@ export default function PatientPortalClient({ token, plans, recentSessions }: Pr
 
           {/* Ejercicio por ejercicio (opcional) */}
           {allExercises.length > 0 && (
-            <div className="border-t-[0.5px] border-border pt-5">
+            <div>
               <button
                 onClick={() => setShowExercises(v => !v)}
-                className="w-full flex items-center justify-between text-[13px] text-text-secondary hover:text-text-primary transition-colors"
+                className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-[13px] font-medium border-[0.5px] transition-colors ${showExercises ? 'bg-bg-secondary border-border text-text-primary' : 'bg-bg-secondary border-border text-text-secondary hover:text-text-primary hover:border-accent'}`}
               >
-                <span>Agregar notas por ejercicio <span className="text-text-secondary/60">(opcional)</span></span>
+                <span>¿Querés comentar algún ejercicio? <span className="font-normal opacity-60">(opcional)</span></span>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                  className={`transition-transform ${showExercises ? 'rotate-180' : ''}`}>
+                  className={`transition-transform flex-shrink-0 ${showExercises ? 'rotate-180' : ''}`}>
                   <polyline points="6 9 12 15 18 9"></polyline>
                 </svg>
               </button>
