@@ -79,11 +79,10 @@ function formatScheduledDate(d: string) {
 
 export default function PatientPortalClient({ token, plans, recentSessions, scheduledSessions }: Props) {
   const [activePlanIdx, setActivePlanIdx] = useState(0)
-  const [jumpWeek, setJumpWeek] = useState<number | undefined>(undefined)
   const [jumpSessionIdx, setJumpSessionIdx] = useState<number | undefined>(undefined)
   const [jumpKey, setJumpKey] = useState(0)
 
-  const navigateToPlanSession = (planIdx: number, week: number, sessionId: string) => {
+  const navigateToPlanSession = (planIdx: number, sessionId: string) => {
     const plan = plans[planIdx]
     if (!plan?.plan_data) return
     const d = plan.plan_data as Record<string, unknown>
@@ -91,7 +90,6 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
     const sessions = d.sessions as Array<{ id: string }>
     const sessionIdx = sessions.findIndex(s => s.id === sessionId)
     setActivePlanIdx(planIdx)
-    setJumpWeek(week)
     setJumpSessionIdx(sessionIdx !== -1 ? sessionIdx : 0)
     setJumpKey(k => k + 1)
     setTimeout(() => {
@@ -183,7 +181,7 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
           return fetch(`/api/paciente/${token}/log`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ exercise_id: ex.id, exercise_name: ex.exercise_name, session_id: ex.sessionId, week: 1, rpe: report.rpe, eva: report.eva, notes: report.notes || null }),
+            body: JSON.stringify({ plan_id: activePlan?.id, exercise_id: ex.id, exercise_name: ex.exercise_name, session_id: ex.sessionId, week: 1, rpe: report.rpe, eva: report.eva, notes: report.notes || null }),
           }).catch(() => {})
         }))
       }
@@ -219,7 +217,7 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
                   key={s.id}
                   onClick={() => {
                     const planIdx = plans.findIndex(p => p.id === s.plan_id)
-                    if (planIdx !== -1) navigateToPlanSession(planIdx, s.week, s.session_id)
+                    if (planIdx !== -1) navigateToPlanSession(planIdx, s.session_id)
                   }}
                   className={`w-full text-left flex items-center gap-3 rounded-xl border-[0.5px] px-4 py-3 transition-colors ${
                     isToday
@@ -286,7 +284,6 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
                     key={jumpKey}
                     planData={validPlanData}
                     token={token}
-                    initialWeek={jumpWeek}
                     initialSessionIdx={jumpSessionIdx}
                   />
                 ) : (

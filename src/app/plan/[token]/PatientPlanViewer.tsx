@@ -31,13 +31,12 @@ interface PlanSession {
   blocks: PlanBlock[]
 }
 
-export default function PatientPlanViewer({ planData, initialWeek, initialSessionIdx }: { planData: { sessions: PlanSession[] }, token: string, initialWeek?: number, initialSessionIdx?: number }) {
+export default function PatientPlanViewer({ planData, initialSessionIdx }: { planData: { sessions: PlanSession[] }, token: string, initialSessionIdx?: number }) {
   const [activeSession, setActiveSession] = useState(() => {
     if (initialSessionIdx !== undefined) return initialSessionIdx
     const firstValid = planData.sessions.findIndex(s => s.blocks.some(b => b.exercises.length > 0))
     return firstValid !== -1 ? firstValid : 0
   })
-  const [activeWeek, setActiveWeek] = useState(initialWeek ?? 1)
   const [activeVideo, setActiveVideo] = useState<string | null>(null)
 
   const currentSession = planData.sessions[activeSession]
@@ -57,18 +56,6 @@ export default function PatientPlanViewer({ planData, initialWeek, initialSessio
 
   return (
     <div className="pb-4">
-      {/* NAVEGACIÓN SEMANAS */}
-      <div className="bg-bg-secondary border-[0.5px] border-border rounded-xl p-2 flex justify-between gap-2 mb-6 sticky top-[65px] z-10 shadow-sm backdrop-blur-md">
-        {[1, 2, 3, 4].map(w => (
-          <button
-            key={w}
-            onClick={() => setActiveWeek(w)}
-            className={`flex-1 py-2 text-[13px] font-medium rounded-lg transition-all ${activeWeek === w ? 'bg-accent text-bg-primary shadow-md' : 'text-text-secondary hover:text-text-primary hover:bg-bg-primary/50'}`}
-          >
-            Semana {w}
-          </button>
-        ))}
-      </div>
 
       {/* NAVEGACIÓN SESIONES */}
       <div className="flex gap-2 overflow-x-auto mb-5 pb-1 hide-scrollbar">
@@ -95,7 +82,7 @@ export default function PatientPlanViewer({ planData, initialWeek, initialSessio
             </div>
             <div className="divide-y-[0.5px] divide-border">
               {block.exercises.map(ex => {
-                const weekData = ex.weeks.find(w => w.week === activeWeek)
+                const weekData = ex.weeks[0]
                 if (!weekData) return null
                 return (
                   <div key={ex.id} className="p-4 sm:p-5 flex flex-col sm:flex-row gap-4 sm:items-center">

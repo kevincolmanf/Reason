@@ -596,16 +596,16 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <h4 className="text-[15px] font-medium text-text-primary">{ex.exercise_name}</h4>
-                              {latestByExercise[ex.exercise_id] && (() => {
-                                const log = latestByExercise[ex.exercise_id]
+                              {latestByExercise[ex.id] && (() => {
+                                const log = latestByExercise[ex.id]
                                 const signal = getTrafficLight(log.rpe, log.eva)
-                                const isHovered = hoveredExSignal === ex.exercise_id
+                                const isHovered = hoveredExSignal === ex.id
                                 return (
                                   <div className="relative">
                                     <button
-                                      onMouseEnter={() => setHoveredExSignal(ex.exercise_id)}
+                                      onMouseEnter={() => setHoveredExSignal(ex.id)}
                                       onMouseLeave={() => setHoveredExSignal(null)}
-                                      onClick={() => setHoveredExSignal(isHovered ? null : ex.exercise_id)}
+                                      onClick={() => setHoveredExSignal(isHovered ? null : ex.id)}
                                       className="flex items-center gap-1.5 focus:outline-none"
                                     >
                                       <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${TRAFFIC_COLORS[signal]}`} />
@@ -636,47 +636,30 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
                           >×</button>
                         </div>
 
-                        {/* TABLA DE SEMANAS EN DESKTOP, STACK EN MOBILE */}
-                        <div className="overflow-x-auto">
-                          <table className="w-full min-w-[700px] text-left border-collapse">
-                            <thead>
-                              <tr className="text-[11px] uppercase tracking-[0.05em] text-text-secondary border-b-[0.5px] border-border">
-                                <th className="pb-2 w-[80px]">Semana</th>
-                                <th className="pb-2 w-[80px]">Series</th>
-                                <th className="pb-2 w-[80px]">Reps</th>
-                                <th className="pb-2 w-[120px]">Carga</th>
-                                <th className="pb-2 w-[120px]">Pausa</th>
-                                <th className="pb-2 w-[80px]" title="Rating of Perceived Exertion (1-10)">RPE</th>
-                                <th className="pb-2 w-[80px]" title="Escala Visual Analógica de dolor (1-10)">EAV</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {ex.weeks.map((w, wIdx) => (
-                                <tr key={w.week} className="border-b-[0.5px] border-border/30 last:border-0">
-                                  <td className="py-2 text-[13px] font-medium text-text-secondary">Sem {w.week}</td>
-                                  <td className="py-2 pr-2">
-                                    <input type="text" value={w.sets} onChange={e => updateWeekData(activeSession, bIdx, exIdx, wIdx, 'sets', e.target.value)} className="w-full bg-bg-primary border-[0.5px] border-border rounded p-1 text-[13px] focus:border-accent outline-none" />
-                                  </td>
-                                  <td className="py-2 pr-2">
-                                    <input type="text" value={w.reps} onChange={e => updateWeekData(activeSession, bIdx, exIdx, wIdx, 'reps', e.target.value)} className="w-full bg-bg-primary border-[0.5px] border-border rounded p-1 text-[13px] focus:border-accent outline-none" />
-                                  </td>
-                                  <td className="py-2 pr-2">
-                                    <input type="text" value={w.load} onChange={e => updateWeekData(activeSession, bIdx, exIdx, wIdx, 'load', e.target.value)} placeholder="ej: 20kg" className="w-full bg-bg-primary border-[0.5px] border-border rounded p-1 text-[13px] focus:border-accent outline-none" />
-                                  </td>
-                                  <td className="py-2 pr-2">
-                                    <input type="text" value={w.rest} onChange={e => updateWeekData(activeSession, bIdx, exIdx, wIdx, 'rest', e.target.value)} placeholder="ej: 90s" className="w-full bg-bg-primary border-[0.5px] border-border rounded p-1 text-[13px] focus:border-accent outline-none" />
-                                  </td>
-                                  <td className="py-2 pr-2">
-                                    <input type="text" value={w.rpe} onChange={e => updateWeekData(activeSession, bIdx, exIdx, wIdx, 'rpe', e.target.value)} className="w-full bg-bg-primary border-[0.5px] border-border rounded p-1 text-[13px] focus:border-accent outline-none" />
-                                  </td>
-                                  <td className="py-2">
-                                    <input type="text" value={w.eav} onChange={e => updateWeekData(activeSession, bIdx, exIdx, wIdx, 'eav', e.target.value)} className="w-full bg-bg-primary border-[0.5px] border-border rounded p-1 text-[13px] focus:border-accent outline-none" />
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
+                        {/* PRESCRIPCIÓN */}
+                        {ex.weeks[0] && (
+                          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                            {[
+                              { field: 'sets' as const, label: 'Series' },
+                              { field: 'reps' as const, label: 'Reps' },
+                              { field: 'load' as const, label: 'Carga', placeholder: 'ej: 20kg' },
+                              { field: 'rest' as const, label: 'Pausa', placeholder: 'ej: 90s' },
+                              { field: 'rpe'  as const, label: 'RPE obj.' },
+                              { field: 'eav'  as const, label: 'EAV obj.' },
+                            ].map(({ field, label, placeholder }) => (
+                              <div key={field}>
+                                <label className="block text-[10px] uppercase tracking-[0.05em] text-text-secondary mb-1">{label}</label>
+                                <input
+                                  type="text"
+                                  value={ex.weeks[0][field]}
+                                  onChange={e => updateWeekData(activeSession, bIdx, exIdx, 0, field, e.target.value)}
+                                  placeholder={placeholder ?? ''}
+                                  className="w-full bg-bg-primary border-[0.5px] border-border rounded-lg px-2 py-1.5 text-[13px] focus:border-accent outline-none"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
 
                       </div>
                     ))}
