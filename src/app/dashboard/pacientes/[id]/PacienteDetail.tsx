@@ -141,7 +141,7 @@ export default function PacienteDetail({ patient: initialPatient }: { patient: P
           </div>
         </Link>
 
-        <Link href="/dashboard/ejercicios/plan" className="block no-underline group">
+        <Link href={`/dashboard/ejercicios/plan?paciente=${patient.id}`} className="block no-underline group">
           <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 hover:bg-bg-secondary transition-colors h-full">
             <div className="text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-3">Ejercicio</div>
             <div className="text-[18px] font-medium mb-1">Plan de Ejercicio</div>
