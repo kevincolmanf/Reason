@@ -31,6 +31,13 @@ const MUSCLE_GROUPS = [
     hqPair: null,
   },
   {
+    key: 'hip_adductor',
+    label: 'Aductores de Cadera',
+    region: 'Miembro Inferior',
+    position: 'Decúbito lateral, cadera neutra',
+    hqPair: null,
+  },
+  {
     key: 'hip_ext_rotator',
     label: 'Rotadores Externos de Cadera',
     region: 'Miembro Inferior',
