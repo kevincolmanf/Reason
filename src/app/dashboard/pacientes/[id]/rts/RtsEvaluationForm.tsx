@@ -233,6 +233,7 @@ export default function RtsEvaluationForm({
   const [isSaved, setIsSaved] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [dynamoMode, setDynamoMode] = useState<'imported' | 'manual'>('imported')
+  const [dynamoUnit, setDynamoUnit] = useState<'kg' | 'N'>('kg')
   const [koosMode, setKoosMode] = useState<'imported' | 'manual'>('imported')
   const [aclRsiMode, setAclRsiMode] = useState<'imported' | 'manual'>('imported')
 
@@ -257,6 +258,7 @@ export default function RtsEvaluationForm({
       hamstring_affected: hamAff || prev.hamstring_affected,
       hamstring_unaffected: hamUnaff || prev.hamstring_unaffected,
     }))
+    if (lastDynamo.unit === 'N' || lastDynamo.unit === 'kg') setDynamoUnit(lastDynamo.unit)
     setDynamoMode('manual')
   }, [lastDynamo, form.affected_side])
 
@@ -379,13 +381,14 @@ export default function RtsEvaluationForm({
       : muscle === 'quad' ? form.quad_unaffected : form.hamstring_unaffected
     const force = n(forceStr)
     if (force === null) return null
+    const forceKg = dynamoUnit === 'N' ? force / 9.81 : force
     const norms = muscle === 'quad' ? QUAD_NORMS : HAMSTRING_NORMS
     const sexNorms = norms[sex]
     if (!sexNorms) return null
     const ageGroup = getAgeGroup(age, sexNorms)
     const normValue = sexNorms[ageGroup]
     if (!normValue) return null
-    const ratio = force / weight
+    const ratio = forceKg / weight
     const pct = (ratio / normValue) * 100
     return { ratio: ratio.toFixed(2), normValue, pct, ageGroup }
   }
@@ -587,7 +590,16 @@ export default function RtsEvaluationForm({
 
       {/* ============ SECCIÓN 2: EVALUACIÓN DE FUERZA ============ */}
       <section>
-        <h2 className="text-[20px] font-medium mb-1">Evaluación de Fuerza Muscular</h2>
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="text-[20px] font-medium">Evaluación de Fuerza Muscular</h2>
+          <div className="flex border-[0.5px] border-border rounded-lg overflow-hidden text-[12px]">
+            {(['kg', 'N'] as const).map(u => (
+              <button key={u} type="button" onClick={() => setDynamoUnit(u)}
+                className={`px-3 py-1 transition-colors ${dynamoUnit === u ? 'bg-accent text-bg-primary' : 'text-text-secondary hover:text-text-primary'}`}
+              >{u}</button>
+            ))}
+          </div>
+        </div>
 
         {lastDynamo && dynamoMode === 'imported' && (
           <div className="mb-5 p-4 bg-bg-secondary border-[0.5px] border-border rounded-xl flex items-center justify-between flex-wrap gap-3">
@@ -616,12 +628,12 @@ export default function RtsEvaluationForm({
         )}
 
         <div className="grid grid-cols-2 gap-4 mb-2">
-          <InputField label={`Cuádriceps lado afectado (${form.affected_side === 'left' ? 'Izq' : 'Der'})`} value={form.quad_affected} onChange={v => set('quad_affected', v)} unit="kg" />
-          <InputField label={`Cuádriceps lado sano (${form.affected_side === 'left' ? 'Der' : 'Izq'})`} value={form.quad_unaffected} onChange={v => set('quad_unaffected', v)} unit="kg" />
+          <InputField label={`Cuádriceps lado afectado (${form.affected_side === 'left' ? 'Izq' : 'Der'})`} value={form.quad_affected} onChange={v => set('quad_affected', v)} unit={dynamoUnit} />
+          <InputField label={`Cuádriceps lado sano (${form.affected_side === 'left' ? 'Der' : 'Izq'})`} value={form.quad_unaffected} onChange={v => set('quad_unaffected', v)} unit={dynamoUnit} />
         </div>
         <div className="grid grid-cols-2 gap-4 mb-4">
-          <InputField label={`Isquiotibiales lado afectado (${form.affected_side === 'left' ? 'Izq' : 'Der'})`} value={form.hamstring_affected} onChange={v => set('hamstring_affected', v)} unit="kg" />
-          <InputField label={`Isquiotibiales lado sano (${form.affected_side === 'left' ? 'Der' : 'Izq'})`} value={form.hamstring_unaffected} onChange={v => set('hamstring_unaffected', v)} unit="kg" />
+          <InputField label={`Isquiotibiales lado afectado (${form.affected_side === 'left' ? 'Izq' : 'Der'})`} value={form.hamstring_affected} onChange={v => set('hamstring_affected', v)} unit={dynamoUnit} />
+          <InputField label={`Isquiotibiales lado sano (${form.affected_side === 'left' ? 'Der' : 'Izq'})`} value={form.hamstring_unaffected} onChange={v => set('hamstring_unaffected', v)} unit={dynamoUnit} />
         </div>
 
         {/* LSI en tiempo real */}
@@ -647,7 +659,7 @@ export default function RtsEvaluationForm({
               {quadAffNorm && (
                 <div className="text-[13px]">
                   <span className="text-text-secondary">Cuád. afectado: </span>
-                  <span className="text-text-primary">{quadAffNorm.ratio} kg/kg peso</span>
+                  <span className="text-text-primary">{quadAffNorm.ratio} kg/kg peso {dynamoUnit === 'N' ? '(convertido)' : ''}</span>
                   <span className={`ml-2 font-medium ${quadAffNorm.pct >= 90 ? 'text-[#4ade80]' : quadAffNorm.pct >= 75 ? 'text-[#fb923c]' : 'text-[#f87171]'}`}>
                     ({quadAffNorm.pct.toFixed(0)}% del esperado para {form.patient_sex === 'male' ? 'hombre' : 'mujer'}, {patient.age} años)
                   </span>
@@ -656,7 +668,7 @@ export default function RtsEvaluationForm({
               {quadUnaffNorm && (
                 <div className="text-[13px]">
                   <span className="text-text-secondary">Cuád. sano: </span>
-                  <span className="text-text-primary">{quadUnaffNorm.ratio} kg/kg peso</span>
+                  <span className="text-text-primary">{quadUnaffNorm.ratio} kg/kg peso {dynamoUnit === 'N' ? '(convertido)' : ''}</span>
                   <span className={`ml-2 font-medium ${quadUnaffNorm.pct >= 90 ? 'text-[#4ade80]' : quadUnaffNorm.pct >= 75 ? 'text-[#fb923c]' : 'text-[#f87171]'}`}>
                     ({quadUnaffNorm.pct.toFixed(0)}%)
                   </span>
@@ -665,7 +677,7 @@ export default function RtsEvaluationForm({
               {hamAffNorm && (
                 <div className="text-[13px]">
                   <span className="text-text-secondary">Isquio. afectado: </span>
-                  <span className="text-text-primary">{hamAffNorm.ratio} kg/kg peso</span>
+                  <span className="text-text-primary">{hamAffNorm.ratio} kg/kg peso {dynamoUnit === 'N' ? '(convertido)' : ''}</span>
                   <span className={`ml-2 font-medium ${hamAffNorm.pct >= 90 ? 'text-[#4ade80]' : hamAffNorm.pct >= 75 ? 'text-[#fb923c]' : 'text-[#f87171]'}`}>
                     ({hamAffNorm.pct.toFixed(0)}%)
                   </span>
@@ -674,7 +686,7 @@ export default function RtsEvaluationForm({
               {hamUnaffNorm && (
                 <div className="text-[13px]">
                   <span className="text-text-secondary">Isquio. sano: </span>
-                  <span className="text-text-primary">{hamUnaffNorm.ratio} kg/kg peso</span>
+                  <span className="text-text-primary">{hamUnaffNorm.ratio} kg/kg peso {dynamoUnit === 'N' ? '(convertido)' : ''}</span>
                   <span className={`ml-2 font-medium ${hamUnaffNorm.pct >= 90 ? 'text-[#4ade80]' : hamUnaffNorm.pct >= 75 ? 'text-[#fb923c]' : 'text-[#f87171]'}`}>
                     ({hamUnaffNorm.pct.toFixed(0)}%)
                   </span>
