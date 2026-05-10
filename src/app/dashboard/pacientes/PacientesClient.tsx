@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 
 interface Patient {
   id: string
@@ -18,6 +19,11 @@ export default function PacientesClient({ userId }: { userId: string }) {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [saving, setSaving] = useState(false)
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    if (searchParams.get('new') === '1') setShowForm(true)
+  }, [searchParams])
   const [form, setForm] = useState({ name: '', age: '', occupation: '' })
 
   const supabase = createClient()

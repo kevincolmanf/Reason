@@ -23,13 +23,20 @@ export default async function DashboardPage() {
     redirect('/login')
   }
 
-  // Obtener los últimos 6 contenidos publicados
-  const { data: latestContents } = await supabase
-    .from('content')
-    .select('id, title, subtitle, slug, category, tiempo_lectura_min, body_que_saber')
-    .eq('published', true)
-    .order('created_at', { ascending: false })
-    .limit(6)
+  const [{ data: latestContents }, { data: recentPatients }] = await Promise.all([
+    supabase
+      .from('content')
+      .select('id, title, subtitle, slug, category, tiempo_lectura_min, body_que_saber')
+      .eq('published', true)
+      .order('created_at', { ascending: false })
+      .limit(6),
+    supabase
+      .from('patients')
+      .select('id, name, age, occupation')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(3),
+  ])
 
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
@@ -43,9 +50,48 @@ export default async function DashboardPage() {
             Hola, {user.user_metadata?.full_name || 'Suscriptor'}
           </h1>
           <p className="text-text-secondary text-[16px]">
-            Bienvenido a tu espacio de aprendizaje clínico.
+            ¿Con qué paciente trabajás hoy?
           </p>
         </div>
+
+        {/* MIS PACIENTES */}
+        <section className="mb-16">
+          <div className="flex justify-between items-end mb-6">
+            <h2 className="text-[20px] font-medium">Mis pacientes</h2>
+            <Link href="/dashboard/pacientes" className="text-[13px] text-accent hover:underline">
+              Ver todos →
+            </Link>
+          </div>
+
+          {recentPatients && recentPatients.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <Link href="/dashboard/pacientes?new=1" className="block no-underline">
+                <div className="bg-bg-secondary border-[0.5px] border-dashed border-border rounded-xl px-4 py-5 hover:border-accent hover:bg-bg-primary transition-colors h-full flex flex-col items-center justify-center gap-1.5 text-center min-h-[88px]">
+                  <span className="text-[22px] leading-none text-text-secondary">+</span>
+                  <span className="text-[12px] text-text-secondary">Nuevo paciente</span>
+                </div>
+              </Link>
+              {recentPatients.map(p => (
+                <Link key={p.id} href={`/dashboard/pacientes/${p.id}`} className="block no-underline">
+                  <div className="bg-bg-primary border-[0.5px] border-border rounded-xl px-4 py-5 hover:bg-bg-secondary transition-colors h-full">
+                    <div className="text-[15px] font-medium mb-1 truncate">{p.name}</div>
+                    <div className="text-[12px] text-text-secondary truncate">
+                      {[p.age ? `${p.age} años` : null, p.occupation].filter(Boolean).join(' · ') || 'Sin datos'}
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-bg-secondary rounded-xl p-12 text-center border-[0.5px] border-dashed border-border">
+              <p className="text-[16px] font-medium mb-2">Todavía no tenés pacientes</p>
+              <p className="text-[13px] text-text-secondary mb-5">Creá tu primer paciente para empezar a trabajar clínicamente con Reason.</p>
+              <Link href="/dashboard/pacientes?new=1" className="bg-accent text-bg-primary px-5 py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 inline-block no-underline">
+                + Crear primer paciente
+              </Link>
+            </div>
+          )}
+        </section>
 
         {/* ÚLTIMOS CONTENIDOS */}
         <section className="mb-16">
@@ -55,7 +101,7 @@ export default async function DashboardPage() {
               Ver todos →
             </Link>
           </div>
-          
+
           {latestContents && latestContents.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {latestContents.map((item) => (
@@ -73,25 +119,25 @@ export default async function DashboardPage() {
         <section className="mb-16">
           <h2 className="text-[20px] font-medium mb-6">Explorar por categoría</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <CategoryCard 
-              title="Resúmenes Comentados" 
-              slug="resumen_comentado" 
-              desc="La literatura actual destilada" 
+            <CategoryCard
+              title="Resúmenes Comentados"
+              slug="resumen_comentado"
+              desc="La literatura actual destilada"
             />
-            <CategoryCard 
-              title="Aplicaciones Clínicas" 
-              slug="aplicacion_clinica" 
-              desc="De la teoría a la práctica" 
+            <CategoryCard
+              title="Aplicaciones Clínicas"
+              slug="aplicacion_clinica"
+              desc="De la teoría a la práctica"
             />
-            <CategoryCard 
-              title="Protocolos" 
-              slug="protocolo" 
-              desc="Pasos claros para actuar" 
+            <CategoryCard
+              title="Protocolos"
+              slug="protocolo"
+              desc="Pasos claros para actuar"
             />
-            <CategoryCard 
-              title="Casos Reales" 
-              slug="caso_real" 
-              desc="Experiencia de consultorio" 
+            <CategoryCard
+              title="Casos Reales"
+              slug="caso_real"
+              desc="Experiencia de consultorio"
             />
           </div>
         </section>
