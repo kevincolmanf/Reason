@@ -52,6 +52,7 @@ interface ExercisePlan {
 
 interface ActivityLog {
   id: string
+  exercise_id: string
   exercise_name: string
   session_id: string
   week: number
@@ -59,6 +60,26 @@ interface ActivityLog {
   eva: number
   notes: string | null
   logged_at: string
+}
+
+type TrafficLight = 'green' | 'yellow' | 'red'
+
+function getTrafficLight(rpe: number, eva: number): TrafficLight {
+  if (rpe >= 8 || eva >= 7) return 'red'
+  if (rpe >= 6 || eva >= 4) return 'yellow'
+  return 'green'
+}
+
+const TRAFFIC_COLORS: Record<TrafficLight, string> = {
+  green:  'bg-green-500',
+  yellow: 'bg-yellow-400',
+  red:    'bg-red-500',
+}
+
+const TRAFFIC_LABELS: Record<TrafficLight, string> = {
+  green:  'Bien tolerado',
+  yellow: 'Esfuerzo moderado-alto',
+  red:    'Esfuerzo muy alto o dolor',
 }
 
 const CATEGORIES = [
@@ -107,6 +128,10 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
   const [logs, setLogs] = useState<ActivityLog[]>([])
   const [logsLoading, setLogsLoading] = useState(false)
   const [logsGroupBy, setLogsGroupBy] = useState<'exercise' | 'date'>('date')
+
+  // Semáforo: último log por exercise_id
+  const [latestByExercise, setLatestByExercise] = useState<Record<string, ActivityLog>>({})
+  const [hoveredExSignal, setHoveredExSignal] = useState<string | null>(null)
   
   const supabase = createClient()
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -119,6 +144,28 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
     }
     fetchPatients()
   }, [supabase])
+
+  // Cargar últimos logs por ejercicio para semáforo
+  useEffect(() => {
+    const fetchLatestLogs = async () => {
+      const { data } = await supabase
+        .from('plan_activity_logs')
+        .select('id, exercise_id, exercise_name, session_id, week, rpe, eva, notes, logged_at')
+        .eq('plan_id', plan.id)
+        .order('logged_at', { ascending: false })
+      if (data) {
+        const latest: Record<string, ActivityLog> = {}
+        for (const log of data) {
+          if (log.exercise_id && !latest[log.exercise_id]) {
+            latest[log.exercise_id] = log
+          }
+        }
+        setLatestByExercise(latest)
+      }
+    }
+    fetchLatestLogs()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plan.id])
 
   // Autoguardado
   useEffect(() => {
@@ -546,17 +593,45 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
                     {block.exercises.map((ex, exIdx) => (
                       <div key={ex.id} className="bg-bg-secondary border-[0.5px] border-border rounded-xl p-4">
                         <div className="flex justify-between items-start mb-4">
-                          <div>
-                            <h4 className="text-[15px] font-medium text-text-primary">{ex.exercise_name}</h4>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-[15px] font-medium text-text-primary">{ex.exercise_name}</h4>
+                              {latestByExercise[ex.exercise_id] && (() => {
+                                const log = latestByExercise[ex.exercise_id]
+                                const signal = getTrafficLight(log.rpe, log.eva)
+                                const isHovered = hoveredExSignal === ex.exercise_id
+                                return (
+                                  <div className="relative">
+                                    <button
+                                      onMouseEnter={() => setHoveredExSignal(ex.exercise_id)}
+                                      onMouseLeave={() => setHoveredExSignal(null)}
+                                      onClick={() => setHoveredExSignal(isHovered ? null : ex.exercise_id)}
+                                      className="flex items-center gap-1.5 focus:outline-none"
+                                    >
+                                      <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${TRAFFIC_COLORS[signal]}`} />
+                                    </button>
+                                    {isHovered && (
+                                      <div className="absolute left-0 top-5 z-20 bg-bg-primary border-[0.5px] border-border rounded-xl shadow-lg p-3 w-[200px]">
+                                        <div className="text-[12px] font-medium text-text-primary mb-1">{TRAFFIC_LABELS[signal]}</div>
+                                        <div className="text-[11px] text-text-secondary space-y-0.5">
+                                          <div>RPE <span className="font-medium text-text-primary">{log.rpe}</span> · EVA <span className="font-medium text-text-primary">{log.eva}</span></div>
+                                          <div>{new Date(log.logged_at).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}</div>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                )
+                              })()}
+                            </div>
                             {ex.youtube_url && (
                               <a href={ex.youtube_url} target="_blank" rel="noreferrer" className="text-[12px] text-accent hover:underline mt-1 inline-block">
                                 Ver video original
                               </a>
                             )}
                           </div>
-                          <button 
+                          <button
                             onClick={() => removeExercise(activeSession, bIdx, exIdx)}
-                            className="text-text-secondary hover:text-warning text-[18px] p-1"
+                            className="text-text-secondary hover:text-warning text-[18px] p-1 shrink-0"
                             title="Eliminar ejercicio"
                           >×</button>
                         </div>
