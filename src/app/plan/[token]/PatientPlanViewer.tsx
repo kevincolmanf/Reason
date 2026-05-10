@@ -31,12 +31,13 @@ interface PlanSession {
   blocks: PlanBlock[]
 }
 
-export default function PatientPlanViewer({ planData }: { planData: { sessions: PlanSession[] }, token: string }) {
+export default function PatientPlanViewer({ planData, initialWeek, initialSessionIdx }: { planData: { sessions: PlanSession[] }, token: string, initialWeek?: number, initialSessionIdx?: number }) {
   const [activeSession, setActiveSession] = useState(() => {
+    if (initialSessionIdx !== undefined) return initialSessionIdx
     const firstValid = planData.sessions.findIndex(s => s.blocks.some(b => b.exercises.length > 0))
     return firstValid !== -1 ? firstValid : 0
   })
-  const [activeWeek, setActiveWeek] = useState(1)
+  const [activeWeek, setActiveWeek] = useState(initialWeek ?? 1)
   const [activeVideo, setActiveVideo] = useState<string | null>(null)
 
   const currentSession = planData.sessions[activeSession]

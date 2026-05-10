@@ -275,9 +275,19 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
     setTargetBlock(null)
   }
 
+  const calcWeek = (scheduledDate: string): number => {
+    if (!plan.start_date) return 1
+    const start = new Date(plan.start_date + 'T00:00:00')
+    const scheduled = new Date(scheduledDate + 'T00:00:00')
+    const diffDays = Math.floor((scheduled.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+    if (diffDays < 0) return 1
+    return Math.min(Math.floor(diffDays / 7) + 1, 4)
+  }
+
   const handleScheduleSession = async () => {
     if (!scheduleModal || !scheduleDate || !plan.patient_id) return
     setScheduleSaving(true)
+    const week = calcWeek(scheduleDate)
     await supabase.from('scheduled_sessions').insert({
       user_id: userId,
       patient_id: plan.patient_id,
@@ -286,6 +296,7 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
       session_name: scheduleModal.sessionName,
       plan_name: plan.name,
       scheduled_date: scheduleDate,
+      week,
     })
     setScheduleSaving(false)
     setScheduleSuccess(true)
@@ -843,6 +854,16 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
                 className="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent"
               />
             </div>
+
+            {scheduleDate && (
+              <div className={`mt-4 rounded-lg px-4 py-2.5 ${plan.start_date ? 'bg-accent/10 border-[0.5px] border-accent/30' : 'bg-bg-secondary border-[0.5px] border-border'}`}>
+                {plan.start_date ? (
+                  <p className="text-[13px] text-accent font-medium">Semana {calcWeek(scheduleDate)} del plan</p>
+                ) : (
+                  <p className="text-[12px] text-text-secondary">Sin fecha de inicio en el plan → se asigna semana 1. Podés editarla arriba.</p>
+                )}
+              </div>
+            )}
 
             <div className="flex gap-3 mt-5">
               <button

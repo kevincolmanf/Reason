@@ -16,7 +16,7 @@ interface RecentSession {
   session_date: string; activity: string | null; rpe: number; load_units: number; vas_post: number | null; source: string
 }
 interface ScheduledItem {
-  id: string; session_name: string; plan_name: string; scheduled_date: string; completed: boolean
+  id: string; plan_id: string; session_id: string; session_name: string; plan_name: string; scheduled_date: string; week: number; completed: boolean
 }
 
 interface Props {
@@ -79,6 +79,25 @@ function formatScheduledDate(d: string) {
 
 export default function PatientPortalClient({ token, plans, recentSessions, scheduledSessions }: Props) {
   const [activePlanIdx, setActivePlanIdx] = useState(0)
+  const [jumpWeek, setJumpWeek] = useState<number | undefined>(undefined)
+  const [jumpSessionIdx, setJumpSessionIdx] = useState<number | undefined>(undefined)
+  const [jumpKey, setJumpKey] = useState(0)
+
+  const navigateToPlanSession = (planIdx: number, week: number, sessionId: string) => {
+    const plan = plans[planIdx]
+    if (!plan?.plan_data) return
+    const d = plan.plan_data as Record<string, unknown>
+    if (!Array.isArray(d.sessions)) return
+    const sessions = d.sessions as Array<{ id: string }>
+    const sessionIdx = sessions.findIndex(s => s.id === sessionId)
+    setActivePlanIdx(planIdx)
+    setJumpWeek(week)
+    setJumpSessionIdx(sessionIdx !== -1 ? sessionIdx : 0)
+    setJumpKey(k => k + 1)
+    setTimeout(() => {
+      document.getElementById('plan-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 50)
+  }
 
   // Form
   const [activityType, setActivityType] = useState<ActivityType>('rehab')
@@ -196,12 +215,16 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
             {scheduledSessions.map(s => {
               const isToday = s.scheduled_date === todayStr()
               return (
-                <div
+                <button
                   key={s.id}
-                  className={`flex items-center gap-3 rounded-xl border-[0.5px] px-4 py-3 ${
+                  onClick={() => {
+                    const planIdx = plans.findIndex(p => p.id === s.plan_id)
+                    if (planIdx !== -1) navigateToPlanSession(planIdx, s.week, s.session_id)
+                  }}
+                  className={`w-full text-left flex items-center gap-3 rounded-xl border-[0.5px] px-4 py-3 transition-colors ${
                     isToday
-                      ? 'bg-accent/10 border-accent/40'
-                      : 'bg-bg-primary border-border'
+                      ? 'bg-accent/10 border-accent/40 hover:bg-accent/20'
+                      : 'bg-bg-primary border-border hover:bg-bg-secondary'
                   } ${s.completed ? 'opacity-50' : ''}`}
                 >
                   <div className={`w-2 h-2 rounded-full shrink-0 ${s.completed ? 'bg-text-secondary' : isToday ? 'bg-accent' : 'bg-border'}`} />
@@ -209,12 +232,15 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
                     <div className={`text-[14px] font-medium truncate ${s.completed ? 'line-through text-text-secondary' : 'text-text-primary'}`}>
                       {s.session_name}
                     </div>
-                    <div className="text-[12px] text-text-secondary">{s.plan_name}</div>
+                    <div className="text-[12px] text-text-secondary flex items-center gap-1">
+                      <span>{s.plan_name}</span>
+                      <span className="text-accent/70">· Semana {s.week}</span>
+                    </div>
                   </div>
                   <div className={`text-[12px] shrink-0 ${isToday ? 'text-accent font-medium' : 'text-text-secondary'}`}>
                     {formatScheduledDate(s.scheduled_date)}
                   </div>
-                </div>
+                </button>
               )
             })}
           </div>
@@ -222,7 +248,7 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
       )}
 
       {/* ── MI PLAN ────────────────────────────────────────── */}
-      <section>
+      <section id="plan-section">
         <h2 className="text-[20px] font-medium tracking-[-0.01em] mb-4">Mi Plan de Ejercicios</h2>
         {plans.length === 0 ? (
           <div className="text-center py-10 bg-bg-secondary rounded-xl border-[0.5px] border-dashed border-border">
@@ -256,7 +282,13 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
                   )}
                 </div>
                 {validPlanData ? (
-                  <PatientPlanViewer planData={validPlanData} token={token} />
+                  <PatientPlanViewer
+                    key={jumpKey}
+                    planData={validPlanData}
+                    token={token}
+                    initialWeek={jumpWeek}
+                    initialSessionIdx={jumpSessionIdx}
+                  />
                 ) : (
                   <div className="text-center py-8 text-text-secondary text-[13px] border-[0.5px] border-dashed border-border rounded-xl">
                     Este plan aún no tiene ejercicios asignados.
