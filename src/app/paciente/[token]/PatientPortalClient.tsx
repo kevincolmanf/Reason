@@ -15,9 +15,13 @@ interface Plan {
 interface RecentSession {
   session_date: string; activity: string | null; rpe: number; load_units: number; vas_post: number | null; source: string
 }
+interface ScheduledItem {
+  id: string; session_name: string; plan_name: string; scheduled_date: string; completed: boolean
+}
+
 interface Props {
   patient: { id: string; name: string; user_id: string }
-  token: string; plans: Plan[]; recentSessions: RecentSession[]
+  token: string; plans: Plan[]; recentSessions: RecentSession[]; scheduledSessions: ScheduledItem[]
 }
 interface ExerciseReport { rpe: number; eva: number; notes: string }
 
@@ -61,7 +65,19 @@ function formatShortDate(d: string) {
   return new Date(d + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' })
 }
 
-export default function PatientPortalClient({ token, plans, recentSessions }: Props) {
+const DAYS_ES_LONG = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']
+const MONTHS_ES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+
+function formatScheduledDate(d: string) {
+  const date = new Date(d + 'T00:00:00')
+  const today = todayStr()
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0]
+  if (d === today) return 'Hoy'
+  if (d === tomorrow) return 'Mañana'
+  return `${DAYS_ES_LONG[date.getDay()]} ${date.getDate()} de ${MONTHS_ES[date.getMonth()]}`
+}
+
+export default function PatientPortalClient({ token, plans, recentSessions, scheduledSessions }: Props) {
   const [activePlanIdx, setActivePlanIdx] = useState(0)
 
   // Form
@@ -171,6 +187,39 @@ export default function PatientPortalClient({ token, plans, recentSessions }: Pr
 
   return (
     <div className="space-y-10 pb-12">
+
+      {/* ── MI SEMANA ──────────────────────────────────────── */}
+      {scheduledSessions.length > 0 && (
+        <section>
+          <h2 className="text-[20px] font-medium tracking-[-0.01em] mb-4">Mi semana</h2>
+          <div className="space-y-2">
+            {scheduledSessions.map(s => {
+              const isToday = s.scheduled_date === todayStr()
+              return (
+                <div
+                  key={s.id}
+                  className={`flex items-center gap-3 rounded-xl border-[0.5px] px-4 py-3 ${
+                    isToday
+                      ? 'bg-accent/10 border-accent/40'
+                      : 'bg-bg-primary border-border'
+                  } ${s.completed ? 'opacity-50' : ''}`}
+                >
+                  <div className={`w-2 h-2 rounded-full shrink-0 ${s.completed ? 'bg-text-secondary' : isToday ? 'bg-accent' : 'bg-border'}`} />
+                  <div className="flex-1 min-w-0">
+                    <div className={`text-[14px] font-medium truncate ${s.completed ? 'line-through text-text-secondary' : 'text-text-primary'}`}>
+                      {s.session_name}
+                    </div>
+                    <div className="text-[12px] text-text-secondary">{s.plan_name}</div>
+                  </div>
+                  <div className={`text-[12px] shrink-0 ${isToday ? 'text-accent font-medium' : 'text-text-secondary'}`}>
+                    {formatScheduledDate(s.scheduled_date)}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      )}
 
       {/* ── MI PLAN ────────────────────────────────────────── */}
       <section>
