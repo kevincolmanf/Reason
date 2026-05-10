@@ -406,11 +406,16 @@ export default function PatientPortalClient({ token, plans, recentSessions }: Pr
           <h2 className="text-[20px] font-medium tracking-[-0.01em] mb-3">Mis últimas sesiones</h2>
           <div className="bg-bg-primary border-[0.5px] border-border rounded-xl divide-y-[0.5px] divide-border overflow-hidden">
             {localSessions.slice(0, 5).map((s, idx) => (
-              <div key={idx} className="flex items-center gap-3 px-4 py-3">
-                <div className="text-[12px] text-text-secondary min-w-[52px]">{formatShortDate(s.session_date)}</div>
-                <div className="text-[13px] text-text-primary flex-1 truncate">{s.activity || '—'}</div>
-                <div className="text-[12px] text-text-secondary whitespace-nowrap">RPE <span className="text-text-primary font-medium">{s.rpe}</span></div>
-                <div className="text-[12px] text-text-secondary whitespace-nowrap"><span className="text-text-primary font-medium">{s.load_units}</span> UA</div>
+              <div key={idx} className="px-4 py-3">
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <div className="text-[13px] text-text-primary truncate flex-1">{s.activity || '—'}</div>
+                  <div className="text-[11px] text-text-secondary shrink-0">{formatShortDate(s.session_date)}</div>
+                </div>
+                <div className="flex gap-3 text-[12px] text-text-secondary">
+                  <span>RPE <span className="text-text-primary font-medium">{s.rpe}</span></span>
+                  <span><span className="text-text-primary font-medium">{s.load_units}</span> UA</span>
+                  {s.vas_post !== null && <span>Dolor <span className={`font-medium ${vasColor(s.vas_post)}`}>{s.vas_post}</span></span>}
+                </div>
               </div>
             ))}
           </div>
