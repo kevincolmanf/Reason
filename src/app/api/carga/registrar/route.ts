@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 
 export async function POST(request: Request) {
   const body = await request.json()
-  const { token, session_date, activity, duration_minutes, rpe, vas_post } = body
+  const { token, session_date, activity, activity_type, duration_minutes, rpe, vas_pre, vas_during, vas_post } = body
 
   if (!token || !session_date || !duration_minutes || rpe === undefined) {
     return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
@@ -11,7 +11,6 @@ export async function POST(request: Request) {
 
   const supabase = createAdminClient()
 
-  // Verificar que el token existe y obtener patient_id y user_id
   const { data: patient, error: patientError } = await supabase
     .from('patients')
     .select('id, user_id')
@@ -29,9 +28,12 @@ export async function POST(request: Request) {
     patient_id: patient.id,
     session_date,
     activity: activity || null,
+    activity_type: activity_type || null,
     duration_minutes,
     rpe,
     load_units,
+    vas_pre: vas_pre ?? null,
+    vas_during: vas_during ?? null,
     vas_post: vas_post ?? null,
     source: 'patient',
   })
