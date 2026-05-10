@@ -25,7 +25,7 @@ export default async function CargaPage({ params }: { params: { id: string } }) 
 
   const { data: sessions } = await supabase
     .from('load_sessions')
-    .select('id, session_date, activity, duration_minutes, rpe, load_units, vas_pre, vas_during, vas_post, notes, source')
+    .select('id, session_date, activity, duration_minutes, rpe, load_units, vas_pre, vas_during, vas_post, notes, source, sleep_quality, energy, stress')
     .eq('patient_id', patient.id)
     .order('session_date', { ascending: false })
     .limit(56)
