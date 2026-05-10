@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 
 export async function POST(request: Request) {
   const body = await request.json()
-  const { token, session_date, activity, activity_type, duration_minutes, rpe, vas_pre, vas_during, vas_post } = body
+  const { token, session_date, activity, activity_type, duration_minutes, rpe, vas_pre, vas_during, vas_post, sleep_quality, energy, stress } = body
 
   if (!token || !session_date || !duration_minutes || rpe === undefined) {
     return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
@@ -35,6 +35,9 @@ export async function POST(request: Request) {
     vas_pre: vas_pre ?? null,
     vas_during: vas_during ?? null,
     vas_post: vas_post ?? null,
+    sleep_quality: sleep_quality ?? null,
+    energy: energy ?? null,
+    stress: stress ?? null,
     source: 'patient',
   })
 

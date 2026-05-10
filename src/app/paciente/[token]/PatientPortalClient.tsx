@@ -112,6 +112,11 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
   const [expandedEx, setExpandedEx] = useState<Set<string>>(new Set())
   const [exReports, setExReports] = useState<Record<string, ExerciseReport>>({})
 
+  // Bienestar pre-sesión
+  const [sleepQuality, setSleepQuality] = useState<number | null>(null)
+  const [energy, setEnergy] = useState<number | null>(null)
+  const [stress, setStress] = useState<number | null>(null)
+
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [localSessions, setLocalSessions] = useState<RecentSession[]>(recentSessions)
 
@@ -167,6 +172,9 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
           vas_pre: vasPre,
           vas_during: showSportSection ? vasDuring : null,
           vas_post: vasPost,
+          sleep_quality: sleepQuality,
+          energy,
+          stress,
         }),
       })
 
@@ -193,6 +201,7 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
 
       setSubmitStatus('success')
       setFormDate(todayStr()); setFormActivity(''); setFormDuration(''); setFormRpe(null)
+      setSleepQuality(null); setEnergy(null); setStress(null)
       setVasPre(0); setVasDuring(0); setVasPost(0)
       setShowExercises(false); setExpandedEx(new Set()); setExReports({})
       setTimeout(() => setSubmitStatus('idle'), 3000)
@@ -303,6 +312,43 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
         <p className="text-[13px] text-text-secondary mb-5">Completá después de cada entrenamiento.</p>
 
         <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-5 space-y-6">
+
+          {/* Bienestar */}
+          <div>
+            <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-3">Cómo llegás hoy</label>
+            <div className="space-y-4">
+              {([
+                { label: 'Sueño', low: 'Dormí muy mal', high: 'Dormí muy bien', value: sleepQuality, set: setSleepQuality },
+                { label: 'Energía', low: 'Sin energía', high: 'Muy energético', value: energy, set: setEnergy },
+                { label: 'Estrés', low: 'Muy estresado', high: 'Sin estrés', value: stress, set: setStress },
+              ] as const).map(({ label, low, high, value, set }) => (
+                <div key={label}>
+                  <div className="flex justify-between items-center mb-1.5">
+                    <span className="text-[13px] text-text-primary">{label}</span>
+                    {value !== null && <span className="text-[13px] font-medium text-accent">{value}</span>}
+                  </div>
+                  <div className="flex gap-1">
+                    {[1,2,3,4,5,6,7,8,9,10].map(n => (
+                      <button
+                        key={n}
+                        onClick={() => set(n === value ? null : n)}
+                        className={`flex-1 py-1.5 rounded text-[12px] font-medium transition-all ${
+                          value === n
+                            ? 'bg-accent text-bg-primary'
+                            : 'bg-bg-secondary text-text-secondary hover:text-text-primary border-[0.5px] border-border'
+                        }`}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex justify-between text-[10px] text-text-secondary mt-1">
+                    <span>{low}</span><span>{high}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
 
           {/* Tipo de sesión */}
           <div>
