@@ -118,6 +118,8 @@ export default function PacienteDetail({ patient: initialPatient, userId: _userI
   const [editForm, setEditForm] = useState({ name: initialPatient.name, age: initialPatient.age?.toString() || '', occupation: initialPatient.occupation || '' })
   const [saving, setSaving] = useState(false)
   const [activeTab, setActiveTab] = useState<'evaluaciones' | 'carga' | 'plan' | 'portal'>('evaluaciones')
+  const [expandedSection, setExpandedSection] = useState<'fichas' | 'cuestionarios' | 'rts' | 'dinamometria'>('fichas')
+  const toggleSection = (s: 'fichas' | 'cuestionarios' | 'rts' | 'dinamometria') => setExpandedSection(s)
 
   const router = useRouter()
   const supabase = createClient()
@@ -451,256 +453,245 @@ export default function PacienteDetail({ patient: initialPatient, userId: _userI
       {/* EVALUACIONES — Fichas, Cuestionarios, RTS, Dinamometría */}
       {activeTab === 'evaluaciones' && (
         <>
-          {/* FICHAS KINÉSICAS */}
-          <div className="mb-12">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-[20px] font-medium">Fichas Kinésicas</h2>
+          {/* CARDS HORIZONTALES */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+            {([
+              { key: 'fichas', label: 'Fichas Kinésicas', count: fichas.length, loading: fichasLoading },
+              { key: 'cuestionarios', label: 'Cuestionarios', count: questionnaireResults.length, loading: qResultsLoading },
+              { key: 'rts', label: 'Retorno al Deporte', count: rtsEvals.length, loading: rtsLoading },
+              { key: 'dinamometria', label: 'Dinamometría', count: dynamoResults.length, loading: dynamoLoading },
+            ] as const).map(item => (
               <button
-                onClick={handleNewFicha}
-                disabled={creatingFicha}
-                className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
+                key={item.key}
+                onClick={() => toggleSection(item.key)}
+                className={`text-left px-4 py-3 rounded-xl border-[0.5px] transition-colors ${
+                  expandedSection === item.key
+                    ? 'bg-bg-primary border-accent'
+                    : 'bg-bg-secondary border-border hover:border-border-strong'
+                }`}
               >
-                {creatingFicha ? 'Creando...' : '+ Nueva Ficha'}
+                <div className="text-[13px] font-medium mb-0.5">{item.label}</div>
+                <div className="text-[11px] text-text-secondary">
+                  {item.loading ? '...' : `${item.count} registro${item.count !== 1 ? 's' : ''}`}
+                </div>
               </button>
-            </div>
+            ))}
+          </div>
 
-            {fichasLoading ? (
-              <div className="text-text-secondary text-[14px]">Cargando fichas...</div>
-            ) : fichas.length === 0 ? (
-              <div className="text-center py-10 bg-bg-secondary rounded-xl border-[0.5px] border-dashed border-border">
-                <p className="text-[15px] font-medium text-text-primary mb-1">Sin fichas todavía</p>
-                <p className="text-[13px] text-text-secondary">Hacé clic en &quot;Nueva Ficha&quot; para crear la primera.</p>
+          {/* PANEL EXPANDIBLE — Fichas */}
+          {expandedSection === 'fichas' && (
+            <div>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-[18px] font-medium">Fichas Kinésicas</h2>
+                <button
+                  onClick={handleNewFicha}
+                  disabled={creatingFicha}
+                  className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
+                >
+                  {creatingFicha ? 'Creando...' : '+ Nueva Ficha'}
+                </button>
               </div>
-            ) : (
-              <div className="space-y-3">
-                {fichas.map(f => (
-                  <div key={f.id} className="flex items-center justify-between bg-bg-primary border-[0.5px] border-border rounded-xl px-5 py-4 hover:bg-bg-secondary transition-colors group">
-                    <Link href={`/dashboard/pacientes/${patient.id}/fichas/${f.id}`} className="flex-grow no-underline">
-                      <div className="flex items-center gap-4">
+              {fichasLoading ? (
+                <div className="text-text-secondary text-[14px]">Cargando fichas...</div>
+              ) : fichas.length === 0 ? (
+                <div className="text-center py-10 bg-bg-secondary rounded-xl border-[0.5px] border-dashed border-border">
+                  <p className="text-[15px] font-medium text-text-primary mb-1">Sin fichas todavía</p>
+                  <p className="text-[13px] text-text-secondary">Hacé clic en &quot;Nueva Ficha&quot; para crear la primera.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {fichas.map(f => (
+                    <div key={f.id} className="flex items-center justify-between bg-bg-primary border-[0.5px] border-border rounded-xl px-5 py-4 hover:bg-bg-secondary transition-colors group">
+                      <Link href={`/dashboard/pacientes/${patient.id}/fichas/${f.id}`} className="flex-grow no-underline">
                         <div>
                           <div className="text-[14px] font-medium text-text-primary">
                             {f.fecha ? new Date(f.fecha + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' }) : 'Sin fecha'}
                           </div>
                           {f.ficha_data?.motivoConsulta && (
-                            <div className="text-[12px] text-text-secondary mt-0.5 truncate max-w-[400px]">
-                              {f.ficha_data.motivoConsulta}
+                            <div className="text-[12px] text-text-secondary mt-0.5 truncate max-w-[400px]">{f.ficha_data.motivoConsulta}</div>
+                          )}
+                        </div>
+                      </Link>
+                      <div className="flex items-center gap-3">
+                        <Link href={`/dashboard/pacientes/${patient.id}/fichas/${f.id}`} className="text-accent text-[13px] font-medium opacity-0 group-hover:opacity-100 transition-opacity no-underline">
+                          Abrir →
+                        </Link>
+                        <button onClick={() => handleDeleteFicha(f.id)} className="text-text-secondary hover:text-warning text-[12px] opacity-0 group-hover:opacity-100 transition-opacity">
+                          Eliminar
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* PANEL EXPANDIBLE — Cuestionarios */}
+          {expandedSection === 'cuestionarios' && (
+            <div>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-[18px] font-medium">Cuestionarios</h2>
+                <Link href="/recursos/cuestionarios" className="text-accent text-[13px] font-medium hover:opacity-80 no-underline">
+                  + Completar cuestionario
+                </Link>
+              </div>
+              {qResultsLoading ? (
+                <div className="text-text-secondary text-[14px]">Cargando cuestionarios...</div>
+              ) : questionnaireResults.length === 0 ? (
+                <div className="text-center py-10 bg-bg-secondary rounded-xl border-[0.5px] border-dashed border-border">
+                  <p className="text-[15px] font-medium text-text-primary mb-1">Sin cuestionarios todavía</p>
+                  <p className="text-[13px] text-text-secondary max-w-[400px] mx-auto">
+                    Completá uno desde{' '}
+                    <Link href="/recursos/cuestionarios" className="text-accent hover:underline">Cuestionarios</Link>{' '}
+                    y guardalo en este paciente.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {questionnaireResults.map(result => {
+                    const meta = QUESTIONNAIRE_NAMES[result.questionnaire_type] ?? { label: result.questionnaire_type, unit: '' }
+                    return (
+                      <div key={result.id} className="flex items-center justify-between bg-bg-primary border-[0.5px] border-border rounded-xl px-5 py-4 hover:bg-bg-secondary transition-colors group">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <span className="text-[14px] font-medium text-text-primary">{meta.label}</span>
+                            <span className="text-[14px] text-text-secondary">
+                              {formatScore(result)} <span className="text-[12px] opacity-70">{meta.unit}</span>
+                            </span>
+                            {result.interpretation && (
+                              <span className="text-[12px] bg-bg-secondary border-[0.5px] border-border rounded-full px-2.5 py-0.5 text-text-secondary">
+                                {result.interpretation}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[12px] text-text-secondary mt-1">
+                            {new Date(result.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                          </div>
+                        </div>
+                        <button onClick={() => handleDeleteResult(result.id)} className="text-text-secondary hover:text-warning text-[12px] opacity-0 group-hover:opacity-100 transition-opacity ml-4 shrink-0">
+                          Eliminar
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* PANEL EXPANDIBLE — RTS */}
+          {expandedSection === 'rts' && (
+            <div>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-[18px] font-medium">Retorno al Deporte — RTS</h2>
+                <Link href={`/dashboard/pacientes/${patient.id}/rts`} className="text-accent text-[13px] font-medium hover:opacity-80 no-underline">
+                  Nueva Evaluación →
+                </Link>
+              </div>
+              {rtsLoading ? (
+                <div className="text-text-secondary text-[14px]">Cargando evaluaciones...</div>
+              ) : rtsEvals.length === 0 ? (
+                <div className="text-center py-10 bg-bg-secondary rounded-xl border-[0.5px] border-dashed border-border">
+                  <p className="text-[15px] font-medium text-text-primary mb-1">Sin evaluaciones RTS todavía</p>
+                  <p className="text-[13px] text-text-secondary max-w-[420px] mx-auto">
+                    El protocolo evalúa fuerza, hop tests, saltos y cuestionarios validados para determinar si el paciente está listo para retornar al deporte.
+                  </p>
+                  <Link href={`/dashboard/pacientes/${patient.id}/rts`} className="inline-block mt-4 text-accent text-[13px] font-medium hover:opacity-80 no-underline">
+                    Iniciar primera evaluación →
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {rtsEvals.map(ev => {
+                    const { passed, total } = computeRtsCriteriaSummary(ev)
+                    const allPassed = total > 0 && passed === total
+                    return (
+                      <Link key={ev.id} href={`/dashboard/pacientes/${patient.id}/rts`} className="flex items-center justify-between bg-bg-primary border-[0.5px] border-border rounded-xl px-5 py-4 hover:bg-bg-secondary transition-colors group no-underline">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <span className="text-[14px] font-medium text-text-primary">
+                              {new Date(ev.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                            </span>
+                            {total > 0 && (
+                              <span className={`text-[12px] font-medium px-2.5 py-0.5 rounded-full border-[0.5px] ${allPassed ? 'text-[#4ade80] border-[#4ade8040] bg-[#4ade8010]' : 'text-[#fb923c] border-[#fb923c40] bg-[#fb923c10]'}`}>
+                                {passed}/{total} criterios
+                              </span>
+                            )}
+                            <span className="text-[12px] text-text-secondary">{ev.affected_side === 'left' ? 'Izquierdo' : ev.affected_side === 'right' ? 'Derecho' : ev.affected_side}</span>
+                          </div>
+                          {ev.surgery_date && (
+                            <div className="text-[12px] text-text-secondary mt-1">
+                              Cirugía: {new Date(ev.surgery_date + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}
                             </div>
                           )}
                         </div>
-                      </div>
-                    </Link>
-                    <div className="flex items-center gap-3">
-                      <Link
-                        href={`/dashboard/pacientes/${patient.id}/fichas/${f.id}`}
-                        className="text-accent text-[13px] font-medium opacity-0 group-hover:opacity-100 transition-opacity no-underline"
-                      >
-                        Abrir →
+                        <span className="text-accent text-[13px] font-medium opacity-0 group-hover:opacity-100 transition-opacity ml-4 shrink-0">Ver →</span>
                       </Link>
-                      <button
-                        onClick={() => handleDeleteFicha(f.id)}
-                        className="text-text-secondary hover:text-warning text-[12px] opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        Eliminar
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* CUESTIONARIOS */}
-          <div className="mb-12">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-[20px] font-medium">Cuestionarios</h2>
-              <Link
-                href="/recursos/cuestionarios"
-                className="text-accent text-[13px] font-medium hover:opacity-80 no-underline"
-              >
-                + Completar cuestionario
-              </Link>
+                    )
+                  })}
+                </div>
+              )}
             </div>
+          )}
 
-            {qResultsLoading ? (
-              <div className="text-text-secondary text-[14px]">Cargando cuestionarios...</div>
-            ) : questionnaireResults.length === 0 ? (
-              <div className="text-center py-10 bg-bg-secondary rounded-xl border-[0.5px] border-dashed border-border">
-                <p className="text-[15px] font-medium text-text-primary mb-1">Sin cuestionarios todavía</p>
-                <p className="text-[13px] text-text-secondary max-w-[400px] mx-auto">
-                  Completá un cuestionario desde{' '}
-                  <Link href="/recursos/cuestionarios" className="text-accent hover:underline">
-                    Recursos
-                  </Link>{' '}
-                  y guardalo en este paciente.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {questionnaireResults.map(result => {
-                  const meta = QUESTIONNAIRE_NAMES[result.questionnaire_type] ?? { label: result.questionnaire_type, unit: '' }
-                  return (
-                    <div key={result.id} className="flex items-center justify-between bg-bg-primary border-[0.5px] border-border rounded-xl px-5 py-4 hover:bg-bg-secondary transition-colors group">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 flex-wrap">
-                          <span className="text-[14px] font-medium text-text-primary">{meta.label}</span>
-                          <span className="text-[14px] text-text-secondary">
-                            {formatScore(result)} <span className="text-[12px] opacity-70">{meta.unit}</span>
-                          </span>
-                          {result.interpretation && (
-                            <span className="text-[12px] bg-bg-secondary border-[0.5px] border-border rounded-full px-2.5 py-0.5 text-text-secondary">
-                              {result.interpretation}
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-[12px] text-text-secondary mt-1">
-                          {new Date(result.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })}
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => handleDeleteResult(result.id)}
-                        className="text-text-secondary hover:text-warning text-[12px] opacity-0 group-hover:opacity-100 transition-opacity ml-4 shrink-0"
-                      >
-                        Eliminar
-                      </button>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* RETORNO AL DEPORTE (RTS) */}
-          <div className="mb-12">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-[20px] font-medium">Retorno al Deporte — RTS</h2>
-              <Link
-                href={`/dashboard/pacientes/${patient.id}/rts`}
-                className="text-accent text-[13px] font-medium hover:opacity-80 no-underline"
-              >
-                Nueva Evaluación RTS →
-              </Link>
-            </div>
-
-            {rtsLoading ? (
-              <div className="text-text-secondary text-[14px]">Cargando evaluaciones...</div>
-            ) : rtsEvals.length === 0 ? (
-              <div className="text-center py-10 bg-bg-secondary rounded-xl border-[0.5px] border-dashed border-border">
-                <p className="text-[15px] font-medium text-text-primary mb-1">Sin evaluaciones RTS todavía</p>
-                <p className="text-[13px] text-text-secondary max-w-[420px] mx-auto">
-                  El protocolo RTS evalúa fuerza muscular, hop tests, saltos verticales y cuestionarios validados (ACL-RSI, KOOS-Sport) para determinar si el paciente está listo para retornar al deporte.
-                </p>
-                <Link
-                  href={`/dashboard/pacientes/${patient.id}/rts`}
-                  className="inline-block mt-4 text-accent text-[13px] font-medium hover:opacity-80 no-underline"
-                >
-                  Iniciar primera evaluación →
+          {/* PANEL EXPANDIBLE — Dinamometría */}
+          {expandedSection === 'dinamometria' && (
+            <div>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-[18px] font-medium">Dinamometría</h2>
+                <Link href="/recursos/dinamometro" className="text-accent text-[13px] font-medium hover:opacity-80 no-underline">
+                  + Nueva evaluación
                 </Link>
               </div>
-            ) : (
-              <div className="space-y-3">
-                {rtsEvals.map(ev => {
-                  const { passed, total } = computeRtsCriteriaSummary(ev)
-                  const allPassed = total > 0 && passed === total
-                  return (
-                    <Link
-                      key={ev.id}
-                      href={`/dashboard/pacientes/${patient.id}/rts`}
-                      className="flex items-center justify-between bg-bg-primary border-[0.5px] border-border rounded-xl px-5 py-4 hover:bg-bg-secondary transition-colors group no-underline"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 flex-wrap">
-                          <span className="text-[14px] font-medium text-text-primary">
-                            {new Date(ev.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })}
-                          </span>
-                          {total > 0 && (
-                            <span className={`text-[12px] font-medium px-2.5 py-0.5 rounded-full border-[0.5px] ${allPassed ? 'text-[#4ade80] border-[#4ade8040] bg-[#4ade8010]' : 'text-[#fb923c] border-[#fb923c40] bg-[#fb923c10]'}`}>
-                              {passed}/{total} criterios
+              {dynamoLoading ? (
+                <div className="text-text-secondary text-[14px]">Cargando evaluaciones...</div>
+              ) : dynamoResults.length === 0 ? (
+                <div className="text-center py-10 bg-bg-secondary rounded-xl border-[0.5px] border-dashed border-border">
+                  <p className="text-[15px] font-medium text-text-primary mb-1">Sin evaluaciones todavía</p>
+                  <p className="text-[13px] text-text-secondary max-w-[400px] mx-auto">
+                    Realizá una desde{' '}
+                    <Link href="/recursos/dinamometro" className="text-accent hover:underline">Dinamómetro HHD</Link>{' '}
+                    y guardala en este paciente.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {dynamoResults.map(d => {
+                    const muscles = Object.keys(d.muscle_results ?? {}).filter(k => {
+                      const v = d.muscle_results[k]
+                      return (v.right && parseFloat(v.right) > 0) || (v.left && parseFloat(v.left) > 0)
+                    })
+                    return (
+                      <div key={d.id} className="flex items-center justify-between bg-bg-primary border-[0.5px] border-border rounded-xl px-5 py-4 hover:bg-bg-secondary transition-colors group">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <span className="text-[14px] font-medium text-text-primary">
+                              {new Date(d.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })}
                             </span>
+                            <span className="text-[12px] text-text-secondary">{muscles.length} grupos · {d.unit}</span>
+                          </div>
+                          {muscles.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mt-2">
+                              {muscles.map(k => (
+                                <span key={k} className="text-[11px] bg-bg-secondary border-[0.5px] border-border rounded-full px-2 py-0.5 text-text-secondary">
+                                  {MUSCLE_LABELS[k] ?? k}
+                                </span>
+                              ))}
+                            </div>
                           )}
-                          <span className="text-[12px] text-text-secondary capitalize">{ev.affected_side === 'left' ? 'Izquierdo' : ev.affected_side === 'right' ? 'Derecho' : ev.affected_side}</span>
+                          {d.notes && <div className="text-[12px] text-text-secondary mt-1 truncate max-w-[400px]">{d.notes}</div>}
                         </div>
-                        {ev.surgery_date && (
-                          <div className="text-[12px] text-text-secondary mt-1">
-                            Cirugía: {new Date(ev.surgery_date + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}
-                          </div>
-                        )}
+                        <button onClick={() => handleDeleteDynamo(d.id)} className="text-text-secondary hover:text-warning text-[12px] opacity-0 group-hover:opacity-100 transition-opacity ml-4 shrink-0">
+                          Eliminar
+                        </button>
                       </div>
-                      <span className="text-accent text-[13px] font-medium opacity-0 group-hover:opacity-100 transition-opacity ml-4 shrink-0">
-                        Ver →
-                      </span>
-                    </Link>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* DINAMOMETRÍA */}
-          <div className="mb-12">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-[20px] font-medium">Dinamometría</h2>
-              <Link
-                href="/recursos/dinamometro"
-                className="text-accent text-[13px] font-medium hover:opacity-80 no-underline"
-              >
-                + Nueva evaluación
-              </Link>
+                    )
+                  })}
+                </div>
+              )}
             </div>
-
-            {dynamoLoading ? (
-              <div className="text-text-secondary text-[14px]">Cargando evaluaciones...</div>
-            ) : dynamoResults.length === 0 ? (
-              <div className="text-center py-10 bg-bg-secondary rounded-xl border-[0.5px] border-dashed border-border">
-                <p className="text-[15px] font-medium text-text-primary mb-1">Sin evaluaciones todavía</p>
-                <p className="text-[13px] text-text-secondary max-w-[400px] mx-auto">
-                  Realizá una evaluación desde{' '}
-                  <Link href="/recursos/dinamometro" className="text-accent hover:underline">
-                    Dinamómetro HHD
-                  </Link>{' '}
-                  y guardala en este paciente.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {dynamoResults.map(d => {
-                  const muscles = Object.keys(d.muscle_results ?? {}).filter(k => {
-                    const v = d.muscle_results[k]
-                    return (v.right && parseFloat(v.right) > 0) || (v.left && parseFloat(v.left) > 0)
-                  })
-                  return (
-                    <div key={d.id} className="flex items-center justify-between bg-bg-primary border-[0.5px] border-border rounded-xl px-5 py-4 hover:bg-bg-secondary transition-colors group">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 flex-wrap">
-                          <span className="text-[14px] font-medium text-text-primary">
-                            {new Date(d.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })}
-                          </span>
-                          <span className="text-[12px] text-text-secondary">{muscles.length} grupos · {d.unit}</span>
-                        </div>
-                        {muscles.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5 mt-2">
-                            {muscles.map(k => (
-                              <span key={k} className="text-[11px] bg-bg-secondary border-[0.5px] border-border rounded-full px-2 py-0.5 text-text-secondary">
-                                {MUSCLE_LABELS[k] ?? k}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                        {d.notes && (
-                          <div className="text-[12px] text-text-secondary mt-1 truncate max-w-[400px]">{d.notes}</div>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => handleDeleteDynamo(d.id)}
-                        className="text-text-secondary hover:text-warning text-[12px] opacity-0 group-hover:opacity-100 transition-opacity ml-4 shrink-0"
-                      >
-                        Eliminar
-                      </button>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
+          )}
         </>
       )}
 
