@@ -3,6 +3,15 @@
 import { useState, useMemo, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 
+interface ActivityLog {
+  id: string
+  exercise_name: string | null
+  rpe: number
+  eva: number
+  notes: string | null
+  logged_at: string
+}
+
 interface LoadSession {
   id: string
   session_date: string
@@ -139,13 +148,17 @@ export default function LoadMonitorClient({
   patientId,
   userId,
   initialSessions,
+  initialActivityLogs,
 }: {
   patientId: string
   userId: string
   initialSessions: LoadSession[]
+  initialActivityLogs: ActivityLog[]
 }) {
   const supabaseRef = useRef(createClient())
   const [sessions, setSessions] = useState<LoadSession[]>(initialSessions)
+  const [activityLogs] = useState<ActivityLog[]>(initialActivityLogs)
+  const [expandedSessions, setExpandedSessions] = useState<Set<string>>(new Set())
   const [formOpen, setFormOpen] = useState(initialSessions.length === 0)
   const [saving, setSaving] = useState(false)
 
@@ -322,6 +335,26 @@ export default function LoadMonitorClient({
       .slice()
       .sort((a, b) => (a.session_date > b.session_date ? 1 : -1))
   }, [sessions, today])
+
+  // ─── Activity logs grouped by date ─────────────────────────────────────────
+
+  const logsByDate = useMemo(() => {
+    const map: Record<string, ActivityLog[]> = {}
+    for (const log of activityLogs) {
+      const date = log.logged_at.slice(0, 10)
+      if (!map[date]) map[date] = []
+      map[date].push(log)
+    }
+    return map
+  }, [activityLogs])
+
+  const toggleSession = (id: string) => {
+    setExpandedSessions(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) { next.delete(id) } else { next.add(id) }
+      return next
+    })
+  }
 
   // ─── ACWR display ──────────────────────────────────────────────────────────
 
@@ -737,58 +770,100 @@ export default function LoadMonitorClient({
               ))}
             </div>
 
-            {sessions.slice(0, 20).map(s => (
-              <div key={s.id} className="group border-[0.5px] border-border rounded-lg hover:bg-bg-secondary transition-colors">
-                {/* Mobile layout */}
-                <div className="sm:hidden px-4 py-3">
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <span className="text-[13px] text-text-primary truncate flex-1">{s.activity || '—'}</span>
-                    <span className="text-[12px] text-text-secondary shrink-0">{formatShortDate(s.session_date)}</span>
-                  </div>
-                  <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[12px] text-text-secondary">
-                    {s.duration_minutes && <span>{s.duration_minutes} min</span>}
-                    <span>RPE <span className="text-text-primary font-medium">{s.rpe}</span></span>
-                    <span><span className="text-text-primary font-medium">{s.load_units}</span> UA</span>
-                    {s.vas_post !== null && <span>VAS <span className={`font-medium ${vasColor(s.vas_post)}`}>{s.vas_post}</span></span>}
-                    <SourceBadge source={s.source} />
-                  </div>
-                  {(s.sleep_quality !== null || s.energy !== null || s.stress !== null) && (
-                    <div className="flex gap-x-3 mt-0.5 text-[11px] text-text-secondary">
-                      {s.sleep_quality !== null && <span>😴 <span className="font-medium text-text-primary">{s.sleep_quality}</span></span>}
-                      {s.energy !== null && <span>⚡ <span className="font-medium text-text-primary">{s.energy}</span></span>}
-                      {s.stress !== null && <span>🧠 <span className="font-medium text-text-primary">{s.stress}</span></span>}
+            {sessions.slice(0, 20).map(s => {
+              const exLogs = logsByDate[s.session_date] ?? []
+              const isExpanded = expandedSessions.has(s.id)
+              return (
+                <div key={s.id} className="group border-[0.5px] border-border rounded-lg hover:bg-bg-secondary transition-colors">
+                  {/* Mobile layout */}
+                  <div className="sm:hidden px-4 py-3">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <span className="text-[13px] text-text-primary truncate flex-1">{s.activity || '—'}</span>
+                      <span className="text-[12px] text-text-secondary shrink-0">{formatShortDate(s.session_date)}</span>
                     </div>
-                  )}
-                  <button onClick={() => handleDeleteSession(s.id)} className="text-text-secondary hover:text-warning text-[11px] mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    Eliminar
-                  </button>
-                </div>
-                {/* Desktop layout */}
-                <div className="hidden sm:block px-3 py-3">
-                  <div className="grid grid-cols-[100px_1fr_80px_60px_80px_80px_90px_60px] gap-3 items-center">
-                    <span className="text-[13px] text-text-primary">{formatShortDate(s.session_date)}</span>
-                    <span className="text-[13px] text-text-secondary truncate">{s.activity || '—'}</span>
-                    <span className="text-[13px] text-text-secondary">{s.duration_minutes} min</span>
-                    <span className="text-[13px] text-text-primary">{s.rpe}/10</span>
-                    <span className="text-[13px] text-text-primary">{s.load_units} UA</span>
-                    <span className={`text-[13px] ${s.vas_post !== null ? vasColor(s.vas_post) : 'text-text-secondary'}`}>
-                      {s.vas_post !== null ? s.vas_post : '—'}
-                    </span>
-                    <SourceBadge source={s.source} />
-                    <button onClick={() => handleDeleteSession(s.id)} className="text-text-secondary hover:text-warning text-[12px] opacity-0 group-hover:opacity-100 transition-opacity text-right">
+                    <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[12px] text-text-secondary">
+                      {s.duration_minutes && <span>{s.duration_minutes} min</span>}
+                      <span>RPE <span className="text-text-primary font-medium">{s.rpe}</span></span>
+                      <span><span className="text-text-primary font-medium">{s.load_units}</span> UA</span>
+                      {s.vas_post !== null && <span>VAS <span className={`font-medium ${vasColor(s.vas_post)}`}>{s.vas_post}</span></span>}
+                      <SourceBadge source={s.source} />
+                    </div>
+                    {(s.sleep_quality !== null || s.energy !== null || s.stress !== null) && (
+                      <div className="flex gap-x-3 mt-0.5 text-[11px] text-text-secondary">
+                        {s.sleep_quality !== null && <span>😴 <span className="font-medium text-text-primary">{s.sleep_quality}</span></span>}
+                        {s.energy !== null && <span>⚡ <span className="font-medium text-text-primary">{s.energy}</span></span>}
+                        {s.stress !== null && <span>🧠 <span className="font-medium text-text-primary">{s.stress}</span></span>}
+                      </div>
+                    )}
+                    {exLogs.length > 0 && (
+                      <div className="mt-2 pt-2 border-t-[0.5px] border-border">
+                        <button onClick={() => toggleSession(s.id)} className="text-[11px] text-accent font-medium">
+                          {isExpanded ? '▾' : '▸'} {exLogs.length} ejercicio{exLogs.length > 1 ? 's' : ''} reportado{exLogs.length > 1 ? 's' : ''}
+                        </button>
+                        {isExpanded && (
+                          <div className="mt-2 space-y-1.5">
+                            {exLogs.map(log => (
+                              <div key={log.id} className="flex flex-wrap gap-x-3 gap-y-0.5 text-[12px]">
+                                <span className="text-text-primary font-medium">{log.exercise_name || 'Ejercicio'}</span>
+                                <span className="text-text-secondary">RPE <span className="text-text-primary">{log.rpe}</span></span>
+                                <span className="text-text-secondary">EVA <span className={`font-medium ${vasColor(log.eva * 10)}`}>{log.eva}/10</span></span>
+                                {log.notes && <span className="text-text-secondary italic w-full">{log.notes}</span>}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    <button onClick={() => handleDeleteSession(s.id)} className="text-text-secondary hover:text-warning text-[11px] mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       Eliminar
                     </button>
                   </div>
-                  {(s.sleep_quality !== null || s.energy !== null || s.stress !== null) && (
-                    <div className="flex gap-x-4 mt-1 text-[11px] text-text-secondary">
-                      {s.sleep_quality !== null && <span>😴 Sueño <span className="font-medium text-text-primary">{s.sleep_quality}/10</span></span>}
-                      {s.energy !== null && <span>⚡ Energía <span className="font-medium text-text-primary">{s.energy}/10</span></span>}
-                      {s.stress !== null && <span>🧠 Estrés <span className="font-medium text-text-primary">{s.stress}/10</span></span>}
+                  {/* Desktop layout */}
+                  <div className="hidden sm:block px-3 py-3">
+                    <div className="grid grid-cols-[100px_1fr_80px_60px_80px_80px_90px_60px] gap-3 items-center">
+                      <span className="text-[13px] text-text-primary">{formatShortDate(s.session_date)}</span>
+                      <span className="text-[13px] text-text-secondary truncate">{s.activity || '—'}</span>
+                      <span className="text-[13px] text-text-secondary">{s.duration_minutes} min</span>
+                      <span className="text-[13px] text-text-primary">{s.rpe}/10</span>
+                      <span className="text-[13px] text-text-primary">{s.load_units} UA</span>
+                      <span className={`text-[13px] ${s.vas_post !== null ? vasColor(s.vas_post) : 'text-text-secondary'}`}>
+                        {s.vas_post !== null ? s.vas_post : '—'}
+                      </span>
+                      <SourceBadge source={s.source} />
+                      <button onClick={() => handleDeleteSession(s.id)} className="text-text-secondary hover:text-warning text-[12px] opacity-0 group-hover:opacity-100 transition-opacity text-right">
+                        Eliminar
+                      </button>
                     </div>
-                  )}
+                    {(s.sleep_quality !== null || s.energy !== null || s.stress !== null) && (
+                      <div className="flex gap-x-4 mt-1 text-[11px] text-text-secondary">
+                        {s.sleep_quality !== null && <span>😴 Sueño <span className="font-medium text-text-primary">{s.sleep_quality}/10</span></span>}
+                        {s.energy !== null && <span>⚡ Energía <span className="font-medium text-text-primary">{s.energy}/10</span></span>}
+                        {s.stress !== null && <span>🧠 Estrés <span className="font-medium text-text-primary">{s.stress}/10</span></span>}
+                      </div>
+                    )}
+                    {exLogs.length > 0 && (
+                      <div className="mt-2 pt-2 border-t-[0.5px] border-border">
+                        <button onClick={() => toggleSession(s.id)} className="text-[11px] text-accent font-medium hover:opacity-80 transition-opacity">
+                          {isExpanded ? '▾' : '▸'} {exLogs.length} ejercicio{exLogs.length > 1 ? 's' : ''} reportado{exLogs.length > 1 ? 's' : ''}
+                        </button>
+                        {isExpanded && (
+                          <div className="mt-2 space-y-1.5 pl-3">
+                            {exLogs.map(log => (
+                              <div key={log.id} className="flex flex-wrap gap-x-4 gap-y-0.5 text-[12px]">
+                                <span className="text-text-primary font-medium min-w-[160px]">{log.exercise_name || 'Ejercicio'}</span>
+                                <span className="text-text-secondary">RPE <span className="text-text-primary font-medium">{log.rpe}/10</span></span>
+                                <span className="text-text-secondary">EVA <span className={`font-medium ${vasColor(log.eva * 10)}`}>{log.eva}/10</span></span>
+                                {log.notes && <span className="text-text-secondary italic">{log.notes}</span>}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
