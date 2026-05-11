@@ -133,22 +133,23 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
   const [latestByExercise, setLatestByExercise] = useState<Record<string, ActivityLog>>({})
   const [hoveredExSignal, setHoveredExSignal] = useState<string | null>(null)
   
-  const supabase = createClient()
+  const supabaseRef = useRef(createClient())
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Cargar pacientes del usuario
   useEffect(() => {
     const fetchPatients = async () => {
-      const { data } = await supabase.from('patients').select('id, name').order('name')
+      const { data } = await supabaseRef.current.from('patients').select('id, name').order('name')
       if (data) setPatients(data)
     }
     fetchPatients()
-  }, [supabase])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Cargar últimos logs por ejercicio para semáforo
   useEffect(() => {
     const fetchLatestLogs = async () => {
-      const { data } = await supabase
+      const { data } = await supabaseRef.current
         .from('plan_activity_logs')
         .select('id, exercise_id, exercise_name, session_id, week, rpe, eva, notes, logged_at')
         .eq('plan_id', plan.id)
@@ -173,7 +174,7 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
     
     setSaveStatus('saving')
     timeoutRef.current = setTimeout(async () => {
-      const { error } = await supabase
+      const { error } = await supabaseRef.current
         .from('exercise_plans')
         .update({
           name: plan.name,
@@ -195,7 +196,8 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
     }
-  }, [plan, supabase])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plan])
 
   // Buscar ejercicios
   useEffect(() => {
@@ -204,12 +206,12 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
       setIsSearching(true)
 
       if (searchCategory === 'mis_ejercicios') {
-        let query = supabase.from('user_exercises').select('id, name, youtube_url').eq('user_id', userId).limit(50)
+        let query = supabaseRef.current.from('user_exercises').select('id, name, youtube_url').eq('user_id', userId).limit(50)
         if (searchQuery) query = query.ilike('name', `%${searchQuery}%`)
         const { data } = await query
         if (data) setSearchResults(data.map(e => ({ ...e, category: 'mis_ejercicios', equipment: null })))
       } else {
-        let query = supabase.from('exercises').select('id, name, category, equipment, youtube_url').limit(30)
+        let query = supabaseRef.current.from('exercises').select('id, name, category, equipment, youtube_url').limit(30)
         if (searchQuery) query = query.ilike('name', `%${searchQuery}%`)
         if (searchCategory) query = query.eq('category', searchCategory)
         const { data } = await query
@@ -221,7 +223,7 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
 
     const debounce = setTimeout(searchExercises, 300)
     return () => clearTimeout(debounce)
-  }, [searchQuery, searchCategory, isSearchOpen, supabase, userId])
+  }, [searchQuery, searchCategory, isSearchOpen, userId])
 
   // Cargar logs
   useEffect(() => {
@@ -229,7 +231,7 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
       let cancelled = false
       const fetchLogs = async () => {
         setLogsLoading(true)
-        const { data, error } = await supabase
+        const { data, error } = await supabaseRef.current
           .from('plan_activity_logs')
           .select('*')
           .eq('plan_id', plan.id)
@@ -282,7 +284,7 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
   const handleCreateExercise = async () => {
     if (!createName.trim()) return
     setCreating(true)
-    const { data, error } = await supabase
+    const { data, error } = await supabaseRef.current
       .from('user_exercises')
       .insert({ user_id: userId, name: createName.trim(), youtube_url: createUrl.trim() || null })
       .select()
@@ -335,7 +337,7 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
     if (!scheduleModal || !scheduleDate || !plan.patient_id) return
     setScheduleSaving(true)
     const week = calcWeek(scheduleDate)
-    await supabase.from('scheduled_sessions').insert({
+    await supabaseRef.current.from('scheduled_sessions').insert({
       user_id: userId,
       patient_id: plan.patient_id,
       plan_id: plan.id,
