@@ -698,7 +698,7 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
                         <div className="flex justify-between items-start mb-4">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <span className="cursor-grab active:cursor-grabbing text-text-secondary/40 hover:text-text-secondary transition-colors shrink-0 select-none" title="Arrastrar para reordenar">
+                              <span className="cursor-grab active:cursor-grabbing text-text-secondary hover:text-text-primary transition-colors shrink-0 select-none" title="Arrastrar para reordenar">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="5" r="1.5"/><circle cx="15" cy="5" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="19" r="1.5"/></svg>
                               </span>
                               <select
