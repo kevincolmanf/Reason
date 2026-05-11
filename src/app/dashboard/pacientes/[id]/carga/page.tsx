@@ -23,12 +23,28 @@ export default async function CargaPage({ params }: { params: { id: string } }) 
 
   if (patientError || !patient) redirect('/dashboard/pacientes')
 
-  const { data: sessions } = await supabase
-    .from('load_sessions')
-    .select('id, session_date, activity, duration_minutes, rpe, load_units, vas_pre, vas_during, vas_post, notes, source, sleep_quality, energy, stress')
-    .eq('patient_id', patient.id)
-    .order('session_date', { ascending: false })
-    .limit(56)
+  const [{ data: sessions }, { data: plans }] = await Promise.all([
+    supabase
+      .from('load_sessions')
+      .select('id, session_date, activity, duration_minutes, rpe, load_units, vas_pre, vas_during, vas_post, notes, source, sleep_quality, energy, stress')
+      .eq('patient_id', patient.id)
+      .order('session_date', { ascending: false })
+      .limit(56),
+    supabase
+      .from('exercise_plans')
+      .select('id')
+      .eq('patient_id', patient.id),
+  ])
+
+  const planIds = plans?.map(p => p.id) ?? []
+  const { data: activityLogs } = planIds.length > 0
+    ? await supabase
+        .from('plan_activity_logs')
+        .select('id, exercise_name, rpe, eva, notes, logged_at')
+        .in('plan_id', planIds)
+        .order('logged_at', { ascending: false })
+        .limit(300)
+    : { data: [] }
 
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
@@ -50,6 +66,7 @@ export default async function CargaPage({ params }: { params: { id: string } }) 
           patientId={patient.id}
           userId={user.id}
           initialSessions={sessions ?? []}
+          initialActivityLogs={activityLogs ?? []}
         />
       </main>
     </div>
