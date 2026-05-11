@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { jsPDF } from 'jspdf'
@@ -176,24 +176,16 @@ export default function FichaClient({
   const [qResults, setQResults] = useState<QuestionnaireResult[]>(questionnaireResults)
   const [dynResults, setDynResults] = useState<DynamoResult[]>(dynamoResults)
 
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const supabaseRef = useRef(createClient())
-  const fichaIdRef = useRef(initialFicha.id)
 
-  // Autosave
-  useEffect(() => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current)
+  const handleSave = async () => {
     setSaveStatus('saving')
-    timeoutRef.current = setTimeout(async () => {
-      const { error } = await supabaseRef.current
-        .from('patient_fichas')
-        .update({ fecha: ficha.fecha || null, ficha_data: ficha })
-        .eq('id', fichaIdRef.current)
-      setSaveStatus(error ? 'error' : 'saved')
-    }, 1500)
-    return () => { if (timeoutRef.current) clearTimeout(timeoutRef.current) }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ficha])
+    const { error } = await supabaseRef.current
+      .from('patient_fichas')
+      .update({ fecha: ficha.fecha || null, ficha_data: ficha })
+      .eq('id', initialFicha.id)
+    setSaveStatus(error ? 'error' : 'saved')
+  }
 
   const handleChange = (field: keyof FichaData, value: string) => {
     setFicha(prev => ({ ...prev, [field]: value }))
@@ -299,14 +291,15 @@ export default function FichaClient({
 
   return (
     <div>
-      {/* Save status */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-[28px] font-medium tracking-[-0.01em]">Ficha Clínica</h1>
-        <div className="text-[12px]">
-          {saveStatus === 'saving' && <span className="text-text-secondary">Guardando...</span>}
-          {saveStatus === 'saved' && <span className="text-[#3b82f6]">✓ Guardado</span>}
-          {saveStatus === 'error' && <span className="text-warning">Error al guardar</span>}
-        </div>
+        <button
+          onClick={handleSave}
+          disabled={saveStatus === 'saving'}
+          className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity min-w-[100px]"
+        >
+          {saveStatus === 'saving' ? 'Guardando...' : saveStatus === 'saved' ? '✓ Guardado' : saveStatus === 'error' ? 'Error — reintentar' : 'Guardar'}
+        </button>
       </div>
 
       {/* ── DATOS CLÍNICOS ─────────────────────────────────────────────────── */}
