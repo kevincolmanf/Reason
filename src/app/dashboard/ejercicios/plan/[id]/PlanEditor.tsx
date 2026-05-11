@@ -103,6 +103,10 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [targetBlock, setTargetBlock] = useState<{sessionIdx: number, blockIdx: number} | null>(null)
 
+  // Drag state
+  const dragExRef = useRef<{sIdx: number, bIdx: number, exIdx: number} | null>(null)
+  const [dragOverEx, setDragOverEx] = useState<{sIdx: number, bIdx: number, exIdx: number} | null>(null)
+
   // Copy/paste session state
   const [copiedBlocks, setCopiedBlocks] = useState<PlanBlock[] | null>(null)
   const [copiedFromSession, setCopiedFromSession] = useState<number | null>(null)
@@ -334,6 +338,15 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
     setPlan(newPlan)
     setIsSearchOpen(false)
     setTargetBlock(null)
+  }
+
+  const moveExercise = (sIdx: number, bIdx: number, fromIdx: number, toIdx: number) => {
+    if (fromIdx === toIdx) return
+    const newPlan = { ...plan }
+    const exs = newPlan.plan_data.sessions[sIdx].blocks[bIdx].exercises
+    const [moved] = exs.splice(fromIdx, 1)
+    exs.splice(toIdx, 0, moved)
+    setPlan(newPlan)
   }
 
   const handleCopySession = (sIdx: number) => {
@@ -666,10 +679,28 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
                 ) : (
                   <div className="space-y-6">
                     {block.exercises.map((ex, exIdx) => (
-                      <div key={ex.id} className="bg-bg-secondary border-[0.5px] border-border rounded-xl p-4">
+                      <div
+                        key={ex.id}
+                        draggable
+                        onDragStart={() => { dragExRef.current = { sIdx: activeSession as number, bIdx, exIdx } }}
+                        onDragOver={e => { e.preventDefault(); setDragOverEx({ sIdx: activeSession as number, bIdx, exIdx }) }}
+                        onDragLeave={() => setDragOverEx(null)}
+                        onDrop={() => {
+                          if (dragExRef.current) {
+                            moveExercise(activeSession as number, bIdx, dragExRef.current.exIdx, exIdx)
+                            dragExRef.current = null
+                          }
+                          setDragOverEx(null)
+                        }}
+                        onDragEnd={() => { dragExRef.current = null; setDragOverEx(null) }}
+                        className={`bg-bg-secondary border-[0.5px] rounded-xl p-4 transition-colors ${dragOverEx?.bIdx === bIdx && dragOverEx?.exIdx === exIdx ? 'border-accent bg-accent/5' : 'border-border'}`}
+                      >
                         <div className="flex justify-between items-start mb-4">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
+                              <span className="cursor-grab active:cursor-grabbing text-text-secondary hover:text-text-primary transition-colors shrink-0 select-none" title="Arrastrar para reordenar">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="5" r="1.5"/><circle cx="15" cy="5" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="19" r="1.5"/></svg>
+                              </span>
                               <select
                                 value={ex.group || ''}
                                 onChange={e => updateExerciseGroup(activeSession as number, bIdx, exIdx, e.target.value)}
