@@ -19,7 +19,7 @@ export default async function CalendarioPage({ params }: { params: { id: string 
   if (!patient) notFound()
 
   // Un plan por paciente: buscar el plan asignado a este paciente
-  let { data: plans } = await supabase
+  const { data: plans } = await supabase
     .from('exercise_plans')
     .select('id, name, start_date, plan_data')
     .eq('patient_id', params.id)
