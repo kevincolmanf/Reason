@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -22,12 +22,12 @@ export default function PacienteDetail({ patient: initialPatient }: { patient: P
   const [generatingToken, setGeneratingToken] = useState(false)
 
   const router = useRouter()
-  const supabase = createClient()
+  const supabaseRef = useRef(createClient())
 
   const generatePortalToken = async () => {
     setGeneratingToken(true)
     const token = crypto.randomUUID()
-    const { data, error } = await supabase
+    const { data, error } = await supabaseRef.current
       .from('patients')
       .update({ load_share_token: token })
       .eq('id', patient.id)
@@ -39,7 +39,7 @@ export default function PacienteDetail({ patient: initialPatient }: { patient: P
 
   const revokePortalToken = async () => {
     if (!confirm('¿Revocar el link del portal? El paciente ya no podrá acceder.')) return
-    const { data, error } = await supabase
+    const { data, error } = await supabaseRef.current
       .from('patients')
       .update({ load_share_token: null })
       .eq('id', patient.id)
@@ -51,7 +51,7 @@ export default function PacienteDetail({ patient: initialPatient }: { patient: P
   const handleSaveEdit = async () => {
     if (!editForm.name.trim()) return
     setSaving(true)
-    const { data, error } = await supabase
+    const { data, error } = await supabaseRef.current
       .from('patients')
       .update({
         name: editForm.name.trim(),
@@ -67,7 +67,7 @@ export default function PacienteDetail({ patient: initialPatient }: { patient: P
 
   const handleDelete = async () => {
     if (!confirm(`¿Eliminar a ${patient.name}? Los planes asociados quedarán sin paciente asignado.`)) return
-    const { error } = await supabase.from('patients').delete().eq('id', patient.id)
+    const { error } = await supabaseRef.current.from('patients').delete().eq('id', patient.id)
     if (!error) router.push('/dashboard/pacientes')
   }
 
