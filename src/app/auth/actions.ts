@@ -9,6 +9,7 @@ export async function login(formData: FormData) {
 
   const email = formData.get('email') as string
   const password = formData.get('password') as string
+  const returnUrl = formData.get('returnUrl') as string | null
 
   const { error } = await supabase.auth.signInWithPassword({
     email,
@@ -20,7 +21,7 @@ export async function login(formData: FormData) {
   }
 
   revalidatePath('/', 'layout')
-  redirect('/dashboard')
+  redirect(returnUrl || '/dashboard')
 }
 
 export async function signup(formData: FormData) {
@@ -29,6 +30,7 @@ export async function signup(formData: FormData) {
   const email = formData.get('email') as string
   const password = formData.get('password') as string
   const fullName = formData.get('fullName') as string
+  const returnUrl = formData.get('returnUrl') as string | null
 
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -70,7 +72,7 @@ export async function signup(formData: FormData) {
   }
 
   revalidatePath('/', 'layout')
-  redirect('/dashboard')
+  redirect(returnUrl || '/dashboard')
 }
 
 export async function resetPassword(formData: FormData) {

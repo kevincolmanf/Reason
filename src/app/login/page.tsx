@@ -4,7 +4,7 @@ import { login } from '../auth/actions'
 export default function LoginPage({
   searchParams,
 }: {
-  searchParams: { message: string }
+  searchParams: { message?: string; returnUrl?: string }
 }) {
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col justify-center items-center p-4">
@@ -21,6 +21,9 @@ export default function LoginPage({
         </p>
 
         <form className="flex flex-col gap-5" action={login}>
+          {searchParams?.returnUrl && (
+            <input type="hidden" name="returnUrl" value={searchParams.returnUrl} />
+          )}
           {searchParams?.message && (
             <div className="p-4 bg-bg-secondary text-warning text-[14px] rounded-lg border-[0.5px] border-warning text-center">
               {searchParams.message}
