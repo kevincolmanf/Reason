@@ -23,6 +23,7 @@ interface Props {
   userId: string
   patientName: string
   plans: Plan[]
+  unassignedPlans: { id: string; name: string }[]
   initialScheduled: ScheduledSession[]
 }
 
@@ -71,7 +72,7 @@ function formatDay(date: Date): string {
   return `${date.getDate()} ${MONTHS_ES[date.getMonth()].slice(0, 3)}`
 }
 
-export default function CalendarioClient({ patientId, userId, patientName, plans, initialScheduled }: Props) {
+export default function CalendarioClient({ patientId, userId, patientName, plans, unassignedPlans, initialScheduled }: Props) {
   const supabase = createClient()
 
   // ── Week view ──────────────────────────────────────────────────────────────
@@ -104,6 +105,15 @@ export default function CalendarioClient({ patientId, userId, patientName, plans
   })
   const [bulkSaving, setBulkSaving] = useState(false)
   const [bulkSuccess, setBulkSuccess] = useState(false)
+
+  // ── Linking unassigned plan ────────────────────────────────────────────────
+  const [linkingPlanId, setLinkingPlanId] = useState<string | null>(null)
+
+  const handleLinkPlan = async (planId: string) => {
+    setLinkingPlanId(planId)
+    await supabase.from('exercise_plans').update({ patient_id: patientId }).eq('id', planId)
+    window.location.reload()
+  }
 
   const { daysInMonth, firstDayOfWeek } = getMonthInfo(calView.year, calView.month)
 
@@ -337,6 +347,32 @@ export default function CalendarioClient({ patientId, userId, patientName, plans
               )}
             </>
           )}
+        </section>
+      ) : unassignedPlans.length > 0 ? (
+        <section className="bg-bg-secondary border-[0.5px] border-border rounded-2xl p-5 sm:p-6">
+          <h2 className="text-[18px] font-medium mb-1">Vincular plan existente</h2>
+          <p className="text-[13px] text-text-secondary mb-5">Tenés planes sin paciente asignado. Vinculá uno a {patientName}.</p>
+          <div className="space-y-2">
+            {unassignedPlans.map(p => (
+              <div key={p.id} className="flex items-center justify-between gap-4 bg-bg-primary border-[0.5px] border-border rounded-xl px-4 py-3">
+                <span className="text-[14px] text-text-primary">{p.name}</span>
+                <button
+                  onClick={() => handleLinkPlan(p.id)}
+                  disabled={linkingPlanId !== null}
+                  className="shrink-0 bg-accent text-bg-primary px-4 py-1.5 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
+                >
+                  {linkingPlanId === p.id ? 'Vinculando...' : 'Vincular'}
+                </button>
+              </div>
+            ))}
+          </div>
+          <p className="text-[12px] text-text-secondary mt-4">
+            O{' '}
+            <a href={`/dashboard/ejercicios/plan?paciente=${patientId}`} className="underline hover:text-text-primary">
+              creá un plan nuevo para {patientName}
+            </a>
+            .
+          </p>
         </section>
       ) : (
         <div className="text-center py-12 bg-bg-secondary rounded-xl border-[0.5px] border-dashed border-border">

@@ -15,6 +15,10 @@ export default async function PlanListPage({ searchParams }: { searchParams: { p
   if (!user) redirect('/login')
 
   const patientId = searchParams.paciente ?? null
+
+  // Los planes son siempre por paciente — sin contexto de paciente, ir a la lista
+  if (!patientId) redirect('/dashboard/pacientes')
+
   let patientName: string | null = null
 
   if (patientId) {
