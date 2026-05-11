@@ -44,7 +44,7 @@ export default function PacientesClient({ userId, isActiveUser }: { userId: stri
       .from('patients')
       .select('id, name, age, occupation, created_at')
       .eq('user_id', userId)
-      .order('name')
+      .order('created_at', { ascending: true })
 
     if (!error && data) {
       // Fetch plan count per patient
@@ -199,25 +199,52 @@ export default function PacientesClient({ userId, isActiveUser }: { userId: stri
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {patients.map(p => (
-            <Link key={p.id} href={`/dashboard/pacientes/${p.id}`} className="block no-underline">
-              <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 hover:bg-bg-secondary transition-colors h-full flex flex-col group">
-                <h3 className="text-[18px] font-medium text-text-primary mb-2">{p.name}</h3>
-                <div className="text-[13px] text-text-secondary space-y-1 flex-grow">
-                  {p.age && <p>Edad: {p.age} años</p>}
-                  {p.occupation && <p>Ocupación: {p.occupation}</p>}
+          {patients.map((p, idx) => {
+            const locked = atFreeLimit && idx > 0
+            if (locked) {
+              return (
+                <div key={p.id} className="relative rounded-xl overflow-hidden cursor-default select-none">
+                  <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 h-full flex flex-col opacity-40 pointer-events-none">
+                    <h3 className="text-[18px] font-medium text-text-primary mb-2">{p.name}</h3>
+                    <div className="text-[13px] text-text-secondary space-y-1 flex-grow">
+                      {p.age && <p>Edad: {p.age} años</p>}
+                      {p.occupation && <p>Ocupación: {p.occupation}</p>}
+                    </div>
+                    <div className="mt-4 pt-4 border-t-[0.5px] border-border flex justify-between items-center">
+                      <span className="text-[12px] text-text-secondary">
+                        {p.plan_count} plan{p.plan_count !== 1 ? 'es' : ''}
+                      </span>
+                    </div>
+                  </div>
+                  <a href="/checkout" className="absolute inset-0 flex items-center justify-center group">
+                    <span className="bg-bg-primary border-[0.5px] border-border rounded-lg px-3 py-1.5 text-[12px] font-medium text-text-secondary group-hover:text-text-primary group-hover:border-accent transition-colors flex items-center gap-1.5">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                      Suscribite para acceder
+                    </span>
+                  </a>
                 </div>
-                <div className="mt-4 pt-4 border-t-[0.5px] border-border flex justify-between items-center">
-                  <span className="text-[12px] text-text-secondary">
-                    {p.plan_count} plan{p.plan_count !== 1 ? 'es' : ''}
-                  </span>
-                  <span className="text-accent text-[13px] font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                    Ver →
-                  </span>
+              )
+            }
+            return (
+              <Link key={p.id} href={`/dashboard/pacientes/${p.id}`} className="block no-underline">
+                <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 hover:bg-bg-secondary transition-colors h-full flex flex-col group">
+                  <h3 className="text-[18px] font-medium text-text-primary mb-2">{p.name}</h3>
+                  <div className="text-[13px] text-text-secondary space-y-1 flex-grow">
+                    {p.age && <p>Edad: {p.age} años</p>}
+                    {p.occupation && <p>Ocupación: {p.occupation}</p>}
+                  </div>
+                  <div className="mt-4 pt-4 border-t-[0.5px] border-border flex justify-between items-center">
+                    <span className="text-[12px] text-text-secondary">
+                      {p.plan_count} plan{p.plan_count !== 1 ? 'es' : ''}
+                    </span>
+                    <span className="text-accent text-[13px] font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                      Ver →
+                    </span>
+                  </div>
                 </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            )
+          })}
         </div>
       )}
     </div>
