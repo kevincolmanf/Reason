@@ -106,7 +106,7 @@ function HelpModal({ onClose }: { onClose: () => void }) {
             <ol className="space-y-1.5 text-text-secondary list-none">
               <li className="flex gap-2"><span className="shrink-0 font-medium text-text-primary">1.</span>Abrí esta página en <span className="text-text-primary font-medium">&nbsp;Chrome</span>.</li>
               <li className="flex gap-2"><span className="shrink-0 font-medium text-text-primary">2.</span>Tocá el menú de tres puntos (⋮) arriba a la derecha.</li>
-              <li className="flex gap-2"><span className="shrink-0 font-medium text-text-primary">3.</span>Seleccioná <span className="text-text-primary font-medium">&nbsp;"Agregar a pantalla de inicio"</span>.</li>
+              <li className="flex gap-2"><span className="shrink-0 font-medium text-text-primary">3.</span>Seleccioná <span className="text-text-primary font-medium">&nbsp;&ldquo;Agregar a pantalla de inicio&rdquo;</span>.</li>
               <li className="flex gap-2"><span className="shrink-0 font-medium text-text-primary">4.</span>Confirmá y listo — aparece el ícono en tu pantalla.</li>
             </ol>
           </div>
@@ -117,7 +117,7 @@ function HelpModal({ onClose }: { onClose: () => void }) {
             <ol className="space-y-1.5 text-text-secondary list-none">
               <li className="flex gap-2"><span className="shrink-0 font-medium text-text-primary">1.</span>Abrí esta página en <span className="text-text-primary font-medium">&nbsp;Safari</span> (no funciona en Chrome en iOS).</li>
               <li className="flex gap-2"><span className="shrink-0 font-medium text-text-primary">2.</span>Tocá el ícono de compartir (□↑) en la barra inferior.</li>
-              <li className="flex gap-2"><span className="shrink-0 font-medium text-text-primary">3.</span>Elegí <span className="text-text-primary font-medium">&nbsp;"Añadir a pantalla de inicio"</span>.</li>
+              <li className="flex gap-2"><span className="shrink-0 font-medium text-text-primary">3.</span>Elegí <span className="text-text-primary font-medium">&nbsp;&ldquo;Añadir a pantalla de inicio&rdquo;</span>.</li>
               <li className="flex gap-2"><span className="shrink-0 font-medium text-text-primary">4.</span>Confirmá y listo — se comporta como una app nativa.</li>
             </ol>
           </div>
