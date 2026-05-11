@@ -77,8 +77,69 @@ function formatScheduledDate(d: string) {
   return `${DAYS_ES_LONG[date.getDay()]} ${date.getDate()} de ${MONTHS_ES[date.getMonth()]}`
 }
 
+function HelpModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-bg-primary w-full sm:max-w-[480px] sm:rounded-2xl rounded-t-2xl border-[0.5px] border-border max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between px-5 py-4 border-b-[0.5px] border-border">
+          <h2 className="text-[16px] font-medium">Cómo usar el portal</h2>
+          <button onClick={onClose} className="text-text-secondary hover:text-text-primary text-[18px] leading-none p-1">✕</button>
+        </div>
+
+        <div className="px-5 py-5 space-y-6 text-[14px] leading-[1.6]">
+
+          {/* Uso del portal */}
+          <div>
+            <h3 className="text-[13px] font-semibold uppercase tracking-[0.06em] text-accent mb-3">Qué podés hacer acá</h3>
+            <ul className="space-y-2 text-text-secondary">
+              <li className="flex gap-2"><span className="shrink-0 text-accent mt-0.5">→</span><span><span className="text-text-primary font-medium">Mi semana:</span> ves tus sesiones programadas por tu kinesiólogo. Al tocar una sesión te lleva directamente al ejercicio del día.</span></li>
+              <li className="flex gap-2"><span className="shrink-0 text-accent mt-0.5">→</span><span><span className="text-text-primary font-medium">Mi plan:</span> todos los ejercicios de tu programa, con video y descripción.</span></li>
+              <li className="flex gap-2"><span className="shrink-0 text-accent mt-0.5">→</span><span><span className="text-text-primary font-medium">Registrar sesión:</span> después de cada entrenamiento, completá cómo llegaste (sueño, energía, estrés), la duración, el esfuerzo y el dolor. Ese dato le llega directamente a tu kinesiólogo.</span></li>
+              <li className="flex gap-2"><span className="shrink-0 text-accent mt-0.5">→</span><span><span className="text-text-primary font-medium">Últimas sesiones:</span> resumen de tus entrenamientos más recientes.</span></li>
+            </ul>
+          </div>
+
+          {/* Instalar Android */}
+          <div>
+            <h3 className="text-[13px] font-semibold uppercase tracking-[0.06em] text-accent mb-3">Instalá como app — Android</h3>
+            <ol className="space-y-1.5 text-text-secondary list-none">
+              <li className="flex gap-2"><span className="shrink-0 font-medium text-text-primary">1.</span>Abrí esta página en <span className="text-text-primary font-medium">&nbsp;Chrome</span>.</li>
+              <li className="flex gap-2"><span className="shrink-0 font-medium text-text-primary">2.</span>Tocá el menú de tres puntos (⋮) arriba a la derecha.</li>
+              <li className="flex gap-2"><span className="shrink-0 font-medium text-text-primary">3.</span>Seleccioná <span className="text-text-primary font-medium">&nbsp;&ldquo;Agregar a pantalla de inicio&rdquo;</span>.</li>
+              <li className="flex gap-2"><span className="shrink-0 font-medium text-text-primary">4.</span>Confirmá y listo — aparece el ícono en tu pantalla.</li>
+            </ol>
+          </div>
+
+          {/* Instalar iOS */}
+          <div>
+            <h3 className="text-[13px] font-semibold uppercase tracking-[0.06em] text-accent mb-3">Instalá como app — iPhone / iPad</h3>
+            <ol className="space-y-1.5 text-text-secondary list-none">
+              <li className="flex gap-2"><span className="shrink-0 font-medium text-text-primary">1.</span>Abrí esta página en <span className="text-text-primary font-medium">&nbsp;Safari</span> (no funciona en Chrome en iOS).</li>
+              <li className="flex gap-2"><span className="shrink-0 font-medium text-text-primary">2.</span>Tocá el ícono de compartir (□↑) en la barra inferior.</li>
+              <li className="flex gap-2"><span className="shrink-0 font-medium text-text-primary">3.</span>Elegí <span className="text-text-primary font-medium">&nbsp;&ldquo;Añadir a pantalla de inicio&rdquo;</span>.</li>
+              <li className="flex gap-2"><span className="shrink-0 font-medium text-text-primary">4.</span>Confirmá y listo — se comporta como una app nativa.</li>
+            </ol>
+          </div>
+
+        </div>
+
+        <div className="px-5 pb-5">
+          <button
+            onClick={onClose}
+            className="w-full bg-accent text-bg-primary py-3 rounded-xl text-[14px] font-medium hover:opacity-90 transition-opacity"
+          >
+            Entendido
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function PatientPortalClient({ token, plans, recentSessions, scheduledSessions }: Props) {
   const [activePlanIdx, setActivePlanIdx] = useState(0)
+  const [showHelp, setShowHelp] = useState(false)
   const [jumpSessionIdx, setJumpSessionIdx] = useState<number | undefined>(undefined)
   const [jumpKey, setJumpKey] = useState(0)
 
@@ -213,6 +274,23 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
 
   return (
     <div className="space-y-10 pb-12">
+
+      {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
+
+      {/* ── BANNER AYUDA ───────────────────────────────────── */}
+      <button
+        onClick={() => setShowHelp(true)}
+        className="w-full flex items-center justify-between gap-3 bg-bg-secondary border-[0.5px] border-border rounded-xl px-4 py-3 hover:border-accent/50 hover:bg-bg-primary transition-colors text-left"
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-[18px]">📱</span>
+          <div>
+            <span className="text-[13px] font-medium text-text-primary">¿Cómo usar el portal?</span>
+            <span className="text-[12px] text-text-secondary ml-2 hidden sm:inline">· Instalá como app en tu celular</span>
+          </div>
+        </div>
+        <span className="text-[12px] text-accent font-medium shrink-0">Ver →</span>
+      </button>
 
       {/* ── MI SEMANA ──────────────────────────────────────── */}
       {scheduledSessions.length > 0 && (
