@@ -23,7 +23,7 @@ export default async function DashboardPage() {
     redirect('/login')
   }
 
-  const [{ data: latestContents }, { data: recentPatients }] = await Promise.all([
+  const [{ data: latestContents }, { data: recentPatients }, { data: userData }] = await Promise.all([
     supabase
       .from('content')
       .select('id, title, subtitle, slug, category, tiempo_lectura_min, body_que_saber')
@@ -36,7 +36,20 @@ export default async function DashboardPage() {
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(3),
+    supabase
+      .from('users')
+      .select('role, trial_expires_at')
+      .eq('id', user.id)
+      .single(),
   ])
+
+  const role = userData?.role
+  const trialExpiresAt = userData?.trial_expires_at
+  const daysLeft = trialExpiresAt
+    ? Math.ceil((new Date(trialExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    : 0
+  const inTrial = daysLeft > 0
+  const showTrialBanner = role === 'free'
 
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
@@ -53,6 +66,42 @@ export default async function DashboardPage() {
             ¿Con qué paciente trabajás hoy?
           </p>
         </div>
+
+        {showTrialBanner && (
+          <div className={`flex items-center justify-between gap-4 rounded-xl border-[0.5px] px-5 py-4 mb-10 ${
+            inTrial
+              ? 'bg-amber-500/10 border-amber-500/30'
+              : 'bg-bg-secondary border-border'
+          }`}>
+            <div>
+              {inTrial ? (
+                <>
+                  <p className="text-[14px] font-medium text-text-primary mb-0.5">
+                    Período de prueba — {daysLeft} día{daysLeft !== 1 ? 's' : ''} restante{daysLeft !== 1 ? 's' : ''}
+                  </p>
+                  <p className="text-[13px] text-text-secondary">
+                    Estás usando Reason con acceso completo. Suscribite antes de que termine para no perder el acceso.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-[14px] font-medium text-text-primary mb-0.5">
+                    Tu período de prueba terminó
+                  </p>
+                  <p className="text-[13px] text-text-secondary">
+                    Seguís con 1 paciente gratuito. Suscribite para desbloquear todo.
+                  </p>
+                </>
+              )}
+            </div>
+            <Link
+              href="/paywall"
+              className="shrink-0 bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity no-underline"
+            >
+              Ver planes
+            </Link>
+          </div>
+        )}
 
         {/* MIS PACIENTES */}
         <section className="mb-16">
