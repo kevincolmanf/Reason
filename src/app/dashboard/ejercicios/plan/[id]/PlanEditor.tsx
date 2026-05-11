@@ -103,6 +103,11 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [targetBlock, setTargetBlock] = useState<{sessionIdx: number, blockIdx: number} | null>(null)
 
+  // Copy/paste session state
+  const [copiedBlocks, setCopiedBlocks] = useState<PlanBlock[] | null>(null)
+  const [copiedFromSession, setCopiedFromSession] = useState<number | null>(null)
+  const [pasteConfirm, setPasteConfirm] = useState(false)
+
   // Schedule modal state
   const [scheduleModal, setScheduleModal] = useState<{sessionId: string, sessionName: string} | null>(null)
   const [scheduleDate, setScheduleDate] = useState('')
@@ -331,6 +336,24 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
     setTargetBlock(null)
   }
 
+  const handleCopySession = (sIdx: number) => {
+    const blocks = plan.plan_data.sessions[sIdx].blocks
+    setCopiedBlocks(JSON.parse(JSON.stringify(blocks)))
+    setCopiedFromSession(sIdx)
+    setPasteConfirm(false)
+  }
+
+  const handlePasteSession = (sIdx: number) => {
+    if (!copiedBlocks) return
+    const newPlan = { ...plan }
+    newPlan.plan_data.sessions[sIdx].blocks = copiedBlocks.map(block => ({
+      ...block,
+      exercises: block.exercises.map(ex => ({ ...ex, id: uuidv4() }))
+    }))
+    setPlan(newPlan)
+    setPasteConfirm(false)
+  }
+
   const calcWeek = (scheduledDate: string): number => {
     if (!plan.start_date) return 1
     const start = new Date(plan.start_date + 'T00:00:00')
@@ -557,27 +580,70 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
       {/* CONTENIDO DE SESION */}
       {typeof activeSession === 'number' && currentSession && (
         <div className="bg-bg-primary border-[0.5px] border-border rounded-b-xl rounded-tl-xl p-6 min-h-[500px]">
-          <div className="mb-8 flex items-center gap-4">
+          <div className="mb-8 flex items-center gap-3 flex-wrap">
             <input
               type="text"
               value={currentSession.name}
               onChange={(e) => updateSessionName(activeSession, e.target.value)}
-              className="bg-transparent text-[20px] font-medium tracking-[-0.01em] text-accent focus:outline-none focus:border-b-[0.5px] border-accent flex-1"
+              className="bg-transparent text-[20px] font-medium tracking-[-0.01em] text-accent focus:outline-none focus:border-b-[0.5px] border-accent flex-1 min-w-0"
             />
-            {plan.patient_id && (
+            <div className="flex items-center gap-2 shrink-0">
+              {/* Copiar sesión */}
               <button
-                onClick={() => {
-                  setScheduleDate(new Date().toISOString().split('T')[0])
-                  setScheduleSuccess(false)
-                  setScheduleModal({ sessionId: currentSession.id, sessionName: currentSession.name })
-                }}
-                className="shrink-0 bg-bg-secondary border-[0.5px] border-border text-text-secondary px-3 py-1.5 rounded-lg text-[12px] hover:text-accent hover:border-accent transition-colors flex items-center gap-1.5"
-                title="Programar esta sesión en el calendario"
+                onClick={() => handleCopySession(activeSession as number)}
+                className={`bg-bg-secondary border-[0.5px] text-text-secondary px-3 py-1.5 rounded-lg text-[12px] hover:text-text-primary hover:border-accent transition-colors flex items-center gap-1.5 ${copiedFromSession === activeSession ? 'border-accent text-accent' : 'border-border'}`}
+                title="Copiar todos los ejercicios de esta sesión"
               >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                Programar
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                {copiedFromSession === activeSession ? 'Copiado' : 'Copiar sesión'}
               </button>
-            )}
+
+              {/* Pegar sesión (solo si hay algo copiado y es otra sesión) */}
+              {copiedBlocks && copiedFromSession !== activeSession && (
+                pasteConfirm ? (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[12px] text-text-secondary">¿Reemplazar ejercicios?</span>
+                    <button
+                      onClick={() => handlePasteSession(activeSession as number)}
+                      className="bg-accent text-bg-primary px-3 py-1.5 rounded-lg text-[12px] font-medium hover:opacity-90 transition-opacity"
+                    >
+                      Sí, pegar
+                    </button>
+                    <button
+                      onClick={() => setPasteConfirm(false)}
+                      className="text-text-secondary text-[12px] px-2 py-1.5 hover:text-text-primary"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setPasteConfirm(true)}
+                    className="bg-accent/10 border-[0.5px] border-accent/40 text-accent px-3 py-1.5 rounded-lg text-[12px] font-medium hover:bg-accent/20 transition-colors flex items-center gap-1.5"
+                    title={`Pegar ejercicios copiados de ${plan.plan_data.sessions[copiedFromSession as number]?.name}`}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
+                    Pegar sesión
+                  </button>
+                )
+              )}
+
+              {/* Programar */}
+              {plan.patient_id && (
+                <button
+                  onClick={() => {
+                    setScheduleDate(new Date().toISOString().split('T')[0])
+                    setScheduleSuccess(false)
+                    setScheduleModal({ sessionId: currentSession.id, sessionName: currentSession.name })
+                  }}
+                  className="bg-bg-secondary border-[0.5px] border-border text-text-secondary px-3 py-1.5 rounded-lg text-[12px] hover:text-accent hover:border-accent transition-colors flex items-center gap-1.5"
+                  title="Programar esta sesión en el calendario"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  Programar
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="space-y-12">
