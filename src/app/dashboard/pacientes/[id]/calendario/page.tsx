@@ -18,11 +18,13 @@ export default async function CalendarioPage({ params }: { params: { id: string 
 
   if (!patient) notFound()
 
+  // Un plan por paciente: buscar el plan asignado a este paciente
   const { data: plans } = await supabase
     .from('exercise_plans')
     .select('id, name, start_date, plan_data')
     .eq('patient_id', params.id)
     .order('updated_at', { ascending: false })
+    .limit(1)
 
   const { data: scheduled } = await supabase
     .from('scheduled_sessions')
@@ -41,6 +43,7 @@ export default async function CalendarioPage({ params }: { params: { id: string 
       <CalendarioClient
         patientId={params.id}
         userId={user.id}
+        patientName={patient.name}
         plans={plans ?? []}
         initialScheduled={scheduled ?? []}
       />
