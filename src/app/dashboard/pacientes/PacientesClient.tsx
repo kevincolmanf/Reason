@@ -19,11 +19,21 @@ export default function PacientesClient({ userId, isActiveUser }: { userId: stri
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [limitError, setLimitError] = useState(false)
   const searchParams = useSearchParams()
 
+  const atFreeLimit = !isActiveUser && patients.length >= 1
+
   useEffect(() => {
-    if (searchParams.get('new') === '1') setShowForm(true)
-  }, [searchParams])
+    if (searchParams.get('new') === '1') {
+      if (atFreeLimit) {
+        setShowForm(false)
+        setLimitError(true)
+      } else {
+        setShowForm(true)
+      }
+    }
+  }, [searchParams, atFreeLimit])
   const [form, setForm] = useState({ name: '', age: '', occupation: '' })
 
   const supabase = createClient()
@@ -56,11 +66,9 @@ export default function PacientesClient({ userId, isActiveUser }: { userId: stri
     fetchPatients()
   }, [fetchPatients])
 
-  const atFreeLimit = !isActiveUser && patients.length >= 1
-
   const handleCreate = async () => {
     if (!form.name.trim()) return
-    if (atFreeLimit) return
+    if (atFreeLimit) { setLimitError(true); return }
     setSaving(true)
 
     const { error } = await supabase.from('patients').insert({
@@ -102,6 +110,16 @@ export default function PacientesClient({ userId, isActiveUser }: { userId: stri
           </button>
         )}
       </div>
+
+      {limitError && (
+        <div className="bg-red-500/10 border-[0.5px] border-red-500/30 rounded-xl px-5 py-4 mb-4 flex items-center justify-between gap-4">
+          <p className="text-[13px] text-text-primary">Con el plan gratuito solo podés tener 1 paciente. Suscribite para agregar más.</p>
+          <div className="flex gap-2 shrink-0">
+            <a href="/checkout" className="bg-accent text-bg-primary px-3 py-1.5 rounded-lg text-[12px] font-medium hover:opacity-90 transition-opacity">Ver planes</a>
+            <button onClick={() => setLimitError(false)} className="text-text-secondary text-[12px] px-2 hover:text-text-primary">✕</button>
+          </div>
+        </div>
+      )}
 
       {atFreeLimit && (
         <div className="bg-accent/5 border-[0.5px] border-accent/30 rounded-xl px-5 py-4 mb-6 flex items-center justify-between gap-4">
