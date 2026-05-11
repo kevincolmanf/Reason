@@ -177,21 +177,23 @@ export default function FichaClient({
   const [dynResults, setDynResults] = useState<DynamoResult[]>(dynamoResults)
 
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const supabase = createClient()
+  const supabaseRef = useRef(createClient())
+  const fichaIdRef = useRef(initialFicha.id)
 
   // Autosave
   useEffect(() => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current)
     setSaveStatus('saving')
     timeoutRef.current = setTimeout(async () => {
-      const { error } = await supabase
+      const { error } = await supabaseRef.current
         .from('patient_fichas')
         .update({ fecha: ficha.fecha || null, ficha_data: ficha })
-        .eq('id', initialFicha.id)
+        .eq('id', fichaIdRef.current)
       setSaveStatus(error ? 'error' : 'saved')
     }, 1500)
     return () => { if (timeoutRef.current) clearTimeout(timeoutRef.current) }
-  }, [ficha, supabase, initialFicha.id])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ficha])
 
   const handleChange = (field: keyof FichaData, value: string) => {
     setFicha(prev => ({ ...prev, [field]: value }))
@@ -229,13 +231,13 @@ export default function FichaClient({
 
   const handleDeleteQ = async (id: string) => {
     if (!confirm('¿Eliminar este resultado?')) return
-    const { error } = await supabase.from('questionnaire_results').delete().eq('id', id)
+    const { error } = await supabaseRef.current.from('questionnaire_results').delete().eq('id', id)
     if (!error) setQResults(prev => prev.filter(r => r.id !== id))
   }
 
   const handleDeleteDynamo = async (id: string) => {
     if (!confirm('¿Eliminar esta evaluación?')) return
-    const { error } = await supabase.from('dynamometer_results').delete().eq('id', id)
+    const { error } = await supabaseRef.current.from('dynamometer_results').delete().eq('id', id)
     if (!error) setDynResults(prev => prev.filter(d => d.id !== id))
   }
 
