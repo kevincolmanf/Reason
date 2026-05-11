@@ -21,6 +21,7 @@ interface PlanExercise {
   exercise_id: string
   exercise_name: string
   youtube_url: string
+  group?: string
   weeks: WeekData[]
 }
 
@@ -261,6 +262,12 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
   const updateWeekData = (sIdx: number, bIdx: number, exIdx: number, wIdx: number, field: keyof WeekData, value: string) => {
     const newPlan = { ...plan }
     newPlan.plan_data.sessions[sIdx].blocks[bIdx].exercises[exIdx].weeks[wIdx][field] = value as never
+    setPlan(newPlan)
+  }
+
+  const updateExerciseGroup = (sIdx: number, bIdx: number, exIdx: number, group: string) => {
+    const newPlan = { ...plan }
+    newPlan.plan_data.sessions[sIdx].blocks[bIdx].exercises[exIdx].group = group || undefined
     setPlan(newPlan)
   }
 
@@ -597,6 +604,17 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
                         <div className="flex justify-between items-start mb-4">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
+                              <select
+                                value={ex.group || ''}
+                                onChange={e => updateExerciseGroup(activeSession as number, bIdx, exIdx, e.target.value)}
+                                className={`shrink-0 text-[11px] font-mono font-medium rounded px-1.5 py-0.5 border-[0.5px] focus:outline-none cursor-pointer appearance-none transition-colors ${ex.group ? 'bg-accent/10 border-accent/40 text-accent' : 'bg-bg-primary border-border text-text-secondary hover:border-accent/40'}`}
+                                title="Grupo / superserie"
+                              >
+                                <option value="">—</option>
+                                {['A','A1','A2','A3','B','B1','B2','B3','C','C1','C2','C3','D','D1','D2'].map(g => (
+                                  <option key={g} value={g}>{g}</option>
+                                ))}
+                              </select>
                               <h4 className="text-[15px] font-medium text-text-primary">{ex.exercise_name}</h4>
                               {latestByExercise[ex.id] && (() => {
                                 const log = latestByExercise[ex.id]

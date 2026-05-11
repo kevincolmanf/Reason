@@ -16,6 +16,7 @@ interface PlanExercise {
   id: string
   exercise_name: string
   youtube_url: string
+  group?: string
   weeks: WeekData[]
 }
 
@@ -105,7 +106,12 @@ export default function PatientPlanViewer({ planData, initialSessionIdx }: { pla
                       )}
                     </div>
                     <div className="flex-grow">
-                      <h4 className="text-[15px] font-medium text-text-primary mb-2 leading-[1.3]">{ex.exercise_name}</h4>
+                      <div className="flex items-center gap-2 mb-2">
+                        {ex.group && (
+                          <span className="text-[11px] font-mono font-medium bg-accent/10 border-[0.5px] border-accent/40 text-accent rounded px-1.5 py-0.5 shrink-0">{ex.group}</span>
+                        )}
+                        <h4 className="text-[15px] font-medium text-text-primary leading-[1.3]">{ex.exercise_name}</h4>
+                      </div>
                       <div className="grid grid-cols-3 gap-x-4 gap-y-2">
                         <div>
                           <div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-0.5">Series × Reps</div>
