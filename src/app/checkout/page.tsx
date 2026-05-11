@@ -13,7 +13,7 @@ export default async function CheckoutPage({
 
   // 1. Redirigir a signup si no está logueado
   if (!user) {
-    redirect(`/signup?returnUrl=/checkout?plan=${searchParams.plan || 'monthly'}`)
+    redirect(`/signup?returnUrl=${encodeURIComponent(`/checkout?plan=${searchParams.plan || 'monthly'}`)}`)
   }
 
   // Validar el plan
