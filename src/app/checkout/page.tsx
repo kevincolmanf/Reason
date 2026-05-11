@@ -56,12 +56,10 @@ export default async function CheckoutPage({
               <li className="flex items-center gap-2">✓ Cancelá en cualquier momento</li>
             </ul>
 
-            <form action={async () => {
-              'use server'
-              await createSubscriptionPreference(plan)
-            }}>
-              <button 
-                type="submit" 
+            <form action={createSubscriptionPreference}>
+              <input type="hidden" name="planType" value={plan} />
+              <button
+                type="submit"
                 className="w-full bg-[#009EE3] text-white py-[14px] rounded-lg text-[15px] font-medium no-underline hover:opacity-90 transition-opacity flex justify-center items-center gap-2 border-none cursor-pointer"
               >
                 Pagar con Mercado Pago
