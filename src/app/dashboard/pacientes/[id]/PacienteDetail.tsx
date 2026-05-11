@@ -122,7 +122,7 @@ export default function PacienteDetail({ patient: initialPatient }: { patient: P
       </div>
 
       {/* 3 CARDS PRINCIPALES */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         <Link href={`/dashboard/pacientes/${patient.id}/ficha`} className="block no-underline group">
           <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 hover:bg-bg-secondary transition-colors h-full">
             <div className="text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-3">Expediente clínico</div>
@@ -155,6 +155,15 @@ export default function PacienteDetail({ patient: initialPatient }: { patient: P
             <div className="text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-3">Planificación</div>
             <div className="text-[18px] font-medium mb-1">Calendario</div>
             <div className="text-[13px] text-text-secondary">Programá sesiones en fechas específicas para el paciente</div>
+            <div className="mt-5 text-accent text-[13px] font-medium opacity-0 group-hover:opacity-100 transition-opacity">Abrir →</div>
+          </div>
+        </Link>
+
+        <Link href={`/dashboard/pacientes/${patient.id}/rts`} className="block no-underline group">
+          <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 hover:bg-bg-secondary transition-colors h-full">
+            <div className="text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-3">Protocolo LCA</div>
+            <div className="text-[18px] font-medium mb-1">Retorno al Deporte</div>
+            <div className="text-[13px] text-text-secondary">Evaluación de criterios RTS: fuerza, funcional, psicológico y médico</div>
             <div className="mt-5 text-accent text-[13px] font-medium opacity-0 group-hover:opacity-100 transition-opacity">Abrir →</div>
           </div>
         </Link>
