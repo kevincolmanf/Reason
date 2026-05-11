@@ -244,19 +244,31 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
             </div>
 
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-accent mb-2">Instalá como app — Android</p>
-              <ol className="space-y-1 text-text-secondary">
-                <li>1. Abrí en <span className="text-text-primary font-medium">Chrome</span> → tocá el menú ⋮</li>
-                <li>2. Elegí <span className="text-text-primary font-medium">&ldquo;Agregar a pantalla de inicio&rdquo;</span></li>
-              </ol>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-accent mb-3">Instalá como app — Android</p>
+              <div className="space-y-2">
+                <div className="flex items-start gap-3">
+                  <span className="shrink-0 w-5 h-5 rounded-full bg-accent/15 text-accent text-[11px] font-bold flex items-center justify-center mt-0.5">1</span>
+                  <span className="text-text-secondary">Abrí esta página en <span className="text-text-primary font-medium">Chrome</span> y tocá el menú <span className="text-text-primary">⋮</span> arriba a la derecha</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="shrink-0 w-5 h-5 rounded-full bg-accent/15 text-accent text-[11px] font-bold flex items-center justify-center mt-0.5">2</span>
+                  <span className="text-text-secondary">Tocá <span className="text-text-primary font-medium">&ldquo;Agregar a pantalla de inicio&rdquo;</span> y confirmá</span>
+                </div>
+              </div>
             </div>
 
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-accent mb-2">Instalá como app — iPhone</p>
-              <ol className="space-y-1 text-text-secondary">
-                <li>1. Abrí en <span className="text-text-primary font-medium">Safari</span> → tocá el ícono compartir (□↑)</li>
-                <li>2. Elegí <span className="text-text-primary font-medium">&ldquo;Añadir a pantalla de inicio&rdquo;</span></li>
-              </ol>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-accent mb-3">Instalá como app — iPhone</p>
+              <div className="space-y-2">
+                <div className="flex items-start gap-3">
+                  <span className="shrink-0 w-5 h-5 rounded-full bg-accent/15 text-accent text-[11px] font-bold flex items-center justify-center mt-0.5">1</span>
+                  <span className="text-text-secondary">Abrí esta página en <span className="text-text-primary font-medium">Safari</span> y tocá el ícono de compartir <span className="text-text-primary">⬆</span> abajo en el centro</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="shrink-0 w-5 h-5 rounded-full bg-accent/15 text-accent text-[11px] font-bold flex items-center justify-center mt-0.5">2</span>
+                  <span className="text-text-secondary">Tocá <span className="text-text-primary font-medium">&ldquo;Añadir a pantalla de inicio&rdquo;</span> y confirmá</span>
+                </div>
+              </div>
             </div>
 
           </div>
