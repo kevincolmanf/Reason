@@ -367,7 +367,7 @@ export default function FichaClient({
         <h2 className="text-[14px] uppercase tracking-[0.05em] text-text-secondary mb-3">Evaluaciones</h2>
 
         {/* Cards */}
-        <div className="grid grid-cols-3 gap-3 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
           {([
             { key: 'goniometria', label: 'Goniometría', count: ficha.goniometria?.length ?? 0 },
             { key: 'cuestionarios', label: 'Cuestionarios', count: qResults.length },

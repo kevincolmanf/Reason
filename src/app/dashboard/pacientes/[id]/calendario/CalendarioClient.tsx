@@ -167,77 +167,61 @@ export default function CalendarioClient({ patientId, userId, plans, initialSche
         <button onClick={goToday} className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors">Hoy</button>
       </div>
 
-      {/* Week grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-7 gap-2">
+      {/* Week grid — desktop */}
+      <div className="hidden sm:grid sm:grid-cols-7 gap-2">
         {weekDays.map((day, i) => {
           const dateStr = toDateStr(day)
           const isToday = dateStr === today
           const isPast = dateStr < today
           const daySessions = sessionsForDay(dateStr)
-
           return (
-            <div
-              key={dateStr}
-              className={`rounded-xl border-[0.5px] p-3 min-h-[120px] flex flex-col ${
-                isToday
-                  ? 'border-accent bg-bg-secondary'
-                  : 'border-border bg-bg-primary'
-              }`}
-            >
-              {/* Day header */}
+            <div key={dateStr} className={`rounded-xl border-[0.5px] p-3 min-h-[120px] flex flex-col ${isToday ? 'border-accent bg-bg-secondary' : 'border-border bg-bg-primary'}`}>
               <div className="flex items-center justify-between mb-2">
                 <div>
-                  <div className={`text-[11px] uppercase tracking-[0.05em] ${isToday ? 'text-accent' : 'text-text-secondary'}`}>
-                    {DAYS_ES[i]}
-                  </div>
-                  <div className={`text-[14px] font-medium ${isToday ? 'text-accent' : isPast ? 'text-text-secondary' : 'text-text-primary'}`}>
-                    {formatDayLabel(day)}
-                  </div>
+                  <div className={`text-[11px] uppercase tracking-[0.05em] ${isToday ? 'text-accent' : 'text-text-secondary'}`}>{DAYS_ES[i]}</div>
+                  <div className={`text-[14px] font-medium ${isToday ? 'text-accent' : isPast ? 'text-text-secondary' : 'text-text-primary'}`}>{formatDayLabel(day)}</div>
                 </div>
-                <button
-                  onClick={() => openModal(dateStr)}
-                  className="text-[18px] leading-none text-text-secondary hover:text-accent transition-colors"
-                  title="Programar sesión"
-                >
-                  +
-                </button>
+                <button onClick={() => openModal(dateStr)} className="text-[18px] leading-none text-text-secondary hover:text-accent transition-colors" title="Programar sesión">+</button>
               </div>
-
-              {/* Sessions */}
               <div className="flex flex-col gap-1.5 flex-1">
                 {daySessions.map(s => (
-                  <div
-                    key={s.id}
-                    className={`rounded-lg px-2 py-1.5 border-[0.5px] group relative ${
-                      s.completed
-                        ? 'bg-bg-secondary border-border opacity-50'
-                        : 'bg-accent/10 border-accent/30'
-                    }`}
-                  >
+                  <div key={s.id} className={`rounded-lg px-2 py-1.5 border-[0.5px] group relative ${s.completed ? 'bg-bg-secondary border-border opacity-50' : 'bg-accent/10 border-accent/30'}`}>
                     <div className="flex items-start justify-between gap-1">
                       <div className="flex-1 min-w-0">
-                        <div
-                          className={`text-[12px] font-medium leading-tight truncate cursor-pointer ${s.completed ? 'line-through text-text-secondary' : 'text-text-primary'}`}
-                          onClick={() => handleToggleComplete(s)}
-                          title={s.completed ? 'Marcar como pendiente' : 'Marcar como completado'}
-                        >
-                          {s.session_name}
-                        </div>
-                        <div className="text-[11px] text-text-secondary truncate flex items-center gap-1">
-                          <span>{s.plan_name}</span>
-                          <span className="text-accent/70">· S{s.week}</span>
-                        </div>
+                        <div className={`text-[12px] font-medium leading-tight truncate cursor-pointer ${s.completed ? 'line-through text-text-secondary' : 'text-text-primary'}`} onClick={() => handleToggleComplete(s)} title={s.completed ? 'Marcar como pendiente' : 'Marcar como completado'}>{s.session_name}</div>
+                        <div className="text-[11px] text-text-secondary truncate flex items-center gap-1"><span>{s.plan_name}</span><span className="text-accent/70">· S{s.week}</span></div>
                       </div>
-                      <button
-                        onClick={() => handleDelete(s.id)}
-                        className="text-[11px] text-text-secondary opacity-0 group-hover:opacity-100 hover:text-warning transition-all shrink-0 ml-1"
-                        title="Eliminar"
-                      >
-                        ✕
-                      </button>
+                      <button onClick={() => handleDelete(s.id)} className="text-[11px] text-text-secondary opacity-0 group-hover:opacity-100 hover:text-warning transition-all shrink-0 ml-1" title="Eliminar">✕</button>
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Week list — mobile */}
+      <div className="sm:hidden divide-y-[0.5px] divide-border border-[0.5px] border-border rounded-xl overflow-hidden">
+        {weekDays.map((day, i) => {
+          const dateStr = toDateStr(day)
+          const isToday = dateStr === today
+          const isPast = dateStr < today
+          const daySessions = sessionsForDay(dateStr)
+          return (
+            <div key={dateStr} className={`${isToday ? 'bg-bg-secondary' : 'bg-bg-primary'}`}>
+              <div className="flex items-center gap-3 px-4 py-3">
+                <div className={`w-8 text-[13px] font-medium shrink-0 ${isToday ? 'text-accent' : isPast ? 'text-text-secondary' : 'text-text-primary'}`}>{DAYS_ES[i]}</div>
+                <div className={`text-[13px] w-6 shrink-0 ${isToday ? 'text-accent font-medium' : isPast ? 'text-text-secondary' : 'text-text-primary'}`}>{formatDayLabel(day)}</div>
+                <div className="flex-1 flex flex-wrap gap-1 min-w-0">
+                  {daySessions.map(s => (
+                    <button key={s.id} onClick={() => handleToggleComplete(s)} className={`text-[11px] px-2 py-0.5 rounded-full border-[0.5px] ${s.completed ? 'border-border text-text-secondary line-through opacity-50' : 'bg-accent/10 border-accent/30 text-accent'}`}>{s.session_name}</button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => openModal(dateStr)}
+                  className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg border-[0.5px] border-border text-text-secondary hover:border-accent hover:text-accent transition-colors text-[16px] leading-none"
+                >+</button>
               </div>
             </div>
           )
@@ -250,84 +234,54 @@ export default function CalendarioClient({ patientId, userId, plans, initialSche
         </div>
       )}
 
-      {/* Modal */}
+      {/* Panel Programar (inline — funciona en iOS Safari) */}
       {modalDate && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setModalDate(null)}>
-          <div className="bg-bg-primary border-[0.5px] border-border rounded-2xl p-6 w-full max-w-[380px]" onClick={e => e.stopPropagation()}>
-            <h2 className="text-[16px] font-medium mb-1">Programar sesión</h2>
-            <p className="text-[13px] text-text-secondary mb-5">
-              {new Date(modalDate + 'T00:00:00').toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}
-            </p>
+        <div className="mt-4 bg-bg-primary border-[0.5px] border-accent/40 rounded-2xl p-6">
+          <div className="flex items-center justify-between mb-1">
+            <h2 className="text-[16px] font-medium">Programar sesión</h2>
+            <button onClick={() => setModalDate(null)} className="text-text-secondary hover:text-text-primary text-[16px] leading-none p-1">✕</button>
+          </div>
+          <p className="text-[13px] text-text-secondary mb-5">
+            {new Date(modalDate + 'T00:00:00').toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}
+          </p>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Plan</label>
-                <select
-                  value={selectedPlanId}
-                  onChange={e => { setSelectedPlanId(e.target.value); setSelectedSessionId('') }}
-                  className="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent"
-                >
-                  {plans.map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Sesión</label>
-                <select
-                  value={selectedSessionId}
-                  onChange={e => setSelectedSessionId(e.target.value)}
-                  className="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent"
-                >
-                  <option value="">— Elegir sesión —</option>
-                  {planSessions.map(s => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Fecha</label>
-                <input
-                  type="date"
-                  value={modalDate}
-                  onChange={e => setModalDate(e.target.value)}
-                  className="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent"
-                />
-              </div>
-
-              {previewWeek && selectedPlan?.start_date && (
-                <div className="bg-accent/10 border-[0.5px] border-accent/30 rounded-lg px-4 py-2.5">
-                  <p className="text-[13px] text-accent font-medium">Semana {previewWeek} del plan</p>
-                  {!selectedPlan.start_date && (
-                    <p className="text-[11px] text-text-secondary mt-0.5">Asigná una fecha de inicio al plan para calcular la semana automáticamente</p>
-                  )}
-                </div>
-              )}
-
-              {selectedPlan && !selectedPlan.start_date && (
-                <div className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-4 py-2.5">
-                  <p className="text-[12px] text-text-secondary">El plan no tiene fecha de inicio → se asigna semana 1. Podés editarla en el plan.</p>
-                </div>
-              )}
+          <div className="space-y-4">
+            <div>
+              <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Plan</label>
+              <select value={selectedPlanId} onChange={e => { setSelectedPlanId(e.target.value); setSelectedSessionId('') }} className="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent">
+                {plans.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
             </div>
-
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={handleSchedule}
-                disabled={saving || !selectedSessionId}
-                className="bg-accent text-bg-primary px-5 py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 flex-1"
-              >
-                {saving ? 'Guardando...' : 'Programar'}
-              </button>
-              <button
-                onClick={() => setModalDate(null)}
-                className="text-text-secondary px-4 py-2.5 rounded-lg text-[13px] hover:text-text-primary"
-              >
-                Cancelar
-              </button>
+            <div>
+              <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Sesión</label>
+              <select value={selectedSessionId} onChange={e => setSelectedSessionId(e.target.value)} className="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent">
+                <option value="">— Elegir sesión —</option>
+                {planSessions.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
             </div>
+            <div>
+              <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Fecha</label>
+              <input type="date" value={modalDate} onChange={e => setModalDate(e.target.value)} className="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent" />
+            </div>
+            {previewWeek && selectedPlan?.start_date && (
+              <div className="bg-accent/10 border-[0.5px] border-accent/30 rounded-lg px-4 py-2.5">
+                <p className="text-[13px] text-accent font-medium">Semana {previewWeek} del plan</p>
+              </div>
+            )}
+            {selectedPlan && !selectedPlan.start_date && (
+              <div className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-4 py-2.5">
+                <p className="text-[12px] text-text-secondary">El plan no tiene fecha de inicio → se asigna semana 1. Podés editarla en el plan.</p>
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-3 mt-6">
+            <button onClick={handleSchedule} disabled={saving || !selectedSessionId} className="bg-accent text-bg-primary px-5 py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 flex-1">
+              {saving ? 'Guardando...' : 'Programar'}
+            </button>
+            <button onClick={() => setModalDate(null)} className="text-text-secondary px-4 py-2.5 rounded-lg text-[13px] hover:text-text-primary">
+              Cancelar
+            </button>
           </div>
         </div>
       )}
