@@ -25,6 +25,16 @@ export default async function PlanListPage({ searchParams }: { searchParams: { p
       .eq('user_id', user.id)
       .single()
     patientName = data?.name ?? null
+
+    // Un plan por paciente: si ya existe, ir directo al editor
+    const { data: existing } = await supabase
+      .from('exercise_plans')
+      .select('id')
+      .eq('patient_id', patientId)
+      .eq('user_id', user.id)
+      .limit(1)
+      .single()
+    if (existing) redirect(`/dashboard/ejercicios/plan/${existing.id}`)
   }
 
   const backHref = patientId
