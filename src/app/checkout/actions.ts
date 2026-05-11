@@ -4,13 +4,15 @@ import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { MercadoPagoConfig, PreApproval } from 'mercadopago'
 
-export async function createSubscriptionPreference(planType: 'monthly' | 'annual') {
+export async function createSubscriptionPreference(formData: FormData) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
     redirect('/login')
   }
+
+  const planType: 'monthly' | 'annual' = formData.get('planType') === 'annual' ? 'annual' : 'monthly'
 
   console.log('MP Token disponible:', !!process.env.MP_ACCESS_TOKEN)
   const client = new MercadoPagoConfig({ 

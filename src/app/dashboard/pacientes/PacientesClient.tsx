@@ -97,7 +97,7 @@ export default function PacientesClient({ userId, isActiveUser }: { userId: stri
         <span className="text-[14px] text-text-secondary">{patients.length} paciente{patients.length !== 1 ? 's' : ''}</span>
         {atFreeLimit ? (
           <a
-            href="/checkout"
+            href="/paywall"
             className="bg-accent/10 text-accent border-[0.5px] border-accent/40 px-4 py-2 rounded-lg text-[13px] font-medium hover:bg-accent/20 transition-colors"
           >
             Suscribite para agregar más
@@ -116,7 +116,7 @@ export default function PacientesClient({ userId, isActiveUser }: { userId: stri
         <div className="bg-red-500/10 border-[0.5px] border-red-500/30 rounded-xl px-5 py-4 mb-4 flex items-center justify-between gap-4">
           <p className="text-[13px] text-text-primary">Con el plan gratuito solo podés tener 1 paciente. Suscribite para agregar más.</p>
           <div className="flex gap-2 shrink-0">
-            <a href="/checkout" className="bg-accent text-bg-primary px-3 py-1.5 rounded-lg text-[12px] font-medium hover:opacity-90 transition-opacity">Ver planes</a>
+            <a href="/paywall" className="bg-accent text-bg-primary px-3 py-1.5 rounded-lg text-[12px] font-medium hover:opacity-90 transition-opacity">Ver planes</a>
             <button onClick={() => setLimitError(false)} className="text-text-secondary text-[12px] px-2 hover:text-text-primary">✕</button>
           </div>
         </div>
@@ -128,7 +128,7 @@ export default function PacientesClient({ userId, isActiveUser }: { userId: stri
             <p className="text-[14px] font-medium text-text-primary mb-0.5">Plan gratuito — 1 paciente</p>
             <p className="text-[13px] text-text-secondary">Suscribite para agregar pacientes ilimitados y acceder a todos los módulos.</p>
           </div>
-          <a href="/checkout" className="shrink-0 bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity">
+          <a href="/paywall" className="shrink-0 bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity">
             Ver planes
           </a>
         </div>
@@ -217,7 +217,7 @@ export default function PacientesClient({ userId, isActiveUser }: { userId: stri
                       </span>
                     </div>
                   </div>
-                  <a href="/checkout" className="absolute inset-0 flex items-center justify-center group">
+                  <a href="/paywall" className="absolute inset-0 flex items-center justify-center group">
                     <span className="bg-bg-primary border-[0.5px] border-border rounded-lg px-3 py-1.5 text-[12px] font-medium text-text-secondary group-hover:text-text-primary group-hover:border-accent transition-colors flex items-center gap-1.5">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                       Suscribite para acceder
