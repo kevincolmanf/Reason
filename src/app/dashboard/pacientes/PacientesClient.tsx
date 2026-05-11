@@ -27,6 +27,7 @@ export default function PacientesClient({ userId, isActiveUser }: { userId: stri
   useEffect(() => {
     if (searchParams.get('new') === '1') {
       if (atFreeLimit) {
+        setShowForm(false)
         setLimitError(true)
       } else {
         setShowForm(true)
@@ -95,7 +96,7 @@ export default function PacientesClient({ userId, isActiveUser }: { userId: stri
         <span className="text-[14px] text-text-secondary">{patients.length} paciente{patients.length !== 1 ? 's' : ''}</span>
         {atFreeLimit ? (
           <a
-            href="/paywall"
+            href="/checkout"
             className="bg-accent/10 text-accent border-[0.5px] border-accent/40 px-4 py-2 rounded-lg text-[13px] font-medium hover:bg-accent/20 transition-colors"
           >
             Suscribite para agregar más
@@ -111,7 +112,7 @@ export default function PacientesClient({ userId, isActiveUser }: { userId: stri
       </div>
 
       {limitError && (
-        <div className="bg-warning/10 border-[0.5px] border-warning/40 rounded-xl px-5 py-4 mb-4 flex items-center justify-between gap-4">
+        <div className="bg-red-500/10 border-[0.5px] border-red-500/30 rounded-xl px-5 py-4 mb-4 flex items-center justify-between gap-4">
           <p className="text-[13px] text-text-primary">Con el plan gratuito solo podés tener 1 paciente. Suscribite para agregar más.</p>
           <div className="flex gap-2 shrink-0">
             <a href="/checkout" className="bg-accent text-bg-primary px-3 py-1.5 rounded-lg text-[12px] font-medium hover:opacity-90 transition-opacity">Ver planes</a>
@@ -126,7 +127,7 @@ export default function PacientesClient({ userId, isActiveUser }: { userId: stri
             <p className="text-[14px] font-medium text-text-primary mb-0.5">Plan gratuito — 1 paciente</p>
             <p className="text-[13px] text-text-secondary">Suscribite para agregar pacientes ilimitados y acceder a todos los módulos.</p>
           </div>
-          <a href="/paywall" className="shrink-0 bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity">
+          <a href="/checkout" className="shrink-0 bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity">
             Ver planes
           </a>
         </div>
