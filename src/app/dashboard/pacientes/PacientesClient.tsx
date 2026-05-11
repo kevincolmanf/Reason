@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
@@ -36,11 +36,11 @@ export default function PacientesClient({ userId, isActiveUser }: { userId: stri
   }, [searchParams, atFreeLimit])
   const [form, setForm] = useState({ name: '', age: '', occupation: '' })
 
-  const supabase = createClient()
+  const supabaseRef = useRef(createClient())
 
   const fetchPatients = useCallback(async () => {
     setLoading(true)
-    const { data, error } = await supabase
+    const { data, error } = await supabaseRef.current
       .from('patients')
       .select('id, name, age, occupation, created_at')
       .eq('user_id', userId)
@@ -50,7 +50,7 @@ export default function PacientesClient({ userId, isActiveUser }: { userId: stri
       // Fetch plan count per patient
       const patientsWithCount = await Promise.all(
         data.map(async (p) => {
-          const { count } = await supabase
+          const { count } = await supabaseRef.current
             .from('exercise_plans')
             .select('id', { count: 'exact', head: true })
             .eq('patient_id', p.id)
@@ -60,7 +60,8 @@ export default function PacientesClient({ userId, isActiveUser }: { userId: stri
       setPatients(patientsWithCount)
     }
     setLoading(false)
-  }, [supabase, userId])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId])
 
   useEffect(() => {
     fetchPatients()
@@ -71,7 +72,7 @@ export default function PacientesClient({ userId, isActiveUser }: { userId: stri
     if (atFreeLimit) { setLimitError(true); return }
     setSaving(true)
 
-    const { error } = await supabase.from('patients').insert({
+    const { error } = await supabaseRef.current.from('patients').insert({
       user_id: userId,
       name: form.name.trim(),
       age: form.age ? parseInt(form.age) : null,

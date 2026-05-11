@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 
 interface PlanSession { id: string; name: string }
@@ -73,7 +73,7 @@ function formatDay(date: Date): string {
 }
 
 export default function CalendarioClient({ patientId, userId, patientName, plans, unassignedPlans, initialScheduled }: Props) {
-  const supabase = createClient()
+  const supabaseRef = useRef(createClient())
 
   // ── Week view ──────────────────────────────────────────────────────────────
   const [weekStart, setWeekStart] = useState(() => getMondayOf(new Date()))
@@ -111,7 +111,7 @@ export default function CalendarioClient({ patientId, userId, patientName, plans
 
   const handleLinkPlan = async (planId: string) => {
     setLinkingPlanId(planId)
-    await supabase.from('exercise_plans').update({ patient_id: patientId }).eq('id', planId)
+    await supabaseRef.current.from('exercise_plans').update({ patient_id: patientId }).eq('id', planId)
     window.location.reload()
   }
 
@@ -135,12 +135,12 @@ export default function CalendarioClient({ patientId, userId, patientName, plans
 
   // ── Actions ────────────────────────────────────────────────────────────────
   const handleDelete = async (id: string) => {
-    await supabase.from('scheduled_sessions').delete().eq('id', id)
+    await supabaseRef.current.from('scheduled_sessions').delete().eq('id', id)
     setScheduled(prev => prev.filter(s => s.id !== id))
   }
 
   const handleToggleComplete = async (s: ScheduledSession) => {
-    const { data } = await supabase
+    const { data } = await supabaseRef.current
       .from('scheduled_sessions')
       .update({ completed: !s.completed })
       .eq('id', s.id)
@@ -166,7 +166,7 @@ export default function CalendarioClient({ patientId, userId, patientName, plans
       week: calcWeek(d, plan.start_date),
     }))
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseRef.current
       .from('scheduled_sessions')
       .insert(inserts)
       .select()

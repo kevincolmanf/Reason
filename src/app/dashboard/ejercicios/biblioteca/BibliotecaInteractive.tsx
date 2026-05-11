@@ -55,13 +55,13 @@ export default function BibliotecaInteractive({ equipments, userId }: { equipmen
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
   const PAGE_SIZE = 50
-  const supabase = createClient()
+  const supabaseRef = useRef(createClient())
 
   const fetchExercises = useCallback(async (reset: boolean = false) => {
     setLoading(true)
     const currentPage = reset ? 0 : page
 
-    let query = supabase
+    let query = supabaseRef.current
       .from('exercises')
       .select('*')
       .order('name')
@@ -82,7 +82,7 @@ export default function BibliotecaInteractive({ equipments, userId }: { equipmen
       setHasMore(data.length === PAGE_SIZE)
     }
     setLoading(false)
-  }, [search, category, equipment, page, supabase])
+  }, [search, category, equipment, page])
 
   useEffect(() => {
     setPage(0)
@@ -96,14 +96,15 @@ export default function BibliotecaInteractive({ equipments, userId }: { equipmen
 
   const fetchUserExercises = useCallback(async () => {
     setUserLoading(true)
-    const { data, error } = await supabase
+    const { data, error } = await supabaseRef.current
       .from('user_exercises')
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
     if (!error && data) setUserExercises(data)
     setUserLoading(false)
-  }, [supabase, userId])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId])
 
   useEffect(() => {
     if (view === 'mis_ejercicios') {
@@ -114,7 +115,7 @@ export default function BibliotecaInteractive({ equipments, userId }: { equipmen
   const handleAddExercise = async () => {
     if (!newName.trim()) return
     setSaving(true)
-    const { error } = await supabase.from('user_exercises').insert({
+    const { error } = await supabaseRef.current.from('user_exercises').insert({
       user_id: userId,
       name: newName.trim(),
       youtube_url: newUrl.trim() || null,
@@ -128,7 +129,7 @@ export default function BibliotecaInteractive({ equipments, userId }: { equipmen
   }
 
   const handleDeleteExercise = async (id: string) => {
-    const { error } = await supabase.from('user_exercises').delete().eq('id', id)
+    const { error } = await supabaseRef.current.from('user_exercises').delete().eq('id', id)
     if (!error) {
       setUserExercises(prev => prev.filter(e => e.id !== id))
     }

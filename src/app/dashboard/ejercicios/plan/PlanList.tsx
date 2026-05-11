@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -31,11 +31,11 @@ export default function PlanList({ userId, patientId }: { userId: string; patien
   const [plans, setPlans] = useState<ExercisePlan[]>([])
   const [loading, setLoading] = useState(true)
   const router = useRouter()
-  const supabase = createClient()
+  const supabaseRef = useRef(createClient())
 
   const fetchPlans = useCallback(async () => {
     setLoading(true)
-    let query = supabase
+    let query = supabaseRef.current
       .from('exercise_plans')
       .select('id, name, updated_at, share_token, patient_id, patients(name)')
       .order('updated_at', { ascending: false })
@@ -45,7 +45,8 @@ export default function PlanList({ userId, patientId }: { userId: string; patien
     const { data, error } = await query
     if (!error && data) setPlans(data)
     setLoading(false)
-  }, [supabase, patientId])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [patientId])
 
   useEffect(() => {
     fetchPlans()
@@ -55,7 +56,7 @@ export default function PlanList({ userId, patientId }: { userId: string; patien
     const name = prompt('Nombre del nuevo plan (ej: Plan Rodilla Post-quirúrgico):')
     if (!name) return
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseRef.current
       .from('exercise_plans')
       .insert({
         user_id: userId,
@@ -78,7 +79,7 @@ export default function PlanList({ userId, patientId }: { userId: string; patien
     e.preventDefault()
     if (!confirm('¿Estás seguro de eliminar este plan? Esta acción no se puede deshacer.')) return
 
-    const { error } = await supabase.from('exercise_plans').delete().eq('id', id)
+    const { error } = await supabaseRef.current.from('exercise_plans').delete().eq('id', id)
     if (error) {
       alert('Error al eliminar')
     } else {
@@ -90,7 +91,7 @@ export default function PlanList({ userId, patientId }: { userId: string; patien
     e.preventDefault()
     
     // Fetch full plan data to duplicate
-    const { data: fullPlan, error: fetchError } = await supabase
+    const { data: fullPlan, error: fetchError } = await supabaseRef.current
       .from('exercise_plans')
       .select('plan_data, notes')
       .eq('id', plan.id)
@@ -103,7 +104,7 @@ export default function PlanList({ userId, patientId }: { userId: string; patien
 
     const newName = `${plan.name} (Copia)`
     
-    const { data, error } = await supabase
+    const { data, error } = await supabaseRef.current
       .from('exercise_plans')
       .insert({
         user_id: userId,

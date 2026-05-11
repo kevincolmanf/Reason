@@ -237,7 +237,7 @@ export default function RtsEvaluationForm({
   const [koosMode, setKoosMode] = useState<'imported' | 'manual'>('imported')
   const [aclRsiMode, setAclRsiMode] = useState<'imported' | 'manual'>('imported')
 
-  const supabase = createClient()
+  const supabaseRef = useRef(createClient())
 
   const set = useCallback((key: keyof FormData, value: string) => {
     setForm(prev => ({ ...prev, [key]: value }))
@@ -328,7 +328,7 @@ export default function RtsEvaluationForm({
     if (!savedEval) return
     setIsSaving(true)
     const evalData = buildEvalObject()
-    const { data, error } = await supabase
+    const { data, error } = await supabaseRef.current
       .from('rts_evaluations')
       .insert({
         ...evalData,
@@ -344,7 +344,8 @@ export default function RtsEvaluationForm({
       setIsSaved(true)
     }
     setIsSaving(false)
-  }, [savedEval, buildEvalObject, supabase, userId, patient.id])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedEval, buildEvalObject, userId, patient.id])
 
   const handleNewEvaluation = useCallback(() => {
     setForm(initialForm)

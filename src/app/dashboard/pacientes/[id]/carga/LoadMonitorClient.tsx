@@ -144,7 +144,7 @@ export default function LoadMonitorClient({
   userId: string
   initialSessions: LoadSession[]
 }) {
-  const supabase = createClient()
+  const supabaseRef = useRef(createClient())
   const [sessions, setSessions] = useState<LoadSession[]>(initialSessions)
   const [formOpen, setFormOpen] = useState(initialSessions.length === 0)
   const [saving, setSaving] = useState(false)
@@ -354,7 +354,7 @@ export default function LoadMonitorClient({
     setSaving(true)
     const loadUnits = formRpe * duration
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseRef.current
       .from('load_sessions')
       .insert({
         user_id: userId,
@@ -393,7 +393,7 @@ export default function LoadMonitorClient({
 
   const handleDeleteSession = async (id: string) => {
     if (!confirm('¿Eliminar esta sesión? No se puede deshacer.')) return
-    const { error } = await supabase.from('load_sessions').delete().eq('id', id)
+    const { error } = await supabaseRef.current.from('load_sessions').delete().eq('id', id)
     if (!error) setSessions(prev => prev.filter(s => s.id !== id))
   }
 
