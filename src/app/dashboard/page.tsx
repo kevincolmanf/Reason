@@ -95,7 +95,7 @@ export default async function DashboardPage() {
               )}
             </div>
             <Link
-              href="/checkout"
+              href="/paywall"
               className="shrink-0 bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity no-underline"
             >
               Ver planes
