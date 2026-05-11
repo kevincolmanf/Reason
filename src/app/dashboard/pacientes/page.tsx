@@ -14,6 +14,17 @@ export default async function PacientesPage() {
 
   if (!user) redirect('/login')
 
+  const { data: userData } = await supabase
+    .from('users')
+    .select('role, trial_expires_at')
+    .eq('id', user.id)
+    .single()
+
+  const role = userData?.role
+  const trialExpiresAt = userData?.trial_expires_at
+  const trialActive = trialExpiresAt ? new Date(trialExpiresAt) > new Date() : false
+  const isActiveUser = role === 'subscriber' || role === 'admin' || trialActive
+
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
       <Header />
@@ -28,7 +39,7 @@ export default async function PacientesPage() {
           </p>
         </div>
 
-        <PacientesClient userId={user.id} />
+        <PacientesClient userId={user.id} isActiveUser={isActiveUser} />
       </main>
     </div>
   )

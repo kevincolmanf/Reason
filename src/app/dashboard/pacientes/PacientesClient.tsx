@@ -14,7 +14,7 @@ interface Patient {
   plan_count?: number
 }
 
-export default function PacientesClient({ userId }: { userId: string }) {
+export default function PacientesClient({ userId, isActiveUser }: { userId: string; isActiveUser: boolean }) {
   const [patients, setPatients] = useState<Patient[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -56,8 +56,11 @@ export default function PacientesClient({ userId }: { userId: string }) {
     fetchPatients()
   }, [fetchPatients])
 
+  const atFreeLimit = !isActiveUser && patients.length >= 1
+
   const handleCreate = async () => {
     if (!form.name.trim()) return
+    if (atFreeLimit) return
     setSaving(true)
 
     const { error } = await supabase.from('patients').insert({
@@ -83,13 +86,34 @@ export default function PacientesClient({ userId }: { userId: string }) {
     <div>
       <div className="flex justify-between items-center mb-6">
         <span className="text-[14px] text-text-secondary">{patients.length} paciente{patients.length !== 1 ? 's' : ''}</span>
-        <button
-          onClick={() => setShowForm(true)}
-          className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity"
-        >
-          + Nuevo Paciente
-        </button>
+        {atFreeLimit ? (
+          <a
+            href="/paywall"
+            className="bg-accent/10 text-accent border-[0.5px] border-accent/40 px-4 py-2 rounded-lg text-[13px] font-medium hover:bg-accent/20 transition-colors"
+          >
+            Suscribite para agregar más
+          </a>
+        ) : (
+          <button
+            onClick={() => setShowForm(true)}
+            className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity"
+          >
+            + Nuevo Paciente
+          </button>
+        )}
       </div>
+
+      {atFreeLimit && (
+        <div className="bg-accent/5 border-[0.5px] border-accent/30 rounded-xl px-5 py-4 mb-6 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-[14px] font-medium text-text-primary mb-0.5">Plan gratuito — 1 paciente</p>
+            <p className="text-[13px] text-text-secondary">Suscribite para agregar pacientes ilimitados y acceder a todos los módulos.</p>
+          </div>
+          <a href="/paywall" className="shrink-0 bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity">
+            Ver planes
+          </a>
+        </div>
+      )}
 
       {/* FORM NUEVO PACIENTE */}
       {showForm && (

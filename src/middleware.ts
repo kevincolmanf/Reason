@@ -69,9 +69,15 @@ export async function middleware(request: NextRequest) {
   const authRoutes = ['/dashboard', '/library', '/content', '/account', '/recursos', '/ficha']
   const isAuthRoute = authRoutes.some(route => pathname.startsWith(route))
 
-  // Rutas que requieren suscripción activa (subscriber o admin)
+  // Rutas que requieren suscripción activa (o trial vigente)
   const subscriberRoutes = ['/library', '/content', '/recursos', '/ficha', '/dashboard/ejercicios']
   const isSubscriberRoute = subscriberRoutes.some(route => pathname.startsWith(route))
+
+  // Módulos avanzados dentro del dashboard de pacientes — bloqueados para free sin trial
+  const advancedModulePatterns = ['/carga', '/calendario', '/rts', '/fichas']
+  const isAdvancedModule =
+    pathname.startsWith('/dashboard/pacientes/') &&
+    advancedModulePatterns.some(p => pathname.includes(p))
 
   // Excepción: artículo de muestra gratuito
   const isFreeContent = pathname === '/content/dolor-lumbar-inespecifico'
@@ -85,15 +91,18 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // 2. Si está logueado → verificar rol para rutas de suscripción y admin
-  if (user && (isSubscriberRoute || isAdminRoute) && !isFreeContent) {
+  // 2. Si está logueado → verificar acceso para rutas premium y admin
+  if (user && (isSubscriberRoute || isAdvancedModule || isAdminRoute) && !isFreeContent) {
     const { data: userData } = await supabase
       .from('users')
-      .select('role')
+      .select('role, trial_expires_at')
       .eq('id', user.id)
       .single()
 
     const role = userData?.role
+    const trialExpiresAt = userData?.trial_expires_at
+    const trialActive = trialExpiresAt ? new Date(trialExpiresAt) > new Date() : false
+    const isActive = role === 'subscriber' || role === 'admin' || trialActive
 
     if (isAdminRoute && role !== 'admin') {
       const url = request.nextUrl.clone()
@@ -101,7 +110,7 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(url)
     }
 
-    if (isSubscriberRoute && role !== 'subscriber' && role !== 'admin') {
+    if ((isSubscriberRoute || isAdvancedModule) && !isActive) {
       const url = request.nextUrl.clone()
       url.pathname = '/paywall'
       return NextResponse.redirect(url)
