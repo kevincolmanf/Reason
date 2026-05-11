@@ -4,7 +4,7 @@ import Link from 'next/link'
 import CalendarioClient from './CalendarioClient'
 
 export default async function CalendarioPage({ params }: { params: { id: string } }) {
-  const supabase = await createClient()
+  const supabase = createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
