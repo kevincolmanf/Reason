@@ -181,6 +181,24 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
 
       if (!res.ok) { setSubmitStatus('error'); setTimeout(() => setSubmitStatus('idle'), 3000); return }
 
+      // Session summary entry — always write if patient has an active plan
+      if (activePlan) {
+        fetch(`/api/paciente/${token}/log`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            plan_id: activePlan.id,
+            exercise_id: null,
+            exercise_name: formActivity.trim() || 'Sesión general',
+            session_id: null,
+            week: 1,
+            rpe: Math.max(1, formRpe),
+            eva: Math.round(vasPost / 10),
+            notes: null,
+          }),
+        }).catch(() => {})
+      }
+
       // Per-exercise reports (fire-and-forget)
       if (showRehabSection) {
         await Promise.all(Array.from(expandedEx).map(exId => {
