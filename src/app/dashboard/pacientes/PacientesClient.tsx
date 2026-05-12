@@ -13,7 +13,7 @@ interface Patient {
   plan_count?: number
 }
 
-export default function PacientesClient({ userId, isActiveUser }: { userId: string; isActiveUser?: boolean }) {
+export default function PacientesClient({ userId, isActiveUser: _isActiveUser }: { userId: string; isActiveUser?: boolean }) {
   const [patients, setPatients] = useState<Patient[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
