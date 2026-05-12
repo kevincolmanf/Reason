@@ -20,6 +20,7 @@ export default function PacientesClient({ userId, isActiveUser }: { userId: stri
   const [showForm, setShowForm] = useState(false)
   const [saving, setSaving] = useState(false)
   const [limitError, setLimitError] = useState(false)
+  const [search, setSearch] = useState('')
   const searchParams = useSearchParams()
 
   const atFreeLimit = !isActiveUser && patients.length >= 1
@@ -87,14 +88,32 @@ export default function PacientesClient({ userId, isActiveUser }: { userId: stri
     setSaving(false)
   }
 
+  const filteredPatients = search.trim()
+    ? patients.filter(p =>
+        p.name.toLowerCase().includes(search.toLowerCase()) ||
+        p.occupation?.toLowerCase().includes(search.toLowerCase())
+      )
+    : patients
+
   if (loading) {
     return <div className="text-text-secondary text-[14px]">Cargando pacientes...</div>
   }
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
-        <span className="text-[14px] text-text-secondary">{patients.length} paciente{patients.length !== 1 ? 's' : ''}</span>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <span className="text-[14px] text-text-secondary shrink-0">{patients.length} paciente{patients.length !== 1 ? 's' : ''}</span>
+          {patients.length > 0 && (
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Buscar paciente..."
+              className="bg-bg-secondary border-[0.5px] border-border-strong rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:border-accent w-full sm:w-[220px]"
+            />
+          )}
+        </div>
         {atFreeLimit ? (
           <a
             href="/paywall"
@@ -198,9 +217,13 @@ export default function PacientesClient({ userId, isActiveUser }: { userId: stri
           <p className="text-[16px] font-medium text-text-primary mb-2">Todavía no tenés pacientes</p>
           <p className="text-[13px] text-text-secondary">Usá el botón de arriba para agregar el primero.</p>
         </div>
+      ) : filteredPatients.length === 0 ? (
+        <div className="text-center py-16 bg-bg-secondary rounded-xl border-[0.5px] border-dashed border-border">
+          <p className="text-[14px] text-text-secondary">No se encontró ningún paciente con &quot;{search}&quot;</p>
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {patients.map((p, idx) => {
+          {filteredPatients.map((p, idx) => {
             const locked = atFreeLimit && idx > 0
             if (locked) {
               return (
