@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import {
   RtsEvaluation,
@@ -22,6 +22,9 @@ interface RtsEvaluationFormProps {
   lastKoos: { score: number | null; result_data: unknown; created_at: string } | null
   lastAclRsi: { score: number | null; created_at: string } | null
   previousEvals: RtsEvaluation[]
+  initialEval?: RtsEvaluation
+  onSaved?: (id: string) => void
+  onNewEval?: () => void
 }
 
 type FormData = {
@@ -220,6 +223,9 @@ export default function RtsEvaluationForm({
   lastKoos,
   lastAclRsi,
   previousEvals,
+  initialEval,
+  onSaved,
+  onNewEval,
 }: RtsEvaluationFormProps) {
   const [form, setForm] = useState<FormData>(() => {
     const base = { ...initialForm }
@@ -238,6 +244,45 @@ export default function RtsEvaluationForm({
   const [aclRsiMode, setAclRsiMode] = useState<'imported' | 'manual'>('imported')
 
   const supabaseRef = useRef(createClient())
+
+  // Load initialEval if provided (editing a previous evaluation)
+  useEffect(() => {
+    if (!initialEval) return
+    setForm({
+      surgery_date: initialEval.surgery_date || '',
+      graft_type: initialEval.graft_type || '',
+      affected_side: initialEval.affected_side || 'left',
+      patient_body_weight: initialEval.patient_body_weight != null ? String(initialEval.patient_body_weight) : '',
+      patient_sex: initialEval.patient_sex || '',
+      effusion: initialEval.effusion != null ? String(initialEval.effusion) : '',
+      rom_extension: initialEval.rom_extension != null ? String(initialEval.rom_extension) : '',
+      rom_flexion: initialEval.rom_flexion != null ? String(initialEval.rom_flexion) : '',
+      pain_vas: initialEval.pain_vas != null ? String(initialEval.pain_vas) : '',
+      quad_affected: initialEval.quad_affected != null ? String(initialEval.quad_affected) : '',
+      quad_unaffected: initialEval.quad_unaffected != null ? String(initialEval.quad_unaffected) : '',
+      hamstring_affected: initialEval.hamstring_affected != null ? String(initialEval.hamstring_affected) : '',
+      hamstring_unaffected: initialEval.hamstring_unaffected != null ? String(initialEval.hamstring_unaffected) : '',
+      single_hop_affected: initialEval.single_hop_affected != null ? String(initialEval.single_hop_affected) : '',
+      single_hop_unaffected: initialEval.single_hop_unaffected != null ? String(initialEval.single_hop_unaffected) : '',
+      triple_hop_affected: initialEval.triple_hop_affected != null ? String(initialEval.triple_hop_affected) : '',
+      triple_hop_unaffected: initialEval.triple_hop_unaffected != null ? String(initialEval.triple_hop_unaffected) : '',
+      crossover_hop_affected: initialEval.crossover_hop_affected != null ? String(initialEval.crossover_hop_affected) : '',
+      crossover_hop_unaffected: initialEval.crossover_hop_unaffected != null ? String(initialEval.crossover_hop_unaffected) : '',
+      timed_hop_affected: initialEval.timed_hop_affected != null ? String(initialEval.timed_hop_affected) : '',
+      timed_hop_unaffected: initialEval.timed_hop_unaffected != null ? String(initialEval.timed_hop_unaffected) : '',
+      cmj_bilateral: initialEval.cmj_bilateral != null ? String(initialEval.cmj_bilateral) : '',
+      slcmj_affected: initialEval.slcmj_affected != null ? String(initialEval.slcmj_affected) : '',
+      slcmj_unaffected: initialEval.slcmj_unaffected != null ? String(initialEval.slcmj_unaffected) : '',
+      drop_jump_quality: initialEval.drop_jump_quality || '',
+      koos_sport: initialEval.koos_sport != null ? String(initialEval.koos_sport) : '',
+      acl_rsi: initialEval.acl_rsi != null ? String(initialEval.acl_rsi) : '',
+      grs: initialEval.grs != null ? String(initialEval.grs) : '',
+      notes: initialEval.notes || '',
+    })
+    setSavedEval(initialEval)
+    setIsSaved(true)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialEval?.id])
 
   const set = useCallback((key: keyof FormData, value: string) => {
     setForm(prev => ({ ...prev, [key]: value }))
@@ -314,15 +359,32 @@ export default function RtsEvaluationForm({
 
   const handleViewAnalysis = useCallback(async () => {
     const evalData = buildEvalObject()
-    const tempEval = {
-      id: 'temp',
-      created_at: new Date().toISOString(),
-      ...evalData,
-    } as RtsEvaluation
-    setSavedEval(tempEval)
-    setIsSaved(false)
     setMode('dashboard')
-  }, [buildEvalObject])
+    setIsSaving(true)
+    const currentId = savedEval && savedEval.id !== 'temp' ? savedEval.id : null
+    let result: RtsEvaluation | null = null
+    if (currentId) {
+      const { data } = await supabaseRef.current
+        .from('rts_evaluations')
+        .update({ ...evalData, protocol_type: 'lca' })
+        .eq('id', currentId)
+        .select()
+        .single()
+      result = data as RtsEvaluation
+    } else {
+      const { data } = await supabaseRef.current
+        .from('rts_evaluations')
+        .insert({ ...evalData, user_id: userId, patient_id: patient.id, protocol_type: 'lca' })
+        .select()
+        .single()
+      result = data as RtsEvaluation
+      if (result?.id) onSaved?.(result.id)
+    }
+    if (result) { setSavedEval(result); setIsSaved(true) }
+    else { setSavedEval({ id: 'temp', created_at: new Date().toISOString(), ...evalData } as RtsEvaluation) }
+    setIsSaving(false)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [buildEvalObject, savedEval, userId, patient.id, onSaved])
 
   const handleSave = useCallback(async () => {
     if (!savedEval) return
@@ -348,6 +410,7 @@ export default function RtsEvaluationForm({
   }, [savedEval, buildEvalObject, userId, patient.id])
 
   const handleNewEvaluation = useCallback(() => {
+    if (onNewEval) { onNewEval(); return }
     setForm(initialForm)
     setSavedEval(null)
     setIsSaved(false)
@@ -355,7 +418,7 @@ export default function RtsEvaluationForm({
     setKoosMode('imported')
     setAclRsiMode('imported')
     setMode('form')
-  }, [])
+  }, [onNewEval])
 
   // Real-time calculations
   const quadLSI = computeLSI(n(form.quad_affected), n(form.quad_unaffected))

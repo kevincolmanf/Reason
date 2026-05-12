@@ -2,7 +2,7 @@ import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import Header from '@/components/Header'
 import Link from 'next/link'
-import RtsEvaluationForm from './RtsEvaluationForm'
+import RtsContainer from './RtsContainer'
 
 export const metadata = { title: 'Retorno al Deporte | Reason' }
 
@@ -63,9 +63,9 @@ export default async function RtsPage({ params }: { params: { id: string } }) {
         </Link>
         <div className="mb-8">
           <h1 className="text-[32px] font-medium tracking-[-0.02em] mb-1">Protocolo de Retorno al Deporte</h1>
-          <p className="text-text-secondary text-[15px]">{patient.name} · LCA</p>
+          <p className="text-text-secondary text-[15px]">{patient.name}</p>
         </div>
-        <RtsEvaluationForm
+        <RtsContainer
           patient={patient}
           userId={user.id}
           lastDynamo={lastDynamo ?? null}
