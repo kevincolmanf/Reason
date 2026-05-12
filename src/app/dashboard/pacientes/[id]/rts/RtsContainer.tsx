@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
+import { createClient } from '@/utils/supabase/client'
 import { PROTOCOL_OPTIONS, formatDate } from './protocols/shared'
 import HamstringProtocol from './protocols/HamstringProtocol'
 import AnkleProtocol from './protocols/AnkleProtocol'
@@ -40,6 +41,8 @@ export default function RtsContainer({ patient, userId, lastDynamo, lastKoos, la
   const [evalsList, setEvalsList] = useState<SavedEval[]>(previousEvals)
   const [loadedEval, setLoadedEval] = useState<SavedEval | null>(null)
   const [showHistory, setShowHistory] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const supabase = useRef(createClient())
 
   const handleSaved = (id: string, protocol: string) => {
     setEvalsList(prev => {
@@ -51,6 +54,15 @@ export default function RtsContainer({ patient, userId, lastDynamo, lastKoos, la
   const handleNewEval = () => {
     setActiveProtocol('')
     setLoadedEval(null)
+  }
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('¿Eliminar esta evaluación? Esta acción no se puede deshacer.')) return
+    setDeletingId(id)
+    await supabase.current.from('rts_evaluations').delete().eq('id', id)
+    setEvalsList(prev => prev.filter(e => e.id !== id))
+    if (loadedEval?.id === id) { setLoadedEval(null); setActiveProtocol('') }
+    setDeletingId(null)
   }
 
   const loadEval = (ev: SavedEval) => {
@@ -79,17 +91,26 @@ export default function RtsContainer({ patient, userId, lastDynamo, lastKoos, la
               <div className="border-[0.5px] border-border rounded-xl overflow-hidden mb-6">
                 <div className="divide-y-[0.5px] divide-border">
                   {evalsList.map(ev => (
-                    <button
-                      key={ev.id}
-                      onClick={() => loadEval(ev)}
-                      className="w-full text-left px-4 py-3 hover:bg-bg-secondary transition-colors flex items-center justify-between gap-4"
-                    >
-                      <div>
-                        <div className="text-[13px] font-medium text-text-primary">{protocolLabel(ev.protocol_type)}</div>
-                        <div className="text-[12px] text-text-secondary mt-0.5">{formatDate(ev.created_at)}{ev.affected_side ? ` · ${ev.affected_side === 'left' ? 'Izquierdo' : ev.affected_side === 'right' ? 'Derecho' : ev.affected_side}` : ''}</div>
-                      </div>
-                      <span className="text-[12px] text-accent shrink-0">Cargar →</span>
-                    </button>
+                    <div key={ev.id} className="flex items-center hover:bg-bg-secondary transition-colors">
+                      <button
+                        onClick={() => loadEval(ev)}
+                        className="flex-1 text-left px-4 py-3 flex items-center justify-between gap-4"
+                      >
+                        <div>
+                          <div className="text-[13px] font-medium text-text-primary">{protocolLabel(ev.protocol_type)}</div>
+                          <div className="text-[12px] text-text-secondary mt-0.5">{formatDate(ev.created_at)}{ev.affected_side ? ` · ${ev.affected_side === 'left' ? 'Izquierdo' : ev.affected_side === 'right' ? 'Derecho' : ev.affected_side}` : ''}</div>
+                        </div>
+                        <span className="text-[12px] text-accent shrink-0">Cargar →</span>
+                      </button>
+                      <button
+                        onClick={() => handleDelete(ev.id)}
+                        disabled={deletingId === ev.id}
+                        className="px-3 py-3 text-text-secondary hover:text-warning transition-colors disabled:opacity-40 shrink-0"
+                        title="Eliminar evaluación"
+                      >
+                        {deletingId === ev.id ? '...' : '×'}
+                      </button>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -142,10 +163,20 @@ export default function RtsContainer({ patient, userId, lastDynamo, lastKoos, la
       <div className="border-[0.5px] border-border rounded-xl overflow-hidden mb-8">
         <div className="divide-y-[0.5px] divide-border">
           {protocolEvals.map(ev => (
-            <button key={ev.id} onClick={() => loadEval(ev)} className="w-full text-left px-4 py-3 hover:bg-bg-secondary transition-colors flex justify-between items-center">
-              <div className="text-[13px] text-text-secondary">{formatDate(ev.created_at)}</div>
-              <span className="text-[12px] text-accent">Cargar →</span>
-            </button>
+            <div key={ev.id} className="flex items-center hover:bg-bg-secondary transition-colors">
+              <button onClick={() => loadEval(ev)} className="flex-1 text-left px-4 py-3 flex justify-between items-center">
+                <div className="text-[13px] text-text-secondary">{formatDate(ev.created_at)}</div>
+                <span className="text-[12px] text-accent">Cargar →</span>
+              </button>
+              <button
+                onClick={() => handleDelete(ev.id)}
+                disabled={deletingId === ev.id}
+                className="px-3 py-3 text-text-secondary hover:text-warning transition-colors disabled:opacity-40 shrink-0"
+                title="Eliminar evaluación"
+              >
+                {deletingId === ev.id ? '...' : '×'}
+              </button>
+            </div>
           ))}
         </div>
       </div>
