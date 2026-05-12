@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { lsi, n, Criterion } from './shared'
-import { Field, NumInput, YesNoInput, SelectInput, LsiDisplay, SectionTitle, CriteriaResults } from './ProtocolUI'
+import { Field, NumInput, SelectInput, LsiDisplay, SectionTitle, CriteriaResults } from './ProtocolUI'
 
 interface Props {
   patient: { id: string; name: string; age: number | null }
