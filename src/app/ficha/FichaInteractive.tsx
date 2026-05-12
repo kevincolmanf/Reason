@@ -4,6 +4,14 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { jsPDF } from 'jspdf'
 
+interface RecomendacionPdf {
+  id: string
+  nombre: string
+  profesional: string
+  fecha: string
+  base64: string
+}
+
 interface FichaState {
   fecha: string;
   motivoConsulta: string;
@@ -15,6 +23,7 @@ interface FichaState {
   examenTest: string;
   diagnostico: string;
   planTratamiento: string;
+  recomendacionesTexto: string;
 }
 
 const initialState: FichaState = {
@@ -27,12 +36,16 @@ const initialState: FichaState = {
   examenFuerza: '',
   examenTest: '',
   diagnostico: '',
-  planTratamiento: ''
+  planTratamiento: '',
+  recomendacionesTexto: '',
 }
 
 export default function FichaInteractive({ userId }: { userId: string }) {
   const [ficha, setFicha] = useState<FichaState>(initialState)
   const [isLoaded, setIsLoaded] = useState(false)
+  const [recomendacionesPdfs, setRecomendacionesPdfs] = useState<RecomendacionPdf[]>([])
+  const [pdfProfesional, setPdfProfesional] = useState('')
+  const [pdfUploadError, setPdfUploadError] = useState('')
 
   // Cargar de LocalStorage
   useEffect(() => {
@@ -74,6 +87,46 @@ export default function FichaInteractive({ userId }: { userId: string }) {
     })
   }
 
+  const handlePdfUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.type !== 'application/pdf') { setPdfUploadError('Solo se aceptan archivos PDF.'); return }
+    if (file.size > 5 * 1024 * 1024) { setPdfUploadError('El PDF no puede superar los 5 MB.'); return }
+    setPdfUploadError('')
+    const reader = new FileReader()
+    reader.onload = () => {
+      const base64 = (reader.result as string).split(',')[1]
+      const record: RecomendacionPdf = {
+        id: crypto.randomUUID(),
+        nombre: file.name,
+        profesional: pdfProfesional.trim(),
+        fecha: new Date().toISOString().split('T')[0],
+        base64,
+      }
+      setRecomendacionesPdfs(prev => [record, ...prev])
+      setPdfProfesional('')
+    }
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }
+
+  const handleDeleteRecomendacionPdf = (id: string) => {
+    setRecomendacionesPdfs(prev => prev.filter(p => p.id !== id))
+  }
+
+  const openPdf = (base64: string, nombre: string) => {
+    const bytes = atob(base64)
+    const arr = new Uint8Array(bytes.length)
+    for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i)
+    const blob = new Blob([arr], { type: 'application/pdf' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = nombre
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const formatText = () => {
     return `FICHA KINÉSICA
 Fecha: ${ficha.fecha}
@@ -105,6 +158,9 @@ ${ficha.diagnostico || '-'}
 
 6. PLAN DE TRATAMIENTO
 ${ficha.planTratamiento || '-'}
+
+7. RECOMENDACIONES DE OTROS PROFESIONALES
+${ficha.recomendacionesTexto || '-'}${recomendacionesPdfs.length > 0 ? `\n\nArchivos adjuntos:\n${recomendacionesPdfs.map(p => `- ${p.nombre}${p.profesional ? ` (${p.profesional})` : ''}`).join('\n')}` : ''}
 
 --
 Documento generado con Reason — reason.com.ar`
@@ -162,6 +218,15 @@ Documento generado con Reason — reason.com.ar`
     addSection('Test Especiales', ficha.examenTest)
     addSection('5. EVALUACIÓN Y DIAGNÓSTICO KINÉSICO', ficha.diagnostico)
     addSection('6. PLAN DE TRATAMIENTO', ficha.planTratamiento)
+
+    const textoRec = ficha.recomendacionesTexto || ''
+    if (textoRec || recomendacionesPdfs.length > 0) {
+      const contenidoRec = [
+        textoRec,
+        recomendacionesPdfs.length > 0 ? `\nArchivos adjuntos:\n${recomendacionesPdfs.map(p => `- ${p.nombre}${p.profesional ? ` (${p.profesional})` : ''} — ${p.fecha}`).join('\n')}` : '',
+      ].filter(Boolean).join('\n')
+      addSection('7. RECOMENDACIONES DE OTROS PROFESIONALES', contenidoRec)
+    }
 
     if (y > pageHeight - 10) { doc.addPage(); y = 20; }
     doc.setFontSize(10)
@@ -282,13 +347,81 @@ Documento generado con Reason — reason.com.ar`
         {/* 6. PLAN DE TRATAMIENTO */}
         <div>
           <label className="block text-[12px] uppercase tracking-[0.05em] text-accent mb-2 font-medium">6. Plan de Tratamiento</label>
-          <textarea 
+          <textarea
             rows={4}
             value={ficha.planTratamiento}
             onChange={e => handleChange('planTratamiento', e.target.value)}
             placeholder="Objetivos a corto/largo plazo, intervenciones a realizar, pautas de ejercicio..."
             className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y"
           />
+        </div>
+
+        {/* 7. RECOMENDACIONES DE OTROS PROFESIONALES */}
+        <div>
+          <label className="block text-[12px] uppercase tracking-[0.05em] text-accent mb-2 font-medium">7. Recomendaciones de Otros Profesionales</label>
+          <textarea
+            rows={3}
+            value={ficha.recomendacionesTexto}
+            onChange={e => handleChange('recomendacionesTexto', e.target.value)}
+            placeholder="Ej: Traumatólogo indica restricción de carga por 4 semanas. Nutricionista recomienda aumento proteico..."
+            className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y mb-4"
+          />
+
+          {/* PDF adjuntos */}
+          <div className="bg-bg-secondary border-[0.5px] border-border rounded-xl p-4 space-y-3">
+            <p className="text-[12px] text-text-secondary font-medium uppercase tracking-[0.05em]">Archivos PDF adjuntos</p>
+
+            {recomendacionesPdfs.length === 0 ? (
+              <p className="text-[13px] text-text-secondary">Sin archivos adjuntos todavía.</p>
+            ) : (
+              <div className="space-y-2">
+                {recomendacionesPdfs.map(pdf => (
+                  <div key={pdf.id} className="flex items-center justify-between bg-bg-primary border-[0.5px] border-border rounded-lg px-4 py-3 group">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[13px] font-medium truncate">{pdf.nombre}</div>
+                      <div className="text-[11px] text-text-secondary">
+                        {pdf.profesional && <span>{pdf.profesional} · </span>}
+                        {new Date(pdf.fecha + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 ml-4 shrink-0">
+                      <button
+                        onClick={() => openPdf(pdf.base64, pdf.nombre)}
+                        className="text-accent text-[12px] font-medium hover:opacity-70"
+                      >
+                        Descargar
+                      </button>
+                      <button
+                        onClick={() => handleDeleteRecomendacionPdf(pdf.id)}
+                        className="text-text-secondary hover:text-warning text-[12px] opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Upload form */}
+            <div className="flex flex-wrap items-end gap-3 pt-2 border-t-[0.5px] border-border">
+              <div>
+                <label className="block text-[11px] text-text-secondary mb-1">Profesional (opcional)</label>
+                <input
+                  type="text"
+                  value={pdfProfesional}
+                  onChange={e => setPdfProfesional(e.target.value)}
+                  placeholder="Ej: Traumatólogo"
+                  className="bg-bg-primary border-[0.5px] border-border-strong rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:border-accent w-[180px]"
+                />
+              </div>
+              <label className="cursor-pointer bg-bg-primary border-[0.5px] border-border-strong hover:border-accent rounded-lg px-4 py-2 text-[13px] font-medium transition-colors">
+                + Adjuntar PDF
+                <input type="file" accept=".pdf,application/pdf" className="hidden" onChange={handlePdfUpload} />
+              </label>
+            </div>
+            {pdfUploadError && <p className="text-[12px] text-warning">{pdfUploadError}</p>}
+          </div>
         </div>
 
       </div>

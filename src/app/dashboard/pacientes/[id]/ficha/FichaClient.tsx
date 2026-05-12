@@ -1,11 +1,19 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { jsPDF } from 'jspdf'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
+
+interface RecomendacionPdf {
+  id: string
+  nombre: string
+  profesional: string
+  fecha: string
+  base64: string
+}
 
 interface FichaData {
   fecha: string
@@ -17,6 +25,8 @@ interface FichaData {
   examenTest: string
   diagnostico: string
   planTratamiento: string
+  recomendacionesTexto: string
+  recomendacionesPdfs: RecomendacionPdf[]
   goniometria: GonioRecord[]
 }
 
@@ -142,6 +152,8 @@ const emptyFicha: FichaData = {
   examenTest: '',
   diagnostico: '',
   planTratamiento: '',
+  recomendacionesTexto: '',
+  recomendacionesPdfs: [],
   goniometria: [],
 }
 
@@ -175,17 +187,25 @@ export default function FichaClient({
   const [gonioNotes, setGonioNotes] = useState('')
   const [qResults, setQResults] = useState<QuestionnaireResult[]>(questionnaireResults)
   const [dynResults, setDynResults] = useState<DynamoResult[]>(dynamoResults)
+  const [pdfProfesional, setPdfProfesional] = useState('')
+  const [pdfUploadError, setPdfUploadError] = useState('')
 
-  const supabaseRef = useRef(createClient())
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const supabase = createClient()
 
-  const handleSave = async () => {
+  // Autosave
+  useEffect(() => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current)
     setSaveStatus('saving')
-    const { error } = await supabaseRef.current
-      .from('patient_fichas')
-      .update({ fecha: ficha.fecha || null, ficha_data: ficha })
-      .eq('id', initialFicha.id)
-    setSaveStatus(error ? 'error' : 'saved')
-  }
+    timeoutRef.current = setTimeout(async () => {
+      const { error } = await supabase
+        .from('patient_fichas')
+        .update({ fecha: ficha.fecha || null, ficha_data: ficha })
+        .eq('id', initialFicha.id)
+      setSaveStatus(error ? 'error' : 'saved')
+    }, 1500)
+    return () => { if (timeoutRef.current) clearTimeout(timeoutRef.current) }
+  }, [ficha, supabase, initialFicha.id])
 
   const handleChange = (field: keyof FichaData, value: string) => {
     setFicha(prev => ({ ...prev, [field]: value }))
@@ -223,13 +243,13 @@ export default function FichaClient({
 
   const handleDeleteQ = async (id: string) => {
     if (!confirm('¿Eliminar este resultado?')) return
-    const { error } = await supabaseRef.current.from('questionnaire_results').delete().eq('id', id)
+    const { error } = await supabase.from('questionnaire_results').delete().eq('id', id)
     if (!error) setQResults(prev => prev.filter(r => r.id !== id))
   }
 
   const handleDeleteDynamo = async (id: string) => {
     if (!confirm('¿Eliminar esta evaluación?')) return
-    const { error } = await supabaseRef.current.from('dynamometer_results').delete().eq('id', id)
+    const { error } = await supabase.from('dynamometer_results').delete().eq('id', id)
     if (!error) setDynResults(prev => prev.filter(d => d.id !== id))
   }
 
@@ -240,6 +260,54 @@ export default function FichaClient({
       return `${pa} / ${work}`
     }
     return result.score === null ? '—' : String(result.score)
+  }
+
+  // ─── Recomendaciones PDFs ────────────────────────────────────────────────────
+
+  const handlePdfUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.type !== 'application/pdf') {
+      setPdfUploadError('Solo se aceptan archivos PDF.')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setPdfUploadError('El PDF no puede superar los 5 MB.')
+      return
+    }
+    setPdfUploadError('')
+    const reader = new FileReader()
+    reader.onload = () => {
+      const base64 = (reader.result as string).split(',')[1]
+      const record: RecomendacionPdf = {
+        id: crypto.randomUUID(),
+        nombre: file.name,
+        profesional: pdfProfesional.trim(),
+        fecha: new Date().toISOString().split('T')[0],
+        base64,
+      }
+      setFicha(prev => ({ ...prev, recomendacionesPdfs: [record, ...(prev.recomendacionesPdfs ?? [])] }))
+      setPdfProfesional('')
+    }
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }
+
+  const handleDeleteRecomendacionPdf = (id: string) => {
+    setFicha(prev => ({ ...prev, recomendacionesPdfs: (prev.recomendacionesPdfs ?? []).filter(p => p.id !== id) }))
+  }
+
+  const openPdf = (base64: string, nombre: string) => {
+    const bytes = atob(base64)
+    const arr = new Uint8Array(bytes.length)
+    for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i)
+    const blob = new Blob([arr], { type: 'application/pdf' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = nombre
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   // ─── PDF ────────────────────────────────────────────────────────────────────
@@ -281,6 +349,16 @@ export default function FichaClient({
     addSection('5. DIAGNÓSTICO KINÉSICO', ficha.diagnostico)
     addSection('6. PLAN DE TRATAMIENTO', ficha.planTratamiento)
 
+    const textoRec = ficha.recomendacionesTexto || ''
+    const pdfsRec = ficha.recomendacionesPdfs ?? []
+    if (textoRec || pdfsRec.length > 0) {
+      const contenidoRec = [
+        textoRec,
+        pdfsRec.length > 0 ? `\nArchivos adjuntos:\n${pdfsRec.map(p => `- ${p.nombre}${p.profesional ? ` (${p.profesional})` : ''} — ${p.fecha}`).join('\n')}` : '',
+      ].filter(Boolean).join('\n')
+      addSection('7. RECOMENDACIONES DE OTROS PROFESIONALES', contenidoRec)
+    }
+
     doc.setFontSize(10)
     doc.setTextColor(150)
     doc.text('Documento generado con Reason — reason.com.ar', margin, 285)
@@ -291,15 +369,14 @@ export default function FichaClient({
 
   return (
     <div>
+      {/* Save status */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-[28px] font-medium tracking-[-0.01em]">Ficha Clínica</h1>
-        <button
-          onClick={handleSave}
-          disabled={saveStatus === 'saving'}
-          className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity min-w-[100px]"
-        >
-          {saveStatus === 'saving' ? 'Guardando...' : saveStatus === 'saved' ? '✓ Guardado' : saveStatus === 'error' ? 'Error — reintentar' : 'Guardar'}
-        </button>
+        <div className="text-[12px]">
+          {saveStatus === 'saving' && <span className="text-text-secondary">Guardando...</span>}
+          {saveStatus === 'saved' && <span className="text-[#3b82f6]">✓ Guardado</span>}
+          {saveStatus === 'error' && <span className="text-warning">Error al guardar</span>}
+        </div>
       </div>
 
       {/* ── DATOS CLÍNICOS ─────────────────────────────────────────────────── */}
@@ -355,6 +432,74 @@ export default function FichaClient({
           <label className="block text-[12px] uppercase tracking-[0.05em] text-accent mb-2 font-medium">6. Plan de Tratamiento</label>
           <textarea rows={4} value={ficha.planTratamiento} onChange={e => handleChange('planTratamiento', e.target.value)} placeholder="Objetivos, intervenciones, pautas de ejercicio..." className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y" />
         </div>
+
+        {/* 7. RECOMENDACIONES DE OTROS PROFESIONALES */}
+        <div>
+          <label className="block text-[12px] uppercase tracking-[0.05em] text-accent mb-2 font-medium">7. Recomendaciones de Otros Profesionales</label>
+          <textarea
+            rows={3}
+            value={ficha.recomendacionesTexto}
+            onChange={e => handleChange('recomendacionesTexto', e.target.value)}
+            placeholder="Ej: Traumatólogo indica restricción de carga por 4 semanas. Nutricionista recomienda aumento proteico..."
+            className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y mb-4"
+          />
+
+          {/* PDF adjuntos */}
+          <div className="bg-bg-secondary border-[0.5px] border-border rounded-xl p-4 space-y-3">
+            <p className="text-[12px] text-text-secondary font-medium uppercase tracking-[0.05em]">Archivos PDF adjuntos</p>
+
+            {(ficha.recomendacionesPdfs ?? []).length === 0 ? (
+              <p className="text-[13px] text-text-secondary">Sin archivos adjuntos todavía.</p>
+            ) : (
+              <div className="space-y-2">
+                {(ficha.recomendacionesPdfs ?? []).map(pdf => (
+                  <div key={pdf.id} className="flex items-center justify-between bg-bg-primary border-[0.5px] border-border rounded-lg px-4 py-3 group">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[13px] font-medium truncate">{pdf.nombre}</div>
+                      <div className="text-[11px] text-text-secondary">
+                        {pdf.profesional && <span>{pdf.profesional} · </span>}
+                        {new Date(pdf.fecha + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 ml-4 shrink-0">
+                      <button
+                        onClick={() => openPdf(pdf.base64, pdf.nombre)}
+                        className="text-accent text-[12px] font-medium hover:opacity-70"
+                      >
+                        Descargar
+                      </button>
+                      <button
+                        onClick={() => handleDeleteRecomendacionPdf(pdf.id)}
+                        className="text-text-secondary hover:text-warning text-[12px] opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Upload form */}
+            <div className="flex flex-wrap items-end gap-3 pt-2 border-t-[0.5px] border-border">
+              <div>
+                <label className="block text-[11px] text-text-secondary mb-1">Profesional (opcional)</label>
+                <input
+                  type="text"
+                  value={pdfProfesional}
+                  onChange={e => setPdfProfesional(e.target.value)}
+                  placeholder="Ej: Traumatólogo"
+                  className="bg-bg-primary border-[0.5px] border-border-strong rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:border-accent w-[180px]"
+                />
+              </div>
+              <label className="cursor-pointer bg-bg-primary border-[0.5px] border-border-strong hover:border-accent rounded-lg px-4 py-2 text-[13px] font-medium transition-colors">
+                + Adjuntar PDF
+                <input type="file" accept=".pdf,application/pdf" className="hidden" onChange={handlePdfUpload} />
+              </label>
+            </div>
+            {pdfUploadError && <p className="text-[12px] text-warning">{pdfUploadError}</p>}
+          </div>
+        </div>
       </div>
 
       {/* ── EVALUACIONES ───────────────────────────────────────────────────── */}
@@ -362,7 +507,7 @@ export default function FichaClient({
         <h2 className="text-[14px] uppercase tracking-[0.05em] text-text-secondary mb-3">Evaluaciones</h2>
 
         {/* Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+        <div className="grid grid-cols-3 gap-3 mb-4">
           {([
             { key: 'goniometria', label: 'Goniometría', count: ficha.goniometria?.length ?? 0 },
             { key: 'cuestionarios', label: 'Cuestionarios', count: qResults.length },
