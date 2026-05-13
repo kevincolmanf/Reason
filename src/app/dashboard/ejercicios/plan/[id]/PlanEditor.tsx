@@ -221,7 +221,7 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
         const { data } = await query
         if (data) setSearchResults(data.map(e => ({ ...e, category: 'mis_ejercicios', equipment: null })))
       } else {
-        let query = supabaseRef.current.from('exercises').select('id, name, category, equipment, youtube_url').limit(30)
+        let query = supabaseRef.current.from('exercises').select('id, name, category, equipment, youtube_url').limit(1000)
         if (searchQuery) query = query.ilike('name', `%${searchQuery}%`)
         if (searchCategory) query = query.eq('category', searchCategory)
         const { data } = await query
