@@ -48,6 +48,11 @@ export default function RecursosPage() {
             desc="Evaluación bilateral de fuerza muscular con cálculo automático del LSI y ratio H:Q."
             href="/recursos/dinamometro"
           />
+          <ResourceCard
+            title="Bodyboard"
+            desc="Explicá al paciente los factores que contribuyen a su dolor marcando sobre la silueta corporal. Basado en Cholewicki y Tousignant-Laflamme."
+            href="/recursos/bodyboard"
+          />
         </div>
       </main>
     </div>
