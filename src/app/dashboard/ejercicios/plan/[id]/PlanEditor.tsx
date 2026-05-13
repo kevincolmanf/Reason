@@ -340,12 +340,14 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
     setTargetBlock(null)
   }
 
-  const moveExercise = (sIdx: number, bIdx: number, fromIdx: number, toIdx: number) => {
-    if (fromIdx === toIdx) return
-    const newPlan = { ...plan }
-    const exs = newPlan.plan_data.sessions[sIdx].blocks[bIdx].exercises
-    const [moved] = exs.splice(fromIdx, 1)
-    exs.splice(toIdx, 0, moved)
+  const moveExercise = (sIdx: number, fromBIdx: number, fromExIdx: number, toBIdx: number, toExIdx: number) => {
+    if (fromBIdx === toBIdx && fromExIdx === toExIdx) return
+    const newPlan = JSON.parse(JSON.stringify(plan))
+    const srcExs = newPlan.plan_data.sessions[sIdx].blocks[fromBIdx].exercises
+    const dstExs = newPlan.plan_data.sessions[sIdx].blocks[toBIdx].exercises
+    const [moved] = srcExs.splice(fromExIdx, 1)
+    if (!moved) return
+    dstExs.splice(toExIdx, 0, moved)
     setPlan(newPlan)
   }
 
@@ -673,8 +675,19 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
                 </div>
 
                 {block.exercises.length === 0 ? (
-                  <div className="text-center py-8 text-text-secondary text-[13px] border-[0.5px] border-dashed border-border rounded-xl">
-                    Bloque vacío. Agregá ejercicios usando el botón superior.
+                  <div
+                    className={`text-center py-8 text-text-secondary text-[13px] border-[0.5px] border-dashed rounded-xl transition-colors ${dragOverEx?.bIdx === bIdx ? 'border-accent bg-accent/5' : 'border-border'}`}
+                    onDragOver={e => { e.preventDefault(); setDragOverEx({ sIdx: activeSession as number, bIdx, exIdx: 0 }) }}
+                    onDragLeave={() => setDragOverEx(null)}
+                    onDrop={() => {
+                      if (dragExRef.current) {
+                        moveExercise(activeSession as number, dragExRef.current.bIdx, dragExRef.current.exIdx, bIdx, 0)
+                        dragExRef.current = null
+                      }
+                      setDragOverEx(null)
+                    }}
+                  >
+                    {dragOverEx?.bIdx === bIdx ? 'Soltar aquí' : 'Bloque vacío. Agregá ejercicios usando el botón superior.'}
                   </div>
                 ) : (
                   <div className="space-y-6">
@@ -687,7 +700,7 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
                         onDragLeave={() => setDragOverEx(null)}
                         onDrop={() => {
                           if (dragExRef.current) {
-                            moveExercise(activeSession as number, bIdx, dragExRef.current.exIdx, exIdx)
+                            moveExercise(activeSession as number, dragExRef.current.bIdx, dragExRef.current.exIdx, bIdx, exIdx)
                             dragExRef.current = null
                           }
                           setDragOverEx(null)
