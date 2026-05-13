@@ -21,6 +21,7 @@ interface PlanExercise {
   exercise_id: string
   exercise_name: string
   youtube_url: string
+  group?: string
   weeks: WeekData[]
 }
 
@@ -102,6 +103,15 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [targetBlock, setTargetBlock] = useState<{sessionIdx: number, blockIdx: number} | null>(null)
 
+  // Drag state
+  const dragExRef = useRef<{sIdx: number, bIdx: number, exIdx: number} | null>(null)
+  const [dragOverEx, setDragOverEx] = useState<{sIdx: number, bIdx: number, exIdx: number} | null>(null)
+
+  // Copy/paste session state
+  const [copiedBlocks, setCopiedBlocks] = useState<PlanBlock[] | null>(null)
+  const [copiedFromSession, setCopiedFromSession] = useState<number | null>(null)
+  const [pasteConfirm, setPasteConfirm] = useState(false)
+
   // Schedule modal state
   const [scheduleModal, setScheduleModal] = useState<{sessionId: string, sessionName: string} | null>(null)
   const [scheduleDate, setScheduleDate] = useState('')
@@ -133,22 +143,23 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
   const [latestByExercise, setLatestByExercise] = useState<Record<string, ActivityLog>>({})
   const [hoveredExSignal, setHoveredExSignal] = useState<string | null>(null)
   
-  const supabase = createClient()
+  const supabaseRef = useRef(createClient())
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Cargar pacientes del usuario
   useEffect(() => {
     const fetchPatients = async () => {
-      const { data } = await supabase.from('patients').select('id, name').order('name')
+      const { data } = await supabaseRef.current.from('patients').select('id, name').order('name')
       if (data) setPatients(data)
     }
     fetchPatients()
-  }, [supabase])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Cargar últimos logs por ejercicio para semáforo
   useEffect(() => {
     const fetchLatestLogs = async () => {
-      const { data } = await supabase
+      const { data } = await supabaseRef.current
         .from('plan_activity_logs')
         .select('id, exercise_id, exercise_name, session_id, week, rpe, eva, notes, logged_at')
         .eq('plan_id', plan.id)
@@ -173,7 +184,7 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
     
     setSaveStatus('saving')
     timeoutRef.current = setTimeout(async () => {
-      const { error } = await supabase
+      const { error } = await supabaseRef.current
         .from('exercise_plans')
         .update({
           name: plan.name,
@@ -195,7 +206,8 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
     }
-  }, [plan, supabase])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plan])
 
   // Buscar ejercicios
   useEffect(() => {
@@ -204,12 +216,12 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
       setIsSearching(true)
 
       if (searchCategory === 'mis_ejercicios') {
-        let query = supabase.from('user_exercises').select('id, name, youtube_url').eq('user_id', userId).limit(50)
+        let query = supabaseRef.current.from('user_exercises').select('id, name, youtube_url').eq('user_id', userId).limit(50)
         if (searchQuery) query = query.ilike('name', `%${searchQuery}%`)
         const { data } = await query
         if (data) setSearchResults(data.map(e => ({ ...e, category: 'mis_ejercicios', equipment: null })))
       } else {
-        let query = supabase.from('exercises').select('id, name, category, equipment, youtube_url').limit(1000)
+        let query = supabaseRef.current.from('exercises').select('id, name, category, equipment, youtube_url').limit(1000)
         if (searchQuery) query = query.ilike('name', `%${searchQuery}%`)
         if (searchCategory) query = query.eq('category', searchCategory)
         const { data } = await query
@@ -221,7 +233,7 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
 
     const debounce = setTimeout(searchExercises, 300)
     return () => clearTimeout(debounce)
-  }, [searchQuery, searchCategory, isSearchOpen, supabase, userId])
+  }, [searchQuery, searchCategory, isSearchOpen, userId])
 
   // Cargar logs
   useEffect(() => {
@@ -229,7 +241,7 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
       let cancelled = false
       const fetchLogs = async () => {
         setLogsLoading(true)
-        const { data, error } = await supabase
+        const { data, error } = await supabaseRef.current
           .from('plan_activity_logs')
           .select('*')
           .eq('plan_id', plan.id)
@@ -262,6 +274,12 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
     setPlan(newPlan)
   }
 
+  const updateExerciseGroup = (sIdx: number, bIdx: number, exIdx: number, group: string) => {
+    const newPlan = { ...plan }
+    newPlan.plan_data.sessions[sIdx].blocks[bIdx].exercises[exIdx].group = group || undefined
+    setPlan(newPlan)
+  }
+
   const removeExercise = (sIdx: number, bIdx: number, exIdx: number) => {
     if (!confirm('¿Quitar este ejercicio?')) return
     const newPlan = { ...plan }
@@ -282,7 +300,7 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
   const handleCreateExercise = async () => {
     if (!createName.trim()) return
     setCreating(true)
-    const { data, error } = await supabase
+    const { data, error } = await supabaseRef.current
       .from('user_exercises')
       .insert({ user_id: userId, name: createName.trim(), youtube_url: createUrl.trim() || null })
       .select()
@@ -322,6 +340,33 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
     setTargetBlock(null)
   }
 
+  const moveExercise = (sIdx: number, bIdx: number, fromIdx: number, toIdx: number) => {
+    if (fromIdx === toIdx) return
+    const newPlan = { ...plan }
+    const exs = newPlan.plan_data.sessions[sIdx].blocks[bIdx].exercises
+    const [moved] = exs.splice(fromIdx, 1)
+    exs.splice(toIdx, 0, moved)
+    setPlan(newPlan)
+  }
+
+  const handleCopySession = (sIdx: number) => {
+    const blocks = plan.plan_data.sessions[sIdx].blocks
+    setCopiedBlocks(JSON.parse(JSON.stringify(blocks)))
+    setCopiedFromSession(sIdx)
+    setPasteConfirm(false)
+  }
+
+  const handlePasteSession = (sIdx: number) => {
+    if (!copiedBlocks) return
+    const newPlan = { ...plan }
+    newPlan.plan_data.sessions[sIdx].blocks = copiedBlocks.map(block => ({
+      ...block,
+      exercises: block.exercises.map(ex => ({ ...ex, id: uuidv4() }))
+    }))
+    setPlan(newPlan)
+    setPasteConfirm(false)
+  }
+
   const calcWeek = (scheduledDate: string): number => {
     if (!plan.start_date) return 1
     const start = new Date(plan.start_date + 'T00:00:00')
@@ -335,7 +380,7 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
     if (!scheduleModal || !scheduleDate || !plan.patient_id) return
     setScheduleSaving(true)
     const week = calcWeek(scheduleDate)
-    await supabase.from('scheduled_sessions').insert({
+    await supabaseRef.current.from('scheduled_sessions').insert({
       user_id: userId,
       patient_id: plan.patient_id,
       plan_id: plan.id,
@@ -548,27 +593,70 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
       {/* CONTENIDO DE SESION */}
       {typeof activeSession === 'number' && currentSession && (
         <div className="bg-bg-primary border-[0.5px] border-border rounded-b-xl rounded-tl-xl p-6 min-h-[500px]">
-          <div className="mb-8 flex items-center gap-4">
+          <div className="mb-8 flex items-center gap-3 flex-wrap">
             <input
               type="text"
               value={currentSession.name}
               onChange={(e) => updateSessionName(activeSession, e.target.value)}
-              className="bg-transparent text-[20px] font-medium tracking-[-0.01em] text-accent focus:outline-none focus:border-b-[0.5px] border-accent flex-1"
+              className="bg-transparent text-[20px] font-medium tracking-[-0.01em] text-accent focus:outline-none focus:border-b-[0.5px] border-accent flex-1 min-w-0"
             />
-            {plan.patient_id && (
+            <div className="flex items-center gap-2 shrink-0">
+              {/* Copiar sesión */}
               <button
-                onClick={() => {
-                  setScheduleDate(new Date().toISOString().split('T')[0])
-                  setScheduleSuccess(false)
-                  setScheduleModal({ sessionId: currentSession.id, sessionName: currentSession.name })
-                }}
-                className="shrink-0 bg-bg-secondary border-[0.5px] border-border text-text-secondary px-3 py-1.5 rounded-lg text-[12px] hover:text-accent hover:border-accent transition-colors flex items-center gap-1.5"
-                title="Programar esta sesión en el calendario"
+                onClick={() => handleCopySession(activeSession as number)}
+                className={`bg-bg-secondary border-[0.5px] text-text-secondary px-3 py-1.5 rounded-lg text-[12px] hover:text-text-primary hover:border-accent transition-colors flex items-center gap-1.5 ${copiedFromSession === activeSession ? 'border-accent text-accent' : 'border-border'}`}
+                title="Copiar todos los ejercicios de esta sesión"
               >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                Programar
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                {copiedFromSession === activeSession ? 'Copiado' : 'Copiar sesión'}
               </button>
-            )}
+
+              {/* Pegar sesión (solo si hay algo copiado y es otra sesión) */}
+              {copiedBlocks && copiedFromSession !== activeSession && (
+                pasteConfirm ? (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[12px] text-text-secondary">¿Reemplazar ejercicios?</span>
+                    <button
+                      onClick={() => handlePasteSession(activeSession as number)}
+                      className="bg-accent text-bg-primary px-3 py-1.5 rounded-lg text-[12px] font-medium hover:opacity-90 transition-opacity"
+                    >
+                      Sí, pegar
+                    </button>
+                    <button
+                      onClick={() => setPasteConfirm(false)}
+                      className="text-text-secondary text-[12px] px-2 py-1.5 hover:text-text-primary"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setPasteConfirm(true)}
+                    className="bg-accent/10 border-[0.5px] border-accent/40 text-accent px-3 py-1.5 rounded-lg text-[12px] font-medium hover:bg-accent/20 transition-colors flex items-center gap-1.5"
+                    title={`Pegar ejercicios copiados de ${plan.plan_data.sessions[copiedFromSession as number]?.name}`}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
+                    Pegar sesión
+                  </button>
+                )
+              )}
+
+              {/* Programar */}
+              {plan.patient_id && (
+                <button
+                  onClick={() => {
+                    setScheduleDate(new Date().toISOString().split('T')[0])
+                    setScheduleSuccess(false)
+                    setScheduleModal({ sessionId: currentSession.id, sessionName: currentSession.name })
+                  }}
+                  className="bg-bg-secondary border-[0.5px] border-border text-text-secondary px-3 py-1.5 rounded-lg text-[12px] hover:text-accent hover:border-accent transition-colors flex items-center gap-1.5"
+                  title="Programar esta sesión en el calendario"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  Programar
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="space-y-12">
@@ -591,10 +679,39 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
                 ) : (
                   <div className="space-y-6">
                     {block.exercises.map((ex, exIdx) => (
-                      <div key={ex.id} className="bg-bg-secondary border-[0.5px] border-border rounded-xl p-4">
+                      <div
+                        key={ex.id}
+                        draggable
+                        onDragStart={() => { dragExRef.current = { sIdx: activeSession as number, bIdx, exIdx } }}
+                        onDragOver={e => { e.preventDefault(); setDragOverEx({ sIdx: activeSession as number, bIdx, exIdx }) }}
+                        onDragLeave={() => setDragOverEx(null)}
+                        onDrop={() => {
+                          if (dragExRef.current) {
+                            moveExercise(activeSession as number, bIdx, dragExRef.current.exIdx, exIdx)
+                            dragExRef.current = null
+                          }
+                          setDragOverEx(null)
+                        }}
+                        onDragEnd={() => { dragExRef.current = null; setDragOverEx(null) }}
+                        className={`bg-bg-secondary border-[0.5px] rounded-xl p-4 transition-colors ${dragOverEx?.bIdx === bIdx && dragOverEx?.exIdx === exIdx ? 'border-accent bg-accent/5' : 'border-border'}`}
+                      >
                         <div className="flex justify-between items-start mb-4">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
+                              <span className="cursor-grab active:cursor-grabbing text-text-secondary hover:text-text-primary transition-colors shrink-0 select-none" title="Arrastrar para reordenar">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="5" r="1.5"/><circle cx="15" cy="5" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="19" r="1.5"/></svg>
+                              </span>
+                              <select
+                                value={ex.group || ''}
+                                onChange={e => updateExerciseGroup(activeSession as number, bIdx, exIdx, e.target.value)}
+                                className={`shrink-0 text-[11px] font-mono font-medium rounded px-1.5 py-0.5 border-[0.5px] focus:outline-none cursor-pointer appearance-none transition-colors ${ex.group ? 'bg-accent/10 border-accent/40 text-accent' : 'bg-bg-primary border-border text-text-secondary hover:border-accent/40'}`}
+                                title="Grupo / superserie"
+                              >
+                                <option value="">—</option>
+                                {['A','A1','A2','A3','B','B1','B2','B3','C','C1','C2','C3','D','D1','D2'].map(g => (
+                                  <option key={g} value={g}>{g}</option>
+                                ))}
+                              </select>
                               <h4 className="text-[15px] font-medium text-text-primary">{ex.exercise_name}</h4>
                               {latestByExercise[ex.id] && (() => {
                                 const log = latestByExercise[ex.id]
