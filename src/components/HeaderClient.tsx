@@ -41,8 +41,17 @@ export default function HeaderClient({ userMetadata }: { userMetadata: any }) {
           <div className="px-4 py-2 border-b-[0.5px] border-border mb-2">
             <p className="text-[13px] font-medium text-text-primary truncate">{name}</p>
           </div>
-          <Link 
-            href="/account" 
+          {/* Navegación mobile — oculta en desktop donde ya aparece en el header */}
+          <div className="sm:hidden border-b-[0.5px] border-border mb-2 pb-2">
+            <Link href="/recursos" onClick={closeMenu} className="block px-4 py-2 text-[14px] text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline">
+              Recursos
+            </Link>
+            <Link href="/library" onClick={closeMenu} className="block px-4 py-2 text-[14px] text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline">
+              Biblioteca
+            </Link>
+          </div>
+          <Link
+            href="/account"
             onClick={closeMenu}
             className="block px-4 py-2 text-[14px] text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline"
           >
