@@ -21,7 +21,7 @@ export async function createOrganization(formData: FormData) {
     .eq('id', user.id)
     .single()
 
-  if (userData?.role !== 'pro') redirect('/paywall')
+  if (userData?.role !== 'pro' && userData?.role !== 'admin') redirect('/paywall')
 
   const name = (formData.get('name') as string)?.trim()
   if (!name) return { error: 'El nombre del centro es requerido' }
