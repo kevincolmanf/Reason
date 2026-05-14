@@ -14,7 +14,7 @@ interface Patient {
   plan_count?: number
 }
 
-export default function PacientesClient({ userId, isActiveUser }: { userId: string; isActiveUser: boolean }) {
+export default function PacientesClient({ userId, isActiveUser, isPro }: { userId: string; isActiveUser: boolean; isPro: boolean }) {
   const [patients, setPatients] = useState<Patient[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -24,17 +24,19 @@ export default function PacientesClient({ userId, isActiveUser }: { userId: stri
   const searchParams = useSearchParams()
 
   const atFreeLimit = !isActiveUser && patients.length >= 1
+  const atSubscriberLimit = isActiveUser && !isPro && patients.length >= 20
+  const atAnyLimit = atFreeLimit || atSubscriberLimit
 
   useEffect(() => {
     if (searchParams.get('new') === '1') {
-      if (atFreeLimit) {
+      if (atAnyLimit) {
         setShowForm(false)
         setLimitError(true)
       } else {
         setShowForm(true)
       }
     }
-  }, [searchParams, atFreeLimit])
+  }, [searchParams, atAnyLimit])
   const [form, setForm] = useState({ name: '', age: '', occupation: '' })
 
   const supabaseRef = useRef(createClient())
@@ -70,7 +72,7 @@ export default function PacientesClient({ userId, isActiveUser }: { userId: stri
 
   const handleCreate = async () => {
     if (!form.name.trim()) return
-    if (atFreeLimit) { setLimitError(true); return }
+    if (atAnyLimit) { setLimitError(true); return }
     setSaving(true)
 
     const { error } = await supabaseRef.current.from('patients').insert({
@@ -121,6 +123,13 @@ export default function PacientesClient({ userId, isActiveUser }: { userId: stri
           >
             Suscribite para agregar más
           </a>
+        ) : atSubscriberLimit ? (
+          <a
+            href="/paywall"
+            className="bg-accent/10 text-accent border-[0.5px] border-accent/40 px-4 py-2 rounded-lg text-[13px] font-medium hover:bg-accent/20 transition-colors"
+          >
+            Actualizá a Plan Pro
+          </a>
         ) : (
           <button
             onClick={() => setShowForm(true)}
@@ -133,7 +142,11 @@ export default function PacientesClient({ userId, isActiveUser }: { userId: stri
 
       {limitError && (
         <div className="bg-red-500/10 border-[0.5px] border-red-500/30 rounded-xl px-5 py-4 mb-4 flex items-center justify-between gap-4">
-          <p className="text-[13px] text-text-primary">Con el plan gratuito solo podés tener 1 paciente. Suscribite para agregar más.</p>
+          <p className="text-[13px] text-text-primary">
+            {atFreeLimit
+              ? 'Con el plan gratuito solo podés tener 1 paciente. Suscribite para agregar más.'
+              : 'Alcanzaste el límite de 20 pacientes del plan individual. Actualizá al Plan Pro para agregar más.'}
+          </p>
           <div className="flex gap-2 shrink-0">
             <a href="/paywall" className="bg-accent text-bg-primary px-3 py-1.5 rounded-lg text-[12px] font-medium hover:opacity-90 transition-opacity">Ver planes</a>
             <button onClick={() => setLimitError(false)} className="text-text-secondary text-[12px] px-2 hover:text-text-primary">✕</button>
@@ -145,10 +158,22 @@ export default function PacientesClient({ userId, isActiveUser }: { userId: stri
         <div className="bg-accent/5 border-[0.5px] border-accent/30 rounded-xl px-5 py-4 mb-6 flex items-center justify-between gap-4">
           <div>
             <p className="text-[14px] font-medium text-text-primary mb-0.5">Plan gratuito — 1 paciente</p>
-            <p className="text-[13px] text-text-secondary">Suscribite para agregar pacientes ilimitados y acceder a todos los módulos.</p>
+            <p className="text-[13px] text-text-secondary">Suscribite para agregar hasta 20 pacientes y acceder a todos los módulos.</p>
           </div>
           <a href="/paywall" className="shrink-0 bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity">
             Ver planes
+          </a>
+        </div>
+      )}
+
+      {atSubscriberLimit && (
+        <div className="bg-accent/5 border-[0.5px] border-accent/30 rounded-xl px-5 py-4 mb-6 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-[14px] font-medium text-text-primary mb-0.5">Límite del plan individual — 20 pacientes</p>
+            <p className="text-[13px] text-text-secondary">Actualizá al Plan Pro para gestionar pacientes ilimitados.</p>
+          </div>
+          <a href="/paywall" className="shrink-0 bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity">
+            Ver Plan Pro
           </a>
         </div>
       )}
@@ -224,7 +249,7 @@ export default function PacientesClient({ userId, isActiveUser }: { userId: stri
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredPatients.map((p, idx) => {
-            const locked = atFreeLimit && idx > 0
+            const locked = (atFreeLimit && idx > 0)
             if (locked) {
               return (
                 <div key={p.id} className="relative rounded-xl overflow-hidden cursor-default select-none">
