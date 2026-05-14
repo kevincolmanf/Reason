@@ -50,10 +50,10 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId }: 
       .select('id, name, age, occupation, created_at')
       .order('created_at', { ascending: true })
 
-    // Org members see all org patients (RLS handles access, filter by org_id)
+    // Org members see org patients + their own personal patients (pre-org migration)
     // Individual users see only their own patients
     if (orgId) {
-      query = query.eq('org_id', orgId)
+      query = query.or(`org_id.eq.${orgId},and(user_id.eq.${userId},org_id.is.null)`)
     } else {
       query = query.eq('user_id', userId)
     }
