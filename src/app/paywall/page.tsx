@@ -127,12 +127,20 @@ export default function PaywallPage() {
               <p className="text-[13px] text-text-secondary">$1.350.000 / año · ahorrás 3 meses</p>
             </div>
 
-            <a
-              href="mailto:hola@reason.com.ar?subject=Plan Pro"
-              className="block w-full text-center bg-bg-secondary border-[0.5px] border-border text-text-primary py-3 rounded-xl text-[14px] font-medium no-underline hover:border-accent hover:text-accent transition-colors mb-8"
-            >
-              Contactar
-            </a>
+            <div className="flex flex-col gap-2 mb-8">
+              <Link
+                href="/checkout?plan=pro_monthly"
+                className="block w-full text-center bg-bg-secondary border-[0.5px] border-border text-text-primary py-3 rounded-xl text-[14px] font-medium no-underline hover:border-accent hover:text-accent transition-colors"
+              >
+                Suscribirme mensual
+              </Link>
+              <Link
+                href="/checkout?plan=pro_annual"
+                className="block w-full text-center bg-bg-secondary border-[0.5px] border-border text-text-primary py-2.5 rounded-xl text-[13px] font-medium no-underline hover:border-accent hover:text-accent transition-colors"
+              >
+                Suscribirme anual · ahorrás 3 meses
+              </Link>
+            </div>
 
             <ul className="space-y-3 flex-grow">
               {FEATURES_PRO.map(f => (

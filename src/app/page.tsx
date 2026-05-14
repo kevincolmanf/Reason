@@ -496,10 +496,10 @@ export default function LandingPage() {
                 Para centros y equipos interdisciplinarios.
               </p>
               <a
-                href="mailto:hola@reason.com.ar?subject=Plan Pro"
+                href="/checkout?plan=pro_monthly"
                 className="w-full py-[14px] rounded-lg text-[14px] font-medium text-center no-underline block border-[0.5px] border-border-strong text-text-primary bg-bg-primary"
               >
-                Contactar
+                Suscribirme al Plan Pro
               </a>
             </div>
           </div>
