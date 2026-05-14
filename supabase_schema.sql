@@ -1,5 +1,5 @@
 -- ENUMS
-CREATE TYPE user_role AS ENUM ('free', 'subscriber', 'admin');
+CREATE TYPE user_role AS ENUM ('free', 'subscriber', 'admin', 'pro');
 CREATE TYPE subscription_plan AS ENUM ('monthly', 'annual');
 CREATE TYPE subscription_status AS ENUM ('active', 'pending', 'cancelled', 'expired');
 CREATE TYPE content_category AS ENUM ('resumen_comentado', 'aplicacion_clinica', 'protocolo', 'caso_real');

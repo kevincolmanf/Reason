@@ -102,7 +102,7 @@ export async function middleware(request: NextRequest) {
     const role = userData?.role
     const trialExpiresAt = userData?.trial_expires_at
     const trialActive = trialExpiresAt ? new Date(trialExpiresAt) > new Date() : false
-    const isActive = role === 'subscriber' || role === 'admin' || trialActive
+    const isActive = role === 'subscriber' || role === 'admin' || role === 'pro' || trialActive
 
     if (isAdminRoute && role !== 'admin') {
       const url = request.nextUrl.clone()

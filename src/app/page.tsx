@@ -435,14 +435,14 @@ export default function LandingPage() {
         <div className="w-full max-w-[1080px] mx-auto px-8">
           <div className="mb-16 max-w-[720px]">
             <h2 className="text-[40px] font-medium tracking-[-0.02em] leading-[1.15] mb-4">
-              Una suscripción. Todo el catálogo.
+              Planes para cada práctica.
             </h2>
             <p className="text-[18px] text-text-secondary leading-[1.5]">
-              Sin niveles. Sin contenido bloqueado para &quot;premium&quot;. Lo que pagás es acceso completo a Reason.
+              Desde el profesional independiente hasta el centro interdisciplinario. Sin contenido bloqueado — lo que pagás es acceso completo a Reason.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-12">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
             <div className="bg-bg-primary border-[0.5px] border-border rounded-2xl p-10 relative">
               <div className="text-[12px] font-medium text-text-secondary uppercase tracking-[0.05em] mb-4">
                 Mensual
@@ -450,7 +450,7 @@ export default function LandingPage() {
               <div className="font-mono text-[36px] font-medium text-text-primary mb-2 tracking-[-0.02em]">
                 <span className="text-[18px] text-text-secondary font-normal">ARS</span> 18.000<span className="text-[16px] text-text-secondary font-normal"> /mes</span>
               </div>
-              <div className="font-mono text-[13px] text-text-secondary mb-6">&nbsp;</div>
+              <div className="font-mono text-[13px] text-text-secondary mb-6">Hasta 20 pacientes</div>
               <p className="text-[14px] text-text-secondary leading-[1.55] mb-8 min-h-[40px]">
                 Acceso completo al catálogo. Cancelás cuando quieras.
               </p>
@@ -472,7 +472,7 @@ export default function LandingPage() {
               <div className="font-mono text-[36px] font-medium text-text-primary mb-2 tracking-[-0.02em]">
                 <span className="text-[18px] text-text-secondary font-normal">ARS</span> 150.000<span className="text-[16px] text-text-secondary font-normal"> /año</span>
               </div>
-              <div className="font-mono text-[13px] text-text-secondary mb-6">≈ ARS 12.500 / mes</div>
+              <div className="font-mono text-[13px] text-text-secondary mb-6">≈ ARS 12.500 / mes · hasta 20 pacientes</div>
               <p className="text-[14px] text-text-secondary leading-[1.55] mb-8 min-h-[40px]">
                 Acceso completo al catálogo durante 12 meses.
               </p>
@@ -481,6 +481,25 @@ export default function LandingPage() {
                 className="w-full py-[14px] rounded-lg text-[14px] font-medium text-center no-underline block border-none bg-accent text-bg-primary"
               >
                 Empezar suscripción anual
+              </a>
+            </div>
+
+            <div className="bg-bg-primary border-[0.5px] border-border rounded-2xl p-10 relative">
+              <div className="text-[12px] font-medium text-text-secondary uppercase tracking-[0.05em] mb-4">
+                Pro · Centros
+              </div>
+              <div className="font-mono text-[36px] font-medium text-text-primary mb-2 tracking-[-0.02em]">
+                <span className="text-[18px] text-text-secondary font-normal">ARS</span> 150.000<span className="text-[16px] text-text-secondary font-normal"> /mes</span>
+              </div>
+              <div className="font-mono text-[13px] text-text-secondary mb-6">Pacientes ilimitados · comunicación interdisciplinar</div>
+              <p className="text-[14px] text-text-secondary leading-[1.55] mb-8 min-h-[40px]">
+                Para centros y equipos interdisciplinarios.
+              </p>
+              <a
+                href="mailto:hola@reason.com.ar?subject=Plan Pro"
+                className="w-full py-[14px] rounded-lg text-[14px] font-medium text-center no-underline block border-[0.5px] border-border-strong text-text-primary bg-bg-primary"
+              >
+                Contactar
               </a>
             </div>
           </div>

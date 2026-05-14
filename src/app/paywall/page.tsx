@@ -1,6 +1,19 @@
 import Link from 'next/link'
 
-const FEATURES = [
+const FEATURES_INDIVIDUAL = [
+  'Hasta 20 pacientes',
+  'Monitoreo de carga por paciente',
+  'Calendario de sesiones',
+  'Fichas clínicas y goniometría',
+  'Protocolo RTS (retorno al deporte)',
+  'Cuestionarios validados (NDI, DASH, Oswestry y más)',
+  'Dinamometría HHD',
+  'Planes de ejercicio ilimitados',
+  'Biblioteca de +1.700 ejercicios',
+  'Biblioteca clínica completa',
+]
+
+const FEATURES_PRO = [
   'Pacientes ilimitados',
   'Monitoreo de carga por paciente',
   'Calendario de sesiones',
@@ -11,6 +24,8 @@ const FEATURES = [
   'Planes de ejercicio ilimitados',
   'Biblioteca de +1.700 ejercicios',
   'Biblioteca clínica completa',
+  'Comunicación interdisciplinar',
+  'Ideal para centros y equipos',
 ]
 
 export default function PaywallPage() {
@@ -37,7 +52,7 @@ export default function PaywallPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-[760px] mx-auto mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
 
           {/* MENSUAL */}
           <div className="bg-bg-primary border-[0.5px] border-border rounded-2xl p-8 flex flex-col">
@@ -58,7 +73,7 @@ export default function PaywallPage() {
             </Link>
 
             <ul className="space-y-3 flex-grow">
-              {FEATURES.map(f => (
+              {FEATURES_INDIVIDUAL.map(f => (
                 <li key={f} className="flex items-start gap-2.5 text-[13px] text-text-secondary">
                   <span className="text-accent mt-0.5 shrink-0">✓</span>
                   {f}
@@ -92,7 +107,7 @@ export default function PaywallPage() {
             </Link>
 
             <ul className="space-y-3 flex-grow">
-              {FEATURES.map(f => (
+              {FEATURES_INDIVIDUAL.map(f => (
                 <li key={f} className="flex items-start gap-2.5 text-[13px] text-text-secondary">
                   <span className="text-accent mt-0.5 shrink-0">✓</span>
                   {f}
@@ -100,6 +115,35 @@ export default function PaywallPage() {
               ))}
             </ul>
           </div>
+
+          {/* PRO */}
+          <div className="bg-bg-primary border-[0.5px] border-border rounded-2xl p-8 flex flex-col">
+            <div className="mb-6">
+              <p className="text-[12px] uppercase tracking-[0.08em] text-text-secondary mb-3">Pro · Centros</p>
+              <div className="flex items-end gap-2 mb-1">
+                <span className="text-[42px] font-medium tracking-[-0.02em] leading-none">$150.000</span>
+                <span className="text-[14px] text-text-secondary mb-1">/ mes</span>
+              </div>
+              <p className="text-[13px] text-text-secondary">$1.350.000 / año · ahorrás 3 meses</p>
+            </div>
+
+            <a
+              href="mailto:hola@reason.com.ar?subject=Plan Pro"
+              className="block w-full text-center bg-bg-secondary border-[0.5px] border-border text-text-primary py-3 rounded-xl text-[14px] font-medium no-underline hover:border-accent hover:text-accent transition-colors mb-8"
+            >
+              Contactar
+            </a>
+
+            <ul className="space-y-3 flex-grow">
+              {FEATURES_PRO.map(f => (
+                <li key={f} className="flex items-start gap-2.5 text-[13px] text-text-secondary">
+                  <span className="text-accent mt-0.5 shrink-0">✓</span>
+                  {f}
+                </li>
+              ))}
+            </ul>
+          </div>
+
         </div>
 
         <p className="text-center text-[13px] text-text-secondary">
