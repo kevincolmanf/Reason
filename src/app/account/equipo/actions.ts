@@ -34,13 +34,21 @@ export async function createOrganization(formData: FormData) {
     .select('id')
     .single()
 
-  if (orgError) return { error: 'Error al crear el equipo' }
+  if (orgError) {
+    console.error('Error creando org:', orgError)
+    return { error: `Error al crear el equipo: ${orgError.message} (code: ${orgError.code})` }
+  }
 
-  await adminClient.from('organization_members').insert({
+  const { error: memberError } = await adminClient.from('organization_members').insert({
     org_id: org.id,
     user_id: user.id,
     role: 'admin',
   })
+
+  if (memberError) {
+    console.error('Error agregando admin a org:', memberError)
+    return { error: `Error al configurar el equipo: ${memberError.message}` }
+  }
 
   return { success: true, orgId: org.id }
 }
