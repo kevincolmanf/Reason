@@ -16,14 +16,12 @@ export async function POST(request: Request) {
   try {
     const body = await request.json()
 
-    // 1. Loggear el webhook (para poder debuggear si falla)
     await supabaseAdmin.from('webhook_logs').insert([{
       event_type: body.type || body.topic || 'unknown',
       payload: body,
       processed: false
     }])
 
-    // 2. Verificar si es un evento de suscripción
     if (body.type === 'subscription_preapproval' || body.topic === 'subscription_preapproval') {
       const preApprovalId = body.data?.id
 
@@ -31,50 +29,50 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'No ID provided' }, { status: 400 })
       }
 
-      // 3. Obtener la suscripción directamente de Mercado Pago (para evitar fraude)
       const subscriptionData = await preApproval.get({ id: preApprovalId })
-      const userId = subscriptionData.external_reference
-      const status = subscriptionData.status // 'authorized', 'pending', 'cancelled'
-      const planId = 'custom'
+      const externalRef = subscriptionData.external_reference || ''
+
+      // external_reference tiene formato "userId|planType" (nuevo) o solo "userId" (legacy)
+      const [userId, planType] = externalRef.includes('|')
+        ? externalRef.split('|')
+        : [externalRef, 'monthly']
 
       if (!userId) {
         console.error('Webhook: Suscripción no tiene external_reference (user.id)')
         return NextResponse.json({ status: 'ignored' })
       }
 
-      // 4. Calcular expires_at basado en next_payment_date de MP
+      const status = subscriptionData.status
+      const isPro = planType === 'pro_monthly' || planType === 'pro_annual'
+
       const nextPaymentDate = subscriptionData.next_payment_date
         ? new Date(subscriptionData.next_payment_date).toISOString()
-        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // fallback 30 días
+        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
 
-      // 5. Mapear estado de MP a nuestro estado
       let newRole = 'free'
       let dbStatus = 'pending'
 
       if (status === 'authorized') {
-        newRole = 'subscriber'
+        newRole = isPro ? 'pro' : 'subscriber'
         dbStatus = 'active'
       } else if (status === 'cancelled') {
         dbStatus = 'cancelled'
-
         const isExpired = new Date(nextPaymentDate).getTime() < Date.now()
-        newRole = isExpired ? 'free' : 'subscriber'
+        newRole = isExpired ? 'free' : (isPro ? 'pro' : 'subscriber')
       }
 
-      // 6. Upsert en tabla subscriptions
       const { error: subError } = await supabaseAdmin
         .from('subscriptions')
         .upsert({
           user_id: userId,
           mp_subscription_id: preApprovalId,
-          mp_plan_id: planId,
+          mp_plan_id: planType,
           status: dbStatus,
           expires_at: nextPaymentDate
         }, { onConflict: 'user_id' })
 
       if (subError) throw subError
 
-      // 7. Actualizar el rol en la tabla users
       const { error: userError } = await supabaseAdmin
         .from('users')
         .update({ role: newRole })
@@ -82,7 +80,6 @@ export async function POST(request: Request) {
 
       if (userError) throw userError
 
-      // 8. Marcar webhook como procesado
       await supabaseAdmin.from('webhook_logs')
         .update({ processed: true })
         .eq('payload->>data->>id', preApprovalId)
