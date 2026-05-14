@@ -12,6 +12,7 @@ interface Patient {
   occupation: string | null
   created_at: string
   plan_count?: number
+  users?: { full_name: string | null } | null
 }
 
 export default function PacientesClient({ userId, isActiveUser, isPro, orgId }: { userId: string; isActiveUser: boolean; isPro: boolean; orgId?: string | null }) {
@@ -47,7 +48,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId }: 
     setLoading(true)
     let query = supabaseRef.current
       .from('patients')
-      .select('id, name, age, occupation, created_at')
+      .select('id, name, age, occupation, created_at, users(full_name)')
       .order('created_at', { ascending: true })
 
     // Org members see org patients + their own personal patients (pre-org migration)
@@ -351,6 +352,11 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId }: 
                         Ver →
                       </span>
                     </div>
+                    {orgId && (p.users as { full_name: string | null } | null)?.full_name && (
+                      <p className="text-[11px] text-text-tertiary mt-2">
+                        por {(p.users as { full_name: string | null }).full_name}
+                      </p>
+                    )}
                   </div>
                 </Link>
                 {/* Delete button — solo para usuarios Individual, no Pro */}
