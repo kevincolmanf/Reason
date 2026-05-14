@@ -1,6 +1,27 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { MercadoPagoConfig, PreApproval } from 'mercadopago'
+import { createHmac } from 'crypto'
+
+function verifyMpSignature(request: Request, dataId: string, rawSignature: string, requestId: string): boolean {
+  const secret = process.env.MP_WEBHOOK_SECRET
+  if (!secret) {
+    console.warn('MP_WEBHOOK_SECRET no configurado — verificación de firma omitida')
+    return true
+  }
+
+  // Extraer ts y v1 del header x-signature
+  const parts = Object.fromEntries(rawSignature.split(',').map(p => p.split('=')))
+  const ts = parts['ts']
+  const v1 = parts['v1']
+
+  if (!ts || !v1) return false
+
+  const manifest = `id:${dataId};request-id:${requestId};ts:${ts};`
+  const expected = createHmac('sha256', secret).update(manifest).digest('hex')
+
+  return expected === v1
+}
 
 export async function POST(request: Request) {
   const mpClient = new MercadoPagoConfig({
@@ -15,6 +36,18 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json()
+
+    // Verificar firma antes de procesar nada
+    if (body.type === 'subscription_preapproval' || body.topic === 'subscription_preapproval') {
+      const rawSignature = request.headers.get('x-signature') || ''
+      const requestId = request.headers.get('x-request-id') || ''
+      const dataId = body.data?.id || ''
+
+      if (rawSignature && !verifyMpSignature(request, dataId, rawSignature, requestId)) {
+        console.error('Webhook: firma inválida', { rawSignature, requestId, dataId })
+        return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+      }
+    }
 
     await supabaseAdmin.from('webhook_logs').insert([{
       event_type: body.type || body.topic || 'unknown',
