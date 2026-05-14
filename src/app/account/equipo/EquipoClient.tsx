@@ -70,7 +70,7 @@ export default function EquipoClient({ userId, org: initialOrg, members: initial
       if (res?.error) {
         setOrgError(res.error)
       } else {
-        router.refresh()
+        window.location.href = '/account/equipo'
       }
     } catch (e) {
       setOrgError(`Error inesperado: ${(e as Error).message}`)
