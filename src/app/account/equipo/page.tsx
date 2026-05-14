@@ -20,11 +20,14 @@ export default async function EquipoPage() {
   if (userData?.role !== 'pro') redirect('/paywall')
 
   // Check if user has an org (as admin)
-  const { data: org } = await supabase
+  const { data: orgRows } = await supabase
     .from('organizations')
     .select('id, name')
     .eq('owner_id', user.id)
-    .single()
+    .order('created_at', { ascending: true })
+    .limit(1)
+
+  const org = orgRows?.[0] || null
 
   let members: { id: string; user_id: string; role: string; users: { full_name: string | null; email: string } }[] = []
 
