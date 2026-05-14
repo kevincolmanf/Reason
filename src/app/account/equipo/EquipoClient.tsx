@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState } from 'react'
 import { createOrganization, addMember, removeMember } from './actions'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -42,44 +42,51 @@ const MEMBER_CAN = [
 
 export default function EquipoClient({ userId, org: initialOrg, members: initialMembers }: Props) {
   const router = useRouter()
-  const [isPending, startTransition] = useTransition()
   const [org] = useState(initialOrg)
   const [members, setMembers] = useState(initialMembers)
 
   const [orgName, setOrgName] = useState('')
   const [orgError, setOrgError] = useState('')
+  const [orgLoading, setOrgLoading] = useState(false)
 
   const [showAddForm, setShowAddForm] = useState(false)
   const [memberEmail, setMemberEmail] = useState('')
   const [memberName, setMemberName] = useState('')
   const [addError, setAddError] = useState('')
+  const [addLoading, setAddLoading] = useState(false)
   const [newCredentials, setNewCredentials] = useState<{ email: string; tempPassword?: string } | null>(null)
 
   const [removing, setRemoving] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
 
-  const handleCreateOrg = () => {
-    if (!orgName.trim()) return
+  const handleCreateOrg = async () => {
+    if (!orgName.trim() || orgLoading) return
     setOrgError('')
-    const fd = new FormData()
-    fd.set('name', orgName)
-    startTransition(async () => {
+    setOrgLoading(true)
+    try {
+      const fd = new FormData()
+      fd.set('name', orgName)
       const res = await createOrganization(fd)
       if (res?.error) {
         setOrgError(res.error)
       } else {
         router.refresh()
       }
-    })
+    } catch (e) {
+      setOrgError(`Error inesperado: ${(e as Error).message}`)
+    } finally {
+      setOrgLoading(false)
+    }
   }
 
-  const handleAddMember = () => {
-    if (!org || !memberEmail.trim() || !memberName.trim()) return
+  const handleAddMember = async () => {
+    if (!org || !memberEmail.trim() || !memberName.trim() || addLoading) return
     setAddError('')
-    const fd = new FormData()
-    fd.set('email', memberEmail)
-    fd.set('full_name', memberName)
-    startTransition(async () => {
+    setAddLoading(true)
+    try {
+      const fd = new FormData()
+      fd.set('email', memberEmail)
+      fd.set('full_name', memberName)
       const res = await addMember(org.id, fd)
       if (res?.error) {
         setAddError(res.error)
@@ -90,7 +97,11 @@ export default function EquipoClient({ userId, org: initialOrg, members: initial
         setShowAddForm(false)
         router.refresh()
       }
-    })
+    } catch (e) {
+      setAddError(`Error inesperado: ${(e as Error).message}`)
+    } finally {
+      setAddLoading(false)
+    }
   }
 
   const handleRemoveMember = async (memberId: string, memberUserId: string) => {
@@ -175,10 +186,10 @@ Cualquier duda, avisame.`
             />
             <button
               onClick={handleCreateOrg}
-              disabled={isPending || !orgName.trim()}
+              disabled={orgLoading || !orgName.trim()}
               className="bg-accent text-bg-primary px-5 py-3 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
             >
-              {isPending ? 'Creando...' : 'Crear'}
+              {orgLoading ? 'Creando...' : 'Crear'}
             </button>
           </div>
           {orgError && <p className="text-[13px] text-red-400 mt-3">{orgError}</p>}
@@ -326,10 +337,10 @@ Cualquier duda, avisame.`
             <div className="flex gap-3">
               <button
                 onClick={handleAddMember}
-                disabled={isPending || !memberEmail.trim() || !memberName.trim()}
+                disabled={addLoading || !memberEmail.trim() || !memberName.trim()}
                 className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
               >
-                {isPending ? 'Agregando...' : 'Agregar'}
+                {addLoading ? 'Agregando...' : 'Agregar'}
               </button>
               <button
                 onClick={() => { setShowAddForm(false); setAddError('') }}
