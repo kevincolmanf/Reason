@@ -12,7 +12,7 @@ interface Patient {
   occupation: string | null
   created_at: string
   plan_count?: number
-  users?: { full_name: string | null } | null
+  users?: { full_name: string | null }[] | null
 }
 
 export default function PacientesClient({ userId, isActiveUser, isPro, orgId }: { userId: string; isActiveUser: boolean; isPro: boolean; orgId?: string | null }) {
@@ -352,9 +352,9 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId }: 
                         Ver →
                       </span>
                     </div>
-                    {orgId && (p.users as { full_name: string | null } | null)?.full_name && (
+                    {orgId && p.users?.[0]?.full_name && (
                       <p className="text-[11px] text-text-tertiary mt-2">
-                        por {(p.users as { full_name: string | null }).full_name}
+                        por {p.users[0].full_name}
                       </p>
                     )}
                   </div>
