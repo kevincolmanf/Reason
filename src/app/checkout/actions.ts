@@ -29,6 +29,8 @@ export async function createSubscriptionPreference(formData: FormData) {
         external_reference: user.id,
         payer_email: user.email || '',
         back_url: "https://www.reason.com.ar/dashboard",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ...({ notification_url: "https://www.reason.com.ar/api/webhooks/mercadopago" } as any),
         auto_recurring: {
           frequency: planType === 'annual' ? 12 : 1,
           frequency_type: "months",
