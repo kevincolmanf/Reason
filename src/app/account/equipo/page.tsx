@@ -35,7 +35,7 @@ export default async function EquipoPage() {
       .eq('org_id', org.id)
       .order('created_at', { ascending: true })
 
-    members = (membersData as typeof members) || []
+    members = (membersData as unknown as typeof members) || []
   }
 
   return (
