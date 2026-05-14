@@ -80,6 +80,31 @@ export async function POST(request: Request) {
 
       if (userError) throw userError
 
+      // Propagate role change to all org members (except admin/owner)
+      if (isPro) {
+        const { data: org } = await supabaseAdmin
+          .from('organizations')
+          .select('id')
+          .eq('owner_id', userId)
+          .single()
+
+        if (org) {
+          const { data: orgMembers } = await supabaseAdmin
+            .from('organization_members')
+            .select('user_id')
+            .eq('org_id', org.id)
+            .neq('user_id', userId)
+
+          if (orgMembers && orgMembers.length > 0) {
+            const memberIds = orgMembers.map(m => m.user_id)
+            await supabaseAdmin
+              .from('users')
+              .update({ role: newRole === 'pro' ? 'pro' : 'free' })
+              .in('id', memberIds)
+          }
+        }
+      }
+
       await supabaseAdmin.from('webhook_logs')
         .update({ processed: true })
         .eq('payload->>data->>id', preApprovalId)

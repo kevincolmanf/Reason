@@ -1,7 +1,8 @@
 import Link from 'next/link'
 
 const FEATURES_INDIVIDUAL = [
-  'Hasta 20 pacientes',
+  'Hasta 20 pacientes activos',
+  'Para agregar uno nuevo, tenés que eliminar otro',
   'Monitoreo de carga por paciente',
   'Calendario de sesiones',
   'Fichas clínicas y goniometría',
@@ -14,7 +15,10 @@ const FEATURES_INDIVIDUAL = [
 ]
 
 const FEATURES_PRO = [
-  'Pacientes ilimitados',
+  'Pacientes ilimitados con historial permanente',
+  'Nunca necesitás borrar un paciente',
+  'Usuarios ilimitados con acceso propio',
+  'Pacientes compartidos entre todo el equipo',
   'Monitoreo de carga por paciente',
   'Calendario de sesiones',
   'Fichas clínicas y goniometría',
@@ -24,8 +28,6 @@ const FEATURES_PRO = [
   'Planes de ejercicio ilimitados',
   'Biblioteca de +1.700 ejercicios',
   'Biblioteca clínica completa',
-  'Comunicación interdisciplinar',
-  'Ideal para centros y equipos',
 ]
 
 export default function PaywallPage() {
@@ -47,8 +49,8 @@ export default function PaywallPage() {
           <h1 className="text-[36px] font-medium tracking-[-0.02em] mb-3">
             Elegí tu plan
           </h1>
-          <p className="text-[17px] text-text-secondary max-w-[520px] mx-auto leading-[1.5]">
-            Acceso completo a todas las herramientas clínicas de Reason para tu práctica diaria.
+          <p className="text-[17px] text-text-secondary max-w-[560px] mx-auto leading-[1.5]">
+            Acceso completo a todas las herramientas clínicas. El Plan Pro agrega equipo y historial ilimitado — nunca perdés datos de un paciente.
           </p>
         </div>
 
@@ -119,12 +121,12 @@ export default function PaywallPage() {
           {/* PRO */}
           <div className="bg-bg-primary border-[0.5px] border-border rounded-2xl p-8 flex flex-col">
             <div className="mb-6">
-              <p className="text-[12px] uppercase tracking-[0.08em] text-text-secondary mb-3">Pro · Centros</p>
+              <p className="text-[12px] uppercase tracking-[0.08em] text-text-secondary mb-3">Pro · Equipos y Centros</p>
               <div className="flex items-end gap-2 mb-1">
                 <span className="text-[42px] font-medium tracking-[-0.02em] leading-none">$150.000</span>
                 <span className="text-[14px] text-text-secondary mb-1">/ mes</span>
               </div>
-              <p className="text-[13px] text-text-secondary">$1.350.000 / año · ahorrás 3 meses</p>
+              <p className="text-[13px] text-text-secondary">Usuarios ilimitados · $1.350.000 / año</p>
             </div>
 
             <div className="flex flex-col gap-2 mb-8">

@@ -14,13 +14,15 @@ interface Patient {
   plan_count?: number
 }
 
-export default function PacientesClient({ userId, isActiveUser, isPro }: { userId: string; isActiveUser: boolean; isPro: boolean }) {
+export default function PacientesClient({ userId, isActiveUser, isPro, orgId }: { userId: string; isActiveUser: boolean; isPro: boolean; orgId?: string | null }) {
   const [patients, setPatients] = useState<Patient[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [saving, setSaving] = useState(false)
   const [limitError, setLimitError] = useState(false)
   const [search, setSearch] = useState('')
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const searchParams = useSearchParams()
 
   const atFreeLimit = !isActiveUser && patients.length >= 1
@@ -43,11 +45,20 @@ export default function PacientesClient({ userId, isActiveUser, isPro }: { userI
 
   const fetchPatients = useCallback(async () => {
     setLoading(true)
-    const { data, error } = await supabaseRef.current
+    let query = supabaseRef.current
       .from('patients')
       .select('id, name, age, occupation, created_at')
-      .eq('user_id', userId)
       .order('created_at', { ascending: true })
+
+    // Org members see all org patients (RLS handles access, filter by org_id)
+    // Individual users see only their own patients
+    if (orgId) {
+      query = query.eq('org_id', orgId)
+    } else {
+      query = query.eq('user_id', userId)
+    }
+
+    const { data, error } = await query
 
     if (!error && data) {
       // Fetch plan count per patient
@@ -77,6 +88,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro }: { userI
 
     const { error } = await supabaseRef.current.from('patients').insert({
       user_id: userId,
+      org_id: orgId || null,
       name: form.name.trim(),
       age: form.age ? parseInt(form.age) : null,
       occupation: form.occupation.trim() || null,
@@ -90,6 +102,14 @@ export default function PacientesClient({ userId, isActiveUser, isPro }: { userI
     setSaving(false)
   }
 
+  const handleDelete = async (patientId: string) => {
+    setDeleting(true)
+    await supabaseRef.current.from('patients').delete().eq('id', patientId)
+    setDeleteConfirm(null)
+    setDeleting(false)
+    await fetchPatients()
+  }
+
   const filteredPatients = search.trim()
     ? patients.filter(p =>
         p.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -101,8 +121,45 @@ export default function PacientesClient({ userId, isActiveUser, isPro }: { userI
     return <div className="text-text-secondary text-[14px]">Cargando pacientes...</div>
   }
 
+  const patientToDelete = deleteConfirm ? patients.find(p => p.id === deleteConfirm) : null
+
   return (
     <div>
+      {/* Modal de confirmación de eliminación */}
+      {deleteConfirm && patientToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+          <div className="bg-bg-secondary border-[0.5px] border-border rounded-2xl p-8 max-w-[420px] w-full shadow-xl">
+            <h3 className="text-[18px] font-medium mb-2">Eliminar paciente</h3>
+            <p className="text-[14px] text-text-secondary mb-1">
+              Estás por eliminar a <strong className="text-text-primary">{patientToDelete.name}</strong>.
+            </p>
+            <p className="text-[13px] text-warning mb-6">
+              Esta acción es permanente e irreversible. Se borrarán todos sus planes de ejercicio, fichas clínicas, cuestionarios y registros de carga.
+            </p>
+            <div className="bg-accent/5 border-[0.5px] border-accent/30 rounded-lg px-4 py-3 mb-6">
+              <p className="text-[12px] text-text-secondary">
+                Con el <strong>Plan Pro</strong> nunca necesitás borrar pacientes — tenés ilimitados y conservás el historial completo para siempre.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => handleDelete(deleteConfirm)}
+                disabled={deleting}
+                className="bg-red-600 text-white px-5 py-2.5 rounded-lg text-[13px] font-medium hover:bg-red-700 disabled:opacity-50 transition-colors"
+              >
+                {deleting ? 'Eliminando...' : 'Sí, eliminar'}
+              </button>
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                disabled={deleting}
+                className="text-text-secondary px-4 py-2.5 text-[13px] hover:text-text-primary"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
         <div className="flex items-center gap-3 w-full sm:w-auto">
           <span className="text-[14px] text-text-secondary shrink-0">{patients.length} paciente{patients.length !== 1 ? 's' : ''}</span>
@@ -170,7 +227,10 @@ export default function PacientesClient({ userId, isActiveUser, isPro }: { userI
         <div className="bg-accent/5 border-[0.5px] border-accent/30 rounded-xl px-5 py-4 mb-6 flex items-center justify-between gap-4">
           <div>
             <p className="text-[14px] font-medium text-text-primary mb-0.5">Límite del plan individual — 20 pacientes</p>
-            <p className="text-[13px] text-text-secondary">Actualizá al Plan Pro para gestionar pacientes ilimitados.</p>
+            <p className="text-[13px] text-text-secondary">
+              Para agregar un paciente nuevo tenés que eliminar uno existente — y perdés su historial para siempre.
+              Con el Plan Pro tenés pacientes ilimitados y conservás el historial completo.
+            </p>
           </div>
           <a href="/paywall" className="shrink-0 bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity">
             Ver Plan Pro
@@ -275,23 +335,34 @@ export default function PacientesClient({ userId, isActiveUser, isPro }: { userI
               )
             }
             return (
-              <Link key={p.id} href={`/dashboard/pacientes/${p.id}`} className="block no-underline">
-                <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 hover:bg-bg-secondary transition-colors h-full flex flex-col group">
-                  <h3 className="text-[18px] font-medium text-text-primary mb-2">{p.name}</h3>
-                  <div className="text-[13px] text-text-secondary space-y-1 flex-grow">
-                    {p.age && <p>Edad: {p.age} años</p>}
-                    {p.occupation && <p>Ocupación: {p.occupation}</p>}
+              <div key={p.id} className="relative group">
+                <Link href={`/dashboard/pacientes/${p.id}`} className="block no-underline">
+                  <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 hover:bg-bg-secondary transition-colors h-full flex flex-col">
+                    <h3 className="text-[18px] font-medium text-text-primary mb-2">{p.name}</h3>
+                    <div className="text-[13px] text-text-secondary space-y-1 flex-grow">
+                      {p.age && <p>Edad: {p.age} años</p>}
+                      {p.occupation && <p>Ocupación: {p.occupation}</p>}
+                    </div>
+                    <div className="mt-4 pt-4 border-t-[0.5px] border-border flex justify-between items-center">
+                      <span className="text-[12px] text-text-secondary">
+                        {p.plan_count} plan{p.plan_count !== 1 ? 'es' : ''}
+                      </span>
+                      <span className="text-accent text-[13px] font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                        Ver →
+                      </span>
+                    </div>
                   </div>
-                  <div className="mt-4 pt-4 border-t-[0.5px] border-border flex justify-between items-center">
-                    <span className="text-[12px] text-text-secondary">
-                      {p.plan_count} plan{p.plan_count !== 1 ? 'es' : ''}
-                    </span>
-                    <span className="text-accent text-[13px] font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                      Ver →
-                    </span>
-                  </div>
-                </div>
-              </Link>
+                </Link>
+                {/* Delete button — solo para usuarios Individual, no Pro */}
+                {!isPro && (
+                  <button
+                    onClick={e => { e.preventDefault(); setDeleteConfirm(p.id) }}
+                    className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity text-[11px] text-text-secondary hover:text-red-400 bg-bg-primary border-[0.5px] border-border rounded-lg px-2 py-1"
+                  >
+                    Eliminar
+                  </button>
+                )}
+              </div>
             )
           })}
         </div>

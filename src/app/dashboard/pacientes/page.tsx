@@ -26,6 +26,29 @@ export default async function PacientesPage() {
   const isActiveUser = role === 'subscriber' || role === 'admin' || role === 'pro' || trialActive
   const isPro = role === 'admin' || role === 'pro'
 
+  // Check if user belongs to an org (as admin or member)
+  let orgId: string | null = null
+  if (isPro) {
+    const { data: ownedOrg } = await supabase
+      .from('organizations')
+      .select('id')
+      .eq('owner_id', user.id)
+      .single()
+
+    if (ownedOrg) {
+      orgId = ownedOrg.id
+    } else {
+      const { data: membership } = await supabase
+        .from('organization_members')
+        .select('org_id')
+        .eq('user_id', user.id)
+        .single()
+      orgId = membership?.org_id || null
+    }
+  }
+
+  const isOrgMember = !!orgId
+
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
       <Header />
@@ -34,13 +57,17 @@ export default async function PacientesPage() {
           <Link href="/dashboard" className="text-[13px] text-text-secondary hover:text-text-primary transition-colors no-underline flex items-center gap-2 mb-6">
             ← Volver al Dashboard
           </Link>
-          <h1 className="text-[32px] font-medium tracking-[-0.02em] mb-2">Mis Pacientes</h1>
+          <h1 className="text-[32px] font-medium tracking-[-0.02em] mb-2">
+            {isOrgMember ? 'Pacientes del Equipo' : 'Mis Pacientes'}
+          </h1>
           <p className="text-text-secondary text-[16px] max-w-[600px] leading-[1.5]">
-            Gestioná tu listado de pacientes y asociá sus planes de ejercicio.
+            {isOrgMember
+              ? 'Pacientes compartidos con todos los integrantes de tu equipo.'
+              : 'Gestioná tu listado de pacientes y asociá sus planes de ejercicio.'}
           </p>
         </div>
 
-        <PacientesClient userId={user.id} isActiveUser={isActiveUser} isPro={isPro} />
+        <PacientesClient userId={user.id} isActiveUser={isActiveUser} isPro={isPro} orgId={orgId} />
       </main>
     </div>
   )
