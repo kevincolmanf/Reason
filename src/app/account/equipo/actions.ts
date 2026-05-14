@@ -11,46 +11,52 @@ function generateTempPassword(): string {
 }
 
 export async function createOrganization(formData: FormData) {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  try {
+    const supabase = createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
 
-  const { data: userData } = await supabase
-    .from('users')
-    .select('role')
-    .eq('id', user.id)
-    .single()
+    if (authError || !user) return { error: 'No autenticado' }
 
-  if (userData?.role !== 'pro' && userData?.role !== 'admin') redirect('/paywall')
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single()
 
-  const name = (formData.get('name') as string)?.trim()
-  if (!name) return { error: 'El nombre del centro es requerido' }
+    if (userError) return { error: `Error al verificar usuario: ${userError.message}` }
+    if (!userData) return { error: 'Usuario no encontrado en la base de datos' }
+    if (userData.role !== 'pro' && userData.role !== 'admin') return { error: 'Se requiere Plan Pro' }
 
-  const adminClient = createAdminClient()
+    const name = (formData.get('name') as string)?.trim()
+    if (!name) return { error: 'El nombre del centro es requerido' }
 
-  const { data: org, error: orgError } = await adminClient
-    .from('organizations')
-    .insert({ name, owner_id: user.id })
-    .select('id')
-    .single()
+    const adminClient = createAdminClient()
 
-  if (orgError) {
-    console.error('Error creando org:', orgError)
-    return { error: `Error al crear el equipo: ${orgError.message} (code: ${orgError.code})` }
+    const { data: org, error: orgError } = await adminClient
+      .from('organizations')
+      .insert({ name, owner_id: user.id })
+      .select('id')
+      .single()
+
+    if (orgError) {
+      console.error('Error creando org:', JSON.stringify(orgError))
+      return { error: `Error al crear el equipo: ${orgError.message} (${orgError.code})` }
+    }
+
+    const { error: memberError } = await adminClient
+      .from('organization_members')
+      .insert({ org_id: org.id, user_id: user.id, role: 'admin' })
+
+    if (memberError) {
+      console.error('Error agregando admin a org:', JSON.stringify(memberError))
+      return { error: `Error al configurar el equipo: ${memberError.message}` }
+    }
+
+    return { success: true, orgId: org.id }
+  } catch (e) {
+    console.error('Excepción en createOrganization:', e)
+    return { error: `Excepción: ${(e as Error).message}` }
   }
-
-  const { error: memberError } = await adminClient.from('organization_members').insert({
-    org_id: org.id,
-    user_id: user.id,
-    role: 'admin',
-  })
-
-  if (memberError) {
-    console.error('Error agregando admin a org:', memberError)
-    return { error: `Error al configurar el equipo: ${memberError.message}` }
-  }
-
-  return { success: true, orgId: org.id }
 }
 
 export async function addMember(orgId: string, formData: FormData): Promise<{ error?: string; tempPassword?: string; email?: string }> {
