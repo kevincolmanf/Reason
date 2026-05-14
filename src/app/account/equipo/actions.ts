@@ -32,27 +32,16 @@ export async function createOrganization(formData: FormData) {
 
     const adminClient = createAdminClient()
 
-    const { data: org, error: orgError } = await adminClient
-      .from('organizations')
-      .insert({ name, owner_id: user.id })
-      .select('id')
-      .single()
+    const { data: orgId, error: rpcError } = await adminClient
+      .rpc('create_organization_with_admin', { org_name: name, p_owner_id: user.id })
 
-    if (orgError) {
-      console.error('Error creando org:', JSON.stringify(orgError))
-      return { error: `Error al crear el equipo: ${orgError.message} (${orgError.code})` }
+    if (rpcError) {
+      console.error('Error creando org:', JSON.stringify(rpcError))
+      if (rpcError.code === '23505') return { error: 'Ya tenés un equipo creado. Recargá la página.' }
+      return { error: `Error al crear el equipo: ${rpcError.message}` }
     }
 
-    const { error: memberError } = await adminClient
-      .from('organization_members')
-      .insert({ org_id: org.id, user_id: user.id, role: 'admin' })
-
-    if (memberError) {
-      console.error('Error agregando admin a org:', JSON.stringify(memberError))
-      return { error: `Error al configurar el equipo: ${memberError.message}` }
-    }
-
-    return { success: true, orgId: org.id }
+    return { success: true, orgId }
   } catch (e) {
     console.error('Excepción en createOrganization:', e)
     return { error: `Excepción: ${(e as Error).message}` }
