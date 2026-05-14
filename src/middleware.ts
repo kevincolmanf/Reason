@@ -83,6 +83,7 @@ export async function middleware(request: NextRequest) {
   const isFreeContent = pathname === '/content/dolor-lumbar-inespecifico'
 
   const isAdminRoute = pathname.startsWith('/admin')
+  const isEquipoRoute = pathname.startsWith('/account/equipo')
 
   // 1. Si no está logueado → login
   if ((isAuthRoute || isAdminRoute) && !user) {
@@ -92,7 +93,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // 2. Si está logueado → verificar acceso para rutas premium y admin
-  if (user && (isSubscriberRoute || isAdvancedModule || isAdminRoute) && !isFreeContent) {
+  if (user && (isSubscriberRoute || isAdvancedModule || isAdminRoute || isEquipoRoute) && !isFreeContent) {
     const { data: userData } = await supabase
       .from('users')
       .select('role, trial_expires_at')
@@ -107,6 +108,12 @@ export async function middleware(request: NextRequest) {
     if (isAdminRoute && role !== 'admin') {
       const url = request.nextUrl.clone()
       url.pathname = '/dashboard'
+      return NextResponse.redirect(url)
+    }
+
+    if (isEquipoRoute && role !== 'pro' && role !== 'admin') {
+      const url = request.nextUrl.clone()
+      url.pathname = '/paywall'
       return NextResponse.redirect(url)
     }
 

@@ -62,18 +62,33 @@ export default async function AccountPage() {
             </div>
           </div>
           
-          <div className="p-8 bg-bg-primary flex justify-between items-center">
+          <div className="p-8 bg-bg-primary flex justify-between items-center border-b-[0.5px] border-border">
             <div>
               <h2 className="text-[16px] font-medium mb-1">Suscripción a Reason</h2>
               <p className="text-[13px] text-text-secondary">Gestioná tu plan y métodos de pago</p>
             </div>
-            <Link 
-              href="/account/subscription" 
+            <Link
+              href="/account/subscription"
               className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium no-underline hover:opacity-90 transition-opacity"
             >
               Ver suscripción
             </Link>
           </div>
+
+          {(userData?.role === 'pro' || userData?.role === 'admin') && (
+            <div className="p-8 bg-bg-primary flex justify-between items-center">
+              <div>
+                <h2 className="text-[16px] font-medium mb-1">Mi Equipo</h2>
+                <p className="text-[13px] text-text-secondary">Administrá los integrantes de tu centro</p>
+              </div>
+              <Link
+                href="/account/equipo"
+                className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium no-underline hover:opacity-90 transition-opacity"
+              >
+                Ver equipo
+              </Link>
+            </div>
+          )}
         </div>
 
         <form action="/auth/signout" method="post">
