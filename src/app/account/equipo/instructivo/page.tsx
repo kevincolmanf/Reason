@@ -142,7 +142,7 @@ export default async function InstructivoPage() {
                 <span>Email</span>
                 <span>Rol</span>
               </div>
-              {(members as { id: string; user_id: string; role: string; users: { full_name: string | null; email: string } }[]).map((m, i) => (
+              {(members as unknown as { id: string; user_id: string; role: string; users: { full_name: string | null; email: string } }[]).map((m, i) => (
                 <div key={m.id} className={`grid grid-cols-3 px-5 py-3.5 text-[13px] ${i !== 0 ? 'border-t border-gray-100' : ''}`}>
                   <span className="font-medium text-gray-900">{m.users?.full_name || '—'}</span>
                   <span className="text-gray-500">{m.users?.email}</span>
