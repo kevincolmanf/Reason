@@ -70,7 +70,11 @@ export async function middleware(request: NextRequest) {
   const isAuthRoute = authRoutes.some(route => pathname.startsWith(route))
 
   // Rutas que requieren suscripción activa (o trial vigente)
-  const subscriberRoutes = ['/library', '/content', '/recursos', '/ficha', '/dashboard/ejercicios', '/dashboard/agenda']
+  const subscriberRoutes = ['/library', '/content', '/recursos', '/ficha', '/dashboard/ejercicios']
+
+  // Rutas exclusivas para Pro/admin o miembros de org (agenda)
+  const proRoutes = ['/dashboard/agenda']
+  const isProRoute = proRoutes.some(route => pathname.startsWith(route))
   const isSubscriberRoute = subscriberRoutes.some(route => pathname.startsWith(route))
 
   // Módulos avanzados dentro del dashboard de pacientes — bloqueados para free sin trial
@@ -93,7 +97,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // 2. Si está logueado → verificar acceso para rutas premium y admin
-  if (user && (isSubscriberRoute || isAdvancedModule || isAdminRoute || isEquipoRoute) && !isFreeContent) {
+  if (user && (isSubscriberRoute || isProRoute || isAdvancedModule || isAdminRoute || isEquipoRoute) && !isFreeContent) {
     const { data: userData } = await supabase
       .from('users')
       .select('role, trial_expires_at')
@@ -106,7 +110,7 @@ export async function middleware(request: NextRequest) {
 
     // Check org membership for free users who belong to a team
     let isOrgMember = false
-    if (role === 'free') {
+    if (role === 'free' || role === 'subscriber') {
       const { count } = await supabase
         .from('organization_members')
         .select('*', { count: 'exact', head: true })
@@ -115,6 +119,7 @@ export async function middleware(request: NextRequest) {
     }
 
     const isActive = role === 'subscriber' || role === 'admin' || role === 'pro' || trialActive || isOrgMember
+    const isProActive = role === 'admin' || role === 'pro' || isOrgMember
 
     if (isAdminRoute && role !== 'admin') {
       const url = request.nextUrl.clone()
@@ -130,6 +135,12 @@ export async function middleware(request: NextRequest) {
     }
 
     if ((isSubscriberRoute || isAdvancedModule) && !isActive) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/paywall'
+      return NextResponse.redirect(url)
+    }
+
+    if (isProRoute && !isProActive) {
       const url = request.nextUrl.clone()
       url.pathname = '/paywall'
       return NextResponse.redirect(url)

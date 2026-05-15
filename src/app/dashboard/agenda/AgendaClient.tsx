@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import TurnoModal from './TurnoModal'
+import AgendaSettings from './AgendaSettings'
 
 interface Turno {
   id: string
@@ -31,6 +32,10 @@ interface Props {
   orgId: string | null
   orgName: string | null
   professionals: Professional[]
+  areas: string[]
+  isOwner: boolean
+  shareToken: string | null
+  shareEnabled: boolean
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -174,13 +179,15 @@ function exportDay(turnos: Turno[], date: Date) {
   URL.revokeObjectURL(url)
 }
 
-export default function AgendaClient({ userId, orgId, orgName, professionals }: Props) {
+export default function AgendaClient({ userId, orgId, orgName, professionals, areas: initialAreas, isOwner, shareToken, shareEnabled }: Props) {
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()))
   const [selectedDay, setSelectedDay] = useState<Date>(() => new Date())
   const [view, setView] = useState<'week' | 'day'>('day')
   const [turnos, setTurnos]       = useState<Turno[]>([])
   const [loading, setLoading]     = useState(true)
   const [filterProf, setFilterProf] = useState<string>('all')
+  const [areas, setAreas] = useState<string[]>(initialAreas)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [modal, setModal] = useState<{
     open: boolean
     turno?: Turno
@@ -375,6 +382,14 @@ export default function AgendaClient({ userId, orgId, orgName, professionals }: 
           )}
 
           <button
+            onClick={() => setSettingsOpen(true)}
+            className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors"
+            title="Configurar agenda"
+          >
+            ⚙
+          </button>
+
+          <button
             onClick={() => openNew()}
             className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity"
           >
@@ -511,10 +526,25 @@ export default function AgendaClient({ userId, orgId, orgName, professionals }: 
           userId={userId}
           orgId={orgId}
           professionals={professionals}
+          areas={areas}
           turno={modal.turno}
           defaultStart={modal.defaultStart}
           onClose={closeModal}
           onSaved={handleSaved}
+        />
+      )}
+
+      {/* SETTINGS MODAL */}
+      {settingsOpen && (
+        <AgendaSettings
+          orgId={orgId}
+          userId={userId}
+          isOwner={isOwner}
+          initialAreas={areas}
+          shareToken={shareToken}
+          shareEnabled={shareEnabled}
+          onClose={() => setSettingsOpen(false)}
+          onSaved={newAreas => { setAreas(newAreas); setSettingsOpen(false) }}
         />
       )}
     </div>
