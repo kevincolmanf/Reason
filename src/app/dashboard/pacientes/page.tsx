@@ -39,10 +39,7 @@ export default async function PacientesPage({ searchParams }: { searchParams: { 
   }
 
   const isOrgMember = !!orgId
-  // isActiveUser: puede usar features (plan propio O miembro de equipo O trial)
   const isActiveUser = isPro || role === 'subscriber' || trialActive || isOrgMember
-  // Cada contexto muestra solo sus propios pacientes; el badge del header es el mecanismo para cambiar
-  const showPersonalSection = false
 
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
@@ -62,7 +59,7 @@ export default async function PacientesPage({ searchParams }: { searchParams: { 
           </p>
         </div>
 
-        <PacientesClient userId={user.id} isActiveUser={isActiveUser} isPro={isPro} orgId={orgId} orgName={orgName} showPersonalSection={showPersonalSection} autoOpen={searchParams.new === '1'} />
+        <PacientesClient userId={user.id} isActiveUser={isActiveUser} isPro={isPro} orgId={orgId} orgName={orgName} autoOpen={searchParams.new === '1'} />
       </main>
     </div>
   )
