@@ -23,45 +23,47 @@ export default async function PacientesPage() {
   const role = userData?.role
   const trialExpiresAt = userData?.trial_expires_at
   const trialActive = trialExpiresAt ? new Date(trialExpiresAt) > new Date() : false
-  const isActiveUser = role === 'subscriber' || role === 'admin' || role === 'pro' || trialActive
+
+  // isPro = tiene suscripción propia (no por ser miembro de un equipo)
   const isPro = role === 'admin' || role === 'pro'
 
-  // Check if user belongs to an org (as admin or member)
+  // Detectamos org membership para TODOS los usuarios, independiente del plan personal
   let orgId: string | null = null
   let orgName: string | null = null
   let isOrgOwner = false
-  if (isPro) {
-    const { data: ownedOrg } = await supabase
-      .from('organizations')
-      .select('id, name')
-      .eq('owner_id', user.id)
-      .single()
 
-    if (ownedOrg) {
-      orgId = ownedOrg.id
-      orgName = ownedOrg.name
-      isOrgOwner = true
-    } else {
-      const { data: membership } = await supabase
-        .from('organization_members')
-        .select('org_id')
-        .eq('user_id', user.id)
+  const { data: ownedOrg } = await supabase
+    .from('organizations')
+    .select('id, name')
+    .eq('owner_id', user.id)
+    .single()
+
+  if (ownedOrg) {
+    orgId = ownedOrg.id
+    orgName = ownedOrg.name
+    isOrgOwner = true
+  } else {
+    const { data: membership } = await supabase
+      .from('organization_members')
+      .select('org_id')
+      .eq('user_id', user.id)
+      .single()
+    if (membership?.org_id) {
+      orgId = membership.org_id
+      const { data: orgData } = await supabase
+        .from('organizations')
+        .select('name')
+        .eq('id', membership.org_id)
         .single()
-      if (membership?.org_id) {
-        orgId = membership.org_id
-        const { data: orgData } = await supabase
-          .from('organizations')
-          .select('name')
-          .eq('id', membership.org_id)
-          .single()
-        orgName = orgData?.name || null
-      }
+      orgName = orgData?.name || null
     }
   }
 
   const isOrgMember = !!orgId
-  // Show personal section if: no team, OR owns the team (paid), OR platform admin
-  const showPersonalSection = !orgId || isOrgOwner || role === 'admin'
+  // isActiveUser: puede usar features (plan propio O miembro de equipo O trial)
+  const isActiveUser = isPro || role === 'subscriber' || trialActive || isOrgMember
+  // Sección personal: solo si tiene plan propio o es dueño del equipo
+  const showPersonalSection = !orgId || isOrgOwner || isPro
 
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">

@@ -92,10 +92,7 @@ export async function addMember(orgId: string, formData: FormData): Promise<{ er
       return { error: 'Error al agregar el miembro' }
     }
 
-    if (existingUser.role !== 'admin') {
-      await adminClient.from('users').update({ role: 'pro' }).eq('id', existingUser.id)
-    }
-
+    // No cambiamos el role — el acceso al equipo viene de organization_members, no del role
     return { success: true, email, tempPassword: undefined } as { error?: string; tempPassword?: string; email?: string }
   }
 
@@ -117,7 +114,7 @@ export async function addMember(orgId: string, formData: FormData): Promise<{ er
     id: memberId,
     email,
     full_name: fullName,
-    role: 'pro',
+    role: 'free',  // el acceso Pro viene del equipo, no del role personal
   })
 
   await adminClient.from('organization_members').insert({
@@ -151,15 +148,6 @@ export async function removeMember(orgId: string, memberId: string) {
     .eq('org_id', orgId)
     .eq('user_id', memberId)
 
-  // Check if member belongs to another org before revoking Pro
-  const { count } = await adminClient
-    .from('organization_members')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', memberId)
-
-  if (!count || count === 0) {
-    await adminClient.from('users').update({ role: 'free' }).eq('id', memberId)
-  }
-
+  // No revertimos el role — el usuario mantiene el que tenía antes de entrar al equipo
   return { success: true }
 }
