@@ -56,8 +56,10 @@ export default function AgendaSettings({
 
   const supabase = createClient()
 
+  const [shareProf, setShareProf] = useState<string>('all')
+
   const shareUrl = shareToken
-    ? `${typeof window !== 'undefined' ? window.location.origin : ''}/agenda/share/${shareToken}`
+    ? `${typeof window !== 'undefined' ? window.location.origin : ''}/agenda/share/${shareToken}${shareProf !== 'all' ? `?prof=${shareProf}` : ''}`
     : null
 
   const addArea = () => {
@@ -168,18 +170,34 @@ export default function AgendaSettings({
             </div>
 
             {shareEnabled && (
-              <div className="flex gap-2">
-                <input
-                  readOnly
-                  value={shareUrl}
-                  className="flex-1 bg-bg-primary border-[0.5px] border-border rounded-lg px-3 py-2 text-[11px] text-text-secondary truncate focus:outline-none"
-                />
-                <button
-                  onClick={copyLink}
-                  className="bg-bg-primary border-[0.5px] border-border rounded-lg px-3 py-2 text-[12px] text-text-secondary hover:text-text-primary whitespace-nowrap"
-                >
-                  {copied ? 'Copiado ✓' : 'Copiar'}
-                </button>
+              <div className="flex flex-col gap-2">
+                <div>
+                  <label className="block text-[11px] text-text-secondary mb-1">¿Qué agenda compartir?</label>
+                  <select
+                    value={shareProf}
+                    onChange={e => setShareProf(e.target.value)}
+                    className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg px-3 py-2 text-[13px] text-text-primary focus:outline-none focus:border-accent"
+                  >
+                    <option value="all">Todos los profesionales</option>
+                    <option value={userId}>Solo la mía</option>
+                    {members.map(m => (
+                      <option key={m.id} value={m.id}>{m.full_name || 'Sin nombre'}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    readOnly
+                    value={shareUrl ?? ''}
+                    className="flex-1 bg-bg-primary border-[0.5px] border-border rounded-lg px-3 py-2 text-[11px] text-text-secondary truncate focus:outline-none"
+                  />
+                  <button
+                    onClick={copyLink}
+                    className="bg-bg-primary border-[0.5px] border-border rounded-lg px-3 py-2 text-[12px] text-text-secondary hover:text-text-primary whitespace-nowrap"
+                  >
+                    {copied ? 'Copiado ✓' : 'Copiar'}
+                  </button>
+                </div>
               </div>
             )}
 

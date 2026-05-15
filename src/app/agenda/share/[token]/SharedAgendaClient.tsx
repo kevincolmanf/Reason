@@ -101,7 +101,7 @@ function assignColumns(turnos: Turno[]): Map<string, { col: number; totalCols: n
 
 const MIN_COL_WIDTH = 130
 
-export default function SharedAgendaClient({ token, orgName }: { token: string; orgName: string }) {
+export default function SharedAgendaClient({ token, orgName, profId }: { token: string; orgName: string; profId?: string }) {
   const [selectedDay, setSelectedDay] = useState<Date>(() => new Date())
   const [turnos, setTurnos] = useState<Turno[]>([])
   const [loading, setLoading] = useState(true)
@@ -113,13 +113,14 @@ export default function SharedAgendaClient({ token, orgName }: { token: string; 
     const to   = addDays(selectedDay, 1).toISOString()
 
     const { data } = await supabaseRef.current.rpc('get_shared_agenda', {
-      p_token: token,
-      p_from:  from,
-      p_to:    to,
+      p_token:   token,
+      p_from:    from,
+      p_to:      to,
+      p_prof_id: profId ?? null,
     })
     setTurnos((data ?? []) as Turno[])
     setLoading(false)
-  }, [selectedDay, token])
+  }, [selectedDay, token, profId])
 
   useEffect(() => { fetchTurnos() }, [fetchTurnos])
 

@@ -2,7 +2,7 @@ import { createClient } from '@/utils/supabase/server'
 import { notFound } from 'next/navigation'
 import SharedAgendaClient from './SharedAgendaClient'
 
-export default async function SharedAgendaPage({ params }: { params: { token: string } }) {
+export default async function SharedAgendaPage({ params, searchParams }: { params: { token: string }; searchParams: { prof?: string } }) {
   const supabase = createClient()
 
   // Verify token is valid and sharing is enabled
@@ -26,7 +26,7 @@ export default async function SharedAgendaPage({ params }: { params: { token: st
         </div>
       </header>
       <main className="flex-grow w-full max-w-[1200px] mx-auto px-6 py-8">
-        <SharedAgendaClient token={params.token} orgName={org.name} />
+        <SharedAgendaClient token={params.token} orgName={org.name} profId={searchParams.prof} />
       </main>
     </div>
   )
