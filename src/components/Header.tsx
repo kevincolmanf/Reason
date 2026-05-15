@@ -6,6 +6,21 @@ export default async function Header() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
+  let contextLabel = 'Mi espacio'
+
+  if (user) {
+    const { data: membership } = await supabase
+      .from('organization_members')
+      .select('organizations(name)')
+      .eq('user_id', user.id)
+      .limit(1)
+      .single()
+
+    type MemberRow = { organizations: { name: string } | null }
+    const orgName = (membership as unknown as MemberRow)?.organizations?.name
+    if (orgName) contextLabel = orgName
+  }
+
   return (
     <header className="py-6 border-b-[0.5px] border-border sticky top-0 bg-bg-primary/80 backdrop-blur-md z-10">
       <div className="w-full max-w-[1080px] mx-auto px-4 sm:px-8 flex justify-between items-center">
@@ -29,6 +44,12 @@ export default async function Header() {
             Agenda
           </Link>
           
+          {user && (
+            <span className="hidden sm:inline text-[11px] text-text-secondary bg-bg-secondary border-[0.5px] border-border rounded-md px-2 py-1 max-w-[140px] truncate">
+              {contextLabel}
+            </span>
+          )}
+
           {user ? (
             <HeaderClient userMetadata={user.user_metadata} />
           ) : (
