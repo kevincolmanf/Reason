@@ -72,7 +72,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
       setOrgPatients(orgWithCounts)
       setPersonalPatients(personalWithCounts)
     } else {
-      const { data } = await sb.from('patients').select('id, name, age, occupation, created_at, user_id').eq('user_id', userId).order('created_at', { ascending: true })
+      const { data } = await sb.from('patients').select('id, name, age, occupation, created_at, user_id').eq('user_id', userId).is('org_id', null).order('created_at', { ascending: true })
       const rows = (data || []) as Patient[]
       const withCounts = await Promise.all(
         rows.map(async (p) => {
