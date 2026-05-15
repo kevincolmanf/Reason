@@ -457,7 +457,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals }: 
                     </div>
                   ))}
                   <div className="absolute inset-0 left-[48px] grid" style={{ gridTemplateColumns: 'repeat(7, 1fr)' }}>
-                    {weekDays.map((day, dayIdx) => {
+                    {weekDays.map((day) => {
                       const dt = turnos.filter(t => isSameDay(new Date(t.start_time), day))
                       const layout = assignColumns(dt)
                       return renderDayColumn(day, dt, layout)
