@@ -19,6 +19,10 @@ CREATE TABLE public.turnos (
   -- Patient (optional: can be a new patient not yet in the system)
   patient_id uuid references public.patients(id) on delete set null,
   patient_name text not null, -- always stored so display works even without patient record
+  patient_phone text,
+  patient_email text,
+  patient_age integer,
+  patient_obra_social text,
 
   -- When
   start_time timestamp with time zone not null,
@@ -61,3 +65,21 @@ CREATE POLICY "Org members manage turnos" ON public.turnos
 -- Admin can view all
 CREATE POLICY "Admin can view all turnos" ON public.turnos
   FOR SELECT USING (public.is_admin());
+
+-- ALTER TABLE statements for users who already ran the previous version
+-- (safe to run even if columns already exist — use DO block to avoid errors)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'turnos' AND column_name = 'patient_phone') THEN
+    ALTER TABLE public.turnos ADD COLUMN patient_phone text;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'turnos' AND column_name = 'patient_email') THEN
+    ALTER TABLE public.turnos ADD COLUMN patient_email text;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'turnos' AND column_name = 'patient_age') THEN
+    ALTER TABLE public.turnos ADD COLUMN patient_age integer;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'turnos' AND column_name = 'patient_obra_social') THEN
+    ALTER TABLE public.turnos ADD COLUMN patient_obra_social text;
+  END IF;
+END $$;

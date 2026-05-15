@@ -8,6 +8,10 @@ interface Turno {
   id: string
   patient_name: string
   patient_id: string | null
+  patient_phone: string | null
+  patient_email: string | null
+  patient_age: number | null
+  patient_obra_social: string | null
   professional_id: string | null
   professional_name: string | null
   start_time: string
@@ -64,14 +68,18 @@ export default function TurnoModal({ userId, orgId, professionals, turno, defaul
   const defaultEnd = defaultStart ? new Date(defaultStart.getTime() + 60 * 60 * 1000) : null
 
   const [form, setForm] = useState({
-    patient_name:    turno?.patient_name ?? '',
-    patient_id:      turno?.patient_id ?? null as string | null,
-    professional_id: turno?.professional_id ?? (professionals[0]?.id ?? null) as string | null,
-    start_time:      turno ? toLocalInputValue(new Date(turno.start_time)) : (defaultStart ? toLocalInputValue(defaultStart) : ''),
-    end_time:        turno ? toLocalInputValue(new Date(turno.end_time))   : (defaultEnd   ? toLocalInputValue(defaultEnd)   : ''),
-    area:            turno?.area   ?? AREAS[0],
-    status:          turno?.status ?? 'programado',
-    notes:           turno?.notes  ?? '',
+    patient_name:        turno?.patient_name ?? '',
+    patient_id:          turno?.patient_id ?? null as string | null,
+    patient_phone:       turno?.patient_phone ?? '',
+    patient_email:       turno?.patient_email ?? '',
+    patient_age:         turno?.patient_age?.toString() ?? '',
+    patient_obra_social: turno?.patient_obra_social ?? '',
+    professional_id:     turno?.professional_id ?? (professionals[0]?.id ?? null) as string | null,
+    start_time:          turno ? toLocalInputValue(new Date(turno.start_time)) : (defaultStart ? toLocalInputValue(defaultStart) : ''),
+    end_time:            turno ? toLocalInputValue(new Date(turno.end_time))   : (defaultEnd   ? toLocalInputValue(defaultEnd)   : ''),
+    area:                turno?.area   ?? AREAS[0],
+    status:              turno?.status ?? 'programado',
+    notes:               turno?.notes  ?? '',
   })
 
   const [patientSearch, setPatientSearch]   = useState(turno?.patient_name ?? '')
@@ -120,17 +128,21 @@ export default function TurnoModal({ userId, orgId, professionals, turno, defaul
     setSaving(true)
 
     const payload = {
-      patient_name:    form.patient_name.trim(),
-      patient_id:      form.patient_id,
-      professional_id: form.professional_id,
-      professional_name: professionals.find(p => p.id === form.professional_id)?.full_name ?? null,
-      start_time:      new Date(form.start_time).toISOString(),
-      end_time:        new Date(form.end_time).toISOString(),
-      area:            form.area,
-      status:          form.status,
-      notes:           form.notes.trim() || null,
-      org_id:          orgId,
-      created_by:      userId,
+      patient_name:        form.patient_name.trim(),
+      patient_id:          form.patient_id,
+      patient_phone:       form.patient_phone.trim() || null,
+      patient_email:       form.patient_email.trim() || null,
+      patient_age:         form.patient_age ? parseInt(form.patient_age, 10) : null,
+      patient_obra_social: form.patient_obra_social.trim() || null,
+      professional_id:     form.professional_id,
+      professional_name:   professionals.find(p => p.id === form.professional_id)?.full_name ?? null,
+      start_time:          new Date(form.start_time).toISOString(),
+      end_time:            new Date(form.end_time).toISOString(),
+      area:                form.area,
+      status:              form.status,
+      notes:               form.notes.trim() || null,
+      org_id:              orgId,
+      created_by:          userId,
     }
 
     if (isEdit) {
@@ -212,6 +224,54 @@ export default function TurnoModal({ userId, orgId, professionals, turno, defaul
                 <button onClick={clearPatient} className="underline text-text-secondary hover:text-text-primary">Desvincular</button>
               </p>
             )}
+          </div>
+
+          {/* Contact info */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Teléfono</label>
+              <input
+                type="tel"
+                value={form.patient_phone}
+                onChange={e => setForm(f => ({ ...f, patient_phone: e.target.value }))}
+                placeholder="Ej: 11 1234-5678"
+                className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[13px] focus:outline-none focus:border-accent"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Email</label>
+              <input
+                type="email"
+                value={form.patient_email}
+                onChange={e => setForm(f => ({ ...f, patient_email: e.target.value }))}
+                placeholder="paciente@email.com"
+                className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[13px] focus:outline-none focus:border-accent"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Edad</label>
+              <input
+                type="number"
+                value={form.patient_age}
+                onChange={e => setForm(f => ({ ...f, patient_age: e.target.value }))}
+                placeholder="Años"
+                min={0}
+                max={120}
+                className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[13px] focus:outline-none focus:border-accent"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Obra social</label>
+              <input
+                type="text"
+                value={form.patient_obra_social}
+                onChange={e => setForm(f => ({ ...f, patient_obra_social: e.target.value }))}
+                placeholder="Ej: OSDE, PAMI..."
+                className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[13px] focus:outline-none focus:border-accent"
+              />
+            </div>
           </div>
 
           {/* Date/time */}
