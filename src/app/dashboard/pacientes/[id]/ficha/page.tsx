@@ -24,14 +24,16 @@ export default async function FichaPage({ params }: { params: { id: string } }) 
 
   if (!patient) redirect('/dashboard/pacientes')
 
-  // Canonical ficha: most recent, or create one
-  let { data: ficha } = await supabase
+  // Canonical ficha: prefer the one with actual data, fall back to any, auto-create if none
+  const { data: allFichas } = await supabase
     .from('patient_fichas')
     .select('*')
     .eq('patient_id', params.id)
     .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
+
+  // Pick the ficha with the most data (non-empty ficha_data preferred over empty one)
+  const fichaWithData = allFichas?.find(f => f.ficha_data && Object.keys(f.ficha_data).some(k => f.ficha_data[k] !== '' && f.ficha_data[k] !== null && !(Array.isArray(f.ficha_data[k]) && f.ficha_data[k].length === 0)))
+  let ficha = fichaWithData ?? allFichas?.[0] ?? null
 
   if (!ficha) {
     const { data: newFicha } = await supabase
