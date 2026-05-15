@@ -51,10 +51,8 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId }: 
       .select('id, name, age, occupation, created_at, users(full_name)')
       .order('created_at', { ascending: true })
 
-    // Org members see org patients + their own personal patients (pre-org migration)
-    // Individual users see only their own patients
     if (orgId) {
-      query = query.or(`org_id.eq.${orgId},and(user_id.eq.${userId},org_id.is.null)`)
+      query = query.eq('org_id', orgId)
     } else {
       query = query.eq('user_id', userId)
     }
