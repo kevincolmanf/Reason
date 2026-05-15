@@ -133,7 +133,7 @@ function buildWhatsAppUrl(phone: string, name: string, start: Date, end: Date, a
   const t1  = start.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
   const t2  = end.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
   const lugar = org ?? 'el centro'
-  const msg = `Hola ${name}! Te recordamos tu turno en ${lugar}:\n📅 ${day}\n⏰ ${t1} – ${t2}\n🏥 ${area}\n\n¡Te esperamos!`
+  const msg = `Hola ${name}! Te recordamos tu turno en ${lugar}:\n- ${day}\n- ${t1} - ${t2}\n- ${area}\n\n¡Te esperamos!`
   return `https://wa.me/${clean}?text=${encodeURIComponent(msg)}`
 }
 
@@ -242,6 +242,11 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
   const [areas, setAreas] = useState<string[]>(initialAreas)
   const [slotInterval, setSlotInterval] = useState(initialSlotInterval)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [remindedIds, setRemindedIds] = useState<Set<string>>(() => {
+    if (typeof window === 'undefined') return new Set()
+    try { return new Set(JSON.parse(localStorage.getItem('wa_reminded') ?? '[]')) }
+    catch { return new Set() }
+  })
   const [modal, setModal] = useState<{
     open: boolean
     turno?: Turno
@@ -298,6 +303,15 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
     setSelectedDay(new Date())
     setWeekStart(startOfWeek(new Date()))
   }
+
+  const markReminded = useCallback((id: string) => {
+    setRemindedIds(prev => {
+      const next = new Set(prev)
+      next.add(id)
+      localStorage.setItem('wa_reminded', JSON.stringify(Array.from(next)))
+      return next
+    })
+  }, [])
 
   const openNew = (day?: Date, hour?: number, minute?: number) => {
     const defaultDay = day ?? (view === 'day' ? selectedDay : new Date())
@@ -363,6 +377,9 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                 className={`absolute group rounded-lg border-[0.5px] text-left overflow-hidden pointer-events-auto ${colorClass}`}
                 style={{ top: `${top}%`, height: `${height}%`, minHeight: '22px', left: `${leftPct}%`, width: `${widthPct}%` }}
               >
+                {remindedIds.has(t.id) && (
+                  <span className="absolute top-0.5 left-0.5 w-1.5 h-1.5 rounded-full bg-green-400 z-10" title="Recordatorio enviado" />
+                )}
                 <button
                   onClick={() => openEdit(t)}
                   className="absolute inset-0 px-1.5 py-1 w-full text-left cursor-pointer hover:opacity-80 transition-opacity"
@@ -382,7 +399,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                     href={waUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    onClick={e => e.stopPropagation()}
+                    onClick={e => { e.stopPropagation(); markReminded(t.id) }}
                     title="Enviar recordatorio por WhatsApp"
                     className="absolute bottom-0.5 right-0.5 opacity-0 group-hover:opacity-100 transition-opacity text-[9px] leading-none bg-green-500/20 hover:bg-green-500/40 border-[0.5px] border-green-500/40 rounded px-1 py-0.5 text-green-400"
                   >
@@ -613,6 +630,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
           onClose={closeModal}
           onSaved={handleSaved}
           onClone={handleClone}
+          onReminderSent={markReminded}
         />
       )}
 
