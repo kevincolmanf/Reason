@@ -19,9 +19,10 @@ interface Props {
   isPro: boolean
   orgId?: string | null
   orgName?: string | null
+  isOrgOwner?: boolean
 }
 
-export default function PacientesClient({ userId, isActiveUser, isPro, orgId, orgName }: Props) {
+export default function PacientesClient({ userId, isActiveUser, isPro, orgId, orgName, isOrgOwner = false }: Props) {
   const [orgPatients, setOrgPatients] = useState<Patient[]>([])
   const [personalPatients, setPersonalPatients] = useState<Patient[]>([])
   const [loading, setLoading] = useState(true)
@@ -46,7 +47,9 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
     if (orgId) {
       const [{ data: orgData }, { data: personalData }] = await Promise.all([
         sb.from('patients').select('id, name, age, occupation, created_at').eq('org_id', orgId).order('created_at', { ascending: true }),
-        sb.from('patients').select('id, name, age, occupation, created_at').eq('user_id', userId).is('org_id', null).order('created_at', { ascending: true }),
+        isOrgOwner
+          ? sb.from('patients').select('id, name, age, occupation, created_at').eq('user_id', userId).is('org_id', null).order('created_at', { ascending: true })
+          : Promise.resolve({ data: [] }),
       ])
 
       const withCounts = async (rows: Patient[]) => Promise.all(
@@ -318,11 +321,9 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
         )}
       </div>
 
-      {/* Separador */}
-      <div className="border-t-[0.5px] border-border mb-10" />
-
-      {/* Sección personal */}
-      <div>
+      {/* Sección personal — solo para el dueño del equipo */}
+      {isOrgOwner && <div className="border-t-[0.5px] border-border mb-10" />}
+      {isOrgOwner && <div>
         <SectionHeader label="Mis Pacientes Personales" count={personalPatients.length} pool="personal" canAdd={!atFreeLimit && !atSubscriberLimit} />
         {atFreeLimit && <LimitBanner type="free" />}
         {atSubscriberLimit && <LimitBanner type="subscriber" />}
@@ -338,7 +339,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
             {filteredPersonal.map((p, idx) => <PatientCard key={p.id} p={p} idx={idx} pool="personal" />)}
           </div>
         )}
-      </div>
+      </div>}
     </div>
   )
 }

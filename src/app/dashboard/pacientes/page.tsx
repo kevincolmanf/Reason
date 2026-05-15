@@ -29,6 +29,7 @@ export default async function PacientesPage() {
   // Check if user belongs to an org (as admin or member)
   let orgId: string | null = null
   let orgName: string | null = null
+  let isOrgOwner = false
   if (isPro) {
     const { data: ownedOrg } = await supabase
       .from('organizations')
@@ -39,6 +40,7 @@ export default async function PacientesPage() {
     if (ownedOrg) {
       orgId = ownedOrg.id
       orgName = ownedOrg.name
+      isOrgOwner = true
     } else {
       const { data: membership } = await supabase
         .from('organization_members')
@@ -77,7 +79,7 @@ export default async function PacientesPage() {
           </p>
         </div>
 
-        <PacientesClient userId={user.id} isActiveUser={isActiveUser} isPro={isPro} orgId={orgId} orgName={orgName} />
+        <PacientesClient userId={user.id} isActiveUser={isActiveUser} isPro={isPro} orgId={orgId} orgName={orgName} isOrgOwner={isOrgOwner} />
       </main>
     </div>
   )
