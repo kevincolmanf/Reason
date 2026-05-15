@@ -46,7 +46,7 @@ export default async function AgendaPage() {
       .eq('user_id', user.id)
       .limit(1)
       .single()
-    const org = (membership as any)?.organizations
+    const org = (membership as { org_id: string; organizations: { id: string; name: string } | null })?.organizations
     if (org) { orgId = org.id; orgName = org.name }
   }
 
@@ -57,7 +57,7 @@ export default async function AgendaPage() {
       .from('organization_members')
       .select('user_id, users(id, full_name)')
       .eq('org_id', orgId)
-    professionals = (members ?? []).map((m: any) => ({
+    professionals = (members ?? []).map((m: { user_id: string; users: { id: string; full_name: string | null } | null }) => ({
       id: m.users?.id ?? m.user_id,
       full_name: m.users?.full_name ?? null,
     }))
