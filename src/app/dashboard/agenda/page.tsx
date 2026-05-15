@@ -59,19 +59,31 @@ export default async function AgendaPage() {
     }
   }
 
-  // Load org members for professional filter
+  // Load org members — check access for non-owners, build professional filter
   let professionals: { id: string; full_name: string | null }[] = []
+  let members: { id: string; full_name: string | null; agendaAccess: boolean }[] = []
+
   if (orgId) {
-    const { data: members } = await supabase
+    type MemberRow = { user_id: string; agenda_access: boolean; users: { id: string; full_name: string | null } | null }
+    const { data: memberRows } = await supabase
       .from('organization_members')
-      .select('user_id, users(id, full_name)')
+      .select('user_id, agenda_access, users(id, full_name)')
       .eq('org_id', orgId)
-    type MemberRow = { user_id: string; users: { id: string; full_name: string | null } | null }
-    professionals = ((members ?? []) as unknown as MemberRow[]).map(m => ({
+
+    members = ((memberRows ?? []) as unknown as MemberRow[]).map(m => ({
       id: m.users?.id ?? m.user_id,
       full_name: m.users?.full_name ?? null,
+      agendaAccess: m.agenda_access ?? false,
     }))
-    // Add owner (avoid duplicates)
+
+    // Non-owner members need explicit agenda_access to enter
+    if (!isOwner) {
+      const myAccess = members.find(m => m.id === user.id)?.agendaAccess ?? false
+      if (!myAccess) redirect('/dashboard')
+    }
+
+    professionals = members.map(m => ({ id: m.id, full_name: m.full_name }))
+    // Add owner if not already in list
     if (userData?.full_name && !professionals.find(p => p.id === user.id)) {
       professionals = [{ id: user.id, full_name: userData.full_name }, ...professionals]
     }
@@ -86,6 +98,7 @@ export default async function AgendaPage() {
           orgId={orgId}
           orgName={orgName}
           professionals={professionals}
+          members={members}
           areas={areas}
           isOwner={isOwner}
           shareToken={shareToken}

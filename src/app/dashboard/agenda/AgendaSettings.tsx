@@ -15,11 +15,18 @@ const DEFAULT_AREAS = [
   'Análisis de la marcha',
 ]
 
+interface Member {
+  id: string
+  full_name: string | null
+  agendaAccess: boolean
+}
+
 interface Props {
   orgId: string | null
   userId: string
   isOwner: boolean
   initialAreas: string[]
+  members: Member[]
   shareToken: string | null
   shareEnabled: boolean
   onClose: () => void
@@ -31,6 +38,7 @@ export default function AgendaSettings({
   userId,
   isOwner,
   initialAreas,
+  members,
   shareToken,
   shareEnabled: initialShareEnabled,
   onClose,
@@ -39,13 +47,19 @@ export default function AgendaSettings({
   const [areas, setAreas] = useState<string[]>(initialAreas)
   const [newArea, setNewArea] = useState('')
   const [shareEnabled, setShareEnabled] = useState(initialShareEnabled)
+  const [memberAccess, setMemberAccess] = useState<Record<string, boolean>>(
+    Object.fromEntries(members.map(m => [m.id, m.agendaAccess]))
+  )
+  const [savingMember, setSavingMember] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [copied, setCopied] = useState(false)
 
   const supabase = createClient()
 
+  const [shareProf, setShareProf] = useState<string>('all')
+
   const shareUrl = shareToken
-    ? `${typeof window !== 'undefined' ? window.location.origin : ''}/agenda/share/${shareToken}`
+    ? `${typeof window !== 'undefined' ? window.location.origin : ''}/agenda/share/${shareToken}${shareProf !== 'all' ? `?prof=${shareProf}` : ''}`
     : null
 
   const addArea = () => {
@@ -66,6 +80,19 @@ export default function AgendaSettings({
     navigator.clipboard.writeText(shareUrl)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  const toggleMemberAccess = async (memberId: string) => {
+    if (!orgId || !isOwner) return
+    const newAccess = !memberAccess[memberId]
+    setSavingMember(memberId)
+    setMemberAccess(prev => ({ ...prev, [memberId]: newAccess }))
+    await supabase.rpc('set_member_agenda_access', {
+      p_org_id: orgId,
+      p_user_id: memberId,
+      p_access: newAccess,
+    })
+    setSavingMember(null)
   }
 
   const handleSave = async () => {
@@ -143,24 +170,72 @@ export default function AgendaSettings({
             </div>
 
             {shareEnabled && (
-              <div className="flex gap-2">
-                <input
-                  readOnly
-                  value={shareUrl}
-                  className="flex-1 bg-bg-primary border-[0.5px] border-border rounded-lg px-3 py-2 text-[11px] text-text-secondary truncate focus:outline-none"
-                />
-                <button
-                  onClick={copyLink}
-                  className="bg-bg-primary border-[0.5px] border-border rounded-lg px-3 py-2 text-[12px] text-text-secondary hover:text-text-primary whitespace-nowrap"
-                >
-                  {copied ? 'Copiado ✓' : 'Copiar'}
-                </button>
+              <div className="flex flex-col gap-2">
+                <div>
+                  <label className="block text-[11px] text-text-secondary mb-1">¿Qué agenda compartir?</label>
+                  <select
+                    value={shareProf}
+                    onChange={e => setShareProf(e.target.value)}
+                    className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg px-3 py-2 text-[13px] text-text-primary focus:outline-none focus:border-accent"
+                  >
+                    <option value="all">Todos los profesionales</option>
+                    <option value={userId}>Solo la mía</option>
+                    {members.map(m => (
+                      <option key={m.id} value={m.id}>{m.full_name || 'Sin nombre'}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    readOnly
+                    value={shareUrl ?? ''}
+                    className="flex-1 bg-bg-primary border-[0.5px] border-border rounded-lg px-3 py-2 text-[11px] text-text-secondary truncate focus:outline-none"
+                  />
+                  <button
+                    onClick={copyLink}
+                    className="bg-bg-primary border-[0.5px] border-border rounded-lg px-3 py-2 text-[12px] text-text-secondary hover:text-text-primary whitespace-nowrap"
+                  >
+                    {copied ? 'Copiado ✓' : 'Copiar'}
+                  </button>
+                </div>
               </div>
             )}
 
             <p className="text-[11px] text-text-secondary mt-2">
               Quien tenga el link puede ver la agenda pero no puede editar ni agregar turnos.
             </p>
+          </div>
+        )}
+
+        {/* Member agenda access — org owners only */}
+        {orgId && isOwner && members.length > 0 && (
+          <div className="mb-6 border-t-[0.5px] border-border pt-5">
+            <label className="text-[11px] uppercase tracking-[0.05em] text-text-secondary block mb-3">
+              Acceso a la agenda por integrante
+            </label>
+            <p className="text-[12px] text-text-secondary mb-3">
+              Los integrantes sin acceso no pueden ver la agenda del equipo.
+            </p>
+            <div className="flex flex-col gap-2">
+              {members.map(m => {
+                const access = memberAccess[m.id] ?? false
+                const isSaving = savingMember === m.id
+                return (
+                  <div key={m.id} className="flex items-center justify-between py-2 border-b-[0.5px] border-border last:border-0">
+                    <span className="text-[13px] text-text-primary truncate mr-3">
+                      {m.full_name || 'Sin nombre'}
+                    </span>
+                    <button
+                      onClick={() => !isSaving && toggleMemberAccess(m.id)}
+                      disabled={isSaving}
+                      className={`relative shrink-0 w-10 h-5 rounded-full transition-colors disabled:opacity-50 ${access ? 'bg-accent' : 'bg-border-strong'}`}
+                    >
+                      <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${access ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         )}
 

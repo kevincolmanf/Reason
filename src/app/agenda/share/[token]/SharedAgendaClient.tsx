@@ -11,15 +11,26 @@ interface Turno {
   end_time: string
   area: string
   status: string
+  appointment_type: string | null
+  is_blocked: boolean | null
+}
+
+const TYPE_COLORS: Record<string, string> = {
+  turno_comun:   'bg-slate-500/10 border-slate-500/25 text-slate-300',
+  primera_vez:   'bg-sky-500/10 border-sky-500/25 text-sky-300',
+  ingreso:       'bg-amber-500/10 border-amber-500/25 text-amber-300',
+  consulta:      'bg-teal-500/10 border-teal-500/25 text-teal-300',
+  antropometria: 'bg-orange-500/10 border-orange-500/25 text-orange-300',
+  controles:     'bg-indigo-500/10 border-indigo-500/25 text-indigo-300',
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  programado:  'bg-bg-secondary border-border text-text-secondary',
-  confirmado:  'bg-[#1a2e22] border-[#34D399]/40 text-[#34D399]',
-  presente:    'bg-[#1a2530] border-[#60A5FA]/40 text-[#60A5FA]',
-  ausente:     'bg-[#2e1a1a] border-[#F87171]/40 text-[#F87171]',
-  cancelado:   'bg-bg-secondary border-border text-text-tertiary line-through',
-  sobreturno:  'bg-[#2a1e30] border-[#C084FC]/40 text-[#C084FC]',
+  programado: 'bg-bg-secondary border-border text-text-secondary',
+  confirmado: 'bg-emerald-500/10 border-emerald-500/25 text-emerald-300',
+  presente:   'bg-blue-500/10 border-blue-500/25 text-blue-300',
+  ausente:    'bg-red-500/10 border-red-500/25 text-red-300',
+  cancelado:  'bg-bg-secondary border-border text-text-tertiary line-through',
+  sobreturno: 'bg-purple-500/10 border-purple-500/25 text-purple-300',
 }
 
 const HOURS = Array.from({ length: 14 }, (_, i) => i + 7)
@@ -101,7 +112,7 @@ function assignColumns(turnos: Turno[]): Map<string, { col: number; totalCols: n
 
 const MIN_COL_WIDTH = 130
 
-export default function SharedAgendaClient({ token, orgName }: { token: string; orgName: string }) {
+export default function SharedAgendaClient({ token, orgName, profId }: { token: string; orgName: string; profId?: string }) {
   const [selectedDay, setSelectedDay] = useState<Date>(() => new Date())
   const [turnos, setTurnos] = useState<Turno[]>([])
   const [loading, setLoading] = useState(true)
@@ -113,13 +124,14 @@ export default function SharedAgendaClient({ token, orgName }: { token: string; 
     const to   = addDays(selectedDay, 1).toISOString()
 
     const { data } = await supabaseRef.current.rpc('get_shared_agenda', {
-      p_token: token,
-      p_from:  from,
-      p_to:    to,
+      p_token:   token,
+      p_from:    from,
+      p_to:      to,
+      p_prof_id: profId ?? null,
     })
     setTurnos((data ?? []) as Turno[])
     setLoading(false)
-  }, [selectedDay, token])
+  }, [selectedDay, token, profId])
 
   useEffect(() => { fetchTurnos() }, [fetchTurnos])
 
@@ -184,7 +196,11 @@ export default function SharedAgendaClient({ token, orgName }: { token: string; 
                     const end   = new Date(t.end_time)
                     const top    = ((minutesFromMidnight(start) - GRID_START) / GRID_TOTAL) * 100
                     const height = ((minutesFromMidnight(end) - minutesFromMidnight(start)) / GRID_TOTAL) * 100
-                    const colorClass = STATUS_COLORS[t.status] ?? STATUS_COLORS.programado
+                    const colorClass = t.is_blocked
+                      ? 'bg-bg-secondary border-border text-text-tertiary opacity-60'
+                      : t.status === 'ausente' || t.status === 'cancelado' || t.status === 'sobreturno'
+                        ? (STATUS_COLORS[t.status] ?? STATUS_COLORS.programado)
+                        : (TYPE_COLORS[t.appointment_type ?? 'turno_comun'] ?? STATUS_COLORS.programado)
                     const layout = colLayout.get(t.id) ?? { col: 0, totalCols: 1 }
                     const widthPct = 100 / layout.totalCols
                     const leftPct  = layout.col * widthPct
@@ -195,9 +211,15 @@ export default function SharedAgendaClient({ token, orgName }: { token: string; 
                         className={`absolute rounded-lg border-[0.5px] px-1.5 py-1 overflow-hidden ${colorClass}`}
                         style={{ top: `${top}%`, height: `${height}%`, minHeight: '24px', left: `${leftPct}%`, width: `${widthPct}%` }}
                       >
-                        <p className="text-[10px] font-medium leading-tight truncate">{formatTime(start)} {t.patient_name}</p>
-                        {height > 4 && <p className="text-[9px] opacity-70 leading-tight truncate">{t.area}</p>}
-                        {height > 6 && t.professional_name && <p className="text-[9px] opacity-60 leading-tight truncate">{t.professional_name}</p>}
+                        {t.is_blocked ? (
+                          <p className="text-[10px] leading-tight truncate opacity-60">Bloqueado</p>
+                        ) : (
+                          <>
+                            <p className="text-[10px] font-medium leading-tight truncate">{formatTime(start)} {t.patient_name}</p>
+                            {height > 4 && <p className="text-[9px] opacity-70 leading-tight truncate">{t.area}</p>}
+                            {height > 6 && t.professional_name && <p className="text-[9px] opacity-60 leading-tight truncate">{t.professional_name}</p>}
+                          </>
+                        )}
                       </div>
                     )
                   })}
