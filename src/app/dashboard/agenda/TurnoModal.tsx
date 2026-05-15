@@ -122,8 +122,7 @@ export default function TurnoModal({ userId, orgId, professionals, areas, turno,
 
   const [patientSearch, setPatientSearch]     = useState(turno?.patient_name ?? '')
   const [patientResults, setPatientResults]   = useState<PatientResult[]>([])
-  const [selectedPatientDni, setSelectedPatientDni] = useState<string | null>(null)
-  const [newPatientDni, setNewPatientDni]     = useState('')
+  const [patientDni, setPatientDni]           = useState('')
   const [dniDupWarning, setDniDupWarning]     = useState<PatientResult | null>(null)
   const [searchOpen, setSearchOpen]           = useState(false)
   const [createPatient, setCreatePatient]     = useState(!isEdit)
@@ -142,24 +141,24 @@ export default function TurnoModal({ userId, orgId, professionals, areas, turno,
 
   // Fetch DNI when a patient is linked (covers edit mode + search selection)
   useEffect(() => {
-    if (!form.patient_id) { setSelectedPatientDni(null); return }
+    if (!form.patient_id) { setPatientDni(''); return }
     supabaseRef.current
       .from('patients').select('dni').eq('id', form.patient_id).single()
-      .then(({ data }) => setSelectedPatientDni(data?.dni ?? null))
+      .then(({ data }) => setPatientDni(data?.dni ?? ''))
   }, [form.patient_id])
 
-  // Check for duplicate DNI when typing for a new patient
+  // Check for duplicate DNI when typing without a linked patient
   useEffect(() => {
-    if (!newPatientDni.trim() || !createPatient || form.patient_id) { setDniDupWarning(null); return }
+    if (!patientDni.trim() || form.patient_id) { setDniDupWarning(null); return }
     if (dniTimeout.current) clearTimeout(dniTimeout.current)
     dniTimeout.current = setTimeout(async () => {
-      let q = supabaseRef.current.from('patients').select('id, name, dni, age, occupation').eq('dni', newPatientDni.trim())
+      let q = supabaseRef.current.from('patients').select('id, name, dni, age, occupation').eq('dni', patientDni.trim())
       if (orgId) q = q.eq('org_id', orgId)
       else       q = q.eq('user_id', userId).is('org_id', null)
       const { data } = await q.maybeSingle()
       setDniDupWarning(data as PatientResult | null)
     }, 350)
-  }, [newPatientDni, createPatient, form.patient_id, orgId, userId])
+  }, [patientDni, form.patient_id, orgId, userId])
 
   // Patient search
   useEffect(() => {
@@ -227,7 +226,8 @@ export default function TurnoModal({ userId, orgId, professionals, areas, turno,
   const selectPatient = (p: PatientResult) => {
     setForm(f => ({ ...f, patient_name: p.name, patient_id: p.id }))
     setPatientSearch(p.name)
-    setSelectedPatientDni(p.dni ?? null)
+    setPatientDni(p.dni ?? '')
+    setDniDupWarning(null)
     setSearchOpen(false)
     setPatientResults([])
     setHistorialLoaded(false)
@@ -237,8 +237,7 @@ export default function TurnoModal({ userId, orgId, professionals, areas, turno,
   const clearPatient = () => {
     setForm(f => ({ ...f, patient_id: null }))
     setPatientSearch('')
-    setSelectedPatientDni(null)
-    setNewPatientDni('')
+    setPatientDni('')
     setDniDupWarning(null)
     setPatientResults([])
     setHistorialLoaded(false)
@@ -257,7 +256,7 @@ export default function TurnoModal({ userId, orgId, professionals, areas, turno,
     if (!form.is_blocked && !patientId && createPatient && form.patient_name.trim()) {
       const { data: newPatient } = await supabaseRef.current
         .from('patients')
-        .insert({ name: form.patient_name.trim(), dni: newPatientDni.trim() || null, age: form.patient_age ? parseInt(form.patient_age, 10) : null, user_id: userId, org_id: orgId })
+        .insert({ name: form.patient_name.trim(), dni: patientDni.trim() || null, age: form.patient_age ? parseInt(form.patient_age, 10) : null, user_id: userId, org_id: orgId })
         .select('id').single()
       if (newPatient) patientId = newPatient.id
     }
@@ -456,9 +455,34 @@ export default function TurnoModal({ userId, orgId, professionals, areas, turno,
               )}
               {form.patient_id && (
                 <p className="text-[11px] text-text-secondary mt-1">
-                  Paciente vinculado{selectedPatientDni ? <span className="text-text-tertiary"> · DNI {selectedPatientDni}</span> : ''}.{' '}
+                  Paciente vinculado.{' '}
                   <button onClick={clearPatient} className="underline hover:text-text-primary">Desvincular</button>
                 </p>
+              )}
+            </div>
+
+            {/* DNI — always visible */}
+            <div>
+              <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">DNI</label>
+              <input
+                type="text"
+                value={patientDni}
+                onChange={e => setPatientDni(e.target.value.replace(/\D/g, ''))}
+                placeholder="Ej: 12345678"
+                inputMode="numeric"
+                readOnly={!!form.patient_id}
+                className={`w-full bg-bg-primary border-[0.5px] rounded-lg p-3 text-[13px] focus:outline-none ${
+                  form.patient_id ? 'border-border text-text-secondary cursor-default' :
+                  dniDupWarning ? 'border-amber-500/60 focus:border-amber-500' : 'border-border-strong focus:border-accent'
+                }`}
+              />
+              {dniDupWarning && (
+                <div className="mt-1.5 bg-amber-500/10 border-[0.5px] border-amber-500/30 rounded-lg px-3 py-2 text-[12px] text-amber-400">
+                  Ya existe <strong className="text-amber-300">{dniDupWarning.name}</strong> con ese DNI.{' '}
+                  <button type="button" onClick={() => { selectPatient(dniDupWarning); setCreatePatient(false) }} className="underline hover:opacity-80">
+                    Usar este paciente
+                  </button>
+                </div>
               )}
             </div>
 
@@ -579,36 +603,10 @@ export default function TurnoModal({ userId, orgId, professionals, areas, turno,
 
         {/* Auto-create patient */}
         {!form.is_blocked && !form.patient_id && form.patient_name.trim() && (
-          <div className="mt-3 space-y-2">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={createPatient} onChange={e => setCreatePatient(e.target.checked)} className="accent-accent w-4 h-4" />
-              <span className="text-[12px] text-text-secondary">Registrar como paciente nuevo en el sistema</span>
-            </label>
-            {createPatient && (
-              <div>
-                <input
-                  type="text"
-                  value={newPatientDni}
-                  onChange={e => setNewPatientDni(e.target.value.replace(/\D/g, ''))}
-                  placeholder="DNI (solo números)"
-                  inputMode="numeric"
-                  className={`w-full bg-bg-primary border-[0.5px] rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:border-accent ${dniDupWarning ? 'border-amber-500/60' : 'border-border-strong'}`}
-                />
-                {dniDupWarning && (
-                  <div className="mt-1.5 bg-amber-500/10 border-[0.5px] border-amber-500/30 rounded-lg px-3 py-2 text-[12px] text-amber-400">
-                    Ya existe <strong className="text-amber-300">{dniDupWarning.name}</strong> con ese DNI.{' '}
-                    <button
-                      type="button"
-                      onClick={() => { selectPatient(dniDupWarning); setCreatePatient(false) }}
-                      className="underline hover:opacity-80"
-                    >
-                      Usar este paciente
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+          <label className="flex items-center gap-2 mt-3 cursor-pointer">
+            <input type="checkbox" checked={createPatient} onChange={e => setCreatePatient(e.target.checked)} className="accent-accent w-4 h-4" />
+            <span className="text-[12px] text-text-secondary">Registrar como paciente nuevo en el sistema</span>
+          </label>
         )}
 
         {/* Historial del paciente */}
