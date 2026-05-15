@@ -60,6 +60,8 @@ export default async function PacientesPage() {
   }
 
   const isOrgMember = !!orgId
+  // Show personal section if: no team, OR owns the team (paid), OR platform admin
+  const showPersonalSection = !orgId || isOrgOwner || role === 'admin'
 
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
@@ -79,7 +81,7 @@ export default async function PacientesPage() {
           </p>
         </div>
 
-        <PacientesClient userId={user.id} isActiveUser={isActiveUser} isPro={isPro} orgId={orgId} orgName={orgName} isOrgOwner={isOrgOwner} />
+        <PacientesClient userId={user.id} isActiveUser={isActiveUser} isPro={isPro} orgId={orgId} orgName={orgName} showPersonalSection={showPersonalSection} />
       </main>
     </div>
   )

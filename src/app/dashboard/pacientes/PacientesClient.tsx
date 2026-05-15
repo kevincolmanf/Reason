@@ -19,10 +19,10 @@ interface Props {
   isPro: boolean
   orgId?: string | null
   orgName?: string | null
-  isOrgOwner?: boolean
+  showPersonalSection?: boolean
 }
 
-export default function PacientesClient({ userId, isActiveUser, isPro, orgId, orgName, isOrgOwner = false }: Props) {
+export default function PacientesClient({ userId, isActiveUser, isPro, orgId, orgName, showPersonalSection = false }: Props) {
   const [orgPatients, setOrgPatients] = useState<Patient[]>([])
   const [personalPatients, setPersonalPatients] = useState<Patient[]>([])
   const [loading, setLoading] = useState(true)
@@ -47,7 +47,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
     if (orgId) {
       const [{ data: orgData }, { data: personalData }] = await Promise.all([
         sb.from('patients').select('id, name, age, occupation, created_at').eq('org_id', orgId).order('created_at', { ascending: true }),
-        isOrgOwner
+        showPersonalSection
           ? sb.from('patients').select('id, name, age, occupation, created_at').eq('user_id', userId).is('org_id', null).order('created_at', { ascending: true })
           : Promise.resolve({ data: [] }),
       ])
@@ -322,8 +322,8 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
       </div>
 
       {/* Sección personal — solo para el dueño del equipo */}
-      {isOrgOwner && <div className="border-t-[0.5px] border-border mb-10" />}
-      {isOrgOwner && <div>
+      {showPersonalSection && <div className="border-t-[0.5px] border-border mb-10" />}
+      {showPersonalSection && <div>
         <SectionHeader label="Mis Pacientes Personales" count={personalPatients.length} pool="personal" canAdd={!atFreeLimit && !atSubscriberLimit} />
         {atFreeLimit && <LimitBanner type="free" />}
         {atSubscriberLimit && <LimitBanner type="subscriber" />}
