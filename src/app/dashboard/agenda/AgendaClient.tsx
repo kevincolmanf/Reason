@@ -248,13 +248,16 @@ export default function AgendaClient({ userId, orgId, orgName, professionals }: 
   const closeModal = () => setModal({ open: false })
   const handleSaved = () => { closeModal(); fetchTurnos() }
 
+  const GRID_HEIGHT = HOURS.length * 56
+
   // ── render a single day column ──────────────────────────────────
   const renderDayColumn = (day: Date, dayTurnos: Turno[], colLayout: Map<string, { col: number; totalCols: number }>) => {
     const today = new Date()
     const isToday = isSameDay(day, today)
     return (
       <div
-        className={`relative border-r-[0.5px] border-border last:border-r-0 h-full ${isToday ? 'bg-accent/[0.02]' : ''}`}
+        className={`relative border-r-[0.5px] border-border last:border-r-0 ${isToday ? 'bg-accent/[0.02]' : ''}`}
+        style={{ height: `${GRID_HEIGHT}px` }}
       >
         {HOURS.map((h, hi) => (
           <div
@@ -400,10 +403,10 @@ export default function AgendaClient({ userId, orgId, orgName, professionals }: 
                   <span className="text-[13px] text-text-secondary">Cargando...</span>
                 </div>
               )}
-              {/* outer flex: hour labels (sticky left) + scrollable appointment area */}
-              <div className="flex" style={{ height: `${HOURS.length * 56}px` }}>
+              {/* outer flex: hour labels (fixed) + scrollable appointment area */}
+              <div className="flex" style={{ height: `${GRID_HEIGHT}px` }}>
                 {/* Hour labels — fixed width, not scrolled */}
-                <div className="relative shrink-0 w-[48px]">
+                <div className="relative shrink-0 w-[48px]" style={{ height: `${GRID_HEIGHT}px` }}>
                   {HOURS.map((h, i) => (
                     <div
                       key={h}
@@ -418,12 +421,12 @@ export default function AgendaClient({ userId, orgId, orgName, professionals }: 
                 </div>
 
                 {/* Scrollable appointment area */}
-                <div className="flex-1 overflow-x-auto">
+                <div className="flex-1 overflow-x-auto" style={{ height: `${GRID_HEIGHT}px` }}>
                   <div
-                    className="relative h-full"
-                    style={{ minWidth: `${maxSimultaneousCols * MIN_COL_WIDTH}px` }}
+                    className="relative"
+                    style={{ minWidth: `${maxSimultaneousCols * MIN_COL_WIDTH}px`, height: `${GRID_HEIGHT}px` }}
                   >
-                    {/* Horizontal hour lines behind appointments */}
+                    {/* Horizontal hour lines */}
                     {HOURS.map((h, i) => (
                       <div
                         key={h}
