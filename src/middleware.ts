@@ -103,7 +103,18 @@ export async function middleware(request: NextRequest) {
     const role = userData?.role
     const trialExpiresAt = userData?.trial_expires_at
     const trialActive = trialExpiresAt ? new Date(trialExpiresAt) > new Date() : false
-    const isActive = role === 'subscriber' || role === 'admin' || role === 'pro' || trialActive
+
+    // Check org membership for free users who belong to a team
+    let isOrgMember = false
+    if (role === 'free') {
+      const { count } = await supabase
+        .from('organization_members')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+      isOrgMember = (count ?? 0) > 0
+    }
+
+    const isActive = role === 'subscriber' || role === 'admin' || role === 'pro' || trialActive || isOrgMember
 
     if (isAdminRoute && role !== 'admin') {
       const url = request.nextUrl.clone()
@@ -111,9 +122,10 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(url)
     }
 
+    // Only org owners (pro/admin) can manage the team page
     if (isEquipoRoute && role !== 'pro' && role !== 'admin') {
       const url = request.nextUrl.clone()
-      url.pathname = '/paywall'
+      url.pathname = '/account'
       return NextResponse.redirect(url)
     }
 

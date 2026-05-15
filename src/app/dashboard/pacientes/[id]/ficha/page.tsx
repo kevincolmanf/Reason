@@ -24,12 +24,12 @@ export default async function FichaPage({ params }: { params: { id: string } }) 
 
   if (!patient) redirect('/dashboard/pacientes')
 
-  // Canonical ficha: most recent, or create one
+  // Canonical ficha: oldest first (original always predates auto-created duplicates)
   let { data: ficha } = await supabase
     .from('patient_fichas')
     .select('*')
     .eq('patient_id', params.id)
-    .order('created_at', { ascending: false })
+    .order('created_at', { ascending: true })
     .limit(1)
     .maybeSingle()
 
