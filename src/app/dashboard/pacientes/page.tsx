@@ -28,24 +28,18 @@ export default async function PacientesPage({ searchParams }: { searchParams: { 
 
   let orgId: string | null = null
   let orgName: string | null = null
-  let isOrgOwner = false
-
   if (ctx.type === 'org' && ctx.orgId) {
     orgId = ctx.orgId
     const { data: orgData } = await supabase
       .from('organizations')
-      .select('name, owner_id')
+      .select('name')
       .eq('id', ctx.orgId)
       .single()
     orgName = orgData?.name ?? null
-    isOrgOwner = orgData?.owner_id === user.id
   }
 
   const isOrgMember = !!orgId
-  // isActiveUser: puede usar features (plan propio O miembro de equipo O trial)
   const isActiveUser = isPro || role === 'subscriber' || trialActive || isOrgMember
-  // Sección personal: solo si tiene plan propio o es dueño del equipo
-  const showPersonalSection = !orgId || isOrgOwner || isPro
 
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
@@ -65,7 +59,7 @@ export default async function PacientesPage({ searchParams }: { searchParams: { 
           </p>
         </div>
 
-        <PacientesClient userId={user.id} isActiveUser={isActiveUser} isPro={isPro} orgId={orgId} orgName={orgName} showPersonalSection={showPersonalSection} autoOpen={searchParams.new === '1'} />
+        <PacientesClient userId={user.id} isActiveUser={isActiveUser} isPro={isPro} orgId={orgId} orgName={orgName} autoOpen={searchParams.new === '1'} />
       </main>
     </div>
   )

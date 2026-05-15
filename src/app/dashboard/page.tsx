@@ -66,6 +66,7 @@ export default async function DashboardPage() {
       .from('patients')
       .select('id, name, age, occupation')
       .eq('user_id', user.id)
+      .is('org_id', null)
       .order('created_at', { ascending: false })
       .limit(3)
     recentPatients = data ?? []
