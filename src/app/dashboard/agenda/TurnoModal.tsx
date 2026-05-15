@@ -122,6 +122,8 @@ export default function TurnoModal({ userId, orgId, professionals, areas, turno,
 
   const [patientSearch, setPatientSearch]     = useState(turno?.patient_name ?? '')
   const [patientResults, setPatientResults]   = useState<PatientResult[]>([])
+  const [patientDni, setPatientDni]           = useState('')
+  const [dniDupWarning, setDniDupWarning]     = useState<PatientResult | null>(null)
   const [searchOpen, setSearchOpen]           = useState(false)
   const [createPatient, setCreatePatient]     = useState(!isEdit)
   const [rescheduling, setRescheduling]       = useState(false)
@@ -135,17 +137,44 @@ export default function TurnoModal({ userId, orgId, professionals, areas, turno,
   const supabaseRef    = useRef(createClient())
   const searchTimeout  = useRef<ReturnType<typeof setTimeout> | null>(null)
   const overlapTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const dniTimeout     = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Fetch DNI when a patient is linked (covers edit mode + search selection)
+  useEffect(() => {
+    if (!form.patient_id) { setPatientDni(''); return }
+    supabaseRef.current
+      .from('patients').select('dni').eq('id', form.patient_id).single()
+      .then(({ data }) => setPatientDni(data?.dni ?? ''))
+  }, [form.patient_id])
+
+  // Check for duplicate DNI when typing without a linked patient
+  useEffect(() => {
+    if (!patientDni.trim() || form.patient_id) { setDniDupWarning(null); return }
+    if (dniTimeout.current) clearTimeout(dniTimeout.current)
+    dniTimeout.current = setTimeout(async () => {
+      let q = supabaseRef.current.from('patients').select('id, name, dni, age, occupation').eq('dni', patientDni.trim())
+      if (orgId) q = q.eq('org_id', orgId)
+      else       q = q.eq('user_id', userId).is('org_id', null)
+      const { data } = await q.maybeSingle()
+      setDniDupWarning(data as PatientResult | null)
+    }, 350)
+  }, [patientDni, form.patient_id, orgId, userId])
 
   // Patient search
   useEffect(() => {
     if (patientSearch.length < 2) { setPatientResults([]); return }
     if (searchTimeout.current) clearTimeout(searchTimeout.current)
     searchTimeout.current = setTimeout(async () => {
+      const isNumeric = /^\d+$/.test(patientSearch.trim())
       let query = supabaseRef.current
         .from('patients')
         .select('id, name, dni, age, occupation')
-        .ilike('name', `%${patientSearch}%`)
         .limit(6)
+      if (isNumeric) {
+        query = query.ilike('dni', `%${patientSearch.trim()}%`)
+      } else {
+        query = query.ilike('name', `%${patientSearch}%`)
+      }
       if (orgId) query = query.eq('org_id', orgId)
       else       query = query.eq('user_id', userId)
       const { data } = await query
@@ -197,6 +226,8 @@ export default function TurnoModal({ userId, orgId, professionals, areas, turno,
   const selectPatient = (p: PatientResult) => {
     setForm(f => ({ ...f, patient_name: p.name, patient_id: p.id }))
     setPatientSearch(p.name)
+    setPatientDni(p.dni ?? '')
+    setDniDupWarning(null)
     setSearchOpen(false)
     setPatientResults([])
     setHistorialLoaded(false)
@@ -206,6 +237,8 @@ export default function TurnoModal({ userId, orgId, professionals, areas, turno,
   const clearPatient = () => {
     setForm(f => ({ ...f, patient_id: null }))
     setPatientSearch('')
+    setPatientDni('')
+    setDniDupWarning(null)
     setPatientResults([])
     setHistorialLoaded(false)
     setHistorial([])
@@ -223,7 +256,7 @@ export default function TurnoModal({ userId, orgId, professionals, areas, turno,
     if (!form.is_blocked && !patientId && createPatient && form.patient_name.trim()) {
       const { data: newPatient } = await supabaseRef.current
         .from('patients')
-        .insert({ name: form.patient_name.trim(), age: form.patient_age ? parseInt(form.patient_age, 10) : null, user_id: userId, org_id: orgId })
+        .insert({ name: form.patient_name.trim(), dni: patientDni.trim() || null, age: form.patient_age ? parseInt(form.patient_age, 10) : null, user_id: userId, org_id: orgId })
         .select('id').single()
       if (newPatient) patientId = newPatient.id
     }
@@ -425,6 +458,31 @@ export default function TurnoModal({ userId, orgId, professionals, areas, turno,
                   Paciente vinculado.{' '}
                   <button onClick={clearPatient} className="underline hover:text-text-primary">Desvincular</button>
                 </p>
+              )}
+            </div>
+
+            {/* DNI — always visible */}
+            <div>
+              <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">DNI</label>
+              <input
+                type="text"
+                value={patientDni}
+                onChange={e => setPatientDni(e.target.value.replace(/\D/g, ''))}
+                placeholder="Ej: 12345678"
+                inputMode="numeric"
+                readOnly={!!form.patient_id}
+                className={`w-full bg-bg-primary border-[0.5px] rounded-lg p-3 text-[13px] focus:outline-none ${
+                  form.patient_id ? 'border-border text-text-secondary cursor-default' :
+                  dniDupWarning ? 'border-amber-500/60 focus:border-amber-500' : 'border-border-strong focus:border-accent'
+                }`}
+              />
+              {dniDupWarning && (
+                <div className="mt-1.5 bg-amber-500/10 border-[0.5px] border-amber-500/30 rounded-lg px-3 py-2 text-[12px] text-amber-400">
+                  Ya existe <strong className="text-amber-300">{dniDupWarning.name}</strong> con ese DNI.{' '}
+                  <button type="button" onClick={() => { selectPatient(dniDupWarning); setCreatePatient(false) }} className="underline hover:opacity-80">
+                    Usar este paciente
+                  </button>
+                </div>
               )}
             </div>
 
