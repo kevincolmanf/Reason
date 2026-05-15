@@ -55,14 +55,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId }: 
         .eq('org_id', orgId)
         .order('created_at', { ascending: true })
 
-      const { data: personalData } = await supabaseRef.current
-        .from('patients')
-        .select('id, name, age, occupation, created_at')
-        .eq('user_id', userId)
-        .is('org_id', null)
-        .order('created_at', { ascending: true })
-
-      rows = [...(orgData || []), ...(personalData || [])] as Patient[]
+      rows = (orgData || []) as Patient[]
     } else {
       const { data } = await supabaseRef.current
         .from('patients')
