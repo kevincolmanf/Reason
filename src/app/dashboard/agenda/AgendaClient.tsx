@@ -27,11 +27,18 @@ interface Professional {
   full_name: string | null
 }
 
+interface Member {
+  id: string
+  full_name: string | null
+  agendaAccess: boolean
+}
+
 interface Props {
   userId: string
   orgId: string | null
   orgName: string | null
   professionals: Professional[]
+  members: Member[]
   areas: string[]
   isOwner: boolean
   shareToken: string | null
@@ -179,7 +186,7 @@ function exportDay(turnos: Turno[], date: Date) {
   URL.revokeObjectURL(url)
 }
 
-export default function AgendaClient({ userId, orgId, orgName, professionals, areas: initialAreas, isOwner, shareToken, shareEnabled }: Props) {
+export default function AgendaClient({ userId, orgId, orgName, professionals, members, areas: initialAreas, isOwner, shareToken, shareEnabled }: Props) {
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()))
   const [selectedDay, setSelectedDay] = useState<Date>(() => new Date())
   const [view, setView] = useState<'week' | 'day'>('day')
@@ -541,6 +548,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, ar
           userId={userId}
           isOwner={isOwner}
           initialAreas={areas}
+          members={members}
           shareToken={shareToken}
           shareEnabled={shareEnabled}
           onClose={() => setSettingsOpen(false)}
