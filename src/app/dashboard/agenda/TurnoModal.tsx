@@ -122,6 +122,7 @@ export default function TurnoModal({ userId, orgId, professionals, areas, turno,
 
   const [patientSearch, setPatientSearch]     = useState(turno?.patient_name ?? '')
   const [patientResults, setPatientResults]   = useState<PatientResult[]>([])
+  const [selectedPatientDni, setSelectedPatientDni] = useState<string | null>(null)
   const [searchOpen, setSearchOpen]           = useState(false)
   const [createPatient, setCreatePatient]     = useState(!isEdit)
   const [rescheduling, setRescheduling]       = useState(false)
@@ -141,11 +142,16 @@ export default function TurnoModal({ userId, orgId, professionals, areas, turno,
     if (patientSearch.length < 2) { setPatientResults([]); return }
     if (searchTimeout.current) clearTimeout(searchTimeout.current)
     searchTimeout.current = setTimeout(async () => {
+      const isNumeric = /^\d+$/.test(patientSearch.trim())
       let query = supabaseRef.current
         .from('patients')
         .select('id, name, dni, age, occupation')
-        .ilike('name', `%${patientSearch}%`)
         .limit(6)
+      if (isNumeric) {
+        query = query.ilike('dni', `%${patientSearch.trim()}%`)
+      } else {
+        query = query.ilike('name', `%${patientSearch}%`)
+      }
       if (orgId) query = query.eq('org_id', orgId)
       else       query = query.eq('user_id', userId)
       const { data } = await query
@@ -197,6 +203,7 @@ export default function TurnoModal({ userId, orgId, professionals, areas, turno,
   const selectPatient = (p: PatientResult) => {
     setForm(f => ({ ...f, patient_name: p.name, patient_id: p.id }))
     setPatientSearch(p.name)
+    setSelectedPatientDni(p.dni ?? null)
     setSearchOpen(false)
     setPatientResults([])
     setHistorialLoaded(false)
@@ -206,6 +213,7 @@ export default function TurnoModal({ userId, orgId, professionals, areas, turno,
   const clearPatient = () => {
     setForm(f => ({ ...f, patient_id: null }))
     setPatientSearch('')
+    setSelectedPatientDni(null)
     setPatientResults([])
     setHistorialLoaded(false)
     setHistorial([])
@@ -422,7 +430,7 @@ export default function TurnoModal({ userId, orgId, professionals, areas, turno,
               )}
               {form.patient_id && (
                 <p className="text-[11px] text-text-secondary mt-1">
-                  Paciente vinculado.{' '}
+                  Paciente vinculado{selectedPatientDni ? <span className="text-text-tertiary"> · DNI {selectedPatientDni}</span> : ''}.{' '}
                   <button onClick={clearPatient} className="underline hover:text-text-primary">Desvincular</button>
                 </p>
               )}
