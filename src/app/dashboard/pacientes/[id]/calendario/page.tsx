@@ -41,11 +41,32 @@ export default async function CalendarioPage({ params }: { params: { id: string 
     unassignedPlans = data ?? []
   }
 
-  const { data: scheduled } = await supabase
-    .from('scheduled_sessions')
-    .select('*')
-    .eq('patient_id', params.id)
-    .order('scheduled_date', { ascending: true })
+  const [{ data: scheduled }, { data: turnosByPatientId }, { data: turnosByName }] = await Promise.all([
+    supabase
+      .from('scheduled_sessions')
+      .select('*')
+      .eq('patient_id', params.id)
+      .order('scheduled_date', { ascending: true }),
+    // Turnos vinculados por patient_id
+    supabase
+      .from('turnos')
+      .select('start_time')
+      .eq('patient_id', params.id)
+      .not('is_blocked', 'is', true),
+    // Turnos vinculados solo por nombre (sin patient_id)
+    supabase
+      .from('turnos')
+      .select('start_time')
+      .is('patient_id', null)
+      .ilike('patient_name', patient.name)
+      .not('is_blocked', 'is', true),
+  ])
+
+  // Fechas únicas de ambas búsquedas
+  const turnoDates = Array.from(new Set([
+    ...(turnosByPatientId ?? []).map(t => t.start_time.slice(0, 10)),
+    ...(turnosByName ?? []).map(t => t.start_time.slice(0, 10)),
+  ]))
 
   return (
     <div className="max-w-[900px] mx-auto px-4 py-6">
@@ -62,6 +83,7 @@ export default async function CalendarioPage({ params }: { params: { id: string 
         plans={plans ?? []}
         unassignedPlans={unassignedPlans}
         initialScheduled={scheduled ?? []}
+        turnoDates={turnoDates}
       />
     </div>
   )

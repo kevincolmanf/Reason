@@ -3,6 +3,7 @@ import Link from 'next/link'
 import PlanEditor from './PlanEditor'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
+import { verifyPlanAccess } from '@/utils/patient-access'
 
 export const metadata = {
   title: 'Editar Plan | Reason',
@@ -22,9 +23,12 @@ export default async function PlanEditorPage({ params }: { params: { id: string 
     .eq('id', params.id)
     .single()
 
-  if (error || !plan || plan.user_id !== user.id) {
+  if (error || !plan) {
     redirect('/dashboard/ejercicios/plan')
   }
+
+  // Permite acceso si el usuario es dueño del plan O miembro de la org del paciente
+  await verifyPlanAccess(plan.user_id, plan.patient_id ?? null, user.id)
 
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
