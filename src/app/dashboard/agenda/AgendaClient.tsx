@@ -368,7 +368,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                     </>
                   )}
                 </button>
-                {waUrl && height > 5 && (
+                {waUrl && (
                   <a
                     href={waUrl}
                     target="_blank"
