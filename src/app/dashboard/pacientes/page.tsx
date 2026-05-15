@@ -28,22 +28,32 @@ export default async function PacientesPage() {
 
   // Check if user belongs to an org (as admin or member)
   let orgId: string | null = null
+  let orgName: string | null = null
   if (isPro) {
     const { data: ownedOrg } = await supabase
       .from('organizations')
-      .select('id')
+      .select('id, name')
       .eq('owner_id', user.id)
       .single()
 
     if (ownedOrg) {
       orgId = ownedOrg.id
+      orgName = ownedOrg.name
     } else {
       const { data: membership } = await supabase
         .from('organization_members')
         .select('org_id')
         .eq('user_id', user.id)
         .single()
-      orgId = membership?.org_id || null
+      if (membership?.org_id) {
+        orgId = membership.org_id
+        const { data: orgData } = await supabase
+          .from('organizations')
+          .select('name')
+          .eq('id', membership.org_id)
+          .single()
+        orgName = orgData?.name || null
+      }
     }
   }
 
@@ -67,7 +77,7 @@ export default async function PacientesPage() {
           </p>
         </div>
 
-        <PacientesClient userId={user.id} isActiveUser={isActiveUser} isPro={isPro} orgId={orgId} />
+        <PacientesClient userId={user.id} isActiveUser={isActiveUser} isPro={isPro} orgId={orgId} orgName={orgName} />
       </main>
     </div>
   )
