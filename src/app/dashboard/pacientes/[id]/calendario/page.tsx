@@ -1,7 +1,8 @@
 import { createClient } from '@/utils/supabase/server'
-import { notFound, redirect } from 'next/navigation'
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import CalendarioClient from './CalendarioClient'
+import { verifyPatientAccess } from '@/utils/patient-access'
 
 export default async function CalendarioPage({ params }: { params: { id: string } }) {
   const supabase = createClient()
@@ -9,14 +10,15 @@ export default async function CalendarioPage({ params }: { params: { id: string 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  await verifyPatientAccess(params.id, user.id)
+
   const { data: patient } = await supabase
     .from('patients')
     .select('id, name')
     .eq('id', params.id)
-    .eq('user_id', user.id)
     .single()
 
-  if (!patient) notFound()
+  if (!patient) redirect('/dashboard/pacientes')
 
   // Un plan por paciente: buscar el plan asignado a este paciente
   const { data: plans } = await supabase

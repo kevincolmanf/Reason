@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Header from '@/components/Header'
 import Link from 'next/link'
 import RtsContainer from './RtsContainer'
+import { verifyPatientAccess } from '@/utils/patient-access'
 
 export const metadata = { title: 'Retorno al Deporte | Reason' }
 
@@ -11,11 +12,12 @@ export default async function RtsPage({ params }: { params: { id: string } }) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  await verifyPatientAccess(params.id, user.id)
+
   const { data: patient } = await supabase
     .from('patients')
     .select('id, name, age')
     .eq('id', params.id)
-    .eq('user_id', user.id)
     .single()
   if (!patient) redirect('/dashboard/pacientes')
 

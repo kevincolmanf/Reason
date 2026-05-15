@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Header from '@/components/Header'
 import Link from 'next/link'
 import LoadMonitorClient from './LoadMonitorClient'
+import { verifyPatientAccess } from '@/utils/patient-access'
 
 export const metadata = {
   title: 'Monitoreo de Carga | Reason',
@@ -14,11 +15,12 @@ export default async function CargaPage({ params }: { params: { id: string } }) 
 
   if (!user) redirect('/login')
 
+  await verifyPatientAccess(params.id, user.id)
+
   const { data: patient, error: patientError } = await supabase
     .from('patients')
     .select('id, name')
     .eq('id', params.id)
-    .eq('user_id', user.id)
     .single()
 
   if (patientError || !patient) redirect('/dashboard/pacientes')
