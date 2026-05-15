@@ -46,7 +46,7 @@ export default async function AgendaPage() {
       .eq('user_id', user.id)
       .limit(1)
       .single()
-    const org = (membership as { org_id: string; organizations: { id: string; name: string } | null })?.organizations
+    const org = (membership as unknown as { org_id: string; organizations: { id: string; name: string } | null })?.organizations
     if (org) { orgId = org.id; orgName = org.name }
   }
 
