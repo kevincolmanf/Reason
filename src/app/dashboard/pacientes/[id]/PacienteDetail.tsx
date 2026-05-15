@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation'
 interface Patient {
   id: string
   name: string
+  dni: string | null
   age: number | null
   occupation: string | null
   created_at: string
@@ -19,8 +20,9 @@ export default function PacienteDetail({ patient: initialPatient, userId }: { pa
   const isOwner = initialPatient.user_id === userId
   const [patient, setPatient] = useState<Patient>(initialPatient)
   const [editing, setEditing] = useState(false)
-  const [editForm, setEditForm] = useState({ name: initialPatient.name, age: initialPatient.age?.toString() || '', occupation: initialPatient.occupation || '' })
+  const [editForm, setEditForm] = useState({ name: initialPatient.name, dni: initialPatient.dni || '', age: initialPatient.age?.toString() || '', occupation: initialPatient.occupation || '' })
   const [saving, setSaving] = useState(false)
+  const [dniError, setDniError] = useState<string | null>(null)
   const [generatingToken, setGeneratingToken] = useState(false)
 
   const router = useRouter()
@@ -51,12 +53,30 @@ export default function PacienteDetail({ patient: initialPatient, userId }: { pa
   }
 
   const handleSaveEdit = async () => {
-    if (!editForm.name.trim()) return
+    if (!editForm.name.trim() || !editForm.dni.trim()) return
+    setDniError(null)
     setSaving(true)
+
+    // Check for duplicate DNI (exclude current patient)
+    if (editForm.dni.trim() !== (patient.dni ?? '')) {
+      const { data: existing } = await supabaseRef.current
+        .from('patients')
+        .select('id')
+        .eq('dni', editForm.dni.trim())
+        .neq('id', patient.id)
+        .maybeSingle()
+      if (existing) {
+        setDniError('Ya existe un paciente registrado con ese DNI.')
+        setSaving(false)
+        return
+      }
+    }
+
     const { data, error } = await supabaseRef.current
       .from('patients')
       .update({
         name: editForm.name.trim(),
+        dni: editForm.dni.trim(),
         age: editForm.age ? parseInt(editForm.age) : null,
         occupation: editForm.occupation.trim() || null,
       })
@@ -80,10 +100,22 @@ export default function PacienteDetail({ patient: initialPatient, userId }: { pa
         {editing ? (
           <div>
             <h2 className="text-[16px] font-medium mb-4">Editar datos</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Nombre *</label>
                 <input type="text" value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} autoFocus className="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent" />
+              </div>
+              <div>
+                <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">DNI *</label>
+                <input
+                  type="text"
+                  value={editForm.dni}
+                  onChange={e => { setEditForm(f => ({ ...f, dni: e.target.value.replace(/\D/g, '') })); setDniError(null) }}
+                  inputMode="numeric"
+                  placeholder="Ej: 12345678"
+                  className={`w-full bg-bg-secondary border-[0.5px] rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent ${dniError ? 'border-red-500/60' : 'border-border-strong'}`}
+                />
+                {dniError && <p className="text-[11px] text-red-400 mt-1">{dniError}</p>}
               </div>
               <div>
                 <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Edad</label>
@@ -95,7 +127,7 @@ export default function PacienteDetail({ patient: initialPatient, userId }: { pa
               </div>
             </div>
             <div className="flex gap-3">
-              <button onClick={handleSaveEdit} disabled={saving || !editForm.name.trim()} className="bg-accent text-bg-primary px-5 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40">
+              <button onClick={handleSaveEdit} disabled={saving || !editForm.name.trim() || !editForm.dni.trim()} className="bg-accent text-bg-primary px-5 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40">
                 {saving ? 'Guardando...' : 'Guardar'}
               </button>
               <button onClick={() => setEditing(false)} className="text-text-secondary px-4 py-2 rounded-lg text-[13px] hover:text-text-primary">
@@ -108,6 +140,7 @@ export default function PacienteDetail({ patient: initialPatient, userId }: { pa
             <div>
               <h1 className="text-[24px] sm:text-[28px] font-medium tracking-[-0.01em] mb-3">{patient.name}</h1>
               <div className="flex flex-wrap gap-2">
+                {patient.dni && <span className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1 text-[13px] text-text-secondary">DNI {patient.dni}</span>}
                 {patient.age && <span className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1 text-[13px] text-text-secondary">{patient.age} años</span>}
                 {patient.occupation && <span className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1 text-[13px] text-text-secondary">{patient.occupation}</span>}
                 <span className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1 text-[12px] text-text-secondary">

@@ -7,6 +7,7 @@ import Link from 'next/link'
 interface Patient {
   id: string
   name: string
+  dni: string | null
   age: number | null
   occupation: string | null
   created_at: string
@@ -31,7 +32,8 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
   const [search, setSearch] = useState('')
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
-  const [form, setForm] = useState({ name: '', age: '', occupation: '' })
+  const [form, setForm] = useState({ name: '', dni: '', age: '', occupation: '' })
+  const [dniError, setDniError] = useState<string | null>(null)
 
   const supabaseRef = useRef(createClient())
 
@@ -44,8 +46,8 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
     const sb = supabaseRef.current
 
     const query = isOrgContext
-      ? sb.from('patients').select('id, name, age, occupation, created_at, user_id').eq('org_id', orgId).order('created_at', { ascending: true })
-      : sb.from('patients').select('id, name, age, occupation, created_at, user_id').eq('user_id', userId).is('org_id', null).order('created_at', { ascending: true })
+      ? sb.from('patients').select('id, name, dni, age, occupation, created_at, user_id').eq('org_id', orgId).order('created_at', { ascending: true })
+      : sb.from('patients').select('id, name, dni, age, occupation, created_at, user_id').eq('user_id', userId).is('org_id', null).order('created_at', { ascending: true })
 
     const { data } = await query
     const rows = (data ?? []) as Patient[]
@@ -64,17 +66,34 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
   useEffect(() => { fetchPatients() }, [fetchPatients])
 
   const handleCreate = async () => {
-    if (!form.name.trim()) return
+    if (!form.name.trim() || !form.dni.trim()) return
+    setDniError(null)
     setSaving(true)
+
+    // Check for duplicate DNI within same context
+    let dupQuery = supabaseRef.current
+      .from('patients')
+      .select('id')
+      .eq('dni', form.dni.trim())
+    if (isOrgContext) dupQuery = dupQuery.eq('org_id', orgId!)
+    else             dupQuery = dupQuery.eq('user_id', userId).is('org_id', null)
+    const { data: existing } = await dupQuery.maybeSingle()
+    if (existing) {
+      setDniError('Ya existe un paciente registrado con ese DNI.')
+      setSaving(false)
+      return
+    }
+
     const { error } = await supabaseRef.current.from('patients').insert({
       user_id: userId,
       org_id: isOrgContext ? orgId : null,
       name: form.name.trim(),
+      dni: form.dni.trim(),
       age: form.age ? parseInt(form.age) : null,
       occupation: form.occupation.trim() || null,
     })
     if (!error) {
-      setForm({ name: '', age: '', occupation: '' })
+      setForm({ name: '', dni: '', age: '', occupation: '' })
       setShowForm(false)
       await fetchPatients()
     }
@@ -89,12 +108,13 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
     await fetchPatients()
   }
 
-  const closeForm = () => { setShowForm(false); setForm({ name: '', age: '', occupation: '' }) }
+  const closeForm = () => { setShowForm(false); setForm({ name: '', dni: '', age: '', occupation: '' }); setDniError(null) }
 
   const filtered = search.trim()
     ? patients.filter(p =>
         p.name.toLowerCase().includes(search.toLowerCase()) ||
-        p.occupation?.toLowerCase().includes(search.toLowerCase())
+        p.occupation?.toLowerCase().includes(search.toLowerCase()) ||
+        p.dni?.includes(search.trim())
       )
     : patients
 
@@ -182,10 +202,22 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
               Se agregará como paciente de <strong className="text-text-primary">{orgName || 'el equipo'}</strong>
             </p>
           )}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Nombre *</label>
-              <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} onKeyDown={e => e.key === 'Enter' && handleCreate()} placeholder="Nombre y apellido" autoFocus className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent" />
+              <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Nombre y apellido" autoFocus className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent" />
+            </div>
+            <div>
+              <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">DNI *</label>
+              <input
+                type="text"
+                value={form.dni}
+                onChange={e => { setForm(f => ({ ...f, dni: e.target.value.replace(/\D/g, '') })); setDniError(null) }}
+                placeholder="Ej: 12345678"
+                inputMode="numeric"
+                className={`w-full bg-bg-primary border-[0.5px] rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent ${dniError ? 'border-red-500/60' : 'border-border-strong'}`}
+              />
+              {dniError && <p className="text-[11px] text-red-400 mt-1">{dniError}</p>}
             </div>
             <div>
               <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Edad</label>
@@ -193,11 +225,11 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
             </div>
             <div>
               <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Ocupación</label>
-              <input type="text" value={form.occupation} onChange={e => setForm(f => ({ ...f, occupation: e.target.value }))} onKeyDown={e => e.key === 'Enter' && handleCreate()} placeholder="Ej: Docente" className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent" />
+              <input type="text" value={form.occupation} onChange={e => setForm(f => ({ ...f, occupation: e.target.value }))} placeholder="Ej: Docente" className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent" />
             </div>
           </div>
           <div className="flex gap-3">
-            <button onClick={handleCreate} disabled={saving || !form.name.trim()} className="bg-accent text-bg-primary px-5 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity">
+            <button onClick={handleCreate} disabled={saving || !form.name.trim() || !form.dni.trim()} className="bg-accent text-bg-primary px-5 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity">
               {saving ? 'Guardando...' : 'Guardar'}
             </button>
             <button onClick={closeForm} className="text-text-secondary px-4 py-2 rounded-lg text-[13px] hover:text-text-primary">Cancelar</button>
@@ -249,7 +281,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
                   <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 hover:bg-bg-secondary transition-colors h-full flex flex-col">
                     <p className="text-[17px] font-medium text-text-primary mb-1">{p.name}</p>
                     <p className="text-[13px] text-text-secondary flex-grow">
-                      {p.age ? `${p.age} años` : ''}{p.age && p.occupation ? ' · ' : ''}{p.occupation || ''}
+                      {p.dni ? `DNI ${p.dni}` : ''}{p.dni && (p.age || p.occupation) ? ' · ' : ''}{p.age ? `${p.age} años` : ''}{p.age && p.occupation ? ' · ' : ''}{p.occupation || ''}
                     </p>
                     <div className="mt-4 pt-4 border-t-[0.5px] border-border flex justify-between items-center">
                       <span className="text-[12px] text-text-secondary">{p.plan_count} plan{p.plan_count !== 1 ? 'es' : ''}</span>

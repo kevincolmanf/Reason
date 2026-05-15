@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import TurnoModal from './TurnoModal'
+import CloneTurnoModal from './CloneTurnoModal'
 import AgendaSettings from './AgendaSettings'
 
 interface Turno {
@@ -20,6 +21,8 @@ interface Turno {
   area: string
   status: string
   notes: string | null
+  appointment_type: string | null
+  is_blocked: boolean | null
 }
 
 interface Professional {
@@ -45,13 +48,33 @@ interface Props {
   shareEnabled: boolean
 }
 
+// Status-based colors (lighter palette for readability)
 const STATUS_COLORS: Record<string, string> = {
-  programado:  'bg-bg-secondary border-border text-text-secondary',
-  confirmado:  'bg-[#1a2e22] border-[#34D399]/40 text-[#34D399]',
-  presente:    'bg-[#1a2530] border-[#60A5FA]/40 text-[#60A5FA]',
-  ausente:     'bg-[#2e1a1a] border-[#F87171]/40 text-[#F87171]',
-  cancelado:   'bg-bg-secondary border-border text-text-tertiary line-through',
-  sobreturno:  'bg-[#2a1e30] border-[#C084FC]/40 text-[#C084FC]',
+  programado: 'bg-bg-secondary border-border text-text-secondary',
+  confirmado: 'bg-emerald-500/10 border-emerald-500/25 text-emerald-300',
+  presente:   'bg-blue-500/10 border-blue-500/25 text-blue-300',
+  ausente:    'bg-red-500/10 border-red-500/25 text-red-300',
+  cancelado:  'bg-bg-secondary border-border text-text-tertiary line-through',
+  sobreturno: 'bg-purple-500/10 border-purple-500/25 text-purple-300',
+}
+
+// Appointment-type colors (primary visual identifier)
+const TYPE_COLORS: Record<string, string> = {
+  turno_comun:   'bg-slate-500/10 border-slate-500/25 text-slate-300',
+  primera_vez:   'bg-sky-500/10 border-sky-500/25 text-sky-300',
+  ingreso:       'bg-amber-500/10 border-amber-500/25 text-amber-300',
+  consulta:      'bg-teal-500/10 border-teal-500/25 text-teal-300',
+  antropometria: 'bg-orange-500/10 border-orange-500/25 text-orange-300',
+  controles:     'bg-indigo-500/10 border-indigo-500/25 text-indigo-300',
+}
+
+const TYPE_LABELS: Record<string, string> = {
+  turno_comun:   'Turno común',
+  primera_vez:   'Primera vez',
+  ingreso:       'Ingreso',
+  consulta:      'Consulta',
+  antropometria: 'Antropometría',
+  controles:     'Controles',
 }
 
 const HOURS = Array.from({ length: 14 }, (_, i) => i + 7) // 7:00 – 20:00
@@ -94,21 +117,18 @@ function formatTime(date: Date): string {
   return date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
 }
 
-const GRID_START = 7 * 60   // 07:00
-const GRID_END   = 21 * 60  // 21:00
-const GRID_TOTAL = GRID_END - GRID_START  // 840 minutes
+const GRID_START = 7 * 60
+const GRID_END   = 21 * 60
+const GRID_TOTAL = GRID_END - GRID_START
 
-// Compute side-by-side column layout for overlapping appointments
 function assignColumns(turnos: Turno[]): Map<string, { col: number; totalCols: number }> {
   const result = new Map<string, { col: number; totalCols: number }>()
   if (turnos.length === 0) return result
 
-  // Sort by start time
   const sorted = [...turnos].sort((a, b) =>
     new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
   )
 
-  // Groups of overlapping appointments
   const groups: Turno[][] = []
   let current: Turno[] = []
 
@@ -142,16 +162,22 @@ function assignColumns(turnos: Turno[]): Map<string, { col: number; totalCols: n
       if (!placed) cols.push([t])
     }
     const totalCols = cols.length
-    cols.forEach((col, ci) => {
-      col.forEach(t => result.set(t.id, { col: ci, totalCols }))
-    })
+    cols.forEach((col, ci) => col.forEach(t => result.set(t.id, { col: ci, totalCols })))
   }
 
   return result
 }
 
+function blockColorClass(t: Turno): string {
+  if (t.is_blocked) return 'bg-bg-secondary border-border text-text-tertiary opacity-70'
+  if (t.status === 'ausente')   return STATUS_COLORS.ausente
+  if (t.status === 'cancelado') return STATUS_COLORS.cancelado
+  if (t.status === 'sobreturno') return STATUS_COLORS.sobreturno
+  return TYPE_COLORS[t.appointment_type ?? 'turno_comun'] ?? STATUS_COLORS.programado
+}
+
 function exportDay(turnos: Turno[], date: Date) {
-  const sorted = [...turnos].sort((a, b) =>
+  const sorted = [...turnos].filter(t => !t.is_blocked).sort((a, b) =>
     new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
   )
   const dateStr = formatDateLong(date)
@@ -201,6 +227,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
     defaultStart?: Date
     defaultDay?: Date
   }>({ open: false })
+  const [cloneModal, setCloneModal] = useState<Turno | null>(null)
 
   const supabaseRef = useRef(createClient())
 
@@ -262,9 +289,13 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
   const closeModal = () => setModal({ open: false })
   const handleSaved = () => { closeModal(); fetchTurnos() }
 
+  const handleClone = (turno: Turno) => {
+    closeModal()
+    setCloneModal(turno)
+  }
+
   const GRID_HEIGHT = HOURS.length * 56
 
-  // ── render a single day column ──────────────────────────────────
   const renderDayColumn = (day: Date, dayTurnos: Turno[], colLayout: Map<string, { col: number; totalCols: number }>) => {
     const today = new Date()
     const isToday = isSameDay(day, today)
@@ -287,7 +318,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
             const end   = new Date(t.end_time)
             const top    = ((minutesFromMidnight(start) - GRID_START) / GRID_TOTAL) * 100
             const height = ((minutesFromMidnight(end) - minutesFromMidnight(start)) / GRID_TOTAL) * 100
-            const colorClass = STATUS_COLORS[t.status] ?? STATUS_COLORS.programado
+            const colorClass = blockColorClass(t)
             const layout = colLayout.get(t.id) ?? { col: 0, totalCols: 1 }
             const widthPct = 100 / layout.totalCols
             const leftPct  = layout.col * widthPct
@@ -296,18 +327,23 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
               <button
                 key={t.id}
                 onClick={() => openEdit(t)}
-                className={`absolute rounded-lg border-[0.5px] px-1.5 py-1 text-left overflow-hidden cursor-pointer hover:opacity-90 transition-opacity pointer-events-auto ${colorClass}`}
+                className={`absolute rounded-lg border-[0.5px] px-1.5 py-1 text-left overflow-hidden cursor-pointer hover:opacity-80 transition-opacity pointer-events-auto ${colorClass}`}
                 style={{
                   top: `${top}%`,
                   height: `${height}%`,
-                  minHeight: '24px',
+                  minHeight: '22px',
                   left: `${leftPct}%`,
                   width: `${widthPct}%`,
                 }}
               >
-                <p className="text-[10px] font-medium leading-tight truncate">{t.patient_name}</p>
-                {height > 4 && (
-                  <p className="text-[9px] opacity-70 leading-tight truncate">{t.area}</p>
+                {t.is_blocked ? (
+                  <p className="text-[10px] leading-tight truncate opacity-70">{t.notes || 'Bloqueado'}</p>
+                ) : (
+                  <>
+                    <p className="text-[10px] font-medium leading-tight truncate">{formatTime(start)} {t.patient_name}</p>
+                    {height > 4 && <p className="text-[9px] opacity-70 leading-tight truncate">{t.area}</p>}
+                    {height > 6 && t.notes && <p className="text-[8px] opacity-50 leading-tight">◆ nota</p>}
+                  </>
                 )}
               </button>
             )
@@ -317,19 +353,20 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
     )
   }
 
-  // ── week range / day label ────────────────────────────────────────
   const today = new Date()
   const periodLabel = view === 'day'
     ? formatDateLong(selectedDay)
     : `${formatDateHeader(weekStart)} – ${formatDateHeader(weekEnd)}`
 
-  const MIN_COL_WIDTH = 130 // px — minimum readable width per simultaneous column
+  const MIN_COL_WIDTH = 130
 
   const dayTurnos = turnos.filter(t => isSameDay(new Date(t.start_time), selectedDay))
   const dayColLayout = assignColumns(dayTurnos)
   const maxSimultaneousCols = dayTurnos.length > 0
     ? Math.max(...Array.from(dayColLayout.values()).map(v => v.totalCols))
     : 1
+
+  const dayOccupancy = dayTurnos.filter(t => !t.is_blocked).length
 
   return (
     <div>
@@ -339,27 +376,20 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
           <h1 className="text-[24px] font-medium tracking-[-0.01em]">
             {orgName ? `Agenda — ${orgName}` : 'Agenda'}
           </h1>
-          <p className="text-[13px] text-text-secondary mt-0.5 capitalize">{periodLabel}</p>
+          <p className="text-[13px] text-text-secondary mt-0.5 capitalize">
+            {periodLabel}
+            {view === 'day' && dayOccupancy > 0 && (
+              <span className="ml-2 text-text-tertiary">· {dayOccupancy} turno{dayOccupancy !== 1 ? 's' : ''}</span>
+            )}
+          </p>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          {/* View toggle */}
           <div className="flex bg-bg-secondary border-[0.5px] border-border rounded-lg overflow-hidden">
-            <button
-              onClick={() => setView('day')}
-              className={`px-3 py-2 text-[13px] transition-colors ${view === 'day' ? 'bg-accent text-bg-primary' : 'text-text-secondary hover:text-text-primary'}`}
-            >
-              Día
-            </button>
-            <button
-              onClick={() => setView('week')}
-              className={`px-3 py-2 text-[13px] transition-colors ${view === 'week' ? 'bg-accent text-bg-primary' : 'text-text-secondary hover:text-text-primary'}`}
-            >
-              Semana
-            </button>
+            <button onClick={() => setView('day')} className={`px-3 py-2 text-[13px] transition-colors ${view === 'day' ? 'bg-accent text-bg-primary' : 'text-text-secondary hover:text-text-primary'}`}>Día</button>
+            <button onClick={() => setView('week')} className={`px-3 py-2 text-[13px] transition-colors ${view === 'week' ? 'bg-accent text-bg-primary' : 'text-text-secondary hover:text-text-primary'}`}>Semana</button>
           </div>
 
-          {/* Professional filter */}
           {professionals.length > 1 && (
             <select
               value={filterProf}
@@ -373,33 +403,21 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
             </select>
           )}
 
-          {/* Navigation */}
           <button onClick={prevPeriod} className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors">←</button>
           <button onClick={goToday}  className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors">Hoy</button>
           <button onClick={nextPeriod} className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors">→</button>
 
-          {/* Export (day view only) */}
           {view === 'day' && (
-            <button
-              onClick={() => exportDay(dayTurnos, selectedDay)}
-              className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors"
-            >
+            <button onClick={() => exportDay(dayTurnos, selectedDay)} className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors">
               Exportar
             </button>
           )}
 
-          <button
-            onClick={() => setSettingsOpen(true)}
-            className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors"
-            title="Configurar agenda"
-          >
+          <button onClick={() => setSettingsOpen(true)} className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors" title="Configurar agenda">
             ⚙
           </button>
 
-          <button
-            onClick={() => openNew()}
-            className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity"
-          >
+          <button onClick={() => openNew()} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity">
             + Nuevo turno
           </button>
         </div>
@@ -410,7 +428,6 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
 
         {view === 'day' ? (
           <>
-            {/* Day header */}
             <div className="flex border-b-[0.5px] border-border">
               <div className="w-[48px] shrink-0 border-r-[0.5px] border-border" />
               <div className="flex-1 py-3 px-4">
@@ -418,23 +435,16 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
               </div>
             </div>
 
-            {/* Time grid */}
             <div className="relative overflow-y-auto" style={{ maxHeight: '640px' }}>
               {loading && (
                 <div className="absolute inset-0 z-10 flex items-center justify-center bg-bg-primary/60">
                   <span className="text-[13px] text-text-secondary">Cargando...</span>
                 </div>
               )}
-              {/* outer flex: hour labels (fixed) + scrollable appointment area */}
               <div className="flex" style={{ height: `${GRID_HEIGHT}px` }}>
-                {/* Hour labels — fixed width, not scrolled */}
                 <div className="relative shrink-0 w-[48px]" style={{ height: `${GRID_HEIGHT}px` }}>
                   {HOURS.map((h, i) => (
-                    <div
-                      key={h}
-                      className="absolute left-0 right-0 border-t-[0.5px] border-border"
-                      style={{ top: `${i * 56}px`, height: '56px' }}
-                    >
+                    <div key={h} className="absolute left-0 right-0 border-t-[0.5px] border-border" style={{ top: `${i * 56}px`, height: '56px' }}>
                       <div className="pr-2 flex items-start justify-end pt-1">
                         <span className="text-[10px] text-text-tertiary tabular-nums">{String(h).padStart(2, '0')}:00</span>
                       </div>
@@ -442,19 +452,10 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                   ))}
                 </div>
 
-                {/* Scrollable appointment area */}
                 <div className="flex-1 overflow-x-auto" style={{ height: `${GRID_HEIGHT}px` }}>
-                  <div
-                    className="relative"
-                    style={{ minWidth: `${maxSimultaneousCols * MIN_COL_WIDTH}px`, height: `${GRID_HEIGHT}px` }}
-                  >
-                    {/* Horizontal hour lines */}
+                  <div className="relative" style={{ minWidth: `${maxSimultaneousCols * MIN_COL_WIDTH}px`, height: `${GRID_HEIGHT}px` }}>
                     {HOURS.map((h, i) => (
-                      <div
-                        key={h}
-                        className="absolute left-0 right-0 border-t-[0.5px] border-border"
-                        style={{ top: `${i * 56}px`, height: '56px' }}
-                      />
+                      <div key={h} className="absolute left-0 right-0 border-t-[0.5px] border-border" style={{ top: `${i * 56}px`, height: '56px' }} />
                     ))}
                     {renderDayColumn(selectedDay, dayTurnos, dayColLayout)}
                   </div>
@@ -464,11 +465,11 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
           </>
         ) : (
           <>
-            {/* Week day headers */}
             <div className="grid border-b-[0.5px] border-border" style={{ gridTemplateColumns: '48px repeat(7, 1fr)' }}>
               <div className="border-r-[0.5px] border-border" />
               {weekDays.map((day, i) => {
                 const isToday = isSameDay(day, today)
+                const dayCount = turnos.filter(t => isSameDay(new Date(t.start_time), day) && !t.is_blocked).length
                 return (
                   <button
                     key={i}
@@ -476,15 +477,13 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                     className={`py-3 px-2 text-center border-r-[0.5px] border-border last:border-r-0 hover:bg-accent/5 transition-colors ${isToday ? 'bg-accent/5' : ''}`}
                   >
                     <p className={`text-[11px] uppercase tracking-[0.06em] ${isToday ? 'text-accent' : 'text-text-secondary'}`}>{DAYS[i]}</p>
-                    <p className={`text-[15px] font-medium mt-0.5 ${isToday ? 'text-accent' : 'text-text-primary'}`}>
-                      {day.getDate()}
-                    </p>
+                    <p className={`text-[15px] font-medium mt-0.5 ${isToday ? 'text-accent' : 'text-text-primary'}`}>{day.getDate()}</p>
+                    {dayCount > 0 && <p className="text-[10px] text-text-tertiary mt-0.5">{dayCount}t</p>}
                   </button>
                 )
               })}
             </div>
 
-            {/* Week time grid */}
             <div className="relative overflow-y-auto" style={{ maxHeight: '640px' }}>
               {loading && (
                 <div className="absolute inset-0 z-10 flex items-center justify-center bg-bg-primary/60">
@@ -494,11 +493,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
               <div className="grid" style={{ gridTemplateColumns: '48px repeat(7, 1fr)' }}>
                 <div className="col-span-8 relative" style={{ height: `${HOURS.length * 56}px` }}>
                   {HOURS.map((h, i) => (
-                    <div
-                      key={h}
-                      className="absolute left-0 right-0 border-t-[0.5px] border-border flex"
-                      style={{ top: `${i * 56}px`, height: '56px' }}
-                    >
+                    <div key={h} className="absolute left-0 right-0 border-t-[0.5px] border-border flex" style={{ top: `${i * 56}px`, height: '56px' }}>
                       <div className="w-[48px] shrink-0 pr-2 flex items-start justify-end pt-1">
                         <span className="text-[10px] text-text-tertiary tabular-nums">{String(h).padStart(2, '0')}:00</span>
                       </div>
@@ -518,13 +513,22 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
         )}
       </div>
 
-      {/* STATUS LEGEND */}
-      <div className="flex flex-wrap gap-3 mt-4">
-        {Object.entries(STATUS_COLORS).map(([status, cls]) => (
-          <span key={status} className={`text-[11px] px-2 py-1 rounded-md border-[0.5px] capitalize ${cls}`}>
-            {status}
-          </span>
-        ))}
+      {/* LEGEND */}
+      <div className="mt-4 space-y-2">
+        <div className="flex flex-wrap gap-2">
+          {Object.entries(TYPE_COLORS).map(([type, cls]) => (
+            <span key={type} className={`text-[11px] px-2 py-1 rounded-md border-[0.5px] ${cls}`}>
+              {TYPE_LABELS[type] ?? type}
+            </span>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {(['ausente', 'cancelado', 'sobreturno'] as const).map(status => (
+            <span key={status} className={`text-[11px] px-2 py-1 rounded-md border-[0.5px] capitalize ${STATUS_COLORS[status]}`}>
+              {status}
+            </span>
+          ))}
+        </div>
       </div>
 
       {/* TURNO MODAL */}
@@ -538,6 +542,18 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
           defaultStart={modal.defaultStart}
           onClose={closeModal}
           onSaved={handleSaved}
+          onClone={handleClone}
+        />
+      )}
+
+      {/* CLONE MODAL */}
+      {cloneModal && (
+        <CloneTurnoModal
+          turno={cloneModal}
+          userId={userId}
+          orgId={orgId}
+          onClose={() => setCloneModal(null)}
+          onSaved={() => { setCloneModal(null); fetchTurnos() }}
         />
       )}
 
