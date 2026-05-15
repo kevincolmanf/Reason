@@ -23,7 +23,7 @@ export default async function DashboardPage() {
     redirect('/login')
   }
 
-  const [{ data: latestContents }, { data: recentPatients }, { data: userData }] = await Promise.all([
+  const [{ data: latestContents }, { data: userData }, { data: orgMembership }] = await Promise.all([
     supabase
       .from('content')
       .select('id, title, subtitle, slug, category, tiempo_lectura_min, body_que_saber')
@@ -31,17 +31,57 @@ export default async function DashboardPage() {
       .order('created_at', { ascending: false })
       .limit(6),
     supabase
-      .from('patients')
-      .select('id, name, age, occupation')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(3),
-    supabase
       .from('users')
       .select('role, trial_expires_at')
       .eq('id', user.id)
       .single(),
+    supabase
+      .from('organization_members')
+      .select('org_id, organizations(id, name)')
+      .eq('user_id', user.id)
+      .limit(1)
+      .single(),
   ])
+
+  // Resolve active context: org takes priority if user belongs to one
+  type OrgRow = { org_id: string; organizations: { id: string; name: string } | null }
+  const activeOrg = (orgMembership as unknown as OrgRow)?.organizations ?? null
+
+  // Also check owned org
+  let ownedOrg: { id: string; name: string } | null = null
+  if (userData?.role === 'pro' || userData?.role === 'admin') {
+    const { data } = await supabase
+      .from('organizations')
+      .select('id, name')
+      .eq('owner_id', user.id)
+      .limit(1)
+      .single()
+    ownedOrg = data
+  }
+
+  const contextOrg = ownedOrg ?? activeOrg
+  const contextOrgId = contextOrg?.id ?? null
+  const contextOrgName = contextOrg?.name ?? null
+
+  // Fetch recent patients from the active context
+  let recentPatients: { id: string; name: string; age: number | null; occupation: string | null }[] = []
+  if (contextOrgId) {
+    const { data } = await supabase
+      .from('patients')
+      .select('id, name, age, occupation')
+      .eq('org_id', contextOrgId)
+      .order('created_at', { ascending: false })
+      .limit(3)
+    recentPatients = data ?? []
+  } else {
+    const { data } = await supabase
+      .from('patients')
+      .select('id, name, age, occupation')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(3)
+    recentPatients = data ?? []
+  }
 
   const role = userData?.role
   const trialExpiresAt = userData?.trial_expires_at
@@ -103,10 +143,17 @@ export default async function DashboardPage() {
           </div>
         )}
 
-        {/* MIS PACIENTES */}
+        {/* PACIENTES — contexto activo */}
         <section className="mb-16">
           <div className="flex justify-between items-end mb-6">
-            <h2 className="text-[20px] font-medium">Mis pacientes</h2>
+            <div>
+              <h2 className="text-[20px] font-medium">
+                {contextOrgName ? `Pacientes — ${contextOrgName}` : 'Mis pacientes'}
+              </h2>
+              {contextOrgName && (
+                <p className="text-[12px] text-text-secondary mt-0.5">Pacientes compartidos con tu equipo</p>
+              )}
+            </div>
             <Link href="/dashboard/pacientes" className="text-[13px] text-accent hover:underline">
               Ver todos →
             </Link>
