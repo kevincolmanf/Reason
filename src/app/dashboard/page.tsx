@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import ContentCard from '@/components/ContentCard'
 import Header from '@/components/Header'
+import { getActiveContext } from '@/lib/context'
 
 function CategoryCard({ title, slug, desc }: { title: string, slug: string, desc: string }) {
   return (
@@ -23,7 +24,7 @@ export default async function DashboardPage() {
     redirect('/login')
   }
 
-  const [{ data: latestContents }, { data: userData }, { data: orgMembership }] = await Promise.all([
+  const [{ data: latestContents }, { data: userData }, ctx] = await Promise.all([
     supabase
       .from('content')
       .select('id, title, subtitle, slug, category, tiempo_lectura_min, body_que_saber')
@@ -35,33 +36,20 @@ export default async function DashboardPage() {
       .select('role, trial_expires_at')
       .eq('id', user.id)
       .single(),
-    supabase
-      .from('organization_members')
-      .select('org_id, organizations(id, name)')
-      .eq('user_id', user.id)
-      .limit(1)
-      .single(),
+    getActiveContext(user.id, supabase),
   ])
 
-  // Resolve active context: org takes priority if user belongs to one
-  type OrgRow = { org_id: string; organizations: { id: string; name: string } | null }
-  const activeOrg = (orgMembership as unknown as OrgRow)?.organizations ?? null
+  let contextOrgId: string | null = ctx.type === 'org' ? ctx.orgId : null
+  let contextOrgName: string | null = null
 
-  // Also check owned org
-  let ownedOrg: { id: string; name: string } | null = null
-  if (userData?.role === 'pro' || userData?.role === 'admin') {
-    const { data } = await supabase
+  if (contextOrgId) {
+    const { data: orgData } = await supabase
       .from('organizations')
-      .select('id, name')
-      .eq('owner_id', user.id)
-      .limit(1)
+      .select('name')
+      .eq('id', contextOrgId)
       .single()
-    ownedOrg = data
+    contextOrgName = orgData?.name ?? null
   }
-
-  const contextOrg = ownedOrg ?? activeOrg
-  const contextOrgId = contextOrg?.id ?? null
-  const contextOrgName = contextOrg?.name ?? null
 
   // Fetch recent patients from the active context
   let recentPatients: { id: string; name: string; age: number | null; occupation: string | null }[] = []

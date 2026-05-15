@@ -2,6 +2,7 @@ import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import Header from '@/components/Header'
 import AgendaClient from './AgendaClient'
+import { getActiveContext } from '@/lib/context'
 
 export const metadata = { title: 'Agenda | Reason' }
 
@@ -22,20 +23,14 @@ export default async function AgendaPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: userData } = await supabase
-    .from('users')
-    .select('role, full_name, agenda_areas')
-    .eq('id', user.id)
-    .single()
+  const [{ data: userData }, ctx] = await Promise.all([
+    supabase.from('users').select('role, full_name, agenda_areas').eq('id', user.id).single(),
+    getActiveContext(user.id, supabase),
+  ])
 
   const role = userData?.role
-  const { count: orgCount } = await supabase
-    .from('organization_members')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', user.id)
-
-  const isOrgMember = (orgCount ?? 0) > 0
-  const isActive = role === 'admin' || role === 'pro' || isOrgMember
+  const isOrgContext = ctx.type === 'org' && !!ctx.orgId
+  const isActive = role === 'admin' || role === 'pro' || isOrgContext
   if (!isActive) redirect('/paywall')
 
   const isOwner = role === 'pro' || role === 'admin'
@@ -47,33 +42,20 @@ export default async function AgendaPage() {
   let shareToken: string | null = null
   let shareEnabled = false
 
-  if (isOwner) {
-    const { data: ownedOrg } = await supabase
+  if (isOrgContext && ctx.orgId) {
+    type OrgData = { id: string; name: string; agenda_areas: string[] | null; agenda_share_token: string | null; agenda_share_enabled: boolean; owner_id: string }
+    const { data: orgData } = await supabase
       .from('organizations')
-      .select('id, name, agenda_areas, agenda_share_token, agenda_share_enabled')
-      .eq('owner_id', user.id)
-      .limit(1)
+      .select('id, name, agenda_areas, agenda_share_token, agenda_share_enabled, owner_id')
+      .eq('id', ctx.orgId)
       .single()
-    if (ownedOrg) {
-      orgId = ownedOrg.id
-      orgName = ownedOrg.name
-      areas = (ownedOrg as unknown as { agenda_areas: string[] | null }).agenda_areas ?? DEFAULT_AREAS
-      shareToken = (ownedOrg as unknown as { agenda_share_token: string | null }).agenda_share_token
-      shareEnabled = (ownedOrg as unknown as { agenda_share_enabled: boolean }).agenda_share_enabled ?? false
-    }
-  } else if (isOrgMember) {
-    const { data: membership } = await supabase
-      .from('organization_members')
-      .select('org_id, organizations(id, name, agenda_areas)')
-      .eq('user_id', user.id)
-      .limit(1)
-      .single()
-    type OrgRow = { id: string; name: string; agenda_areas: string[] | null }
-    const org = (membership as unknown as { org_id: string; organizations: OrgRow | null })?.organizations
+    const org = orgData as unknown as OrgData | null
     if (org) {
       orgId = org.id
       orgName = org.name
       areas = org.agenda_areas ?? DEFAULT_AREAS
+      shareToken = org.agenda_share_token
+      shareEnabled = org.agenda_share_enabled ?? false
     }
   }
 

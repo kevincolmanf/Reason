@@ -3,6 +3,7 @@ import Link from 'next/link'
 import PacientesClient from './PacientesClient'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
+import { getActiveContext } from '@/lib/context'
 
 export const metadata = {
   title: 'Mis Pacientes | Reason',
@@ -14,49 +15,30 @@ export default async function PacientesPage({ searchParams }: { searchParams: { 
 
   if (!user) redirect('/login')
 
-  const { data: userData } = await supabase
-    .from('users')
-    .select('role, trial_expires_at')
-    .eq('id', user.id)
-    .single()
+  const [{ data: userData }, ctx] = await Promise.all([
+    supabase.from('users').select('role, trial_expires_at').eq('id', user.id).single(),
+    getActiveContext(user.id, supabase),
+  ])
 
   const role = userData?.role
   const trialExpiresAt = userData?.trial_expires_at
   const trialActive = trialExpiresAt ? new Date(trialExpiresAt) > new Date() : false
 
-  // isPro = tiene suscripción propia (no por ser miembro de un equipo)
   const isPro = role === 'admin' || role === 'pro'
 
-  // Detectamos org membership para TODOS los usuarios, independiente del plan personal
   let orgId: string | null = null
   let orgName: string | null = null
   let isOrgOwner = false
 
-  const { data: ownedOrg } = await supabase
-    .from('organizations')
-    .select('id, name')
-    .eq('owner_id', user.id)
-    .single()
-
-  if (ownedOrg) {
-    orgId = ownedOrg.id
-    orgName = ownedOrg.name
-    isOrgOwner = true
-  } else {
-    const { data: membership } = await supabase
-      .from('organization_members')
-      .select('org_id')
-      .eq('user_id', user.id)
+  if (ctx.type === 'org' && ctx.orgId) {
+    orgId = ctx.orgId
+    const { data: orgData } = await supabase
+      .from('organizations')
+      .select('name, owner_id')
+      .eq('id', ctx.orgId)
       .single()
-    if (membership?.org_id) {
-      orgId = membership.org_id
-      const { data: orgData } = await supabase
-        .from('organizations')
-        .select('name')
-        .eq('id', membership.org_id)
-        .single()
-      orgName = orgData?.name || null
-    }
+    orgName = orgData?.name ?? null
+    isOrgOwner = orgData?.owner_id === user.id
   }
 
   const isOrgMember = !!orgId

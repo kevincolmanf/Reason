@@ -1,24 +1,46 @@
 import { createClient } from '@/utils/supabase/server'
 import Link from 'next/link'
 import HeaderClient from './HeaderClient'
+import ContextBadge from './ContextBadge'
+import { getActiveContext } from '@/lib/context'
+import type { ActiveContext } from '@/lib/context'
+import type { AvailableContext } from './ContextBadge'
 
 export default async function Header() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  let contextLabel = 'Mi espacio'
+  let currentLabel = 'Mi espacio'
+  let available: AvailableContext[] = []
+  let ctx: ActiveContext = { type: 'personal', orgId: null }
 
   if (user) {
-    const { data: membership } = await supabase
-      .from('organization_members')
-      .select('organizations(name)')
-      .eq('user_id', user.id)
-      .limit(1)
-      .single()
+    const [activeCtx, ownedOrgsResult, memberOrgsResult] = await Promise.all([
+      getActiveContext(user.id, supabase),
+      supabase.from('organizations').select('id, name').eq('owner_id', user.id),
+      supabase.from('organization_members').select('org_id, organizations(id, name)').eq('user_id', user.id),
+    ])
 
-    type MemberRow = { organizations: { name: string } | null }
-    const orgName = (membership as unknown as MemberRow)?.organizations?.name
-    if (orgName) contextLabel = orgName
+    ctx = activeCtx
+
+    type MemberRow = { org_id: string; organizations: { id: string; name: string } | null }
+
+    const ownedOrgs = (ownedOrgsResult.data ?? []) as { id: string; name: string }[]
+    const memberOrgs = ((memberOrgsResult.data ?? []) as unknown as MemberRow[])
+      .map(r => r.organizations)
+      .filter((o): o is { id: string; name: string } => o !== null)
+      .filter(o => !ownedOrgs.some(owned => owned.id === o.id))
+
+    available = [
+      { type: 'personal', orgId: null, label: 'Mi espacio' },
+      ...ownedOrgs.map(o => ({ type: 'org' as const, orgId: o.id, label: o.name })),
+      ...memberOrgs.map(o => ({ type: 'org' as const, orgId: o.id, label: o.name })),
+    ]
+
+    if (ctx.type === 'org' && ctx.orgId) {
+      const found = available.find(a => a.orgId === ctx.orgId)
+      if (found) currentLabel = found.label
+    }
   }
 
   return (
@@ -43,11 +65,13 @@ export default async function Header() {
           <Link href="/dashboard/agenda" className="hidden sm:inline text-[13px] sm:text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
             Agenda
           </Link>
-          
+
           {user && (
-            <span className="hidden sm:inline text-[11px] text-text-secondary bg-bg-secondary border-[0.5px] border-border rounded-md px-2 py-1 max-w-[140px] truncate">
-              {contextLabel}
-            </span>
+            <ContextBadge
+              current={ctx}
+              currentLabel={currentLabel}
+              available={available}
+            />
           )}
 
           {user ? (
