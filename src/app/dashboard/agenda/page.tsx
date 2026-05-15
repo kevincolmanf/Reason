@@ -24,7 +24,7 @@ export default async function AgendaPage() {
     .eq('user_id', user.id)
 
   const isOrgMember = (orgCount ?? 0) > 0
-  const isActive = role === 'subscriber' || role === 'admin' || role === 'pro' || isOrgMember
+  const isActive = role === 'admin' || role === 'pro' || isOrgMember
   if (!isActive) redirect('/paywall')
 
   // Get org context

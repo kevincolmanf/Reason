@@ -8,6 +8,10 @@ interface Turno {
   id: string
   patient_name: string
   patient_id: string | null
+  patient_phone: string | null
+  patient_email: string | null
+  patient_age: number | null
+  patient_obra_social: string | null
   professional_id: string | null
   professional_name: string | null
   start_time: string
@@ -44,7 +48,7 @@ const DAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 function startOfWeek(date: Date): Date {
   const d = new Date(date)
   const day = d.getDay()
-  const diff = day === 0 ? -6 : 1 - day // Monday = 0
+  const diff = day === 0 ? -6 : 1 - day
   d.setDate(d.getDate() + diff)
   d.setHours(0, 0, 0, 0)
   return d
@@ -60,6 +64,10 @@ function formatDateHeader(date: Date): string {
   return date.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })
 }
 
+function formatDateLong(date: Date): string {
+  return date.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+}
+
 function isSameDay(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear() &&
     a.getMonth() === b.getMonth() &&
@@ -70,12 +78,106 @@ function minutesFromMidnight(date: Date): number {
   return date.getHours() * 60 + date.getMinutes()
 }
 
+function formatTime(date: Date): string {
+  return date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
+}
+
 const GRID_START = 7 * 60   // 07:00
 const GRID_END   = 21 * 60  // 21:00
 const GRID_TOTAL = GRID_END - GRID_START  // 840 minutes
 
+// Compute side-by-side column layout for overlapping appointments
+function assignColumns(turnos: Turno[]): Map<string, { col: number; totalCols: number }> {
+  const result = new Map<string, { col: number; totalCols: number }>()
+  if (turnos.length === 0) return result
+
+  // Sort by start time
+  const sorted = [...turnos].sort((a, b) =>
+    new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+  )
+
+  // Groups of overlapping appointments
+  const groups: Turno[][] = []
+  let current: Turno[] = []
+
+  for (const t of sorted) {
+    if (current.length === 0) {
+      current.push(t)
+    } else {
+      const maxEnd = Math.max(...current.map(c => new Date(c.end_time).getTime()))
+      if (new Date(t.start_time).getTime() < maxEnd) {
+        current.push(t)
+      } else {
+        groups.push(current)
+        current = [t]
+      }
+    }
+  }
+  if (current.length > 0) groups.push(current)
+
+  for (const group of groups) {
+    const cols: Turno[][] = []
+    for (const t of group) {
+      let placed = false
+      for (let ci = 0; ci < cols.length; ci++) {
+        const lastInCol = cols[ci][cols[ci].length - 1]
+        if (new Date(lastInCol.end_time).getTime() <= new Date(t.start_time).getTime()) {
+          cols[ci].push(t)
+          placed = true
+          break
+        }
+      }
+      if (!placed) cols.push([t])
+    }
+    const totalCols = cols.length
+    cols.forEach((col, ci) => {
+      col.forEach(t => result.set(t.id, { col: ci, totalCols }))
+    })
+  }
+
+  return result
+}
+
+function exportDay(turnos: Turno[], date: Date) {
+  const sorted = [...turnos].sort((a, b) =>
+    new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+  )
+  const dateStr = formatDateLong(date)
+  const lines = [
+    `AGENDA DEL DÍA — ${dateStr.toUpperCase()}`,
+    '='.repeat(60),
+    '',
+    ...sorted.map(t => {
+      const start = formatTime(new Date(t.start_time))
+      const end   = formatTime(new Date(t.end_time))
+      const parts = [
+        `${start} – ${end}  ${t.patient_name}`,
+        t.area ? `  Área: ${t.area}` : '',
+        t.patient_phone ? `  Tel: ${t.patient_phone}` : '',
+        t.patient_email ? `  Email: ${t.patient_email}` : '',
+        t.patient_age ? `  Edad: ${t.patient_age} años` : '',
+        t.patient_obra_social ? `  Obra social: ${t.patient_obra_social}` : '',
+        t.professional_name ? `  Profesional: ${t.professional_name}` : '',
+        t.status !== 'programado' ? `  Estado: ${t.status}` : '',
+        t.notes ? `  Notas: ${t.notes}` : '',
+        '',
+      ]
+      return parts.filter(Boolean).join('\n')
+    }),
+  ]
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `agenda-${date.toISOString().slice(0, 10)}.txt`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 export default function AgendaClient({ userId, orgId, orgName, professionals }: Props) {
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()))
+  const [selectedDay, setSelectedDay] = useState<Date>(() => new Date())
+  const [view, setView] = useState<'week' | 'day'>('day')
   const [turnos, setTurnos]       = useState<Turno[]>([])
   const [loading, setLoading]     = useState(true)
   const [filterProf, setFilterProf] = useState<string>('all')
@@ -93,8 +195,14 @@ export default function AgendaClient({ userId, orgId, orgName, professionals }: 
 
   const fetchTurnos = useCallback(async () => {
     setLoading(true)
-    const from = weekStart.toISOString()
-    const to   = addDays(weekEnd, 1).toISOString()
+    let from: string, to: string
+    if (view === 'day') {
+      from = new Date(selectedDay.getFullYear(), selectedDay.getMonth(), selectedDay.getDate()).toISOString()
+      to   = addDays(selectedDay, 1).toISOString()
+    } else {
+      from = weekStart.toISOString()
+      to   = addDays(weekEnd, 1).toISOString()
+    }
 
     let query = supabaseRef.current
       .from('turnos')
@@ -112,16 +220,25 @@ export default function AgendaClient({ userId, orgId, orgName, professionals }: 
     setTurnos(data ?? [])
     setLoading(false)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [weekStart, orgId, userId, filterProf])
+  }, [weekStart, selectedDay, view, orgId, userId, filterProf])
 
   useEffect(() => { fetchTurnos() }, [fetchTurnos])
 
-  const prevWeek = () => setWeekStart(d => addDays(d, -7))
-  const nextWeek = () => setWeekStart(d => addDays(d, 7))
-  const goToday  = () => setWeekStart(startOfWeek(new Date()))
+  const prevPeriod = () => {
+    if (view === 'day') setSelectedDay(d => addDays(d, -1))
+    else setWeekStart(d => addDays(d, -7))
+  }
+  const nextPeriod = () => {
+    if (view === 'day') setSelectedDay(d => addDays(d, 1))
+    else setWeekStart(d => addDays(d, 7))
+  }
+  const goToday = () => {
+    setSelectedDay(new Date())
+    setWeekStart(startOfWeek(new Date()))
+  }
 
   const openNew = (day?: Date, hour?: number) => {
-    const defaultDay = day ?? new Date()
+    const defaultDay = day ?? (view === 'day' ? selectedDay : new Date())
     const defaultStart = new Date(defaultDay)
     defaultStart.setHours(hour ?? 9, 0, 0, 0)
     setModal({ open: true, defaultStart, defaultDay })
@@ -129,35 +246,69 @@ export default function AgendaClient({ userId, orgId, orgName, professionals }: 
 
   const openEdit = (t: Turno) => setModal({ open: true, turno: t })
   const closeModal = () => setModal({ open: false })
-
   const handleSaved = () => { closeModal(); fetchTurnos() }
 
-  // ── render appointment block ──────────────────────────────────
-  const renderTurno = (t: Turno) => {
-    const start = new Date(t.start_time)
-    const end   = new Date(t.end_time)
-    const top    = ((minutesFromMidnight(start) - GRID_START) / GRID_TOTAL) * 100
-    const height = ((minutesFromMidnight(end) - minutesFromMidnight(start)) / GRID_TOTAL) * 100
-    const colorClass = STATUS_COLORS[t.status] ?? STATUS_COLORS.programado
-
+  // ── render a single day column ──────────────────────────────────
+  const renderDayColumn = (day: Date, dayTurnos: Turno[], colLayout: Map<string, { col: number; totalCols: number }>) => {
+    const today = new Date()
+    const isToday = isSameDay(day, today)
     return (
-      <button
-        key={t.id}
-        onClick={() => openEdit(t)}
-        className={`absolute left-1 right-1 rounded-lg border-[0.5px] px-2 py-1 text-left overflow-hidden cursor-pointer hover:opacity-90 transition-opacity ${colorClass}`}
-        style={{ top: `${top}%`, height: `${height}%`, minHeight: '28px' }}
+      <div
+        className={`relative border-r-[0.5px] border-border last:border-r-0 ${isToday ? 'bg-accent/[0.02]' : ''}`}
+        style={{ height: `${HOURS.length * 56}px` }}
       >
-        <p className="text-[11px] font-medium leading-tight truncate">{t.patient_name}</p>
-        {height > 5 && (
-          <p className="text-[10px] opacity-70 leading-tight truncate">{t.area}</p>
-        )}
-      </button>
+        {HOURS.map((h, hi) => (
+          <div
+            key={h}
+            className="absolute left-0 right-0 cursor-pointer hover:bg-accent/5 transition-colors"
+            style={{ top: `${hi * 56}px`, height: '56px' }}
+            onClick={() => openNew(day, h)}
+          />
+        ))}
+        <div className="absolute inset-0 pointer-events-none">
+          {dayTurnos.map(t => {
+            const start = new Date(t.start_time)
+            const end   = new Date(t.end_time)
+            const top    = ((minutesFromMidnight(start) - GRID_START) / GRID_TOTAL) * 100
+            const height = ((minutesFromMidnight(end) - minutesFromMidnight(start)) / GRID_TOTAL) * 100
+            const colorClass = STATUS_COLORS[t.status] ?? STATUS_COLORS.programado
+            const layout = colLayout.get(t.id) ?? { col: 0, totalCols: 1 }
+            const widthPct = 100 / layout.totalCols
+            const leftPct  = layout.col * widthPct
+
+            return (
+              <button
+                key={t.id}
+                onClick={() => openEdit(t)}
+                className={`absolute rounded-lg border-[0.5px] px-1.5 py-1 text-left overflow-hidden cursor-pointer hover:opacity-90 transition-opacity pointer-events-auto ${colorClass}`}
+                style={{
+                  top: `${top}%`,
+                  height: `${height}%`,
+                  minHeight: '24px',
+                  left: `${leftPct}%`,
+                  width: `${widthPct}%`,
+                }}
+              >
+                <p className="text-[10px] font-medium leading-tight truncate">{t.patient_name}</p>
+                {height > 4 && (
+                  <p className="text-[9px] opacity-70 leading-tight truncate">{t.area}</p>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      </div>
     )
   }
 
-  // ── week range label ──────────────────────────────────────────
-  const weekLabel = `${formatDateHeader(weekStart)} – ${formatDateHeader(weekEnd)}`
+  // ── week range / day label ────────────────────────────────────────
   const today = new Date()
+  const periodLabel = view === 'day'
+    ? formatDateLong(selectedDay)
+    : `${formatDateHeader(weekStart)} – ${formatDateHeader(weekEnd)}`
+
+  const dayTurnos = turnos.filter(t => isSameDay(new Date(t.start_time), selectedDay))
+  const dayColLayout = assignColumns(dayTurnos)
 
   return (
     <div>
@@ -167,10 +318,26 @@ export default function AgendaClient({ userId, orgId, orgName, professionals }: 
           <h1 className="text-[24px] font-medium tracking-[-0.01em]">
             {orgName ? `Agenda — ${orgName}` : 'Agenda'}
           </h1>
-          <p className="text-[13px] text-text-secondary mt-0.5">{weekLabel}</p>
+          <p className="text-[13px] text-text-secondary mt-0.5 capitalize">{periodLabel}</p>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          {/* View toggle */}
+          <div className="flex bg-bg-secondary border-[0.5px] border-border rounded-lg overflow-hidden">
+            <button
+              onClick={() => setView('day')}
+              className={`px-3 py-2 text-[13px] transition-colors ${view === 'day' ? 'bg-accent text-bg-primary' : 'text-text-secondary hover:text-text-primary'}`}
+            >
+              Día
+            </button>
+            <button
+              onClick={() => setView('week')}
+              className={`px-3 py-2 text-[13px] transition-colors ${view === 'week' ? 'bg-accent text-bg-primary' : 'text-text-secondary hover:text-text-primary'}`}
+            >
+              Semana
+            </button>
+          </div>
+
           {/* Professional filter */}
           {professionals.length > 1 && (
             <select
@@ -185,10 +352,20 @@ export default function AgendaClient({ userId, orgId, orgName, professionals }: 
             </select>
           )}
 
-          {/* Week navigation */}
-          <button onClick={prevWeek} className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors">←</button>
+          {/* Navigation */}
+          <button onClick={prevPeriod} className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors">←</button>
           <button onClick={goToday}  className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors">Hoy</button>
-          <button onClick={nextWeek} className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors">→</button>
+          <button onClick={nextPeriod} className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors">→</button>
+
+          {/* Export (day view only) */}
+          {view === 'day' && (
+            <button
+              onClick={() => exportDay(dayTurnos, selectedDay)}
+              className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors"
+            >
+              Exportar
+            </button>
+          )}
 
           <button
             onClick={() => openNew()}
@@ -201,86 +378,96 @@ export default function AgendaClient({ userId, orgId, orgName, professionals }: 
 
       {/* CALENDAR GRID */}
       <div className="bg-bg-primary border-[0.5px] border-border rounded-xl overflow-hidden">
-        {/* Day headers */}
-        <div className="grid border-b-[0.5px] border-border" style={{ gridTemplateColumns: '48px repeat(7, 1fr)' }}>
-          <div className="border-r-[0.5px] border-border" /> {/* hour gutter */}
-          {weekDays.map((day, i) => {
-            const isToday = isSameDay(day, today)
-            return (
-              <div
-                key={i}
-                className={`py-3 px-2 text-center border-r-[0.5px] border-border last:border-r-0 ${isToday ? 'bg-accent/5' : ''}`}
-              >
-                <p className={`text-[11px] uppercase tracking-[0.06em] ${isToday ? 'text-accent' : 'text-text-secondary'}`}>{DAYS[i]}</p>
-                <p className={`text-[15px] font-medium mt-0.5 ${isToday ? 'text-accent' : 'text-text-primary'}`}>
-                  {day.getDate()}
-                </p>
+
+        {view === 'day' ? (
+          <>
+            {/* Day header */}
+            <div className="flex border-b-[0.5px] border-border">
+              <div className="w-[48px] shrink-0 border-r-[0.5px] border-border" />
+              <div className="flex-1 py-3 px-4">
+                <p className="text-[13px] font-medium capitalize">{periodLabel}</p>
               </div>
-            )
-          })}
-        </div>
-
-        {/* Time grid */}
-        <div className="relative overflow-y-auto" style={{ maxHeight: '640px' }}>
-          {loading && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center bg-bg-primary/60">
-              <span className="text-[13px] text-text-secondary">Cargando...</span>
             </div>
-          )}
 
-          <div className="grid" style={{ gridTemplateColumns: '48px repeat(7, 1fr)' }}>
-            {/* Hour labels + horizontal rules */}
-            <div className="col-span-8 relative" style={{ height: `${HOURS.length * 56}px` }}>
-              {/* Horizontal hour lines */}
-              {HOURS.map((h, i) => (
-                <div
-                  key={h}
-                  className="absolute left-0 right-0 border-t-[0.5px] border-border flex"
-                  style={{ top: `${i * 56}px`, height: '56px' }}
-                >
-                  <div className="w-[48px] shrink-0 pr-2 flex items-start justify-end pt-1">
-                    <span className="text-[10px] text-text-tertiary tabular-nums">{String(h).padStart(2, '0')}:00</span>
-                  </div>
+            {/* Time grid */}
+            <div className="relative overflow-y-auto" style={{ maxHeight: '640px' }}>
+              {loading && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center bg-bg-primary/60">
+                  <span className="text-[13px] text-text-secondary">Cargando...</span>
                 </div>
-              ))}
+              )}
+              <div className="relative" style={{ height: `${HOURS.length * 56}px` }}>
+                {HOURS.map((h, i) => (
+                  <div
+                    key={h}
+                    className="absolute left-0 right-0 border-t-[0.5px] border-border flex"
+                    style={{ top: `${i * 56}px`, height: '56px' }}
+                  >
+                    <div className="w-[48px] shrink-0 pr-2 flex items-start justify-end pt-1">
+                      <span className="text-[10px] text-text-tertiary tabular-nums">{String(h).padStart(2, '0')}:00</span>
+                    </div>
+                  </div>
+                ))}
+                <div className="absolute inset-0 left-[48px]">
+                  {renderDayColumn(selectedDay, dayTurnos, dayColLayout)}
+                </div>
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Week day headers */}
+            <div className="grid border-b-[0.5px] border-border" style={{ gridTemplateColumns: '48px repeat(7, 1fr)' }}>
+              <div className="border-r-[0.5px] border-border" />
+              {weekDays.map((day, i) => {
+                const isToday = isSameDay(day, today)
+                return (
+                  <button
+                    key={i}
+                    onClick={() => { setSelectedDay(day); setView('day') }}
+                    className={`py-3 px-2 text-center border-r-[0.5px] border-border last:border-r-0 hover:bg-accent/5 transition-colors ${isToday ? 'bg-accent/5' : ''}`}
+                  >
+                    <p className={`text-[11px] uppercase tracking-[0.06em] ${isToday ? 'text-accent' : 'text-text-secondary'}`}>{DAYS[i]}</p>
+                    <p className={`text-[15px] font-medium mt-0.5 ${isToday ? 'text-accent' : 'text-text-primary'}`}>
+                      {day.getDate()}
+                    </p>
+                  </button>
+                )
+              })}
+            </div>
 
-              {/* Day columns with click targets + appointments */}
-              <div className="absolute inset-0 left-[48px] grid" style={{ gridTemplateColumns: 'repeat(7, 1fr)' }}>
-                {weekDays.map((day, dayIdx) => {
-                  const isToday = isSameDay(day, today)
-                  const dayTurnos = turnos.filter(t => isSameDay(new Date(t.start_time), day))
-
-                  return (
+            {/* Week time grid */}
+            <div className="relative overflow-y-auto" style={{ maxHeight: '640px' }}>
+              {loading && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center bg-bg-primary/60">
+                  <span className="text-[13px] text-text-secondary">Cargando...</span>
+                </div>
+              )}
+              <div className="grid" style={{ gridTemplateColumns: '48px repeat(7, 1fr)' }}>
+                <div className="col-span-8 relative" style={{ height: `${HOURS.length * 56}px` }}>
+                  {HOURS.map((h, i) => (
                     <div
-                      key={dayIdx}
-                      className={`relative border-r-[0.5px] border-border last:border-r-0 ${isToday ? 'bg-accent/[0.02]' : ''}`}
-                      style={{ height: `${HOURS.length * 56}px` }}
+                      key={h}
+                      className="absolute left-0 right-0 border-t-[0.5px] border-border flex"
+                      style={{ top: `${i * 56}px`, height: '56px' }}
                     >
-                      {/* Click-to-create targets per hour slot */}
-                      {HOURS.map((h, hi) => (
-                        <div
-                          key={h}
-                          className="absolute left-0 right-0 cursor-pointer hover:bg-accent/5 transition-colors"
-                          style={{ top: `${hi * 56}px`, height: '56px' }}
-                          onClick={() => openNew(day, h)}
-                        />
-                      ))}
-
-                      {/* Appointment blocks */}
-                      <div className="absolute inset-0 pointer-events-none">
-                        {dayTurnos.map(t => (
-                          <div key={t.id} className="pointer-events-auto absolute inset-x-0" style={{ top: 0, bottom: 0 }}>
-                            {renderTurno(t)}
-                          </div>
-                        ))}
+                      <div className="w-[48px] shrink-0 pr-2 flex items-start justify-end pt-1">
+                        <span className="text-[10px] text-text-tertiary tabular-nums">{String(h).padStart(2, '0')}:00</span>
                       </div>
                     </div>
-                  )
-                })}
+                  ))}
+                  <div className="absolute inset-0 left-[48px] grid" style={{ gridTemplateColumns: 'repeat(7, 1fr)' }}>
+                    {weekDays.map((day, dayIdx) => {
+                      const dt = turnos.filter(t => isSameDay(new Date(t.start_time), day))
+                      const layout = assignColumns(dt)
+                      return renderDayColumn(day, dt, layout)
+                    })}
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
+          </>
+        )}
       </div>
 
       {/* STATUS LEGEND */}
