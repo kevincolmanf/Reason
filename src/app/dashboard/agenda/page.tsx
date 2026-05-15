@@ -4,6 +4,7 @@ import Header from '@/components/Header'
 import AgendaClient from './AgendaClient'
 import { getActiveContext } from '@/lib/context'
 
+export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Agenda | Reason' }
 
 const DEFAULT_AREAS = [
