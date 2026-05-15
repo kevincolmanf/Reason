@@ -62,19 +62,13 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId }: 
         .is('org_id', null)
         .order('created_at', { ascending: true })
 
-      console.log('[patients] orgId:', orgId, 'userId:', userId)
-      console.log('[patients] orgData:', orgData, 'orgError:', orgError)
-      console.log('[patients] personalData:', personalData, 'personalError:', personalError)
-
       rows = [...(orgData || []), ...(personalData || [])] as Patient[]
     } else {
-      const { data, error } = await supabaseRef.current
+      const { data } = await supabaseRef.current
         .from('patients')
         .select('id, name, age, occupation, created_at')
         .eq('user_id', userId)
         .order('created_at', { ascending: true })
-
-      console.log('[patients] no-org userId:', userId, 'data:', data, 'error:', error)
 
       rows = (data || []) as Patient[]
     }
