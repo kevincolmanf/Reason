@@ -12,9 +12,11 @@ interface Patient {
   occupation: string | null
   created_at: string
   load_share_token: string | null
+  user_id: string
 }
 
-export default function PacienteDetail({ patient: initialPatient }: { patient: Patient, userId: string }) {
+export default function PacienteDetail({ patient: initialPatient, userId }: { patient: Patient; userId: string }) {
+  const isOwner = initialPatient.user_id === userId
   const [patient, setPatient] = useState<Patient>(initialPatient)
   const [editing, setEditing] = useState(false)
   const [editForm, setEditForm] = useState({ name: initialPatient.name, age: initialPatient.age?.toString() || '', occupation: initialPatient.occupation || '' })
@@ -114,8 +116,8 @@ export default function PacienteDetail({ patient: initialPatient }: { patient: P
               </div>
             </div>
             <div className="flex gap-2 shrink-0">
-              <button onClick={() => setEditing(true)} className="bg-bg-secondary border-[0.5px] border-border text-text-secondary px-4 py-2 rounded-lg text-[13px] hover:text-text-primary transition-colors">Editar</button>
-              <button onClick={handleDelete} className="bg-bg-secondary border-[0.5px] border-border text-text-secondary px-4 py-2 rounded-lg text-[13px] hover:text-warning transition-colors">Eliminar</button>
+              {isOwner && <button onClick={() => setEditing(true)} className="bg-bg-secondary border-[0.5px] border-border text-text-secondary px-4 py-2 rounded-lg text-[13px] hover:text-text-primary transition-colors">Editar</button>}
+              {isOwner && <button onClick={handleDelete} className="bg-bg-secondary border-[0.5px] border-border text-text-secondary px-4 py-2 rounded-lg text-[13px] hover:text-warning transition-colors">Eliminar</button>}
             </div>
           </div>
         )}

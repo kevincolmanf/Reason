@@ -44,13 +44,23 @@ export default async function ContentPage({ params }: { params: { slug: string }
   if (user && params.slug !== 'dolor-lumbar-inespecifico') {
     const { data: userData } = await supabase
       .from('users')
-      .select('role')
+      .select('role, trial_expires_at')
       .eq('id', user.id)
       .single()
-      
+
     if (userData && userData.role === 'free') {
-      const { redirect } = await import('next/navigation')
-      redirect('/paywall')
+      const trialActive = userData.trial_expires_at ? new Date(userData.trial_expires_at) > new Date() : false
+      if (!trialActive) {
+        // Check if user is an org member — team access includes content
+        const { count } = await supabase
+          .from('organization_members')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+        if (!count || count === 0) {
+          const { redirect } = await import('next/navigation')
+          redirect('/paywall')
+        }
+      }
     }
   }
 
