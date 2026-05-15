@@ -46,6 +46,7 @@ interface Props {
   isOwner: boolean
   shareToken: string | null
   shareEnabled: boolean
+  slotInterval: number
 }
 
 // Status-based colors (lighter palette for readability)
@@ -212,7 +213,7 @@ function exportDay(turnos: Turno[], date: Date) {
   URL.revokeObjectURL(url)
 }
 
-export default function AgendaClient({ userId, orgId, orgName, professionals, members, areas: initialAreas, isOwner, shareToken, shareEnabled }: Props) {
+export default function AgendaClient({ userId, orgId, orgName, professionals, members, areas: initialAreas, isOwner, shareToken, shareEnabled, slotInterval: initialSlotInterval }: Props) {
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()))
   const [selectedDay, setSelectedDay] = useState<Date>(() => new Date())
   const [view, setView] = useState<'week' | 'day'>('day')
@@ -220,6 +221,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
   const [loading, setLoading]     = useState(true)
   const [filterProf, setFilterProf] = useState<string>('all')
   const [areas, setAreas] = useState<string[]>(initialAreas)
+  const [slotInterval, setSlotInterval] = useState(initialSlotInterval)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [modal, setModal] = useState<{
     open: boolean
@@ -278,10 +280,10 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
     setWeekStart(startOfWeek(new Date()))
   }
 
-  const openNew = (day?: Date, hour?: number) => {
+  const openNew = (day?: Date, hour?: number, minute?: number) => {
     const defaultDay = day ?? (view === 'day' ? selectedDay : new Date())
     const defaultStart = new Date(defaultDay)
-    defaultStart.setHours(hour ?? 9, 0, 0, 0)
+    defaultStart.setHours(hour ?? 9, minute ?? 0, 0, 0)
     setModal({ open: true, defaultStart, defaultDay })
   }
 
@@ -304,14 +306,23 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
         className={`relative border-r-[0.5px] border-border last:border-r-0 ${isToday ? 'bg-accent/[0.02]' : ''}`}
         style={{ height: `${GRID_HEIGHT}px` }}
       >
-        {HOURS.map((h, hi) => (
-          <div
-            key={h}
-            className="absolute left-0 right-0 cursor-pointer hover:bg-accent/5 transition-colors"
-            style={{ top: `${hi * 56}px`, height: '56px' }}
-            onClick={() => openNew(day, h)}
-          />
-        ))}
+        {Array.from({ length: Math.ceil(GRID_TOTAL / slotInterval) }, (_, i) => {
+          const minuteOffset = i * slotInterval
+          const absMin = GRID_START + minuteOffset
+          if (absMin >= GRID_END) return null
+          const topPx = (minuteOffset / GRID_TOTAL) * GRID_HEIGHT
+          const heightPx = Math.min((slotInterval / GRID_TOTAL) * GRID_HEIGHT, GRID_HEIGHT - topPx)
+          const h = Math.floor(absMin / 60)
+          const m = absMin % 60
+          return (
+            <div
+              key={i}
+              className="absolute left-0 right-0 cursor-pointer hover:bg-accent/5 transition-colors"
+              style={{ top: `${topPx}px`, height: `${heightPx}px` }}
+              onClick={() => openNew(day, h, m)}
+            />
+          )
+        })}
         <div className="absolute inset-0 pointer-events-none">
           {dayTurnos.map(t => {
             const start = new Date(t.start_time)
@@ -457,6 +468,18 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                     {HOURS.map((h, i) => (
                       <div key={h} className="absolute left-0 right-0 border-t-[0.5px] border-border" style={{ top: `${i * 56}px`, height: '56px' }} />
                     ))}
+                    {slotInterval < 60 && Array.from({ length: Math.ceil(GRID_TOTAL / slotInterval) }, (_, i) => {
+                      const minuteOffset = i * slotInterval
+                      if (minuteOffset % 60 === 0) return null
+                      if (GRID_START + minuteOffset >= GRID_END) return null
+                      return (
+                        <div
+                          key={`sub-${i}`}
+                          className="absolute left-0 right-0 border-t-[0.5px] border-border/30 pointer-events-none"
+                          style={{ top: `${(minuteOffset / GRID_TOTAL) * GRID_HEIGHT}px` }}
+                        />
+                      )
+                    })}
                     {renderDayColumn(selectedDay, dayTurnos, dayColLayout)}
                   </div>
                 </div>
@@ -499,6 +522,18 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                       </div>
                     </div>
                   ))}
+                  {slotInterval < 60 && Array.from({ length: Math.ceil(GRID_TOTAL / slotInterval) }, (_, i) => {
+                    const minuteOffset = i * slotInterval
+                    if (minuteOffset % 60 === 0) return null
+                    if (GRID_START + minuteOffset >= GRID_END) return null
+                    return (
+                      <div
+                        key={`sub-${i}`}
+                        className="absolute left-[48px] right-0 border-t-[0.5px] border-border/30 pointer-events-none"
+                        style={{ top: `${(minuteOffset / GRID_TOTAL) * GRID_HEIGHT}px` }}
+                      />
+                    )
+                  })}
                   <div className="absolute inset-0 left-[48px] grid" style={{ gridTemplateColumns: 'repeat(7, 1fr)' }}>
                     {weekDays.map((day) => {
                       const dt = turnos.filter(t => isSameDay(new Date(t.start_time), day))
@@ -540,6 +575,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
           areas={areas}
           turno={modal.turno}
           defaultStart={modal.defaultStart}
+          slotInterval={slotInterval}
           onClose={closeModal}
           onSaved={handleSaved}
           onClone={handleClone}
@@ -564,11 +600,12 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
           userId={userId}
           isOwner={isOwner}
           initialAreas={areas}
+          initialSlotInterval={slotInterval}
           members={members}
           shareToken={shareToken}
           shareEnabled={shareEnabled}
           onClose={() => setSettingsOpen(false)}
-          onSaved={newAreas => { setAreas(newAreas); setSettingsOpen(false) }}
+          onSaved={(newAreas, newSlotInterval) => { setAreas(newAreas); setSlotInterval(newSlotInterval); setSettingsOpen(false) }}
         />
       )}
     </div>

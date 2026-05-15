@@ -26,11 +26,12 @@ interface Props {
   userId: string
   isOwner: boolean
   initialAreas: string[]
+  initialSlotInterval: number
   members: Member[]
   shareToken: string | null
   shareEnabled: boolean
   onClose: () => void
-  onSaved: (areas: string[]) => void
+  onSaved: (areas: string[], slotInterval: number) => void
 }
 
 export default function AgendaSettings({
@@ -38,6 +39,7 @@ export default function AgendaSettings({
   userId,
   isOwner,
   initialAreas,
+  initialSlotInterval,
   members,
   shareToken,
   shareEnabled: initialShareEnabled,
@@ -45,6 +47,7 @@ export default function AgendaSettings({
   onSaved,
 }: Props) {
   const [areas, setAreas] = useState<string[]>(initialAreas)
+  const [slotInterval, setSlotInterval] = useState(initialSlotInterval)
   const [newArea, setNewArea] = useState('')
   const [shareEnabled, setShareEnabled] = useState(initialShareEnabled)
   const [memberAccess, setMemberAccess] = useState<Record<string, boolean>>(
@@ -101,12 +104,13 @@ export default function AgendaSettings({
     if (orgId && isOwner) {
       await supabase.rpc('set_org_agenda_areas', { p_org_id: orgId, p_areas: areas })
       await supabase.rpc('set_org_agenda_share', { p_org_id: orgId, p_enabled: shareEnabled })
+      await supabase.from('organizations').update({ agenda_slot_interval: slotInterval }).eq('id', orgId)
     } else {
-      await supabase.from('users').update({ agenda_areas: areas }).eq('id', userId)
+      await supabase.from('users').update({ agenda_areas: areas, agenda_slot_interval: slotInterval }).eq('id', userId)
     }
 
     setSaving(false)
-    onSaved(areas)
+    onSaved(areas, slotInterval)
   }
 
   return (
@@ -151,6 +155,28 @@ export default function AgendaSettings({
             >
               + Agregar
             </button>
+          </div>
+        </div>
+
+        {/* Slot interval */}
+        <div className="mb-6 border-t-[0.5px] border-border pt-5">
+          <label className="text-[11px] uppercase tracking-[0.05em] text-text-secondary block mb-3">Intervalo de turnos</label>
+          <p className="text-[12px] text-text-secondary mb-3">Cada cuántos minutos se muestran los slots en la agenda y la duración por defecto de cada turno.</p>
+          <div className="flex gap-2 flex-wrap">
+            {[15, 20, 30, 40, 45, 60].map(interval => (
+              <button
+                key={interval}
+                type="button"
+                onClick={() => setSlotInterval(interval)}
+                className={`px-4 py-2 rounded-lg text-[13px] border-[0.5px] transition-colors ${
+                  slotInterval === interval
+                    ? 'bg-accent text-bg-primary border-accent'
+                    : 'bg-bg-primary border-border text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                {interval} min
+              </button>
+            ))}
           </div>
         </div>
 

@@ -40,6 +40,7 @@ interface Professional {
 interface PatientResult {
   id: string
   name: string
+  dni: string | null
   age: number | null
   occupation: string | null
 }
@@ -51,6 +52,7 @@ interface Props {
   areas: string[]
   turno?: Turno
   defaultStart?: Date
+  slotInterval?: number
   onClose: () => void
   onSaved: () => void
   onClone?: (turno: Turno) => void
@@ -90,10 +92,11 @@ function formatTime(date: Date): string {
   return date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
 }
 
-export default function TurnoModal({ userId, orgId, professionals, areas, turno, defaultStart, onClose, onSaved, onClone }: Props) {
+export default function TurnoModal({ userId, orgId, professionals, areas, turno, defaultStart, slotInterval, onClose, onSaved, onClone }: Props) {
   const isEdit = !!turno
   const effectiveAreas = areas.length > 0 ? areas : AREAS
-  const defaultEnd = defaultStart ? new Date(defaultStart.getTime() + 60 * 60 * 1000) : null
+  const defaultDuration = slotInterval ?? 60
+  const defaultEnd = defaultStart ? new Date(defaultStart.getTime() + defaultDuration * 60 * 1000) : null
 
   const [form, setForm] = useState({
     patient_name:        turno?.patient_name ?? '',
@@ -110,6 +113,11 @@ export default function TurnoModal({ userId, orgId, professionals, areas, turno,
     notes:               turno?.notes            ?? '',
     appointment_type:    turno?.appointment_type ?? 'turno_comun',
     is_blocked:          turno?.is_blocked       ?? false,
+  })
+
+  const [duration, setDuration] = useState(() => {
+    if (turno) return Math.round((new Date(turno.end_time).getTime() - new Date(turno.start_time).getTime()) / 60000) || defaultDuration
+    return defaultDuration
   })
 
   const [patientSearch, setPatientSearch]     = useState(turno?.patient_name ?? '')
@@ -135,7 +143,7 @@ export default function TurnoModal({ userId, orgId, professionals, areas, turno,
     searchTimeout.current = setTimeout(async () => {
       let query = supabaseRef.current
         .from('patients')
-        .select('id, name, age, occupation')
+        .select('id, name, dni, age, occupation')
         .ilike('name', `%${patientSearch}%`)
         .limit(6)
       if (orgId) query = query.eq('org_id', orgId)
@@ -321,11 +329,46 @@ export default function TurnoModal({ userId, orgId, professionals, areas, turno,
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Inicio *</label>
-                <input type="datetime-local" value={form.start_time} onChange={e => setForm(f => ({ ...f, start_time: e.target.value }))} className={inputCls} />
+                <input
+                  type="datetime-local"
+                  value={form.start_time}
+                  onChange={e => {
+                    const newStart = e.target.value
+                    setForm(f => ({
+                      ...f,
+                      start_time: newStart,
+                      end_time: newStart ? toLocalInputValue(new Date(new Date(newStart).getTime() + duration * 60 * 1000)) : f.end_time,
+                    }))
+                  }}
+                  className={inputCls}
+                />
               </div>
               <div>
                 <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Fin *</label>
                 <input type="datetime-local" value={form.end_time} onChange={e => setForm(f => ({ ...f, end_time: e.target.value }))} className={inputCls} />
+              </div>
+            </div>
+            <div>
+              <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-2">Duración</label>
+              <div className="flex gap-1.5 flex-wrap">
+                {[15, 20, 30, 40, 45, 60, 90, 120].map(d => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => {
+                      setDuration(d)
+                      if (form.start_time) {
+                        const end = new Date(new Date(form.start_time).getTime() + d * 60 * 1000)
+                        setForm(f => ({ ...f, end_time: toLocalInputValue(end) }))
+                      }
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-[12px] border-[0.5px] transition-colors ${
+                      duration === d ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-primary border-border text-text-secondary hover:text-text-primary'
+                    }`}
+                  >
+                    {d}min
+                  </button>
+                ))}
               </div>
             </div>
             {professionals.length > 0 && (
@@ -369,6 +412,7 @@ export default function TurnoModal({ userId, orgId, professionals, areas, turno,
                   {patientResults.map(p => (
                     <button key={p.id} onClick={() => selectPatient(p)} className="w-full text-left px-4 py-3 text-[13px] hover:bg-bg-secondary transition-colors border-b-[0.5px] border-border last:border-b-0">
                       <span className="font-medium">{p.name}</span>
+                      {p.dni && <span className="text-text-tertiary ml-2 text-[12px]">DNI {p.dni}</span>}
                       {(p.age || p.occupation) && (
                         <span className="text-text-secondary ml-2">{[p.age ? `${p.age} años` : null, p.occupation].filter(Boolean).join(' · ')}</span>
                       )}
@@ -407,15 +451,52 @@ export default function TurnoModal({ userId, orgId, professionals, areas, turno,
             </div>
 
             {/* Date/time */}
-            <div className={`grid grid-cols-2 gap-3 ${rescheduling ? 'ring-1 ring-accent/40 rounded-xl p-3 -mx-1' : ''}`}>
-              {rescheduling && <p className="col-span-2 text-[11px] text-accent mb-1">Seleccioná el nuevo día y horario</p>}
-              <div>
-                <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Inicio *</label>
-                <input type="datetime-local" value={form.start_time} onChange={e => setForm(f => ({ ...f, start_time: e.target.value }))} className={inputCls} />
+            <div className={`space-y-3 ${rescheduling ? 'ring-1 ring-accent/40 rounded-xl p-3 -mx-1' : ''}`}>
+              {rescheduling && <p className="text-[11px] text-accent">Seleccioná el nuevo día y horario</p>}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Inicio *</label>
+                  <input
+                    type="datetime-local"
+                    value={form.start_time}
+                    onChange={e => {
+                      const newStart = e.target.value
+                      setForm(f => ({
+                        ...f,
+                        start_time: newStart,
+                        end_time: newStart ? (() => { const d = new Date(new Date(newStart).getTime() + duration * 60 * 1000); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}T${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}` })() : f.end_time,
+                      }))
+                    }}
+                    className={inputCls}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Fin *</label>
+                  <input type="datetime-local" value={form.end_time} onChange={e => setForm(f => ({ ...f, end_time: e.target.value }))} className={inputCls} />
+                </div>
               </div>
               <div>
-                <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Fin *</label>
-                <input type="datetime-local" value={form.end_time} onChange={e => setForm(f => ({ ...f, end_time: e.target.value }))} className={inputCls} />
+                <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-2">Duración</label>
+                <div className="flex gap-1.5 flex-wrap">
+                  {[15, 20, 30, 40, 45, 60, 90, 120].map(d => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => {
+                        setDuration(d)
+                        if (form.start_time) {
+                          const end = new Date(new Date(form.start_time).getTime() + d * 60 * 1000)
+                          setForm(f => ({ ...f, end_time: toLocalInputValue(end) }))
+                        }
+                      }}
+                      className={`px-2.5 py-1 rounded-lg text-[12px] border-[0.5px] transition-colors ${
+                        duration === d ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-primary border-border text-text-secondary hover:text-text-primary'
+                      }`}
+                    >
+                      {d}min
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
