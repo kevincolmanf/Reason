@@ -12,7 +12,6 @@ interface Patient {
   occupation: string | null
   created_at: string
   plan_count?: number
-  users?: { full_name: string | null }[] | null
 }
 
 export default function PacientesClient({ userId, isActiveUser, isPro, orgId }: { userId: string; isActiveUser: boolean; isPro: boolean; orgId?: string | null }) {
@@ -52,13 +51,13 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId }: 
     if (orgId) {
       const { data: orgData, error: orgError } = await supabaseRef.current
         .from('patients')
-        .select('id, name, age, occupation, created_at, users!user_id(full_name)')
+        .select('id, name, age, occupation, created_at')
         .eq('org_id', orgId)
         .order('created_at', { ascending: true })
 
       const { data: personalData, error: personalError } = await supabaseRef.current
         .from('patients')
-        .select('id, name, age, occupation, created_at, users!user_id(full_name)')
+        .select('id, name, age, occupation, created_at')
         .eq('user_id', userId)
         .is('org_id', null)
         .order('created_at', { ascending: true })
@@ -71,7 +70,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId }: 
     } else {
       const { data, error } = await supabaseRef.current
         .from('patients')
-        .select('id, name, age, occupation, created_at, users!user_id(full_name)')
+        .select('id, name, age, occupation, created_at')
         .eq('user_id', userId)
         .order('created_at', { ascending: true })
 
@@ -369,11 +368,6 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId }: 
                         Ver →
                       </span>
                     </div>
-                    {orgId && p.users?.[0]?.full_name && (
-                      <p className="text-[11px] text-text-tertiary mt-2">
-                        por {p.users[0].full_name}
-                      </p>
-                    )}
                   </div>
                 </Link>
                 {/* Delete button — solo para usuarios Individual, no Pro */}
