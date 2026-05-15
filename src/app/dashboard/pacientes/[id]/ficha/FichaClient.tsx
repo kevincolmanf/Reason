@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { jsPDF } from 'jspdf'
@@ -178,7 +178,8 @@ export default function FichaClient({
     fecha: initialFicha.fecha || emptyFicha.fecha,
     goniometria: (initialFicha.ficha_data?.goniometria as GonioRecord[]) ?? [],
   })
-  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved')
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [hasChanges, setHasChanges] = useState(false)
   const [expandedSection, setExpandedSection] = useState<'goniometria' | 'cuestionarios' | 'dinamometria' | null>(null)
   const [showGonioForm, setShowGonioForm] = useState(false)
   const [gonioRegion, setGonioRegion] = useState(GONIO_REGIONS[0].key)
@@ -190,25 +191,27 @@ export default function FichaClient({
   const [pdfProfesional, setPdfProfesional] = useState('')
   const [pdfUploadError, setPdfUploadError] = useState('')
 
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const supabase = createClient()
+  const supabaseRef = useRef(createClient())
 
-  // Autosave
-  useEffect(() => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current)
+  const handleSave = async () => {
     setSaveStatus('saving')
-    timeoutRef.current = setTimeout(async () => {
-      const { error } = await supabase
-        .from('patient_fichas')
-        .update({ fecha: ficha.fecha || null, ficha_data: ficha })
-        .eq('id', initialFicha.id)
-      setSaveStatus(error ? 'error' : 'saved')
-    }, 1500)
-    return () => { if (timeoutRef.current) clearTimeout(timeoutRef.current) }
-  }, [ficha, supabase, initialFicha.id])
+    const { error } = await supabaseRef.current
+      .from('patient_fichas')
+      .update({ fecha: ficha.fecha || null, ficha_data: ficha })
+      .eq('id', initialFicha.id)
+    if (error) {
+      setSaveStatus('error')
+      alert(`Error al guardar: ${error.message}`)
+    } else {
+      setSaveStatus('saved')
+      setHasChanges(false)
+    }
+  }
 
   const handleChange = (field: keyof FichaData, value: string) => {
     setFicha(prev => ({ ...prev, [field]: value }))
+    setHasChanges(true)
+    setSaveStatus('idle')
   }
 
   // ─── Goniometry ────────────────────────────────────────────────────────────
@@ -229,6 +232,8 @@ export default function FichaClient({
       notes: gonioNotes,
     }
     setFicha(prev => ({ ...prev, goniometria: [record, ...(prev.goniometria ?? [])] }))
+    setHasChanges(true)
+    setSaveStatus('idle')
     setShowGonioForm(false)
     setGonioValues({})
     setGonioNotes('')
@@ -237,19 +242,21 @@ export default function FichaClient({
 
   const handleDeleteGonio = (id: string) => {
     setFicha(prev => ({ ...prev, goniometria: (prev.goniometria ?? []).filter(r => r.id !== id) }))
+    setHasChanges(true)
+    setSaveStatus('idle')
   }
 
   // ─── Questionnaire delete ───────────────────────────────────────────────────
 
   const handleDeleteQ = async (id: string) => {
     if (!confirm('¿Eliminar este resultado?')) return
-    const { error } = await supabase.from('questionnaire_results').delete().eq('id', id)
+    const { error } = await supabaseRef.current.from('questionnaire_results').delete().eq('id', id)
     if (!error) setQResults(prev => prev.filter(r => r.id !== id))
   }
 
   const handleDeleteDynamo = async (id: string) => {
     if (!confirm('¿Eliminar esta evaluación?')) return
-    const { error } = await supabase.from('dynamometer_results').delete().eq('id', id)
+    const { error } = await supabaseRef.current.from('dynamometer_results').delete().eq('id', id)
     if (!error) setDynResults(prev => prev.filter(d => d.id !== id))
   }
 
@@ -369,13 +376,19 @@ export default function FichaClient({
 
   return (
     <div>
-      {/* Save status */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-[28px] font-medium tracking-[-0.01em]">Ficha Clínica</h1>
-        <div className="text-[12px]">
-          {saveStatus === 'saving' && <span className="text-text-secondary">Guardando...</span>}
-          {saveStatus === 'saved' && <span className="text-[#3b82f6]">✓ Guardado</span>}
-          {saveStatus === 'error' && <span className="text-warning">Error al guardar</span>}
+        <div className="flex items-center gap-3">
+          {saveStatus === 'saving' && <span className="text-[13px] text-text-secondary">Guardando...</span>}
+          {saveStatus === 'saved' && <span className="text-[13px] text-[#3b82f6]">✓ Guardado</span>}
+          {saveStatus === 'error' && <span className="text-[13px] text-warning">Error al guardar</span>}
+          <button
+            onClick={handleSave}
+            disabled={saveStatus === 'saving' || !hasChanges}
+            className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
+          >
+            {saveStatus === 'saving' ? 'Guardando...' : 'Guardar'}
+          </button>
         </div>
       </div>
 
@@ -765,13 +778,27 @@ export default function FichaClient({
       </div>
 
       {/* ── Footer ─────────────────────────────────────────────────────────── */}
-      <div className="sticky bottom-6 bg-bg-secondary/90 backdrop-blur-md border-[0.5px] border-border rounded-xl p-4 flex justify-end gap-3 shadow-lg">
-        <button
-          onClick={handleExportPDF}
-          className="bg-accent text-bg-primary px-5 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity"
-        >
-          Exportar PDF
-        </button>
+      <div className="sticky bottom-6 bg-bg-secondary/90 backdrop-blur-md border-[0.5px] border-border rounded-xl p-4 flex justify-between items-center gap-3 shadow-lg">
+        <div className="flex items-center gap-2">
+          {hasChanges && <span className="text-[12px] text-warning">Cambios sin guardar</span>}
+          {saveStatus === 'saved' && !hasChanges && <span className="text-[12px] text-[#3b82f6]">✓ Guardado</span>}
+          {saveStatus === 'error' && <span className="text-[12px] text-warning">Error al guardar — intentá de nuevo</span>}
+        </div>
+        <div className="flex gap-3">
+          <button
+            onClick={handleSave}
+            disabled={saveStatus === 'saving' || !hasChanges}
+            className="bg-accent text-bg-primary px-5 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
+          >
+            {saveStatus === 'saving' ? 'Guardando...' : 'Guardar cambios'}
+          </button>
+          <button
+            onClick={handleExportPDF}
+            className="bg-bg-primary border-[0.5px] border-border text-text-secondary px-5 py-2 rounded-lg text-[13px] font-medium hover:text-text-primary transition-colors"
+          >
+            Exportar PDF
+          </button>
+        </div>
       </div>
     </div>
   )
