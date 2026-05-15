@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import FichaClient from './FichaClient'
+import { verifyPatientAccess } from '@/utils/patient-access'
 
 export const metadata = {
   title: 'Ficha Clínica | Reason',
@@ -13,11 +14,12 @@ export default async function FichaPage({ params }: { params: { id: string } }) 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  await verifyPatientAccess(params.id, user.id)
+
   const { data: patient } = await supabase
     .from('patients')
     .select('id, name, age, occupation')
     .eq('id', params.id)
-    .eq('user_id', user.id)
     .single()
 
   if (!patient) redirect('/dashboard/pacientes')

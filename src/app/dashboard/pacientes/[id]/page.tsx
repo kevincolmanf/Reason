@@ -3,6 +3,7 @@ import Link from 'next/link'
 import PacienteDetail from './PacienteDetail'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
+import { verifyPatientAccess } from '@/utils/patient-access'
 
 export const metadata = {
   title: 'Paciente | Reason',
@@ -14,11 +15,12 @@ export default async function PacientePage({ params }: { params: { id: string } 
 
   if (!user) redirect('/login')
 
+  await verifyPatientAccess(params.id, user.id)
+
   const { data: patient, error } = await supabase
     .from('patients')
     .select('*')
     .eq('id', params.id)
-    .eq('user_id', user.id)
     .single()
 
   if (error || !patient) redirect('/dashboard/pacientes')
