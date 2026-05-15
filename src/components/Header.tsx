@@ -14,12 +14,13 @@ export default async function Header() {
   let available: AvailableContext[] = []
   let ctx: ActiveContext = { type: 'personal', orgId: null }
   let hasAgendaAccess = false
+  let agendaBlockedReason: 'plan' | 'member' = 'plan'
 
   if (user) {
     const [activeCtx, ownedOrgsResult, memberOrgsResult, userDataResult] = await Promise.all([
       getActiveContext(user.id, supabase),
       supabase.from('organizations').select('id, name').eq('owner_id', user.id),
-      supabase.from('organization_members').select('org_id, organizations(id, name)').eq('user_id', user.id),
+      supabase.from('organization_members').select('org_id, agenda_access, organizations(id, name)').eq('user_id', user.id),
       supabase.from('users').select('role').eq('id', user.id).single(),
     ])
 
@@ -28,25 +29,22 @@ export default async function Header() {
     const isOwner = role === 'admin' || role === 'pro'
     const isOrgCtx = ctx.type === 'org' && !!ctx.orgId
 
-    if (isOwner) {
-      hasAgendaAccess = true
-    } else if (isOrgCtx && ctx.orgId) {
-      const { data: memberRow } = await supabase
-        .from('organization_members')
-        .select('agenda_access')
-        .eq('org_id', ctx.orgId)
-        .eq('user_id', user.id)
-        .single()
-      hasAgendaAccess = memberRow?.agenda_access ?? false
-    }
-
-    type MemberRow = { org_id: string; organizations: { id: string; name: string } | null }
+    type MemberRow = { org_id: string; agenda_access: boolean | null; organizations: { id: string; name: string } | null }
 
     const ownedOrgs = (ownedOrgsResult.data ?? []) as { id: string; name: string }[]
-    const memberOrgs = ((memberOrgsResult.data ?? []) as unknown as MemberRow[])
+    const memberRows = (memberOrgsResult.data ?? []) as unknown as MemberRow[]
+    const memberOrgs = memberRows
       .map(r => r.organizations)
       .filter((o): o is { id: string; name: string } => o !== null)
       .filter(o => !ownedOrgs.some(owned => owned.id === o.id))
+
+    if (isOwner) {
+      hasAgendaAccess = true
+    } else if (isOrgCtx && ctx.orgId) {
+      const myMemberRow = memberRows.find(r => r.org_id === ctx.orgId)
+      hasAgendaAccess = myMemberRow?.agenda_access ?? false
+      agendaBlockedReason = 'member'
+    }
 
     available = [
       { type: 'personal', orgId: null, label: 'Mi espacio' },
@@ -87,7 +85,7 @@ export default async function Header() {
             <div className="relative group hidden sm:inline-block">
               <span className="text-[13px] sm:text-[14px] text-[#c47c5a] cursor-default select-none">Agenda</span>
               <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-2.5 py-1.5 bg-bg-secondary border-[0.5px] border-border rounded-lg text-[11px] text-text-secondary whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 shadow-lg">
-                Disponible en Plan Pro
+                {agendaBlockedReason === 'member' ? 'Sin acceso habilitado' : 'Disponible en Plan Pro'}
               </div>
             </div>
           )}
