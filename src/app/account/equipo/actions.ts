@@ -92,7 +92,9 @@ export async function addMember(orgId: string, formData: FormData): Promise<{ er
       return { error: 'Error al agregar el miembro' }
     }
 
-    await adminClient.from('users').update({ role: 'pro' }).eq('id', existingUser.id)
+    if (existingUser.role !== 'admin') {
+      await adminClient.from('users').update({ role: 'pro' }).eq('id', existingUser.id)
+    }
 
     return { success: true, email, tempPassword: undefined } as { error?: string; tempPassword?: string; email?: string }
   }
