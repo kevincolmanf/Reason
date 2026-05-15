@@ -37,6 +37,7 @@ interface Props {
   userId: string
   orgId: string | null
   professionals: Professional[]
+  areas: string[]
   turno?: Turno
   defaultStart?: Date
   onClose: () => void
@@ -62,8 +63,9 @@ function toLocalInputValue(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
-export default function TurnoModal({ userId, orgId, professionals, turno, defaultStart, onClose, onSaved }: Props) {
+export default function TurnoModal({ userId, orgId, professionals, areas, turno, defaultStart, onClose, onSaved }: Props) {
   const isEdit = !!turno
+  const effectiveAreas = areas.length > 0 ? areas : AREAS
 
   const defaultEnd = defaultStart ? new Date(defaultStart.getTime() + 60 * 60 * 1000) : null
 
@@ -85,6 +87,8 @@ export default function TurnoModal({ userId, orgId, professionals, turno, defaul
   const [patientSearch, setPatientSearch]   = useState(turno?.patient_name ?? '')
   const [patientResults, setPatientResults] = useState<PatientResult[]>([])
   const [searchOpen, setSearchOpen]         = useState(false)
+  const [createPatient, setCreatePatient]   = useState(!isEdit)
+  const [rescheduling, setRescheduling]     = useState(false)
   const [saving, setSaving]  = useState(false)
   const [deleting, setDeleting] = useState(false)
 
@@ -127,9 +131,26 @@ export default function TurnoModal({ userId, orgId, professionals, turno, defaul
     if (!form.patient_name.trim() || !form.start_time || !form.end_time) return
     setSaving(true)
 
+    let patientId = form.patient_id
+
+    // Auto-create patient if requested and not already linked
+    if (!patientId && createPatient && form.patient_name.trim()) {
+      const { data: newPatient } = await supabaseRef.current
+        .from('patients')
+        .insert({
+          name:       form.patient_name.trim(),
+          age:        form.patient_age ? parseInt(form.patient_age, 10) : null,
+          user_id:    userId,
+          org_id:     orgId,
+        })
+        .select('id')
+        .single()
+      if (newPatient) patientId = newPatient.id
+    }
+
     const payload = {
       patient_name:        form.patient_name.trim(),
-      patient_id:          form.patient_id,
+      patient_id:          patientId,
       patient_phone:       form.patient_phone.trim() || null,
       patient_email:       form.patient_email.trim() || null,
       patient_age:         form.patient_age ? parseInt(form.patient_age, 10) : null,
@@ -169,7 +190,17 @@ export default function TurnoModal({ userId, orgId, professionals, turno, defaul
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div className="bg-bg-secondary border-[0.5px] border-border rounded-2xl p-6 w-full max-w-[480px] shadow-xl">
         <div className="flex justify-between items-center mb-5">
-          <h2 className="text-[16px] font-medium">{isEdit ? 'Editar turno' : 'Nuevo turno'}</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-[16px] font-medium">{isEdit ? 'Editar turno' : 'Nuevo turno'}</h2>
+            {isEdit && (
+              <button
+                onClick={() => setRescheduling(r => !r)}
+                className={`text-[11px] px-2 py-1 rounded-md border-[0.5px] transition-colors ${rescheduling ? 'bg-accent text-bg-primary border-accent' : 'border-border text-text-secondary hover:text-text-primary'}`}
+              >
+                Reprogramar
+              </button>
+            )}
+          </div>
           <button onClick={onClose} className="text-text-secondary hover:text-text-primary text-[18px] leading-none">×</button>
         </div>
 
@@ -274,8 +305,11 @@ export default function TurnoModal({ userId, orgId, professionals, turno, defaul
             </div>
           </div>
 
-          {/* Date/time */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* Date/time — highlighted when rescheduling */}
+          <div className={`grid grid-cols-2 gap-3 ${rescheduling ? 'ring-1 ring-accent/40 rounded-xl p-3 -mx-1' : ''}`}>
+            {rescheduling && (
+              <p className="col-span-2 text-[11px] text-accent mb-1">Seleccioná el nuevo día y horario</p>
+            )}
             <div>
               <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Inicio *</label>
               <input
@@ -305,7 +339,7 @@ export default function TurnoModal({ userId, orgId, professionals, turno, defaul
                 onChange={e => setForm(f => ({ ...f, area: e.target.value }))}
                 className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[13px] focus:outline-none focus:border-accent"
               >
-                {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
+                {effectiveAreas.map(a => <option key={a} value={a}>{a}</option>)}
               </select>
             </div>
             <div>
@@ -349,6 +383,19 @@ export default function TurnoModal({ userId, orgId, professionals, turno, defaul
             />
           </div>
         </div>
+
+        {/* Auto-create patient (only when no patient is linked yet) */}
+        {!form.patient_id && form.patient_name.trim() && (
+          <label className="flex items-center gap-2 mt-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={createPatient}
+              onChange={e => setCreatePatient(e.target.checked)}
+              className="accent-accent w-4 h-4"
+            />
+            <span className="text-[12px] text-text-secondary">Registrar como paciente nuevo en el sistema</span>
+          </label>
+        )}
 
         {/* Actions */}
         <div className="flex gap-3 mt-6">

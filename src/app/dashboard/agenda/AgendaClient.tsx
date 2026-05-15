@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import TurnoModal from './TurnoModal'
+import AgendaSettings from './AgendaSettings'
 
 interface Turno {
   id: string
@@ -31,6 +32,10 @@ interface Props {
   orgId: string | null
   orgName: string | null
   professionals: Professional[]
+  areas: string[]
+  isOwner: boolean
+  shareToken: string | null
+  shareEnabled: boolean
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -174,13 +179,15 @@ function exportDay(turnos: Turno[], date: Date) {
   URL.revokeObjectURL(url)
 }
 
-export default function AgendaClient({ userId, orgId, orgName, professionals }: Props) {
+export default function AgendaClient({ userId, orgId, orgName, professionals, areas: initialAreas, isOwner, shareToken, shareEnabled }: Props) {
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()))
   const [selectedDay, setSelectedDay] = useState<Date>(() => new Date())
   const [view, setView] = useState<'week' | 'day'>('day')
   const [turnos, setTurnos]       = useState<Turno[]>([])
   const [loading, setLoading]     = useState(true)
   const [filterProf, setFilterProf] = useState<string>('all')
+  const [areas, setAreas] = useState<string[]>(initialAreas)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [modal, setModal] = useState<{
     open: boolean
     turno?: Turno
@@ -248,6 +255,8 @@ export default function AgendaClient({ userId, orgId, orgName, professionals }: 
   const closeModal = () => setModal({ open: false })
   const handleSaved = () => { closeModal(); fetchTurnos() }
 
+  const GRID_HEIGHT = HOURS.length * 56
+
   // ── render a single day column ──────────────────────────────────
   const renderDayColumn = (day: Date, dayTurnos: Turno[], colLayout: Map<string, { col: number; totalCols: number }>) => {
     const today = new Date()
@@ -255,7 +264,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals }: 
     return (
       <div
         className={`relative border-r-[0.5px] border-border last:border-r-0 ${isToday ? 'bg-accent/[0.02]' : ''}`}
-        style={{ height: `${HOURS.length * 56}px` }}
+        style={{ height: `${GRID_HEIGHT}px` }}
       >
         {HOURS.map((h, hi) => (
           <div
@@ -307,8 +316,13 @@ export default function AgendaClient({ userId, orgId, orgName, professionals }: 
     ? formatDateLong(selectedDay)
     : `${formatDateHeader(weekStart)} – ${formatDateHeader(weekEnd)}`
 
+  const MIN_COL_WIDTH = 130 // px — minimum readable width per simultaneous column
+
   const dayTurnos = turnos.filter(t => isSameDay(new Date(t.start_time), selectedDay))
   const dayColLayout = assignColumns(dayTurnos)
+  const maxSimultaneousCols = dayTurnos.length > 0
+    ? Math.max(...Array.from(dayColLayout.values()).map(v => v.totalCols))
+    : 1
 
   return (
     <div>
@@ -368,6 +382,14 @@ export default function AgendaClient({ userId, orgId, orgName, professionals }: 
           )}
 
           <button
+            onClick={() => setSettingsOpen(true)}
+            className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors"
+            title="Configurar agenda"
+          >
+            ⚙
+          </button>
+
+          <button
             onClick={() => openNew()}
             className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity"
           >
@@ -396,20 +418,39 @@ export default function AgendaClient({ userId, orgId, orgName, professionals }: 
                   <span className="text-[13px] text-text-secondary">Cargando...</span>
                 </div>
               )}
-              <div className="relative" style={{ height: `${HOURS.length * 56}px` }}>
-                {HOURS.map((h, i) => (
-                  <div
-                    key={h}
-                    className="absolute left-0 right-0 border-t-[0.5px] border-border flex"
-                    style={{ top: `${i * 56}px`, height: '56px' }}
-                  >
-                    <div className="w-[48px] shrink-0 pr-2 flex items-start justify-end pt-1">
-                      <span className="text-[10px] text-text-tertiary tabular-nums">{String(h).padStart(2, '0')}:00</span>
+              {/* outer flex: hour labels (fixed) + scrollable appointment area */}
+              <div className="flex" style={{ height: `${GRID_HEIGHT}px` }}>
+                {/* Hour labels — fixed width, not scrolled */}
+                <div className="relative shrink-0 w-[48px]" style={{ height: `${GRID_HEIGHT}px` }}>
+                  {HOURS.map((h, i) => (
+                    <div
+                      key={h}
+                      className="absolute left-0 right-0 border-t-[0.5px] border-border"
+                      style={{ top: `${i * 56}px`, height: '56px' }}
+                    >
+                      <div className="pr-2 flex items-start justify-end pt-1">
+                        <span className="text-[10px] text-text-tertiary tabular-nums">{String(h).padStart(2, '0')}:00</span>
+                      </div>
                     </div>
+                  ))}
+                </div>
+
+                {/* Scrollable appointment area */}
+                <div className="flex-1 overflow-x-auto" style={{ height: `${GRID_HEIGHT}px` }}>
+                  <div
+                    className="relative"
+                    style={{ minWidth: `${maxSimultaneousCols * MIN_COL_WIDTH}px`, height: `${GRID_HEIGHT}px` }}
+                  >
+                    {/* Horizontal hour lines */}
+                    {HOURS.map((h, i) => (
+                      <div
+                        key={h}
+                        className="absolute left-0 right-0 border-t-[0.5px] border-border"
+                        style={{ top: `${i * 56}px`, height: '56px' }}
+                      />
+                    ))}
+                    {renderDayColumn(selectedDay, dayTurnos, dayColLayout)}
                   </div>
-                ))}
-                <div className="absolute inset-0 left-[48px]">
-                  {renderDayColumn(selectedDay, dayTurnos, dayColLayout)}
                 </div>
               </div>
             </div>
@@ -485,10 +526,25 @@ export default function AgendaClient({ userId, orgId, orgName, professionals }: 
           userId={userId}
           orgId={orgId}
           professionals={professionals}
+          areas={areas}
           turno={modal.turno}
           defaultStart={modal.defaultStart}
           onClose={closeModal}
           onSaved={handleSaved}
+        />
+      )}
+
+      {/* SETTINGS MODAL */}
+      {settingsOpen && (
+        <AgendaSettings
+          orgId={orgId}
+          userId={userId}
+          isOwner={isOwner}
+          initialAreas={areas}
+          shareToken={shareToken}
+          shareEnabled={shareEnabled}
+          onClose={() => setSettingsOpen(false)}
+          onSaved={newAreas => { setAreas(newAreas); setSettingsOpen(false) }}
         />
       )}
     </div>

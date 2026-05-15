@@ -5,6 +5,18 @@ import AgendaClient from './AgendaClient'
 
 export const metadata = { title: 'Agenda | Reason' }
 
+const DEFAULT_AREAS = [
+  'Kinesiología',
+  'Entrenamiento adultos',
+  'Entrenamiento niños',
+  'RPG',
+  'Pilates',
+  'Yoga',
+  'Nutrición',
+  'Traumatología',
+  'Análisis de la marcha',
+]
+
 export default async function AgendaPage() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -12,11 +24,10 @@ export default async function AgendaPage() {
 
   const { data: userData } = await supabase
     .from('users')
-    .select('role, full_name')
+    .select('role, full_name, agenda_areas')
     .eq('id', user.id)
     .single()
 
-  // Need active subscription or org membership
   const role = userData?.role
   const { count: orgCount } = await supabase
     .from('organization_members')
@@ -27,27 +38,43 @@ export default async function AgendaPage() {
   const isActive = role === 'admin' || role === 'pro' || isOrgMember
   if (!isActive) redirect('/paywall')
 
+  const isOwner = role === 'pro' || role === 'admin'
+
   // Get org context
   let orgId: string | null = null
   let orgName: string | null = null
+  let areas: string[] = userData?.agenda_areas ?? DEFAULT_AREAS
+  let shareToken: string | null = null
+  let shareEnabled = false
 
-  if (role === 'pro' || role === 'admin') {
+  if (isOwner) {
     const { data: ownedOrg } = await supabase
       .from('organizations')
-      .select('id, name')
+      .select('id, name, agenda_areas, agenda_share_token, agenda_share_enabled')
       .eq('owner_id', user.id)
       .limit(1)
       .single()
-    if (ownedOrg) { orgId = ownedOrg.id; orgName = ownedOrg.name }
+    if (ownedOrg) {
+      orgId = ownedOrg.id
+      orgName = ownedOrg.name
+      areas = (ownedOrg as unknown as { agenda_areas: string[] | null }).agenda_areas ?? DEFAULT_AREAS
+      shareToken = (ownedOrg as unknown as { agenda_share_token: string | null }).agenda_share_token
+      shareEnabled = (ownedOrg as unknown as { agenda_share_enabled: boolean }).agenda_share_enabled ?? false
+    }
   } else if (isOrgMember) {
     const { data: membership } = await supabase
       .from('organization_members')
-      .select('org_id, organizations(id, name)')
+      .select('org_id, organizations(id, name, agenda_areas)')
       .eq('user_id', user.id)
       .limit(1)
       .single()
-    const org = (membership as unknown as { org_id: string; organizations: { id: string; name: string } | null })?.organizations
-    if (org) { orgId = org.id; orgName = org.name }
+    type OrgRow = { id: string; name: string; agenda_areas: string[] | null }
+    const org = (membership as unknown as { org_id: string; organizations: OrgRow | null })?.organizations
+    if (org) {
+      orgId = org.id
+      orgName = org.name
+      areas = org.agenda_areas ?? DEFAULT_AREAS
+    }
   }
 
   // Load org members for professional filter
@@ -62,8 +89,8 @@ export default async function AgendaPage() {
       id: m.users?.id ?? m.user_id,
       full_name: m.users?.full_name ?? null,
     }))
-    // Add owner
-    if (userData?.full_name) {
+    // Add owner (avoid duplicates)
+    if (userData?.full_name && !professionals.find(p => p.id === user.id)) {
       professionals = [{ id: user.id, full_name: userData.full_name }, ...professionals]
     }
   }
@@ -77,6 +104,10 @@ export default async function AgendaPage() {
           orgId={orgId}
           orgName={orgName}
           professionals={professionals}
+          areas={areas}
+          isOwner={isOwner}
+          shareToken={shareToken}
+          shareEnabled={shareEnabled}
         />
       </main>
     </div>
