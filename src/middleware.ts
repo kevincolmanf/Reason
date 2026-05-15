@@ -70,7 +70,7 @@ export async function middleware(request: NextRequest) {
   const isAuthRoute = authRoutes.some(route => pathname.startsWith(route))
 
   // Rutas que requieren suscripción activa (o trial vigente)
-  const subscriberRoutes = ['/library', '/content', '/recursos', '/ficha', '/dashboard/ejercicios']
+  const subscriberRoutes = ['/library', '/content', '/recursos', '/ficha', '/dashboard/ejercicios', '/dashboard/agenda']
   const isSubscriberRoute = subscriberRoutes.some(route => pathname.startsWith(route))
 
   // Módulos avanzados dentro del dashboard de pacientes — bloqueados para free sin trial

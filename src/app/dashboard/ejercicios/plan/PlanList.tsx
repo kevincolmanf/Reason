@@ -41,6 +41,7 @@ export default function PlanList({ userId, patientId }: { userId: string; patien
       .order('updated_at', { ascending: false })
 
     if (patientId) query = query.eq('patient_id', patientId)
+    else query = query.eq('user_id', userId)
 
     const { data, error } = await query
     if (!error && data) setPlans(data)

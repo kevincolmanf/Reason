@@ -17,7 +17,7 @@ export default async function EquipoPage() {
     .eq('id', user.id)
     .single()
 
-  if (userData?.role !== 'pro') redirect('/paywall')
+  if (userData?.role !== 'pro' && userData?.role !== 'admin') redirect('/paywall')
 
   // Check if user has an org (as admin)
   const { data: orgRows } = await supabase
