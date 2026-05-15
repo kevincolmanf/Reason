@@ -10,6 +10,7 @@ interface Patient {
   age: number | null
   occupation: string | null
   created_at: string
+  user_id: string
   plan_count?: number
 }
 
@@ -44,9 +45,9 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
 
     if (orgId) {
       const [{ data: orgData }, { data: personalData }] = await Promise.all([
-        sb.from('patients').select('id, name, age, occupation, created_at').eq('org_id', orgId).order('created_at', { ascending: true }),
+        sb.from('patients').select('id, name, age, occupation, created_at, user_id').eq('org_id', orgId).order('created_at', { ascending: true }),
         showPersonalSection
-          ? sb.from('patients').select('id, name, age, occupation, created_at').eq('user_id', userId).is('org_id', null).order('created_at', { ascending: true })
+          ? sb.from('patients').select('id, name, age, occupation, created_at, user_id').eq('user_id', userId).is('org_id', null).order('created_at', { ascending: true })
           : Promise.resolve({ data: [] }),
       ])
 
@@ -63,7 +64,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
       setOrgPatients(orgWithCounts)
       setPersonalPatients(personalWithCounts)
     } else {
-      const { data } = await sb.from('patients').select('id, name, age, occupation, created_at').eq('user_id', userId).order('created_at', { ascending: true })
+      const { data } = await sb.from('patients').select('id, name, age, occupation, created_at, user_id').eq('user_id', userId).order('created_at', { ascending: true })
       const rows = (data || []) as Patient[]
       const withCounts = await Promise.all(
         rows.map(async (p) => {
@@ -184,7 +185,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
                 </div>
               </div>
             </Link>
-            {!isPro && pool === 'personal' && (
+            {(pool === 'personal' || isPro || p.user_id === userId) && (
               <button onClick={() => setDeleteConfirm(p.id)} className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity text-[11px] text-text-secondary hover:text-red-400 bg-bg-primary border-[0.5px] border-border rounded-lg px-2 py-1">
                 Eliminar
               </button>
@@ -202,9 +203,6 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
         <h3 className="text-[18px] font-medium mb-2">Eliminar paciente</h3>
         <p className="text-[14px] text-text-secondary mb-1">Estás por eliminar a <strong className="text-text-primary">{patientToDelete.name}</strong>.</p>
         <p className="text-[13px] text-warning mb-6">Esta acción es permanente e irreversible. Se borrarán todos sus planes y registros.</p>
-        <div className="bg-accent/5 border-[0.5px] border-accent/30 rounded-lg px-4 py-3 mb-6">
-          <p className="text-[12px] text-text-secondary">Con el <strong>Plan Pro</strong> nunca necesitás borrar pacientes.</p>
-        </div>
         <div className="flex gap-3">
           <button onClick={() => handleDelete(deleteConfirm!)} disabled={deleting} className="bg-red-600 text-white px-5 py-2.5 rounded-lg text-[13px] font-medium hover:bg-red-700 disabled:opacity-50 transition-colors">
             {deleting ? 'Eliminando...' : 'Sí, eliminar'}
