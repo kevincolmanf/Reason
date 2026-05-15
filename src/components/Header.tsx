@@ -13,15 +13,20 @@ export default async function Header() {
   let currentLabel = 'Mi espacio'
   let available: AvailableContext[] = []
   let ctx: ActiveContext = { type: 'personal', orgId: null }
+  let hasAgendaAccess = false
 
   if (user) {
-    const [activeCtx, ownedOrgsResult, memberOrgsResult] = await Promise.all([
+    const [activeCtx, ownedOrgsResult, memberOrgsResult, userDataResult] = await Promise.all([
       getActiveContext(user.id, supabase),
       supabase.from('organizations').select('id, name').eq('owner_id', user.id),
       supabase.from('organization_members').select('org_id, organizations(id, name)').eq('user_id', user.id),
+      supabase.from('users').select('role').eq('id', user.id).single(),
     ])
 
     ctx = activeCtx
+    const role = userDataResult.data?.role
+    const isOrgCtx = ctx.type === 'org'
+    hasAgendaAccess = role === 'admin' || role === 'pro' || isOrgCtx
 
     type MemberRow = { org_id: string; organizations: { id: string; name: string } | null }
 
@@ -62,9 +67,18 @@ export default async function Header() {
           <Link href="/dashboard/pacientes" className="text-[13px] sm:text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
             Pacientes
           </Link>
-          <Link href="/dashboard/agenda" className="hidden sm:inline text-[13px] sm:text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
-            Agenda
-          </Link>
+          {hasAgendaAccess ? (
+            <Link href="/dashboard/agenda" className="hidden sm:inline text-[13px] sm:text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+              Agenda
+            </Link>
+          ) : (
+            <div className="relative group hidden sm:inline-block">
+              <span className="text-[13px] sm:text-[14px] text-[#c47c5a] cursor-default select-none">Agenda</span>
+              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-2.5 py-1.5 bg-bg-secondary border-[0.5px] border-border rounded-lg text-[11px] text-text-secondary whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 shadow-lg">
+                Disponible en Plan Pro
+              </div>
+            </div>
+          )}
 
           {user && (
             <ContextBadge
