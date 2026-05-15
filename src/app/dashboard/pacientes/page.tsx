@@ -28,17 +28,14 @@ export default async function PacientesPage({ searchParams }: { searchParams: { 
 
   let orgId: string | null = null
   let orgName: string | null = null
-  let isOrgOwner = false
-
   if (ctx.type === 'org' && ctx.orgId) {
     orgId = ctx.orgId
     const { data: orgData } = await supabase
       .from('organizations')
-      .select('name, owner_id')
+      .select('name')
       .eq('id', ctx.orgId)
       .single()
     orgName = orgData?.name ?? null
-    isOrgOwner = orgData?.owner_id === user.id
   }
 
   const isOrgMember = !!orgId
