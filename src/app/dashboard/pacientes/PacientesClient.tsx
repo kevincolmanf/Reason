@@ -50,28 +50,33 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId }: 
     let rows: Patient[] = []
 
     if (orgId) {
-      // Org patients (created after org system)
-      const { data: orgData } = await supabaseRef.current
+      const { data: orgData, error: orgError } = await supabaseRef.current
         .from('patients')
         .select('id, name, age, occupation, created_at, users(full_name)')
         .eq('org_id', orgId)
         .order('created_at', { ascending: true })
 
-      // Personal patients without org_id (created before org system)
-      const { data: personalData } = await supabaseRef.current
+      const { data: personalData, error: personalError } = await supabaseRef.current
         .from('patients')
         .select('id, name, age, occupation, created_at, users(full_name)')
         .eq('user_id', userId)
         .is('org_id', null)
         .order('created_at', { ascending: true })
 
+      console.log('[patients] orgId:', orgId, 'userId:', userId)
+      console.log('[patients] orgData:', orgData, 'orgError:', orgError)
+      console.log('[patients] personalData:', personalData, 'personalError:', personalError)
+
       rows = [...(orgData || []), ...(personalData || [])] as Patient[]
     } else {
-      const { data } = await supabaseRef.current
+      const { data, error } = await supabaseRef.current
         .from('patients')
         .select('id, name, age, occupation, created_at, users(full_name)')
         .eq('user_id', userId)
         .order('created_at', { ascending: true })
+
+      console.log('[patients] no-org userId:', userId, 'data:', data, 'error:', error)
+
       rows = (data || []) as Patient[]
     }
 
