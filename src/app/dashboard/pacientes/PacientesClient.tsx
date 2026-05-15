@@ -52,13 +52,13 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId }: 
     if (orgId) {
       const { data: orgData, error: orgError } = await supabaseRef.current
         .from('patients')
-        .select('id, name, age, occupation, created_at, users(full_name)')
+        .select('id, name, age, occupation, created_at, users!user_id(full_name)')
         .eq('org_id', orgId)
         .order('created_at', { ascending: true })
 
       const { data: personalData, error: personalError } = await supabaseRef.current
         .from('patients')
-        .select('id, name, age, occupation, created_at, users(full_name)')
+        .select('id, name, age, occupation, created_at, users!user_id(full_name)')
         .eq('user_id', userId)
         .is('org_id', null)
         .order('created_at', { ascending: true })
@@ -71,7 +71,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId }: 
     } else {
       const { data, error } = await supabaseRef.current
         .from('patients')
-        .select('id, name, age, occupation, created_at, users(full_name)')
+        .select('id, name, age, occupation, created_at, users!user_id(full_name)')
         .eq('user_id', userId)
         .order('created_at', { ascending: true })
 
