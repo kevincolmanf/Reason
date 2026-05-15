@@ -39,7 +39,7 @@ export default async function DashboardPage() {
     getActiveContext(user.id, supabase),
   ])
 
-  let contextOrgId: string | null = ctx.type === 'org' ? ctx.orgId : null
+  const contextOrgId: string | null = ctx.type === 'org' ? ctx.orgId : null
   let contextOrgName: string | null = null
 
   if (contextOrgId) {
