@@ -8,7 +8,7 @@ export const metadata = {
   title: 'Mis Pacientes | Reason',
 }
 
-export default async function PacientesPage() {
+export default async function PacientesPage({ searchParams }: { searchParams: { new?: string } }) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -83,7 +83,7 @@ export default async function PacientesPage() {
           </p>
         </div>
 
-        <PacientesClient userId={user.id} isActiveUser={isActiveUser} isPro={isPro} orgId={orgId} orgName={orgName} showPersonalSection={showPersonalSection} />
+        <PacientesClient userId={user.id} isActiveUser={isActiveUser} isPro={isPro} orgId={orgId} orgName={orgName} showPersonalSection={showPersonalSection} autoOpen={searchParams.new === '1'} />
       </main>
     </div>
   )

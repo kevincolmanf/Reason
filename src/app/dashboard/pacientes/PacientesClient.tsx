@@ -21,13 +21,21 @@ interface Props {
   orgId?: string | null
   orgName?: string | null
   showPersonalSection?: boolean
+  autoOpen?: boolean
 }
 
-export default function PacientesClient({ userId, isActiveUser, isPro, orgId, orgName, showPersonalSection = false }: Props) {
+export default function PacientesClient({ userId, isActiveUser, isPro, orgId, orgName, showPersonalSection = false, autoOpen = false }: Props) {
   const [orgPatients, setOrgPatients] = useState<Patient[]>([])
   const [personalPatients, setPersonalPatients] = useState<Patient[]>([])
   const [loading, setLoading] = useState(true)
-  const [showForm, setShowForm] = useState<'org' | 'personal' | null>(null)
+
+  // Si autoOpen y el usuario tiene ambos contextos disponibles → selector de contexto primero
+  const hasBothContexts = !!orgId && showPersonalSection
+  const [contextPicker, setContextPicker] = useState(autoOpen && hasBothContexts)
+  const defaultForm = autoOpen && !hasBothContexts
+    ? (orgId ? 'org' : 'personal')
+    : null
+  const [showForm, setShowForm] = useState<'org' | 'personal' | null>(defaultForm)
   const [saving, setSaving] = useState(false)
   const [search, setSearch] = useState('')
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
@@ -230,7 +238,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
           ) : atSubscriberLimit ? (
             <a href="/paywall" className="bg-accent/10 text-accent border-[0.5px] border-accent/40 px-4 py-2 rounded-lg text-[13px] font-medium hover:bg-accent/20 transition-colors">Actualizá a Plan Pro</a>
           ) : (
-            <button onClick={() => setShowForm('personal')} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity">+ Nuevo Paciente</button>
+            <button onClick={() => hasBothContexts ? setContextPicker(true) : setShowForm('personal')} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity">+ Nuevo Paciente</button>
           )}
         </div>
 
@@ -270,6 +278,33 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
   // ── ORG MODE ──────────────────────────────────────────────────
   return (
     <div>
+      {/* Selector de contexto — aparece cuando el usuario tiene ambos espacios y hace click en "Nuevo paciente" */}
+      {contextPicker && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" onClick={() => setContextPicker(false)}>
+          <div className="bg-bg-secondary border-[0.5px] border-border rounded-2xl p-6 w-full max-w-[400px] shadow-xl" onClick={e => e.stopPropagation()}>
+            <h2 className="text-[16px] font-medium mb-1">¿Para quién es este paciente?</h2>
+            <p className="text-[13px] text-text-secondary mb-5">El ownership del paciente se define al crearlo y no se puede cambiar después.</p>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => { setShowForm('org'); setContextPicker(false) }}
+                className="w-full text-left bg-bg-primary border-[0.5px] border-border rounded-xl px-4 py-4 hover:border-accent transition-colors"
+              >
+                <p className="text-[14px] font-medium">{orgName || 'El equipo'}</p>
+                <p className="text-[12px] text-text-secondary mt-0.5">Visible para todos los integrantes del workspace</p>
+              </button>
+              <button
+                onClick={() => { setShowForm('personal'); setContextPicker(false) }}
+                className="w-full text-left bg-bg-primary border-[0.5px] border-border rounded-xl px-4 py-4 hover:border-accent transition-colors"
+              >
+                <p className="text-[14px] font-medium">Mi espacio personal</p>
+                <p className="text-[12px] text-text-secondary mt-0.5">Solo vos podés verlo</p>
+              </button>
+            </div>
+            <button onClick={() => setContextPicker(false)} className="mt-4 text-[12px] text-text-secondary hover:text-text-primary">Cancelar</button>
+          </div>
+        </div>
+      )}
+
       {renderDeleteModal()}
 
       {allPatients.length > 2 && (
