@@ -24,7 +24,7 @@ export default async function AgendaPage() {
   if (!user) redirect('/login')
 
   const [{ data: userData }, ctx] = await Promise.all([
-    supabase.from('users').select('role, full_name, agenda_areas').eq('id', user.id).single(),
+    supabase.from('users').select('role, full_name, agenda_areas, agenda_slot_interval').eq('id', user.id).single(),
     getActiveContext(user.id, supabase),
   ])
 
@@ -39,14 +39,15 @@ export default async function AgendaPage() {
   let orgId: string | null = null
   let orgName: string | null = null
   let areas: string[] = userData?.agenda_areas ?? DEFAULT_AREAS
+  let slotInterval: number = userData?.agenda_slot_interval ?? 60
   let shareToken: string | null = null
   let shareEnabled = false
 
   if (isOrgContext && ctx.orgId) {
-    type OrgData = { id: string; name: string; agenda_areas: string[] | null; agenda_share_token: string | null; agenda_share_enabled: boolean; owner_id: string }
+    type OrgData = { id: string; name: string; agenda_areas: string[] | null; agenda_slot_interval: number | null; agenda_share_token: string | null; agenda_share_enabled: boolean; owner_id: string }
     const { data: orgData } = await supabase
       .from('organizations')
-      .select('id, name, agenda_areas, agenda_share_token, agenda_share_enabled, owner_id')
+      .select('id, name, agenda_areas, agenda_slot_interval, agenda_share_token, agenda_share_enabled, owner_id')
       .eq('id', ctx.orgId)
       .single()
     const org = orgData as unknown as OrgData | null
@@ -54,6 +55,7 @@ export default async function AgendaPage() {
       orgId = org.id
       orgName = org.name
       areas = org.agenda_areas ?? DEFAULT_AREAS
+      slotInterval = org.agenda_slot_interval ?? 60
       shareToken = org.agenda_share_token
       shareEnabled = org.agenda_share_enabled ?? false
     }
@@ -103,6 +105,7 @@ export default async function AgendaPage() {
           isOwner={isOwner}
           shareToken={shareToken}
           shareEnabled={shareEnabled}
+          slotInterval={slotInterval}
         />
       </main>
     </div>
