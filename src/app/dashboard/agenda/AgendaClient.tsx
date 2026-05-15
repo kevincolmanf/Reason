@@ -118,8 +118,17 @@ function formatTime(date: Date): string {
   return date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
 }
 
+function formatArgentinePhone(phone: string): string {
+  let n = phone.replace(/\D/g, '')
+  if (n.startsWith('549') || n.startsWith('5411')) return n
+  if (n.startsWith('54')) return n
+  if (n.startsWith('0')) n = n.slice(1)
+  if (n.startsWith('15')) n = n.slice(2)
+  return `54${n}`
+}
+
 function buildWhatsAppUrl(phone: string, name: string, start: Date, end: Date, area: string, org: string | null): string {
-  const clean = phone.replace(/\D/g, '')
+  const clean = formatArgentinePhone(phone)
   const day = start.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })
   const t1  = start.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
   const t2  = end.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
