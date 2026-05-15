@@ -70,7 +70,8 @@ export async function middleware(request: NextRequest) {
   const isAuthRoute = authRoutes.some(route => pathname.startsWith(route))
 
   // Rutas que requieren suscripción activa (o trial vigente)
-  const subscriberRoutes = ['/library', '/content', '/recursos', '/ficha', '/dashboard/ejercicios']
+  // /dashboard/ejercicios/plan y /calendario son accesibles para free (1 paciente)
+  const subscriberRoutes = ['/library', '/content', '/recursos', '/ficha', '/dashboard/ejercicios/biblioteca']
 
   // Rutas exclusivas para Pro/admin o miembros de org (agenda)
   const proRoutes = ['/dashboard/agenda']
@@ -78,7 +79,8 @@ export async function middleware(request: NextRequest) {
   const isSubscriberRoute = subscriberRoutes.some(route => pathname.startsWith(route))
 
   // Módulos avanzados dentro del dashboard de pacientes — bloqueados para free sin trial
-  const advancedModulePatterns = ['/carga', '/calendario', '/rts', '/fichas']
+  // /calendario no está bloqueado: usuarios free pueden ver el calendario de su único paciente
+  const advancedModulePatterns = ['/carga', '/rts', '/fichas']
   const isAdvancedModule =
     pathname.startsWith('/dashboard/pacientes/') &&
     advancedModulePatterns.some(p => pathname.includes(p))

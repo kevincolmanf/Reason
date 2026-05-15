@@ -3,6 +3,7 @@ import Link from 'next/link'
 import PlanList from './PlanList'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
+import { verifyPatientAccess } from '@/utils/patient-access'
 
 export const metadata = {
   title: 'Mis Planes de Ejercicio | Reason',
@@ -22,20 +23,21 @@ export default async function PlanListPage({ searchParams }: { searchParams: { p
   let patientName: string | null = null
 
   if (patientId) {
+    // Verifica acceso: dueño del paciente o miembro de su org
+    await verifyPatientAccess(patientId, user.id)
+
     const { data } = await supabase
       .from('patients')
       .select('name')
       .eq('id', patientId)
-      .eq('user_id', user.id)
       .single()
     patientName = data?.name ?? null
 
-    // Un plan por paciente: si ya existe, ir directo al editor
+    // Un plan por paciente: si ya existe, ir directo al editor (sin filtrar por user_id para org)
     const { data: existing } = await supabase
       .from('exercise_plans')
       .select('id')
       .eq('patient_id', patientId)
-      .eq('user_id', user.id)
       .limit(1)
       .single()
     if (existing) redirect(`/dashboard/ejercicios/plan/${existing.id}`)

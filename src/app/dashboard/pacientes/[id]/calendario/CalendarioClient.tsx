@@ -25,6 +25,7 @@ interface Props {
   plans: Plan[]
   unassignedPlans: { id: string; name: string }[]
   initialScheduled: ScheduledSession[]
+  turnoDates: string[]
 }
 
 const DAYS_WEEK = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
@@ -72,7 +73,8 @@ function formatDay(date: Date): string {
   return `${date.getDate()} ${MONTHS_ES[date.getMonth()].slice(0, 3)}`
 }
 
-export default function CalendarioClient({ patientId, userId, patientName, plans, unassignedPlans, initialScheduled }: Props) {
+export default function CalendarioClient({ patientId, userId, patientName, plans, unassignedPlans, initialScheduled, turnoDates }: Props) {
+  const turnoDateSet = new Set(turnoDates)
   const supabaseRef = useRef(createClient())
 
   // ── Week view ──────────────────────────────────────────────────────────────
@@ -204,10 +206,14 @@ export default function CalendarioClient({ patientId, userId, patientName, plans
             const isToday = d === today
             const isPast = d < today
             const ds = sessionsForDay(d)
+            const hasTurno = turnoDateSet.has(d)
             return (
               <div key={d} className={`rounded-xl border-[0.5px] p-3 min-h-[100px] flex flex-col ${isToday ? 'border-accent bg-bg-secondary' : 'border-border bg-bg-primary'}`}>
                 <div className="mb-2">
-                  <div className={`text-[11px] uppercase tracking-[0.05em] ${isToday ? 'text-accent' : 'text-text-secondary'}`}>{DAYS_WEEK[i]}</div>
+                  <div className="flex items-center gap-1.5">
+                    <div className={`text-[11px] uppercase tracking-[0.05em] ${isToday ? 'text-accent' : 'text-text-secondary'}`}>{DAYS_WEEK[i]}</div>
+                    {hasTurno && <span className="w-1.5 h-1.5 rounded-full bg-[#c47c5a] shrink-0" title="Turno en el centro" />}
+                  </div>
                   <div className={`text-[14px] font-medium ${isToday ? 'text-accent' : isPast ? 'text-text-secondary' : 'text-text-primary'}`}>{formatDay(day)}</div>
                 </div>
                 <div className="flex flex-col gap-1 flex-1">
@@ -235,11 +241,15 @@ export default function CalendarioClient({ patientId, userId, patientName, plans
             const isToday = d === today
             const isPast = d < today
             const ds = sessionsForDay(d)
+            const hasTurnoMobile = turnoDateSet.has(d)
             return (
               <div key={d} className={isToday ? 'bg-bg-secondary' : 'bg-bg-primary'}>
                 <div className="flex items-center gap-3 px-4 py-3">
                   <div className={`w-7 text-[13px] font-medium shrink-0 ${isToday ? 'text-accent' : isPast ? 'text-text-secondary' : 'text-text-primary'}`}>{DAYS_WEEK[i]}</div>
-                  <div className={`text-[13px] shrink-0 ${isToday ? 'text-accent font-medium' : isPast ? 'text-text-secondary' : 'text-text-primary'}`}>{formatDay(day)}</div>
+                  <div className={`text-[13px] shrink-0 flex items-center gap-1.5 ${isToday ? 'text-accent font-medium' : isPast ? 'text-text-secondary' : 'text-text-primary'}`}>
+                    {formatDay(day)}
+                    {hasTurnoMobile && <span className="w-1.5 h-1.5 rounded-full bg-[#c47c5a] shrink-0" />}
+                  </div>
                   <div className="flex-1 flex flex-wrap gap-1 min-w-0">
                     {ds.map(s => (
                       <button key={s.id} onClick={() => handleToggleComplete(s)} className={`text-[11px] px-2 py-0.5 rounded-full border-[0.5px] ${s.completed ? 'border-border text-text-secondary line-through opacity-50' : 'bg-accent/10 border-accent/30 text-accent'}`}>{s.session_name}</button>
@@ -301,12 +311,13 @@ export default function CalendarioClient({ patientId, userId, patientName, plans
                     const isSelected = selectedDates.has(d)
                     const alreadyScheduled = isAlreadyScheduled(d)
                     const isPast = d < today
+                    const hasTurno = turnoDateSet.has(d)
                     return (
                       <button
                         key={day}
                         onClick={() => { if (!isPast && !alreadyScheduled) toggleDate(d) }}
                         disabled={isPast}
-                        className={`h-9 rounded-lg text-[13px] font-medium transition-colors ${
+                        className={`relative h-9 rounded-lg text-[13px] font-medium transition-colors ${
                           alreadyScheduled ? 'bg-accent/20 text-accent cursor-default' :
                           isSelected ? 'bg-accent text-bg-primary' :
                           isPast ? 'text-text-secondary/30 cursor-default' :
@@ -314,6 +325,9 @@ export default function CalendarioClient({ patientId, userId, patientName, plans
                         }`}
                       >
                         {day}
+                        {hasTurno && (
+                          <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#c47c5a]" title="Turno en el centro" />
+                        )}
                       </button>
                     )
                   })}

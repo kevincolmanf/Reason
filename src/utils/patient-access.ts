@@ -29,3 +29,31 @@ export async function verifyPatientAccess(patientId: string, userId: string): Pr
 
   redirect('/dashboard/pacientes')
 }
+
+/**
+ * Verifies the current user can access an exercise plan:
+ * either they own it, or they are in the org of the plan's patient.
+ * Redirects to /dashboard/ejercicios/plan if unauthorized.
+ */
+export async function verifyPlanAccess(planUserId: string, planPatientId: string | null, userId: string): Promise<void> {
+  if (planUserId === userId) return
+  if (!planPatientId) redirect('/dashboard/ejercicios/plan')
+
+  const supabase = createClient()
+  const { data: patient } = await supabase
+    .from('patients')
+    .select('org_id')
+    .eq('id', planPatientId)
+    .single()
+
+  if (!patient?.org_id) redirect('/dashboard/ejercicios/plan')
+
+  const { data: membership } = await supabase
+    .from('organization_members')
+    .select('user_id')
+    .eq('org_id', patient.org_id)
+    .eq('user_id', userId)
+    .single()
+
+  if (!membership) redirect('/dashboard/ejercicios/plan')
+}
