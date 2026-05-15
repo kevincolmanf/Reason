@@ -46,35 +46,49 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId }: 
 
   const fetchPatients = useCallback(async () => {
     setLoading(true)
-    let query = supabaseRef.current
-      .from('patients')
-      .select('id, name, age, occupation, created_at, users(full_name)')
-      .order('created_at', { ascending: true })
+
+    let rows: Patient[] = []
 
     if (orgId) {
-      query = query.eq('org_id', orgId)
+      // Org patients (created after org system)
+      const { data: orgData } = await supabaseRef.current
+        .from('patients')
+        .select('id, name, age, occupation, created_at, users(full_name)')
+        .eq('org_id', orgId)
+        .order('created_at', { ascending: true })
+
+      // Personal patients without org_id (created before org system)
+      const { data: personalData } = await supabaseRef.current
+        .from('patients')
+        .select('id, name, age, occupation, created_at, users(full_name)')
+        .eq('user_id', userId)
+        .is('org_id', null)
+        .order('created_at', { ascending: true })
+
+      rows = [...(orgData || []), ...(personalData || [])] as Patient[]
     } else {
-      query = query.eq('user_id', userId)
+      const { data } = await supabaseRef.current
+        .from('patients')
+        .select('id, name, age, occupation, created_at, users(full_name)')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: true })
+      rows = (data || []) as Patient[]
     }
 
-    const { data, error } = await query
-
-    if (!error && data) {
-      // Fetch plan count per patient
-      const patientsWithCount = await Promise.all(
-        data.map(async (p) => {
-          const { count } = await supabaseRef.current
-            .from('exercise_plans')
-            .select('id', { count: 'exact', head: true })
-            .eq('patient_id', p.id)
-          return { ...p, plan_count: count || 0 }
-        })
-      )
-      setPatients(patientsWithCount)
-    }
+    // Fetch plan count per patient
+    const patientsWithCount = await Promise.all(
+      rows.map(async (p) => {
+        const { count } = await supabaseRef.current
+          .from('exercise_plans')
+          .select('id', { count: 'exact', head: true })
+          .eq('patient_id', p.id)
+        return { ...p, plan_count: count || 0 }
+      })
+    )
+    setPatients(patientsWithCount)
     setLoading(false)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId])
+  }, [userId, orgId])
 
   useEffect(() => {
     fetchPatients()
