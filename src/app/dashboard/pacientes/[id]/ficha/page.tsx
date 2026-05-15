@@ -39,6 +39,7 @@ export default async function FichaPage({ params }: { params: { id: string } }) 
       .insert({ patient_id: params.id, user_id: user.id, ficha_data: {} })
       .select()
       .single()
+    if (!newFicha) redirect('/dashboard/pacientes')
     ficha = newFicha
   }
 
