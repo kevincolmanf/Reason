@@ -57,7 +57,8 @@ export default async function AgendaPage() {
       .from('organization_members')
       .select('user_id, users(id, full_name)')
       .eq('org_id', orgId)
-    professionals = (members ?? []).map((m: { user_id: string; users: { id: string; full_name: string | null } | null }) => ({
+    type MemberRow = { user_id: string; users: { id: string; full_name: string | null } | null }
+    professionals = ((members ?? []) as unknown as MemberRow[]).map(m => ({
       id: m.users?.id ?? m.user_id,
       full_name: m.users?.full_name ?? null,
     }))
