@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createOrganization, addMember, removeMember } from './actions'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -44,6 +44,10 @@ export default function EquipoClient({ userId, org: initialOrg, members: initial
   const router = useRouter()
   const [org] = useState(initialOrg)
   const [members, setMembers] = useState(initialMembers)
+
+  useEffect(() => {
+    setMembers(initialMembers)
+  }, [initialMembers])
 
   const [orgName, setOrgName] = useState('')
   const [orgError, setOrgError] = useState('')
@@ -364,8 +368,8 @@ Cualquier duda, avisame.`
               return (
                 <div key={m.id} className="px-6 py-4 flex items-center justify-between">
                   <div>
-                    <p className="text-[14px] font-medium">{m.users?.full_name || m.users?.email}</p>
-                    <p className="text-[12px] text-text-secondary">{m.users?.email}</p>
+                    <p className="text-[14px] font-medium">{m.users?.full_name || m.users?.email || '(sin nombre)'}</p>
+                    <p className="text-[12px] text-text-secondary">{m.users?.email || '—'}</p>
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="text-[11px] text-text-secondary bg-bg-primary border-[0.5px] border-border rounded-full px-2.5 py-0.5 capitalize">
