@@ -25,8 +25,20 @@ export default async function Header() {
 
     ctx = activeCtx
     const role = userDataResult.data?.role
-    const isOrgCtx = ctx.type === 'org'
-    hasAgendaAccess = role === 'admin' || role === 'pro' || isOrgCtx
+    const isOwner = role === 'admin' || role === 'pro'
+    const isOrgCtx = ctx.type === 'org' && !!ctx.orgId
+
+    if (isOwner) {
+      hasAgendaAccess = true
+    } else if (isOrgCtx && ctx.orgId) {
+      const { data: memberRow } = await supabase
+        .from('organization_members')
+        .select('agenda_access')
+        .eq('org_id', ctx.orgId)
+        .eq('user_id', user.id)
+        .single()
+      hasAgendaAccess = memberRow?.agenda_access ?? false
+    }
 
     type MemberRow = { org_id: string; organizations: { id: string; name: string } | null }
 
