@@ -118,6 +118,25 @@ function formatTime(date: Date): string {
   return date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
 }
 
+function formatArgentinePhone(phone: string): string {
+  let n = phone.replace(/\D/g, '')
+  if (n.startsWith('549') || n.startsWith('5411')) return n
+  if (n.startsWith('54')) return n
+  if (n.startsWith('0')) n = n.slice(1)
+  if (n.startsWith('15')) n = n.slice(2)
+  return `54${n}`
+}
+
+function buildWhatsAppUrl(phone: string, name: string, start: Date, end: Date, area: string, org: string | null): string {
+  const clean = formatArgentinePhone(phone)
+  const day = start.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })
+  const t1  = start.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
+  const t2  = end.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
+  const lugar = org ?? 'el centro'
+  const msg = `Hola ${name}! Te recordamos tu turno en ${lugar}:\n📅 ${day}\n⏰ ${t1} – ${t2}\n🏥 ${area}\n\n¡Te esperamos!`
+  return `https://wa.me/${clean}?text=${encodeURIComponent(msg)}`
+}
+
 const GRID_START = 7 * 60
 const GRID_END   = 21 * 60
 const GRID_TOTAL = GRID_END - GRID_START
@@ -334,29 +353,43 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
             const widthPct = 100 / layout.totalCols
             const leftPct  = layout.col * widthPct
 
+            const waUrl = !t.is_blocked && t.patient_phone
+              ? buildWhatsAppUrl(t.patient_phone, t.patient_name, start, end, t.area, orgName)
+              : null
+
             return (
-              <button
+              <div
                 key={t.id}
-                onClick={() => openEdit(t)}
-                className={`absolute rounded-lg border-[0.5px] px-1.5 py-1 text-left overflow-hidden cursor-pointer hover:opacity-80 transition-opacity pointer-events-auto ${colorClass}`}
-                style={{
-                  top: `${top}%`,
-                  height: `${height}%`,
-                  minHeight: '22px',
-                  left: `${leftPct}%`,
-                  width: `${widthPct}%`,
-                }}
+                className={`absolute group rounded-lg border-[0.5px] text-left overflow-hidden pointer-events-auto ${colorClass}`}
+                style={{ top: `${top}%`, height: `${height}%`, minHeight: '22px', left: `${leftPct}%`, width: `${widthPct}%` }}
               >
-                {t.is_blocked ? (
-                  <p className="text-[10px] leading-tight truncate opacity-70">{t.notes || 'Bloqueado'}</p>
-                ) : (
-                  <>
-                    <p className="text-[10px] font-medium leading-tight truncate">{formatTime(start)} {t.patient_name}</p>
-                    {height > 4 && <p className="text-[9px] opacity-70 leading-tight truncate">{t.area}</p>}
-                    {height > 6 && t.notes && <p className="text-[8px] opacity-50 leading-tight">◆ nota</p>}
-                  </>
+                <button
+                  onClick={() => openEdit(t)}
+                  className="absolute inset-0 px-1.5 py-1 w-full text-left cursor-pointer hover:opacity-80 transition-opacity"
+                >
+                  {t.is_blocked ? (
+                    <p className="text-[10px] leading-tight truncate opacity-70">{t.notes || 'Bloqueado'}</p>
+                  ) : (
+                    <>
+                      <p className="text-[10px] font-medium leading-tight truncate">{formatTime(start)} {t.patient_name}</p>
+                      {height > 4 && <p className="text-[9px] opacity-70 leading-tight truncate">{t.area}</p>}
+                      {height > 6 && t.notes && <p className="text-[8px] opacity-50 leading-tight">◆ nota</p>}
+                    </>
+                  )}
+                </button>
+                {waUrl && (
+                  <a
+                    href={waUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={e => e.stopPropagation()}
+                    title="Enviar recordatorio por WhatsApp"
+                    className="absolute bottom-0.5 right-0.5 opacity-0 group-hover:opacity-100 transition-opacity text-[9px] leading-none bg-green-500/20 hover:bg-green-500/40 border-[0.5px] border-green-500/40 rounded px-1 py-0.5 text-green-400"
+                  >
+                    WA
+                  </a>
                 )}
-              </button>
+              </div>
             )
           })}
         </div>
@@ -571,6 +604,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
         <TurnoModal
           userId={userId}
           orgId={orgId}
+          orgName={orgName}
           professionals={professionals}
           areas={areas}
           turno={modal.turno}
