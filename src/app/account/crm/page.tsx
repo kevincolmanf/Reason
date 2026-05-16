@@ -39,7 +39,7 @@ export default async function CRMPage() {
   const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
   const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
   const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1)
-  const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000)
+  const sixtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
 
   const [
     { data: patientsRaw },
