@@ -190,8 +190,9 @@ function assignColumns(turnos: Turno[]): Map<string, { col: number; totalCols: n
 
 function blockColorClass(t: Turno): string {
   if (t.is_blocked) return 'bg-bg-secondary border-border text-text-tertiary opacity-70'
-  if (t.status === 'ausente')   return STATUS_COLORS.ausente
-  if (t.status === 'cancelado') return STATUS_COLORS.cancelado
+  if (t.status === 'presente')   return STATUS_COLORS.presente
+  if (t.status === 'ausente')    return STATUS_COLORS.ausente
+  if (t.status === 'cancelado')  return STATUS_COLORS.cancelado
   if (t.status === 'sobreturno') return STATUS_COLORS.sobreturno
   return TYPE_COLORS[t.appointment_type ?? 'turno_comun'] ?? STATUS_COLORS.programado
 }
