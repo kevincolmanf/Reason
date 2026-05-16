@@ -17,30 +17,21 @@ export type CRMPatient = {
   active: boolean
 }
 
-export type MonthStats = {
-  total: number
-  presentes: number
-  ausentes: number
-  cancelados: number
-  nuevos: number
-}
-
-export type ProfStats = {
-  name: string
-  total: number
-  presentes: number
-  ausentes: number
-  cancelados: number
-  avgPerHour: number
+export type RawTurno = {
+  status: string
+  appointment_type: string | null
+  professional_name: string | null
+  patient_id: string | null
+  start_time: string
+  end_time: string
+  area: string | null
 }
 
 export type Analytics = {
   thisMonthLabel: string
   lastMonthLabel: string
-  thisStats: MonthStats
-  lastStats: MonthStats
-  byProfessional: ProfStats[]
-  byHour: { hour: string; count: number }[]
+  rawTurnosThis: RawTurno[]
+  rawTurnosLast: RawTurno[]
   upcoming: number
   totalPatients: number
   activePatients: number

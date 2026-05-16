@@ -8,18 +8,9 @@ import CRMPageClient from './CRMPageClient'
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Panel de gestión | Reason' }
 
-type TurnoRow = { status: string; appointment_type: string | null; professional_name: string | null; patient_id: string | null; start_time: string }
+type TurnoRow = { status: string; appointment_type: string | null; professional_name: string | null; patient_id: string | null; start_time: string; end_time: string; area: string | null }
 type PatientRow = { id: string; name: string | null; age: number | null; dni: string | null; phone: string | null; email: string | null; user_id: string }
 type AllTurnoRow = TurnoRow & { patient_phone: string | null; patient_email: string | null; patient_age: number | null }
-
-function computeStats(turnos: TurnoRow[]) {
-  const total = turnos.length
-  const presentes = turnos.filter(t => t.status === 'presente').length
-  const ausentes = turnos.filter(t => t.status === 'ausente').length
-  const cancelados = turnos.filter(t => t.status === 'cancelado').length
-  const nuevos = turnos.filter(t => ['primera_vez', 'ingreso'].includes(t.appointment_type ?? '')).length
-  return { total, presentes, ausentes, cancelados, nuevos }
-}
 
 export default async function CRMPage() {
   const supabase = createClient()
@@ -50,13 +41,13 @@ export default async function CRMPage() {
   ] = await Promise.all([
     admin.from('patients').select('*').eq('org_id', orgRow.id).order('name'),
     admin.from('turnos')
-      .select('patient_id, professional_id, professional_name, start_time, status, appointment_type')
+      .select('patient_id, professional_id, professional_name, start_time, end_time, area, status, appointment_type')
       .eq('org_id', orgRow.id)
       .not('is_blocked', 'is', true)
       .gte('start_time', thisMonthStart.toISOString())
       .lt('start_time', nextMonthStart.toISOString()),
     admin.from('turnos')
-      .select('patient_id, professional_name, start_time, status, appointment_type')
+      .select('patient_id, professional_name, start_time, end_time, area, status, appointment_type')
       .eq('org_id', orgRow.id)
       .not('is_blocked', 'is', true)
       .gte('start_time', lastMonthStart.toISOString())
@@ -104,40 +95,6 @@ export default async function CRMPage() {
     }
   })
 
-  // By professional (this month)
-  const profMap = new Map<string, { total: number; presentes: number; ausentes: number; cancelados: number; hours: Set<string> }>()
-  ;(turnosThis as TurnoRow[] ?? []).forEach((t) => {
-    const name = t.professional_name ?? 'Sin asignar'
-    if (!profMap.has(name)) profMap.set(name, { total: 0, presentes: 0, ausentes: 0, cancelados: 0, hours: new Set() })
-    const e = profMap.get(name)!
-    e.total++
-    if (t.status === 'presente') e.presentes++
-    if (t.status === 'ausente') e.ausentes++
-    if (t.status === 'cancelado') e.cancelados++
-    e.hours.add(new Date(t.start_time).toISOString().slice(0, 13))
-  })
-  const byProfessional = Array.from(profMap.entries())
-    .map(([name, e]) => ({
-      name,
-      total: e.total,
-      presentes: e.presentes,
-      ausentes: e.ausentes,
-      cancelados: e.cancelados,
-      avgPerHour: e.hours.size > 0 ? +(e.presentes / e.hours.size).toFixed(1) : 0,
-    }))
-    .sort((a, b) => b.total - a.total)
-
-  // By hour (heatmap)
-  const hourMap = new Map<number, number>()
-  for (let h = 7; h <= 20; h++) hourMap.set(h, 0)
-  ;(turnosThis as TurnoRow[] ?? []).forEach((t) => {
-    const h = new Date(t.start_time).getHours()
-    hourMap.set(h, (hourMap.get(h) ?? 0) + 1)
-  })
-  const byHour = Array.from(hourMap.entries())
-    .sort((a, b) => a[0] - b[0])
-    .map(([hour, count]) => ({ hour: `${String(hour).padStart(2, '0')}:00`, count }))
-
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
   const thisMonthLabel = cap(now.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }))
   const lastMonthLabel = cap(new Date(now.getFullYear(), now.getMonth() - 1, 1).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }))
@@ -159,10 +116,8 @@ export default async function CRMPage() {
           analytics={{
             thisMonthLabel,
             lastMonthLabel,
-            thisStats: computeStats(turnosThis ?? []),
-            lastStats: computeStats(turnosLast ?? []),
-            byProfessional,
-            byHour,
+            rawTurnosThis: (turnosThis ?? []) as TurnoRow[],
+            rawTurnosLast: (turnosLast ?? []) as TurnoRow[],
             upcoming: turnosUpcoming?.length ?? 0,
             totalPatients: patients.length,
             activePatients: patients.filter(p => p.active).length,

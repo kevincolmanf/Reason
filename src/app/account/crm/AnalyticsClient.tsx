@@ -1,10 +1,11 @@
 'use client'
 
+import { useMemo, useState } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Cell, PieChart, Pie,
 } from 'recharts'
-import type { Analytics } from './CRMPageClient'
+import type { Analytics, RawTurno } from './CRMPageClient'
 
 const ACCENT   = '#c47c5a'
 const EMERALD  = '#10b981'
@@ -56,8 +57,103 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
   )
 }
 
+function computeStats(turnos: RawTurno[]) {
+  const total = turnos.length
+  const presentes = turnos.filter(t => t.status === 'presente').length
+  const ausentes = turnos.filter(t => t.status === 'ausente').length
+  const cancelados = turnos.filter(t => t.status === 'cancelado').length
+  const nuevos = turnos.filter(t => ['primera_vez', 'ingreso'].includes(t.appointment_type ?? '')).length
+  return { total, presentes, ausentes, cancelados, nuevos }
+}
+
+function computeByProfessional(turnos: RawTurno[]) {
+  // avgPerHour: per professional, group by calendar date, for each date compute
+  // (max end_time - min start_time) in hours, sum across all days, divide presentes by total hours
+  type ProfEntry = {
+    total: number
+    presentes: number
+    ausentes: number
+    cancelados: number
+    // date → { minStart, maxEnd }
+    days: Map<string, { minStart: number; maxEnd: number }>
+  }
+  const profMap = new Map<string, ProfEntry>()
+
+  turnos.forEach((t) => {
+    const name = t.professional_name ?? 'Sin asignar'
+    if (!profMap.has(name)) profMap.set(name, { total: 0, presentes: 0, ausentes: 0, cancelados: 0, days: new Map() })
+    const e = profMap.get(name)!
+    e.total++
+    if (t.status === 'presente') e.presentes++
+    if (t.status === 'ausente') e.ausentes++
+    if (t.status === 'cancelado') e.cancelados++
+
+    const dateKey = t.start_time.slice(0, 10)
+    const startMs = new Date(t.start_time).getTime()
+    const endMs = t.end_time ? new Date(t.end_time).getTime() : startMs
+    const existing = e.days.get(dateKey)
+    if (!existing) {
+      e.days.set(dateKey, { minStart: startMs, maxEnd: endMs })
+    } else {
+      if (startMs < existing.minStart) existing.minStart = startMs
+      if (endMs > existing.maxEnd) existing.maxEnd = endMs
+    }
+  })
+
+  return Array.from(profMap.entries())
+    .map(([name, e]) => {
+      const totalHours = Array.from(e.days.values())
+        .reduce((acc, d) => acc + Math.max(0, (d.maxEnd - d.minStart) / 3600000), 0)
+      return {
+        name,
+        total: e.total,
+        presentes: e.presentes,
+        ausentes: e.ausentes,
+        cancelados: e.cancelados,
+        avgPerHour: totalHours > 0 ? +(e.presentes / totalHours).toFixed(1) : 0,
+      }
+    })
+    .sort((a, b) => b.total - a.total)
+}
+
+function computeByHour(turnos: RawTurno[]) {
+  const hourMap = new Map<number, number>()
+  for (let h = 7; h <= 20; h++) hourMap.set(h, 0)
+  turnos.forEach((t) => {
+    const h = new Date(t.start_time).getHours()
+    hourMap.set(h, (hourMap.get(h) ?? 0) + 1)
+  })
+  return Array.from(hourMap.entries())
+    .sort((a, b) => a[0] - b[0])
+    .map(([hour, count]) => ({ hour: `${String(hour).padStart(2, '0')}:00`, count }))
+}
+
 export default function AnalyticsClient({ analytics }: { analytics: Analytics }) {
-  const { thisStats: t, lastStats: l, byProfessional, byHour, upcoming, thisMonthLabel, lastMonthLabel, totalPatients, activePatients } = analytics
+  const { rawTurnosThis, rawTurnosLast, upcoming, thisMonthLabel, lastMonthLabel, totalPatients, activePatients } = analytics
+
+  // Derive available areas
+  const areas = useMemo(() => {
+    const set = new Set<string>()
+    rawTurnosThis.forEach(t => { if (t.area) set.add(t.area) })
+    rawTurnosLast.forEach(t => { if (t.area) set.add(t.area) })
+    return Array.from(set).sort()
+  }, [rawTurnosThis, rawTurnosLast])
+
+  const [selectedArea, setSelectedArea] = useState<string>('all')
+
+  const filteredThis = useMemo(() =>
+    selectedArea === 'all' ? rawTurnosThis : rawTurnosThis.filter(t => t.area === selectedArea),
+    [rawTurnosThis, selectedArea]
+  )
+  const filteredLast = useMemo(() =>
+    selectedArea === 'all' ? rawTurnosLast : rawTurnosLast.filter(t => t.area === selectedArea),
+    [rawTurnosLast, selectedArea]
+  )
+
+  const t = useMemo(() => computeStats(filteredThis), [filteredThis])
+  const l = useMemo(() => computeStats(filteredLast), [filteredLast])
+  const byProfessional = useMemo(() => computeByProfessional(filteredThis), [filteredThis])
+  const byHour = useMemo(() => computeByHour(filteredThis), [filteredThis])
 
   const ausenteRate = t.total > 0 ? Math.round((t.ausentes / t.total) * 100) : 0
   const prevAusenteRate = l.total > 0 ? Math.round((l.ausentes / l.total) * 100) : 0
@@ -72,9 +168,33 @@ export default function AnalyticsClient({ analytics }: { analytics: Analytics })
   return (
     <div className="space-y-10">
 
+      {/* Area filter */}
+      {areas.length > 0 && (
+        <div className="flex items-center gap-3">
+          <span className="text-[13px] text-text-secondary">Ver:</span>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setSelectedArea('all')}
+              className={`px-3 py-1.5 rounded-lg text-[13px] border-[0.5px] transition-colors ${selectedArea === 'all' ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-secondary border-border text-text-secondary hover:text-text-primary'}`}
+            >
+              Todas las áreas
+            </button>
+            {areas.map(a => (
+              <button
+                key={a}
+                onClick={() => setSelectedArea(a)}
+                className={`px-3 py-1.5 rounded-lg text-[13px] border-[0.5px] transition-colors capitalize ${selectedArea === a ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-secondary border-border text-text-secondary hover:text-text-primary'}`}
+              >
+                {a}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* KPI Cards */}
       <div>
-        <h2 className="text-[16px] font-medium mb-4">{thisMonthLabel}</h2>
+        <h2 className="text-[16px] font-medium mb-4">{thisMonthLabel}{selectedArea !== 'all' ? ` — ${selectedArea}` : ''}</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <KPICard label="Turnos totales" value={t.total} prev={l.total} prevLabel={lastMonthLabel} />
           <KPICard label="Presentes" value={t.presentes} prev={l.presentes} prevLabel={lastMonthLabel} />
@@ -89,34 +209,48 @@ export default function AnalyticsClient({ analytics }: { analytics: Analytics })
         </div>
       </div>
 
-      {/* Pacientes */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">
-          <div className="text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em] mb-3">Pacientes totales</div>
-          <div className="font-mono text-[32px] font-medium text-text-primary tracking-[-0.02em]">{totalPatients}</div>
-        </div>
-        <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">
-          <div className="text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em] mb-3">Activos (últimos 30 días)</div>
-          <div className="font-mono text-[32px] font-medium text-emerald-400 tracking-[-0.02em]">{activePatients}</div>
-          <div className="text-[12px] mt-2 text-text-tertiary">
-            {totalPatients > 0 ? Math.round((activePatients / totalPatients) * 100) : 0}% del total
+      {/* Pacientes — only in overall view */}
+      {selectedArea === 'all' && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">
+            <div className="text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em] mb-3">Pacientes totales</div>
+            <div className="font-mono text-[32px] font-medium text-text-primary tracking-[-0.02em]">{totalPatients}</div>
+          </div>
+          <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">
+            <div className="text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em] mb-3">Activos (últimos 30 días)</div>
+            <div className="font-mono text-[32px] font-medium text-emerald-400 tracking-[-0.02em]">{activePatients}</div>
+            <div className="text-[12px] mt-2 text-text-tertiary">
+              {totalPatients > 0 ? Math.round((activePatients / totalPatients) * 100) : 0}% del total
+            </div>
+          </div>
+          <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">
+            <div className="text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em] mb-3">% Ausencia del mes</div>
+            <div className={`font-mono text-[32px] font-medium tracking-[-0.02em] ${ausenteRate > 20 ? 'text-red-400' : 'text-text-primary'}`}>{ausenteRate}%</div>
+            <div className={`text-[12px] mt-2 ${ausenteRate > prevAusenteRate ? 'text-red-400' : 'text-emerald-400'}`}>
+              {delta(ausenteRate, prevAusenteRate)} <span className="text-text-tertiary">vs {lastMonthLabel}</span>
+            </div>
           </div>
         </div>
-        <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">
-          <div className="text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em] mb-3">% Ausencia del mes</div>
-          <div className={`font-mono text-[32px] font-medium tracking-[-0.02em] ${ausenteRate > 20 ? 'text-red-400' : 'text-text-primary'}`}>{ausenteRate}%</div>
-          <div className={`text-[12px] mt-2 ${ausenteRate > prevAusenteRate ? 'text-red-400' : 'text-emerald-400'}`}>
-            {delta(ausenteRate, prevAusenteRate)} <span className="text-text-tertiary">vs {lastMonthLabel}</span>
+      )}
+
+      {/* % Ausencia in area-filtered view */}
+      {selectedArea !== 'all' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">
+            <div className="text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em] mb-3">% Ausencia del mes</div>
+            <div className={`font-mono text-[32px] font-medium tracking-[-0.02em] ${ausenteRate > 20 ? 'text-red-400' : 'text-text-primary'}`}>{ausenteRate}%</div>
+            <div className={`text-[12px] mt-2 ${ausenteRate > prevAusenteRate ? 'text-red-400' : 'text-emerald-400'}`}>
+              {delta(ausenteRate, prevAusenteRate)} <span className="text-text-tertiary">vs {lastMonthLabel}</span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Por profesional */}
       {byProfessional.length > 0 && (
         <div>
-          <h2 className="text-[16px] font-medium mb-4">Por profesional — {thisMonthLabel}</h2>
+          <h2 className="text-[16px] font-medium mb-4">Por profesional — {thisMonthLabel}{selectedArea !== 'all' ? ` — ${selectedArea}` : ''}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Bar chart */}
             <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">
               <div className="text-[12px] text-text-secondary mb-4">Turnos totales</div>
               <ResponsiveContainer width="100%" height={200}>
@@ -132,7 +266,6 @@ export default function AnalyticsClient({ analytics }: { analytics: Analytics })
               </ResponsiveContainer>
             </div>
 
-            {/* Presentes vs ausentes stacked */}
             <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">
               <div className="text-[12px] text-text-secondary mb-4">Presentes vs ausentes</div>
               <ResponsiveContainer width="100%" height={200}>
@@ -148,12 +281,11 @@ export default function AnalyticsClient({ analytics }: { analytics: Analytics })
             </div>
           </div>
 
-          {/* Table */}
           <div className="mt-4 bg-bg-primary border-[0.5px] border-border rounded-xl overflow-hidden">
             <table className="w-full">
               <thead>
                 <tr className="border-b-[0.5px] border-border">
-                  {['Profesional', 'Turnos', 'Presentes', 'Ausentes', 'Cancelados', '% Ausencia', 'Prom/hora'].map(h => (
+                  {['Profesional', 'Turnos', 'Presentes', 'Ausentes', 'Cancelados', '% Ausencia', 'Pac/hora'].map(h => (
                     <th key={h} className="text-left px-4 py-3 text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em]">{h}</th>
                   ))}
                 </tr>
@@ -181,11 +313,11 @@ export default function AnalyticsClient({ analytics }: { analytics: Analytics })
         </div>
       )}
 
-      {/* Estado de turnos — pie */}
+      {/* Estado de turnos — pie + horas pico */}
       {t.total > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">
-            <div className="text-[12px] text-text-secondary mb-4">Distribución de estados — {thisMonthLabel}</div>
+            <div className="text-[12px] text-text-secondary mb-4">Distribución de estados — {thisMonthLabel}{selectedArea !== 'all' ? ` — ${selectedArea}` : ''}</div>
             <ResponsiveContainer width="100%" height={220}>
               <PieChart>
                 <Pie data={breakdownData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, percent }: { name?: string; percent?: number }) => `${name ?? ''} ${Math.round((percent ?? 0) * 100)}%`} labelLine={false}>
@@ -196,9 +328,8 @@ export default function AnalyticsClient({ analytics }: { analytics: Analytics })
             </ResponsiveContainer>
           </div>
 
-          {/* Horas pico */}
           <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">
-            <div className="text-[12px] text-text-secondary mb-4">Horas pico — {thisMonthLabel}</div>
+            <div className="text-[12px] text-text-secondary mb-4">Horas pico — {thisMonthLabel}{selectedArea !== 'all' ? ` — ${selectedArea}` : ''}</div>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={byHour} margin={{ left: -24 }}>
                 <CartesianGrid vertical={false} stroke={GRID_CLR} />
@@ -219,7 +350,7 @@ export default function AnalyticsClient({ analytics }: { analytics: Analytics })
 
       {t.total === 0 && (
         <div className="bg-bg-secondary border-[0.5px] border-border rounded-xl p-12 text-center">
-          <p className="text-[14px] text-text-secondary">No hay turnos registrados en {thisMonthLabel}.</p>
+          <p className="text-[14px] text-text-secondary">No hay turnos registrados en {thisMonthLabel}{selectedArea !== 'all' ? ` para el área ${selectedArea}` : ''}.</p>
         </div>
       )}
     </div>
