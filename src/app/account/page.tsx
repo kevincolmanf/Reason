@@ -76,7 +76,7 @@ export default async function AccountPage() {
           </div>
 
           {(userData?.role === 'pro' || userData?.role === 'admin') && (
-            <div className="p-8 bg-bg-primary flex justify-between items-center">
+            <div className="p-8 bg-bg-primary flex justify-between items-center border-b-[0.5px] border-border">
               <div>
                 <h2 className="text-[16px] font-medium mb-1">Mi Equipo</h2>
                 <p className="text-[13px] text-text-secondary">Administrá los integrantes de tu centro</p>
@@ -86,6 +86,20 @@ export default async function AccountPage() {
                 className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium no-underline hover:opacity-90 transition-opacity"
               >
                 Ver equipo
+              </Link>
+            </div>
+          )}
+          {(userData?.role === 'pro' || userData?.role === 'admin') && (
+            <div className="p-8 bg-bg-primary flex justify-between items-center">
+              <div>
+                <h2 className="text-[16px] font-medium mb-1">Panel de gestión</h2>
+                <p className="text-[13px] text-text-secondary">CRM de pacientes, analítica y métricas del centro</p>
+              </div>
+              <Link
+                href="/account/crm"
+                className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium no-underline hover:opacity-90 transition-opacity"
+              >
+                Ver panel
               </Link>
             </div>
           )}
