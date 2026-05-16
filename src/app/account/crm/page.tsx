@@ -8,7 +8,11 @@ import CRMPageClient from './CRMPageClient'
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Panel de gestión | Reason' }
 
-function computeStats(turnos: any[]) {
+type TurnoRow = { status: string; appointment_type: string | null; professional_name: string | null; patient_id: string | null; start_time: string }
+type PatientRow = { id: string; name: string | null; age: number | null; dni: string | null; phone: string | null; email: string | null; user_id: string }
+type AllTurnoRow = TurnoRow & { patient_phone: string | null; patient_email: string | null; patient_age: number | null }
+
+function computeStats(turnos: TurnoRow[]) {
   const total = turnos.length
   const presentes = turnos.filter(t => t.status === 'presente').length
   const ausentes = turnos.filter(t => t.status === 'ausente').length
@@ -72,7 +76,7 @@ export default async function CRMPage() {
 
   // Last turno per patient (already sorted desc, first match wins)
   const lastTurnoMap = new Map<string, { date: string; phone: string | null; email: string | null; age: number | null; professionalName: string | null }>()
-  ;(allTurnos ?? []).forEach((t: any) => {
+  ;(allTurnos as AllTurnoRow[] ?? []).forEach((t) => {
     if (t.patient_id && !lastTurnoMap.has(t.patient_id)) {
       lastTurnoMap.set(t.patient_id, {
         date: t.start_time,
@@ -84,7 +88,7 @@ export default async function CRMPage() {
     }
   })
 
-  const patients = (patientsRaw ?? []).map((p: any) => {
+  const patients = (patientsRaw as PatientRow[] ?? []).map((p) => {
     const lt = lastTurnoMap.get(p.id)
     const active = lt ? new Date(lt.date) > sixtyDaysAgo : false
     return {
@@ -102,7 +106,7 @@ export default async function CRMPage() {
 
   // By professional (this month)
   const profMap = new Map<string, { total: number; presentes: number; ausentes: number; cancelados: number; hours: Set<string> }>()
-  ;(turnosThis ?? []).forEach((t: any) => {
+  ;(turnosThis as TurnoRow[] ?? []).forEach((t) => {
     const name = t.professional_name ?? 'Sin asignar'
     if (!profMap.has(name)) profMap.set(name, { total: 0, presentes: 0, ausentes: 0, cancelados: 0, hours: new Set() })
     const e = profMap.get(name)!
@@ -126,7 +130,7 @@ export default async function CRMPage() {
   // By hour (heatmap)
   const hourMap = new Map<number, number>()
   for (let h = 7; h <= 20; h++) hourMap.set(h, 0)
-  ;(turnosThis ?? []).forEach((t: any) => {
+  ;(turnosThis as TurnoRow[] ?? []).forEach((t) => {
     const h = new Date(t.start_time).getHours()
     hourMap.set(h, (hourMap.get(h) ?? 0) + 1)
   })

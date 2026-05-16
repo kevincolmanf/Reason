@@ -139,7 +139,7 @@ export default function CRMPageClient({ patients, analytics }: { patients: CRMPa
               )}
               <select
                 value={filterStatus}
-                onChange={e => setFilterStatus(e.target.value as any)}
+                onChange={e => setFilterStatus(e.target.value as 'all' | 'active' | 'inactive')}
                 className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary focus:outline-none focus:border-accent"
               >
                 <option value="all">Todos los estados</option>

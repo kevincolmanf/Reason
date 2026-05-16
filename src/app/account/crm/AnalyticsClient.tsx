@@ -2,7 +2,7 @@
 
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Cell, PieChart, Pie, Legend,
+  ResponsiveContainer, Cell, PieChart, Pie,
 } from 'recharts'
 import type { Analytics } from './CRMPageClient'
 
@@ -41,12 +41,15 @@ function KPICard({ label, value, prev, prevLabel, higherIsBetter = true }: {
   )
 }
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+type TooltipPayloadItem = { name: string; value: number; fill?: string; stroke?: string }
+type TooltipProps = { active?: boolean; payload?: TooltipPayloadItem[]; label?: string }
+
+const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
   if (!active || !payload?.length) return null
   return (
     <div className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[12px] shadow-lg">
       <p className="text-text-secondary mb-1">{label}</p>
-      {payload.map((p: any) => (
+      {payload.map((p) => (
         <p key={p.name} style={{ color: p.fill ?? p.stroke }}>{p.name}: {p.value}</p>
       ))}
     </div>
