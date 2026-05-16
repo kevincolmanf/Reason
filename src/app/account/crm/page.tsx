@@ -10,7 +10,7 @@ export const metadata = { title: 'Panel de gestión | Reason' }
 
 type TurnoRow = { status: string; appointment_type: string | null; professional_name: string | null; start_time: string; end_time: string; area: string | null }
 type PatientRow = { id: string; name: string | null; age: number | null; dni: string | null; phone: string | null; email: string | null; user_id: string }
-type AllTurnoRow = TurnoRow & { patient_phone: string | null; patient_email: string | null; patient_age: number | null }
+type AllTurnoRow = { patient_id: string | null; start_time: string; professional_name: string | null; patient_phone: string | null; patient_email: string | null; patient_age: number | null }
 
 export default async function CRMPage() {
   const supabase = createClient()
