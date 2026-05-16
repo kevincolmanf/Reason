@@ -489,99 +489,136 @@ export default function LandingPage() {
               Planes para cada práctica.
             </h2>
             <p className="text-[18px] text-text-secondary leading-[1.5]">
-              Todos los planes incluyen acceso completo a las herramientas y al catálogo de contenido. Sin funcionalidades bloqueadas.
+              El plan individual es completo para un profesional independiente. El Pro agrega la capa de equipo y agenda para centros que trabajan con varios profesionales.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
-            <div className="bg-bg-primary border-[0.5px] border-border rounded-2xl p-10 relative">
-              <div className="text-[12px] font-medium text-text-secondary uppercase tracking-[0.05em] mb-4">
-                Mensual
-              </div>
-              <div className="font-mono text-[36px] font-medium text-text-primary mb-2 tracking-[-0.02em]">
-                <span className="text-[18px] text-text-secondary font-normal">ARS</span> 18.000<span className="text-[16px] text-text-secondary font-normal"> /mes</span>
-              </div>
-              <div className="font-mono text-[13px] text-text-secondary mb-6">Hasta 20 pacientes · profesional individual</div>
-              <ul className="list-none mb-8 space-y-2">
-                <li className="text-[13px] text-text-secondary flex items-center gap-2">
-                  <span className="text-accent">✓</span> Planes de ejercicio (1800+ ejercicios)
-                </li>
-                <li className="text-[13px] text-text-secondary flex items-center gap-2">
-                  <span className="text-accent">✓</span> Monitoreo de carga · RTS · Ficha
-                </li>
-                <li className="text-[13px] text-text-secondary flex items-center gap-2">
-                  <span className="text-accent">✓</span> Catálogo de contenido clínico
-                </li>
-                <li className="text-[13px] text-text-secondary flex items-center gap-2">
-                  <span className="text-accent">✓</span> Hasta 20 pacientes
-                </li>
-              </ul>
-              <a
-                href="/login"
-                className="w-full py-[14px] rounded-lg text-[14px] font-medium text-center no-underline block border-[0.5px] border-border-strong text-text-primary bg-bg-primary"
-              >
-                Empezar suscripción mensual
-              </a>
-            </div>
+          {/* Tier 1: Individual */}
+          <div className="mb-4">
+            <div className="text-[11px] font-medium text-text-secondary tracking-[0.05em] uppercase mb-4">Para el profesional independiente</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-            <div className="bg-bg-primary border-[1px] border-accent rounded-2xl p-10 relative">
-              <div className="absolute -top-[12px] left-6 bg-accent text-bg-primary text-[11px] font-medium py-1 px-3 rounded tracking-[0.03em] uppercase">
-                Recomendado · Ahorro 30%
+              {/* Mensual */}
+              <div className="bg-bg-primary border-[0.5px] border-border rounded-2xl p-10 relative">
+                <div className="text-[12px] font-medium text-text-secondary uppercase tracking-[0.05em] mb-4">Mensual</div>
+                <div className="font-mono text-[36px] font-medium text-text-primary mb-2 tracking-[-0.02em]">
+                  <span className="text-[18px] text-text-secondary font-normal">ARS</span> 18.000<span className="text-[16px] text-text-secondary font-normal"> /mes</span>
+                </div>
+                <div className="font-mono text-[13px] text-text-secondary mb-6">Hasta 20 pacientes · cancelás cuando querés</div>
+                <ul className="list-none mb-8 space-y-[10px]">
+                  <li className="text-[13px] text-text-secondary flex items-start gap-2">
+                    <span className="text-accent mt-[1px]">✓</span> Constructor de planes con 1800+ ejercicios en video
+                  </li>
+                  <li className="text-[13px] text-text-secondary flex items-start gap-2">
+                    <span className="text-accent mt-[1px]">✓</span> Monitoreo de carga sesión a sesión
+                  </li>
+                  <li className="text-[13px] text-text-secondary flex items-start gap-2">
+                    <span className="text-accent mt-[1px]">✓</span> Protocolo RTS integrado al historial del paciente
+                  </li>
+                  <li className="text-[13px] text-text-secondary flex items-start gap-2">
+                    <span className="text-accent mt-[1px]">✓</span> Ficha kinésica digital exportable a PDF
+                  </li>
+                  <li className="text-[13px] text-text-secondary flex items-start gap-2">
+                    <span className="text-accent mt-[1px]">✓</span> Calendario de sesiones por paciente
+                  </li>
+                  <li className="text-[13px] text-text-secondary flex items-start gap-2">
+                    <span className="text-accent mt-[1px]">✓</span> Catálogo de contenido clínico completo
+                  </li>
+                </ul>
+                <a
+                  href="/login"
+                  className="w-full py-[14px] rounded-lg text-[14px] font-medium text-center no-underline block border-[0.5px] border-border-strong text-text-primary bg-bg-primary"
+                >
+                  Empezar suscripción mensual
+                </a>
               </div>
-              <div className="text-[12px] font-medium text-text-secondary uppercase tracking-[0.05em] mb-4">
-                Anual
-              </div>
-              <div className="font-mono text-[36px] font-medium text-text-primary mb-2 tracking-[-0.02em]">
-                <span className="text-[18px] text-text-secondary font-normal">ARS</span> 150.000<span className="text-[16px] text-text-secondary font-normal"> /año</span>
-              </div>
-              <div className="font-mono text-[13px] text-text-secondary mb-6">≈ ARS 12.500 / mes · hasta 20 pacientes</div>
-              <ul className="list-none mb-8 space-y-2">
-                <li className="text-[13px] text-text-secondary flex items-center gap-2">
-                  <span className="text-accent">✓</span> Todo lo del plan mensual
-                </li>
-                <li className="text-[13px] text-text-secondary flex items-center gap-2">
-                  <span className="text-accent">✓</span> 12 meses de acceso garantizado
-                </li>
-                <li className="text-[13px] text-text-secondary flex items-center gap-2">
-                  <span className="text-accent">✓</span> Ahorro del 30% vs. mensual
-                </li>
-              </ul>
-              <a
-                href="/login"
-                className="w-full py-[14px] rounded-lg text-[14px] font-medium text-center no-underline block border-none bg-accent text-bg-primary"
-              >
-                Empezar suscripción anual
-              </a>
-            </div>
 
+              {/* Anual */}
+              <div className="bg-bg-primary border-[1px] border-accent rounded-2xl p-10 relative">
+                <div className="absolute -top-[12px] left-6 bg-accent text-bg-primary text-[11px] font-medium py-1 px-3 rounded tracking-[0.03em] uppercase">
+                  Recomendado · Ahorro 30%
+                </div>
+                <div className="text-[12px] font-medium text-text-secondary uppercase tracking-[0.05em] mb-4">Anual</div>
+                <div className="font-mono text-[36px] font-medium text-text-primary mb-2 tracking-[-0.02em]">
+                  <span className="text-[18px] text-text-secondary font-normal">ARS</span> 150.000<span className="text-[16px] text-text-secondary font-normal"> /año</span>
+                </div>
+                <div className="font-mono text-[13px] text-text-secondary mb-6">≈ ARS 12.500 / mes · hasta 20 pacientes</div>
+                <ul className="list-none mb-8 space-y-[10px]">
+                  <li className="text-[13px] text-text-secondary flex items-start gap-2">
+                    <span className="text-accent mt-[1px]">✓</span> Todo lo del plan mensual incluido
+                  </li>
+                  <li className="text-[13px] text-text-secondary flex items-start gap-2">
+                    <span className="text-accent mt-[1px]">✓</span> 12 meses de acceso sin interrupciones
+                  </li>
+                  <li className="text-[13px] text-text-secondary flex items-start gap-2">
+                    <span className="text-accent mt-[1px]">✓</span> Ahorrás ARS 66.000 vs. pagar mes a mes
+                  </li>
+                </ul>
+                <a
+                  href="/login"
+                  className="w-full py-[14px] rounded-lg text-[14px] font-medium text-center no-underline block border-none bg-accent text-bg-primary"
+                >
+                  Empezar suscripción anual
+                </a>
+              </div>
+            </div>
+          </div>
+
+          {/* Tier 2: Pro */}
+          <div className="mt-10">
+            <div className="text-[11px] font-medium text-text-secondary tracking-[0.05em] uppercase mb-4">Para centros y equipos interdisciplinarios</div>
             <div className="bg-bg-primary border-[0.5px] border-border rounded-2xl p-10 relative">
-              <div className="text-[12px] font-medium text-text-secondary uppercase tracking-[0.05em] mb-4">
-                Pro · Centros
+              <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-8 items-start">
+                <div>
+                  <div className="text-[12px] font-medium text-text-secondary uppercase tracking-[0.05em] mb-2">Pro · Centros</div>
+                  <div className="font-mono text-[36px] font-medium text-text-primary mb-1 tracking-[-0.02em]">
+                    <span className="text-[18px] text-text-secondary font-normal">ARS</span> 150.000<span className="text-[16px] text-text-secondary font-normal"> /mes</span>
+                  </div>
+                  <div className="font-mono text-[13px] text-text-secondary mb-8">Pacientes ilimitados · todos los profesionales del centro incluidos</div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-[10px]">
+                    <div>
+                      <div className="text-[11px] font-medium text-text-tertiary uppercase tracking-[0.04em] mb-3">Todo lo del plan individual, más:</div>
+                      <ul className="list-none space-y-[10px]">
+                        <li className="text-[13px] text-text-secondary flex items-start gap-2">
+                          <span className="text-accent mt-[1px]">✓</span> Agenda de turnos integrada
+                        </li>
+                        <li className="text-[13px] text-text-secondary flex items-start gap-2">
+                          <span className="text-accent mt-[1px]">✓</span> Recordatorios automáticos por WhatsApp
+                        </li>
+                        <li className="text-[13px] text-text-secondary flex items-start gap-2">
+                          <span className="text-accent mt-[1px]">✓</span> Vista semanal de agenda por profesional
+                        </li>
+                      </ul>
+                    </div>
+                    <div>
+                      <div className="text-[11px] font-medium text-text-tertiary uppercase tracking-[0.04em] mb-3">Funciones de equipo:</div>
+                      <ul className="list-none space-y-[10px]">
+                        <li className="text-[13px] text-text-secondary flex items-start gap-2">
+                          <span className="text-accent mt-[1px]">✓</span> Pacientes y planes compartidos entre profesionales
+                        </li>
+                        <li className="text-[13px] text-text-secondary flex items-start gap-2">
+                          <span className="text-accent mt-[1px]">✓</span> Historial permanente del equipo
+                        </li>
+                        <li className="text-[13px] text-text-secondary flex items-start gap-2">
+                          <span className="text-accent mt-[1px]">✓</span> Control de acceso por profesional
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+                <div className="md:w-[220px] flex-shrink-0">
+                  <a
+                    href="/checkout?plan=pro_monthly"
+                    className="w-full py-[14px] rounded-lg text-[14px] font-medium text-center no-underline block border-[0.5px] border-border-strong text-text-primary bg-bg-primary"
+                  >
+                    Suscribirme al Plan Pro
+                  </a>
+                  <p className="text-[12px] text-text-tertiary text-center mt-3 leading-[1.5]">
+                    Incluye a todos los profesionales del centro sin costo adicional por miembro.
+                  </p>
+                </div>
               </div>
-              <div className="font-mono text-[36px] font-medium text-text-primary mb-2 tracking-[-0.02em]">
-                <span className="text-[18px] text-text-secondary font-normal">ARS</span> 150.000<span className="text-[16px] text-text-secondary font-normal"> /mes</span>
-              </div>
-              <div className="font-mono text-[13px] text-text-secondary mb-6">Pacientes ilimitados · equipo multi-profesional</div>
-              <ul className="list-none mb-8 space-y-2">
-                <li className="text-[13px] text-text-secondary flex items-center gap-2">
-                  <span className="text-accent">✓</span> Todo lo del plan mensual
-                </li>
-                <li className="text-[13px] text-text-secondary flex items-center gap-2">
-                  <span className="text-accent">✓</span> Agenda + recordatorios WA
-                </li>
-                <li className="text-[13px] text-text-secondary flex items-center gap-2">
-                  <span className="text-accent">✓</span> Modo equipo con pacientes compartidos
-                </li>
-                <li className="text-[13px] text-text-secondary flex items-center gap-2">
-                  <span className="text-accent">✓</span> Invitá a tus profesionales
-                </li>
-              </ul>
-              <a
-                href="/checkout?plan=pro_monthly"
-                className="w-full py-[14px] rounded-lg text-[14px] font-medium text-center no-underline block border-[0.5px] border-border-strong text-text-primary bg-bg-primary"
-              >
-                Suscribirme al Plan Pro
-              </a>
             </div>
           </div>
         </div>
