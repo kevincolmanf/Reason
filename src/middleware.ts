@@ -110,9 +110,19 @@ export async function middleware(request: NextRequest) {
     const trialExpiresAt = userData?.trial_expires_at
     const trialActive = trialExpiresAt ? new Date(trialExpiresAt) > new Date() : false
 
-    // Check org membership for free users who belong to a team
+    // Check if user is actively in an org context (cookie reason_ctx)
+    let isInOrgContext = false
+    try {
+      const ctxRaw = request.cookies.get('reason_ctx')?.value
+      if (ctxRaw) {
+        const ctx = JSON.parse(ctxRaw)
+        isInOrgContext = ctx?.type === 'org' && !!ctx?.orgId
+      }
+    } catch { /* invalid cookie → treat as personal */ }
+
+    // Check org membership only when in org context
     let isOrgMember = false
-    if (role === 'free' || role === 'subscriber') {
+    if ((role === 'free' || role === 'subscriber') && isInOrgContext) {
       const { count } = await supabase
         .from('organization_members')
         .select('*', { count: 'exact', head: true })
