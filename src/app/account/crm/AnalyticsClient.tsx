@@ -96,7 +96,7 @@ export default function AnalyticsClient({ analytics }: { analytics: Analytics })
           <div className="font-mono text-[32px] font-medium text-text-primary tracking-[-0.02em]">{totalPatients}</div>
         </div>
         <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">
-          <div className="text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em] mb-3">Activos (últimos 60 días)</div>
+          <div className="text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em] mb-3">Activos (últimos 30 días)</div>
           <div className="font-mono text-[32px] font-medium text-emerald-400 tracking-[-0.02em]">{activePatients}</div>
           <div className="text-[12px] mt-2 text-text-tertiary">
             {totalPatients > 0 ? Math.round((activePatients / totalPatients) * 100) : 0}% del total
