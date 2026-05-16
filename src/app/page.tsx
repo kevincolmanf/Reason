@@ -106,7 +106,7 @@ export default function LandingPage() {
               </div>
               <ul className="list-none">
                 <li className="py-4 text-[15px] text-text-primary border-b-[0.5px] border-border">
-                  Agenda integrada con recordatorios automáticos de WhatsApp
+                  Agenda integrada con recordatorios de WhatsApp <span className="text-[12px] text-accent">(Pro)</span>
                 </li>
                 <li className="py-4 text-[15px] text-text-primary border-b-[0.5px] border-border">
                   Planes con 1800+ ejercicios en video y feedback en tiempo real
@@ -138,13 +138,14 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Agenda */}
             <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-8">
-              <div className="h-[48px] mb-5 flex items-center justify-start text-accent">
+              <div className="h-[48px] mb-5 flex items-center justify-between text-accent">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
                   <line x1="16" y1="2" x2="16" y2="6"></line>
                   <line x1="8" y1="2" x2="8" y2="6"></line>
                   <line x1="3" y1="10" x2="21" y2="10"></line>
                 </svg>
+                <span className="text-[10px] font-medium text-accent border-[0.5px] border-accent rounded px-2 py-0.5 tracking-[0.04em] uppercase">Pro</span>
               </div>
               <h3 className="text-[17px] font-medium mb-3 text-text-primary">Agenda de turnos</h3>
               <p className="text-[14px] text-text-secondary leading-[1.55]">
@@ -503,9 +504,6 @@ export default function LandingPage() {
               <div className="font-mono text-[13px] text-text-secondary mb-6">Hasta 20 pacientes · profesional individual</div>
               <ul className="list-none mb-8 space-y-2">
                 <li className="text-[13px] text-text-secondary flex items-center gap-2">
-                  <span className="text-accent">✓</span> Agenda + recordatorios WA
-                </li>
-                <li className="text-[13px] text-text-secondary flex items-center gap-2">
                   <span className="text-accent">✓</span> Planes de ejercicio (1800+ ejercicios)
                 </li>
                 <li className="text-[13px] text-text-secondary flex items-center gap-2">
@@ -513,6 +511,9 @@ export default function LandingPage() {
                 </li>
                 <li className="text-[13px] text-text-secondary flex items-center gap-2">
                   <span className="text-accent">✓</span> Catálogo de contenido clínico
+                </li>
+                <li className="text-[13px] text-text-secondary flex items-center gap-2">
+                  <span className="text-accent">✓</span> Hasta 20 pacientes
                 </li>
               </ul>
               <a
@@ -542,7 +543,7 @@ export default function LandingPage() {
                   <span className="text-accent">✓</span> 12 meses de acceso garantizado
                 </li>
                 <li className="text-[13px] text-text-secondary flex items-center gap-2">
-                  <span className="text-accent">✓</span> Soporte prioritario
+                  <span className="text-accent">✓</span> Ahorro del 30% vs. mensual
                 </li>
               </ul>
               <a
@@ -563,13 +564,13 @@ export default function LandingPage() {
               <div className="font-mono text-[13px] text-text-secondary mb-6">Pacientes ilimitados · equipo multi-profesional</div>
               <ul className="list-none mb-8 space-y-2">
                 <li className="text-[13px] text-text-secondary flex items-center gap-2">
-                  <span className="text-accent">✓</span> Todo lo del plan anual
+                  <span className="text-accent">✓</span> Todo lo del plan mensual
                 </li>
                 <li className="text-[13px] text-text-secondary flex items-center gap-2">
-                  <span className="text-accent">✓</span> Modo equipo con agenda compartida
+                  <span className="text-accent">✓</span> Agenda + recordatorios WA
                 </li>
                 <li className="text-[13px] text-text-secondary flex items-center gap-2">
-                  <span className="text-accent">✓</span> Pacientes y planes del equipo
+                  <span className="text-accent">✓</span> Modo equipo con pacientes compartidos
                 </li>
                 <li className="text-[13px] text-text-secondary flex items-center gap-2">
                   <span className="text-accent">✓</span> Invitá a tus profesionales
