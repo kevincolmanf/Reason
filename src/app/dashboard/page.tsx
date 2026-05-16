@@ -214,16 +214,6 @@ export default async function DashboardPage() {
               slug="aplicacion_clinica"
               desc="De la teoría a la práctica"
             />
-            <CategoryCard
-              title="Protocolos"
-              slug="protocolo"
-              desc="Pasos claros para actuar"
-            />
-            <CategoryCard
-              title="Casos Reales"
-              slug="caso_real"
-              desc="Experiencia de consultorio"
-            />
           </div>
         </section>
       </main>
