@@ -17,79 +17,105 @@ export default function LandingPage() {
         </div>
       </header>
 
+      {/* Hero */}
       <section className="pt-[120px] pb-[96px]">
         <div className="w-full max-w-[1080px] mx-auto px-8">
-          <h1 className="text-[64px] font-medium tracking-[-0.02em] leading-[1.1] mb-6">
-            Criterio clínico aplicado.
-          </h1>
-          <p className="text-[20px] text-text-secondary leading-[1.5] max-w-[600px] mb-10">
-            Reason traduce evidencia en decisiones de consultorio. Para kinesiólogos que
-            ya están atendiendo y quieren decidir mejor.
-          </p>
-          <div className="flex gap-4 items-center">
-            <a
-              href="/login"
-              className="bg-accent text-bg-primary py-[14px] px-7 rounded-lg text-[14px] font-medium no-underline inline-block border-none cursor-pointer"
-            >
-              Ingresar / Suscribirse
-            </a>
-            <a
-              href="#como-funciona"
-              className="text-text-primary text-[14px] no-underline py-[14px] px-0"
-            >
-              Ver cómo funciona →
-            </a>
+          <div className="max-w-[760px]">
+            <h1 className="text-[64px] font-medium tracking-[-0.02em] leading-[1.1] mb-6">
+              La plataforma que usás<br />para atender mejor.
+            </h1>
+            <p className="text-[20px] text-text-secondary leading-[1.5] max-w-[600px] mb-10">
+              Agenda, planes de ejercicio, monitoreo de carga, protocolos RTS, ficha kinésica y contenido clínico basado en evidencia. Todo diseñado para kinesiólogos.
+            </p>
+            <div className="flex gap-4 items-center flex-wrap">
+              <a
+                href="/login"
+                className="bg-accent text-bg-primary py-[14px] px-7 rounded-lg text-[14px] font-medium no-underline inline-block border-none cursor-pointer"
+              >
+                Probá gratis 7 días
+              </a>
+              <a
+                href="#funcionalidades"
+                className="text-text-primary text-[14px] no-underline py-[14px] px-0"
+              >
+                Ver funcionalidades →
+              </a>
+            </div>
           </div>
         </div>
       </section>
 
-      <section className="py-[96px] border-t-[0.5px] border-border">
+      {/* Stats bar */}
+      <section className="py-10 border-t-[0.5px] border-border border-b-[0.5px] bg-bg-secondary">
+        <div className="w-full max-w-[1080px] mx-auto px-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            <div>
+              <div className="font-mono text-[32px] font-medium text-text-primary tracking-[-0.02em]">1800+</div>
+              <div className="text-[13px] text-text-secondary mt-1">ejercicios con video</div>
+            </div>
+            <div>
+              <div className="font-mono text-[32px] font-medium text-text-primary tracking-[-0.02em]">Agenda</div>
+              <div className="text-[13px] text-text-secondary mt-1">integrada con recordatorios WA</div>
+            </div>
+            <div>
+              <div className="font-mono text-[32px] font-medium text-text-primary tracking-[-0.02em]">RTS</div>
+              <div className="text-[13px] text-text-secondary mt-1">protocolos de retorno al deporte</div>
+            </div>
+            <div>
+              <div className="font-mono text-[32px] font-medium text-text-primary tracking-[-0.02em]">Equipo</div>
+              <div className="text-[13px] text-text-secondary mt-1">modo multi-profesional integrado</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Problem / Solution */}
+      <section className="py-[96px]">
         <div className="w-full max-w-[1080px] mx-auto px-8">
           <div className="mb-16 max-w-[720px]">
             <h2 className="text-[40px] font-medium tracking-[-0.02em] leading-[1.15] mb-4">
-              No te falta información. Te falta criterio para usarla.
+              Demasiadas herramientas para gestionar una práctica.
             </h2>
             <p className="text-[18px] text-text-secondary leading-[1.5]">
-              Reason no suma contenido al ruido. Sintetiza lo que importa, descarta lo
-              que no, y te muestra cómo se piensa cada decisión clínica.
+              Turnos por WhatsApp, planillas de Excel, libretas de papel, PDFs enviados por correo. Reason reemplaza todo eso con una sola plataforma pensada desde adentro del consultorio.
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
             <div className="p-8 rounded-xl bg-bg-primary border-[0.5px] border-border">
               <div className="text-[11px] font-medium text-text-secondary tracking-[0.05em] uppercase mb-6">
-                Lo que ya tenés
+                Sin Reason
               </div>
               <ul className="list-none">
                 <li className="py-4 text-[15px] text-text-primary border-b-[0.5px] border-border">
-                  Papers acumulados sin leer
+                  Turnos perdidos y recordatorios manuales por WhatsApp
                 </li>
                 <li className="py-4 text-[15px] text-text-primary border-b-[0.5px] border-border">
-                  Cursos que no llegaste a aplicar
+                  Planes de ejercicio en PDF genéricos, sin seguimiento
                 </li>
                 <li className="py-4 text-[15px] text-text-primary border-b-[0.5px] border-border">
-                  Información dispersa en mil lugares
+                  Fichas en papel o en planillas que nadie encuentra después
                 </li>
                 <li className="py-4 text-[15px] text-text-primary">
-                  Decisiones que tomás sin estar seguro
+                  Carga y RTS calculados de memoria o sin protocolo
                 </li>
               </ul>
             </div>
             <div className="p-8 rounded-xl bg-bg-secondary border-[0.5px] border-border">
               <div className="text-[11px] font-medium text-text-secondary tracking-[0.05em] uppercase mb-6">
-                Lo que te falta
+                Con Reason
               </div>
               <ul className="list-none">
                 <li className="py-4 text-[15px] text-text-primary border-b-[0.5px] border-border">
-                  Criterio clínico aplicado a casos reales
+                  Agenda integrada con recordatorios automáticos de WhatsApp
                 </li>
                 <li className="py-4 text-[15px] text-text-primary border-b-[0.5px] border-border">
-                  Decisiones claras en formato breve
+                  Planes con 1800+ ejercicios en video y feedback en tiempo real
                 </li>
                 <li className="py-4 text-[15px] text-text-primary border-b-[0.5px] border-border">
-                  Razonamiento expuesto, no recetas
+                  Ficha kinésica digital, exportable a PDF con registro permanente
                 </li>
                 <li className="py-4 text-[15px] text-text-primary">
-                  Tiempo recuperado para tu consultorio
+                  Monitoreo de carga y protocolos RTS integrados al historial del paciente
                 </li>
               </ul>
             </div>
@@ -97,86 +123,182 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="py-[96px] bg-bg-secondary" id="como-funciona">
+      {/* Funcionalidades */}
+      <section className="py-[96px] bg-bg-secondary" id="funcionalidades">
         <div className="w-full max-w-[1080px] mx-auto px-8">
           <div className="mb-16 max-w-[720px]">
             <h2 className="text-[40px] font-medium tracking-[-0.02em] leading-[1.15] mb-4">
-              Cada contenido te lleva a una decisión.
+              Todo lo que necesitás, en un solo lugar.
             </h2>
             <p className="text-[18px] text-text-secondary leading-[1.5]">
-              Estructura fija. Lectura de 2 a 3 minutos. Visualizaciones cuando ayudan
-              a pensar mejor que el texto.
+              Cada herramienta está diseñada para el flujo de trabajo real del kinesiólogo. No son funcionalidades genéricas — son soluciones a problemas que aparecen todos los días en consultorio.
             </p>
           </div>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Agenda */}
             <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-8">
-              <div className="h-[80px] mb-6 flex items-center justify-start">
-                <div className="flex flex-col gap-[6px]">
-                  <div className="w-[80px] h-[6px] bg-border-strong rounded-[3px]"></div>
-                  <div className="w-[50px] h-[6px] bg-border-strong rounded-[3px]"></div>
-                  <div className="w-[65px] h-[6px] bg-border-strong rounded-[3px]"></div>
-                  <div className="w-[80px] h-[6px] bg-border-strong rounded-[3px]"></div>
-                  <div className="w-[50px] h-[6px] bg-border-strong rounded-[3px]"></div>
-                </div>
-              </div>
-              <h3 className="text-[18px] font-medium mb-3 text-text-primary">
-                Estructura fija
-              </h3>
-              <p className="text-[14px] text-text-secondary leading-[1.55]">
-                Cada contenido sigue la misma arquitectura: qué tenés que saber,
-                interpretación, aplicación, qué evitar, conclusión. Sabés dónde
-                encontrar cada cosa, siempre.
-              </p>
-            </div>
-
-            <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-8">
-              <div className="h-[80px] mb-6 flex items-center justify-start">
-                <div className="font-mono text-[48px] font-medium text-text-primary tracking-[-0.02em]">
-                  2-3<span className="text-[16px] text-text-secondary ml-1 font-sans">min</span>
-                </div>
-              </div>
-              <h3 className="text-[18px] font-medium mb-3 text-text-primary">
-                Formato breve
-              </h3>
-              <p className="text-[14px] text-text-secondary leading-[1.55]">
-                Diseñado para leer entre paciente y paciente. Si te lleva más de tres
-                minutos, está mal escrito.
-              </p>
-            </div>
-
-            <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-8">
-              <div className="h-[80px] mb-6 flex items-center justify-start">
-                <svg viewBox="0 0 100 60" className="w-full h-full">
-                  <rect x="35" y="5" width="30" height="14" rx="3" fill="#FFFFFF" stroke="#5C5B57" strokeWidth="0.5" />
-                  <line x1="50" y1="19" x2="50" y2="27" stroke="#5C5B57" strokeWidth="0.8" />
-                  <rect x="10" y="27" width="30" height="14" rx="3" fill="#FFFFFF" stroke="#5C5B57" strokeWidth="0.5" />
-                  <rect x="60" y="27" width="30" height="14" rx="3" fill="rgba(194,90,44,0.08)" stroke="#C25A2C" strokeWidth="0.5" />
-                  <line x1="40" y1="34" x2="60" y2="34" stroke="#5C5B57" strokeWidth="0.5" strokeDasharray="2,2" />
-                  <rect x="35" y="46" width="30" height="14" rx="3" fill="rgba(194,90,44,0.08)" stroke="#C25A2C" strokeWidth="0.5" />
-                  <line x1="75" y1="41" x2="50" y2="46" stroke="#5C5B57" strokeWidth="0.8" />
+              <div className="h-[48px] mb-5 flex items-center justify-start text-accent">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
                 </svg>
               </div>
-              <h3 className="text-[18px] font-medium mb-3 text-text-primary">
-                Visualizaciones
-              </h3>
+              <h3 className="text-[17px] font-medium mb-3 text-text-primary">Agenda de turnos</h3>
               <p className="text-[14px] text-text-secondary leading-[1.55]">
-                Árboles de decisión, tablas comparativas, líneas de tiempo. Cuando un
-                razonamiento se ve, se aplica mejor que cuando se lee.
+                Gestioná todos tus turnos desde una vista semanal. Enviá recordatorios de WhatsApp con un click y sabé quién confirmó y quién no.
+              </p>
+            </div>
+
+            {/* Planes de ejercicio */}
+            <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-8">
+              <div className="h-[48px] mb-5 flex items-center justify-start text-accent">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M6.5 6.5h11M6.5 12h11M6.5 17.5h6"></path>
+                  <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                </svg>
+              </div>
+              <h3 className="text-[17px] font-medium mb-3 text-text-primary">Planes de ejercicio</h3>
+              <p className="text-[14px] text-text-secondary leading-[1.55]">
+                Constructor con 1800+ ejercicios en video. Compartí un link con tu paciente para que siga el plan desde el teléfono, con feedback de RPE y EVA. Exportá a PDF con QR automático.
+              </p>
+            </div>
+
+            {/* Monitoreo de carga */}
+            <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-8">
+              <div className="h-[48px] mb-5 flex items-center justify-start text-accent">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                </svg>
+              </div>
+              <h3 className="text-[17px] font-medium mb-3 text-text-primary">Monitoreo de carga</h3>
+              <p className="text-[14px] text-text-secondary leading-[1.55]">
+                Registrá y visualizá la carga de entrenamiento sesión a sesión. Tomá decisiones de progresión con datos, no con intuición.
+              </p>
+            </div>
+
+            {/* RTS */}
+            <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-8">
+              <div className="h-[48px] mb-5 flex items-center justify-start text-accent">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+              </div>
+              <h3 className="text-[17px] font-medium mb-3 text-text-primary">Protocolo RTS</h3>
+              <p className="text-[14px] text-text-secondary leading-[1.55]">
+                Protocolos de retorno al deporte integrados al historial del paciente. Criterios claros, etapas definidas, sin improvisar la progresión.
+              </p>
+            </div>
+
+            {/* Ficha */}
+            <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-8">
+              <div className="h-[48px] mb-5 flex items-center justify-start text-accent">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34"></path>
+                  <polygon points="18 2 22 6 12 16 8 16 8 12 18 2"></polygon>
+                </svg>
+              </div>
+              <h3 className="text-[17px] font-medium mb-3 text-text-primary">Ficha kinésica digital</h3>
+              <p className="text-[14px] text-text-secondary leading-[1.55]">
+                Evaluá a tus pacientes con una ficha diseñada bajo razonamiento clínico. Exportá a PDF para el registro offline. Sin datos sensibles en la nube.
+              </p>
+            </div>
+
+            {/* Calendario */}
+            <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-8">
+              <div className="h-[48px] mb-5 flex items-center justify-start text-accent">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <circle cx="12" cy="16" r="1" fill="currentColor"></circle>
+                </svg>
+              </div>
+              <h3 className="text-[17px] font-medium mb-3 text-text-primary">Calendario del paciente</h3>
+              <p className="text-[14px] text-text-secondary leading-[1.55]">
+                Planificá las sesiones de cada paciente con su plan asignado. Visualizá de un vistazo los turnos agendados y las sesiones programadas.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="py-[96px]">
+      {/* Modo equipo */}
+      <section className="py-[96px] border-t-[0.5px] border-border">
+        <div className="w-full max-w-[1080px] mx-auto px-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
+            <div>
+              <div className="text-[11px] font-medium text-accent tracking-[0.05em] uppercase mb-4">
+                Plan Pro · Centros
+              </div>
+              <h2 className="text-[40px] font-medium tracking-[-0.02em] leading-[1.15] mb-4">
+                Trabajá en equipo sin perder el hilo.
+              </h2>
+              <p className="text-[18px] text-text-secondary leading-[1.5] mb-8">
+                Modo equipo para centros y consultorios interdisciplinarios. Agenda compartida, pacientes del equipo, historial permanente y control de acceso por profesional.
+              </p>
+              <ul className="list-none">
+                <li className="py-4 border-b-[0.5px] border-border flex items-start gap-3">
+                  <span className="text-accent mt-[2px]">→</span>
+                  <span className="text-[15px] text-text-primary">Agenda propia para cada miembro del equipo</span>
+                </li>
+                <li className="py-4 border-b-[0.5px] border-border flex items-start gap-3">
+                  <span className="text-accent mt-[2px]">→</span>
+                  <span className="text-[15px] text-text-primary">Pacientes compartidos con historial integrado</span>
+                </li>
+                <li className="py-4 border-b-[0.5px] border-border flex items-start gap-3">
+                  <span className="text-accent mt-[2px]">→</span>
+                  <span className="text-[15px] text-text-primary">Planes de ejercicio accesibles por todo el equipo</span>
+                </li>
+                <li className="py-4 flex items-start gap-3">
+                  <span className="text-accent mt-[2px]">→</span>
+                  <span className="text-[15px] text-text-primary">Control de acceso granular por profesional</span>
+                </li>
+              </ul>
+            </div>
+            <div className="bg-bg-secondary border-[0.5px] border-border rounded-2xl p-10">
+              <div className="text-[13px] text-text-secondary mb-6 font-medium">Modo equipo · Vista de agenda</div>
+              <div className="space-y-3">
+                {['Kevin Colman', 'Lucía Martínez', 'Tomás Pérez'].map((name, i) => (
+                  <div key={i} className="bg-bg-primary rounded-lg p-4 border-[0.5px] border-border flex justify-between items-center">
+                    <span className="text-[14px] text-text-primary font-medium">{name}</span>
+                    <div className="flex gap-1">
+                      {[...Array(i === 0 ? 5 : i === 1 ? 3 : 4)].map((_, j) => (
+                        <div key={j} className="w-5 h-5 rounded bg-accent opacity-[0.15] border-[0.5px] border-accent" />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-6 pt-6 border-t-[0.5px] border-border">
+                <div className="text-[12px] text-text-secondary">Pacientes compartidos del equipo</div>
+                <div className="mt-3 space-y-2">
+                  {['Paciente A — Plan inicial', 'Paciente B — Protocolo RTS semana 3', 'Paciente C — Monitoreo de carga'].map((p, i) => (
+                    <div key={i} className="text-[13px] text-text-primary flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-accent flex-shrink-0" />
+                      {p}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Contenido clínico — sample article */}
+      <section className="py-[96px] bg-bg-secondary">
         <div className="w-full max-w-[1080px] mx-auto px-8">
           <div className="mb-16 max-w-[720px]">
             <h2 className="text-[40px] font-medium tracking-[-0.02em] leading-[1.15] mb-4">
-              Mirá cómo se ve un contenido de Reason.
+              Y además: contenido clínico que te hace pensar mejor.
             </h2>
             <p className="text-[18px] text-text-secondary leading-[1.5]">
-              Un caso completo, abierto. Para que decidas si Reason vale la suscripción
-              antes de pagarla.
+              Artículos de 2-3 minutos con criterio clínico aplicado. Diseñados para leer entre paciente y paciente. Con árboles de decisión cuando ayudan a pensar mejor que el texto.
             </p>
           </div>
 
@@ -327,88 +449,17 @@ export default function LandingPage() {
 
           <div className="text-center mt-12">
             <a
-              href="/signup"
+              href="/login"
               className="bg-accent text-bg-primary py-[18px] px-9 rounded-[10px] text-[16px] font-medium no-underline inline-block"
             >
-              Empezar suscripción y acceder al catálogo completo
+              Acceder al catálogo completo
             </a>
           </div>
         </div>
       </section>
 
+      {/* Author */}
       <section className="py-[96px] border-t-[0.5px] border-border">
-        <div className="w-full max-w-[1080px] mx-auto px-8">
-          <div className="mb-16 max-w-[720px]">
-            <h2 className="text-[40px] font-medium tracking-[-0.02em] leading-[1.15] mb-4">
-              Más que una biblioteca. Un ecosistema clínico integrado.
-            </h2>
-            <p className="text-[18px] text-text-secondary leading-[1.5]">
-              La suscripción a Reason no solo te da contenido. Te da acceso total a herramientas diseñadas específicamente para agilizar tu flujo de trabajo y mejorar el control de tus pacientes.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-8">
-              <div className="h-[60px] mb-4 flex items-center justify-start text-accent">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                  <polyline points="14 2 14 8 20 8"></polyline>
-                  <line x1="16" y1="13" x2="8" y2="13"></line>
-                  <line x1="16" y1="17" x2="8" y2="17"></line>
-                  <polyline points="10 9 9 9 8 9"></polyline>
-                </svg>
-              </div>
-              <h3 className="text-[18px] font-medium mb-3 text-text-primary">
-                Movement Dashboard
-              </h3>
-              <p className="text-[14px] text-text-secondary leading-[1.55]">
-                Constructor de planes con +250 ejercicios en video. Compartí links mágicos con el Modo Paciente, recibí su feedback de RPE y EVA en tiempo real, o exportalos a PDF con códigos QR automáticos.
-              </p>
-            </div>
-
-            <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-8">
-              <div className="h-[60px] mb-4 flex items-center justify-start text-accent">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M20 14.66V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5.34"></path>
-                  <polygon points="18 2 22 6 12 16 8 16 8 12 18 2"></polygon>
-                </svg>
-              </div>
-              <h3 className="text-[18px] font-medium mb-3 text-text-primary">
-                Ficha Kinésica Inteligente
-              </h3>
-              <p className="text-[14px] text-text-secondary leading-[1.55]">
-                Dejá de usar planillas genéricas. Evaluá a tus pacientes usando una ficha digital diseñada bajo razonamiento clínico, con exportación a PDF para que te quede el registro offline. Sin guardar datos sensibles en la nube.
-              </p>
-            </div>
-
-            <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-8">
-              <div className="h-[60px] mb-4 flex items-center justify-start text-accent">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect>
-                  <line x1="8" y1="6" x2="16" y2="6"></line>
-                  <line x1="16" y1="10" x2="16" y2="10.01"></line>
-                  <line x1="12" y1="10" x2="12" y2="10.01"></line>
-                  <line x1="8" y1="10" x2="8" y2="10.01"></line>
-                  <line x1="16" y1="14" x2="16" y2="14.01"></line>
-                  <line x1="12" y1="14" x2="12" y2="14.01"></line>
-                  <line x1="8" y1="14" x2="8" y2="14.01"></line>
-                  <line x1="16" y1="18" x2="16" y2="18.01"></line>
-                  <line x1="12" y1="18" x2="12" y2="18.01"></line>
-                  <line x1="8" y1="18" x2="8" y2="18.01"></line>
-                </svg>
-              </div>
-              <h3 className="text-[18px] font-medium mb-3 text-text-primary">
-                Calculadoras y Scores
-              </h3>
-              <p className="text-[14px] text-text-secondary leading-[1.55]">
-                Cuestionarios interactivos y calculadoras de riesgo integradas. Herramientas validadas (como STarT Back, RMQ, VISA) listas para usar en consultorio sin tener que buscarlas en Google cada vez.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="py-[96px] bg-bg-secondary">
         <div className="w-full max-w-[1080px] mx-auto px-8">
           <div className="grid grid-cols-1 md:grid-cols-[200px_1fr] gap-12 items-center">
             <div className="w-[200px] h-[200px] rounded-xl overflow-hidden flex-shrink-0">
@@ -416,29 +467,28 @@ export default function LandingPage() {
             </div>
             <div>
               <h2 className="text-[32px] font-medium tracking-[-0.02em] mb-3">
-                Reason lo escribe Kevin Colman.
+                Reason lo construye Kevin Colman.
               </h2>
               <p className="text-[16px] text-text-secondary leading-[1.55] mb-4">
-                Kinesiólogo, autor de &quot;Movimiento mata dolor&quot;. Director de Build, donde forma estudiantes y atiende pacientes todas las mañanas.
+                Kinesiólogo, autor de &quot;Movimiento mata dolor&quot;. Director de Build Health & Performance, donde forma estudiantes y atiende pacientes todas las mañanas.
               </p>
               <p className="text-[15px] leading-[1.6] text-text-primary">
-                Reason no es contenido genérico. Es el sistema de pensamiento que
-                aplico todos los días en consultorio, sistematizado para que lo
-                apliques en el tuyo.
+                Reason no es software genérico adaptado para kinesiólogos. Es la plataforma que quería tener en consultorio y que tuve que construir porque no existía.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="py-[96px]" id="pricing">
+      {/* Pricing */}
+      <section className="py-[96px] bg-bg-secondary" id="pricing">
         <div className="w-full max-w-[1080px] mx-auto px-8">
           <div className="mb-16 max-w-[720px]">
             <h2 className="text-[40px] font-medium tracking-[-0.02em] leading-[1.15] mb-4">
               Planes para cada práctica.
             </h2>
             <p className="text-[18px] text-text-secondary leading-[1.5]">
-              Desde el profesional independiente hasta el centro interdisciplinario. Sin contenido bloqueado — lo que pagás es acceso completo a Reason.
+              Todos los planes incluyen acceso completo a las herramientas y al catálogo de contenido. Sin funcionalidades bloqueadas.
             </p>
           </div>
 
@@ -450,12 +500,23 @@ export default function LandingPage() {
               <div className="font-mono text-[36px] font-medium text-text-primary mb-2 tracking-[-0.02em]">
                 <span className="text-[18px] text-text-secondary font-normal">ARS</span> 18.000<span className="text-[16px] text-text-secondary font-normal"> /mes</span>
               </div>
-              <div className="font-mono text-[13px] text-text-secondary mb-6">Hasta 20 pacientes</div>
-              <p className="text-[14px] text-text-secondary leading-[1.55] mb-8 min-h-[40px]">
-                Acceso completo al catálogo. Cancelás cuando quieras.
-              </p>
+              <div className="font-mono text-[13px] text-text-secondary mb-6">Hasta 20 pacientes · profesional individual</div>
+              <ul className="list-none mb-8 space-y-2">
+                <li className="text-[13px] text-text-secondary flex items-center gap-2">
+                  <span className="text-accent">✓</span> Agenda + recordatorios WA
+                </li>
+                <li className="text-[13px] text-text-secondary flex items-center gap-2">
+                  <span className="text-accent">✓</span> Planes de ejercicio (1800+ ejercicios)
+                </li>
+                <li className="text-[13px] text-text-secondary flex items-center gap-2">
+                  <span className="text-accent">✓</span> Monitoreo de carga · RTS · Ficha
+                </li>
+                <li className="text-[13px] text-text-secondary flex items-center gap-2">
+                  <span className="text-accent">✓</span> Catálogo de contenido clínico
+                </li>
+              </ul>
               <a
-                href="/signup"
+                href="/login"
                 className="w-full py-[14px] rounded-lg text-[14px] font-medium text-center no-underline block border-[0.5px] border-border-strong text-text-primary bg-bg-primary"
               >
                 Empezar suscripción mensual
@@ -473,11 +534,19 @@ export default function LandingPage() {
                 <span className="text-[18px] text-text-secondary font-normal">ARS</span> 150.000<span className="text-[16px] text-text-secondary font-normal"> /año</span>
               </div>
               <div className="font-mono text-[13px] text-text-secondary mb-6">≈ ARS 12.500 / mes · hasta 20 pacientes</div>
-              <p className="text-[14px] text-text-secondary leading-[1.55] mb-8 min-h-[40px]">
-                Acceso completo al catálogo durante 12 meses.
-              </p>
+              <ul className="list-none mb-8 space-y-2">
+                <li className="text-[13px] text-text-secondary flex items-center gap-2">
+                  <span className="text-accent">✓</span> Todo lo del plan mensual
+                </li>
+                <li className="text-[13px] text-text-secondary flex items-center gap-2">
+                  <span className="text-accent">✓</span> 12 meses de acceso garantizado
+                </li>
+                <li className="text-[13px] text-text-secondary flex items-center gap-2">
+                  <span className="text-accent">✓</span> Soporte prioritario
+                </li>
+              </ul>
               <a
-                href="/signup"
+                href="/login"
                 className="w-full py-[14px] rounded-lg text-[14px] font-medium text-center no-underline block border-none bg-accent text-bg-primary"
               >
                 Empezar suscripción anual
@@ -491,10 +560,21 @@ export default function LandingPage() {
               <div className="font-mono text-[36px] font-medium text-text-primary mb-2 tracking-[-0.02em]">
                 <span className="text-[18px] text-text-secondary font-normal">ARS</span> 150.000<span className="text-[16px] text-text-secondary font-normal"> /mes</span>
               </div>
-              <div className="font-mono text-[13px] text-text-secondary mb-6">Pacientes ilimitados · comunicación interdisciplinar</div>
-              <p className="text-[14px] text-text-secondary leading-[1.55] mb-8 min-h-[40px]">
-                Para centros y equipos interdisciplinarios.
-              </p>
+              <div className="font-mono text-[13px] text-text-secondary mb-6">Pacientes ilimitados · equipo multi-profesional</div>
+              <ul className="list-none mb-8 space-y-2">
+                <li className="text-[13px] text-text-secondary flex items-center gap-2">
+                  <span className="text-accent">✓</span> Todo lo del plan anual
+                </li>
+                <li className="text-[13px] text-text-secondary flex items-center gap-2">
+                  <span className="text-accent">✓</span> Modo equipo con agenda compartida
+                </li>
+                <li className="text-[13px] text-text-secondary flex items-center gap-2">
+                  <span className="text-accent">✓</span> Pacientes y planes del equipo
+                </li>
+                <li className="text-[13px] text-text-secondary flex items-center gap-2">
+                  <span className="text-accent">✓</span> Invitá a tus profesionales
+                </li>
+              </ul>
               <a
                 href="/checkout?plan=pro_monthly"
                 className="w-full py-[14px] rounded-lg text-[14px] font-medium text-center no-underline block border-[0.5px] border-border-strong text-text-primary bg-bg-primary"
@@ -506,19 +586,20 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Final CTA */}
       <section className="py-[120px] bg-bg-tertiary text-center">
         <div className="w-full max-w-[720px] mx-auto px-8">
           <h2 className="text-[40px] font-medium tracking-[-0.02em] leading-[1.15] mb-4">
-            Empezá a decidir mejor desde el lunes.
+            Probá Reason gratis por 7 días.
           </h2>
           <p className="text-[18px] text-text-secondary leading-[1.5] mb-10">
-            Cancelás cuando quieras. Acceso inmediato a todo el catálogo.
+            Sin tarjeta de crédito. Cancelás cuando querés. Acceso inmediato a todas las herramientas.
           </p>
           <a
             href="/login"
             className="bg-accent text-bg-primary py-[18px] px-9 rounded-[10px] text-[16px] font-medium no-underline inline-block"
           >
-            Ingresar / Suscribirse
+            Empezar gratis
           </a>
         </div>
       </section>
