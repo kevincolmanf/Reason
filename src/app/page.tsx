@@ -106,7 +106,7 @@ export default function LandingPage() {
               </div>
               <ul className="list-none">
                 <li className="py-4 text-[15px] text-text-primary border-b-[0.5px] border-border">
-                  Agenda integrada con recordatorios de WhatsApp <span className="text-[12px] text-accent">(Pro)</span>
+                  Agenda integrada con recordatorios por WhatsApp en un click <span className="text-[12px] text-accent">(Pro)</span>
                 </li>
                 <li className="py-4 text-[15px] text-text-primary border-b-[0.5px] border-border">
                   Planes con 1800+ ejercicios en video y feedback en tiempo real
@@ -149,7 +149,7 @@ export default function LandingPage() {
               </div>
               <h3 className="text-[17px] font-medium mb-3 text-text-primary">Agenda de turnos</h3>
               <p className="text-[14px] text-text-secondary leading-[1.55]">
-                Gestioná todos tus turnos desde una vista semanal. Enviá recordatorios de WhatsApp con un click y sabé quién confirmó y quién no.
+                Gestioná todos tus turnos desde una vista semanal. Enviá recordatorios por WhatsApp con un click, directo desde la agenda.
               </p>
             </div>
 
@@ -584,7 +584,7 @@ export default function LandingPage() {
                           <span className="text-accent mt-[1px]">✓</span> Agenda de turnos integrada
                         </li>
                         <li className="text-[13px] text-text-secondary flex items-start gap-2">
-                          <span className="text-accent mt-[1px]">✓</span> Recordatorios automáticos por WhatsApp
+                          <span className="text-accent mt-[1px]">✓</span> Recordatorios por WhatsApp con un click
                         </li>
                         <li className="text-[13px] text-text-secondary flex items-start gap-2">
                           <span className="text-accent mt-[1px]">✓</span> Vista semanal de agenda por profesional
