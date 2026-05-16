@@ -8,9 +8,9 @@ import CRMPageClient from './CRMPageClient'
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Panel de gestión | Reason' }
 
-type TurnoRow = { status: string; appointment_type: string | null; professional_name: string | null; patient_id: string | null; start_time: string; end_time: string; area: string | null }
+type TurnoRow = { status: string; appointment_type: string | null; professional_name: string | null; start_time: string; end_time: string; area: string | null }
 type PatientRow = { id: string; name: string | null; age: number | null; dni: string | null; phone: string | null; email: string | null; user_id: string }
-type AllTurnoRow = TurnoRow & { patient_phone: string | null; patient_email: string | null; patient_age: number | null }
+type AllTurnoRow = { patient_id: string | null; start_time: string; professional_name: string | null; patient_phone: string | null; patient_email: string | null; patient_age: number | null }
 
 export default async function CRMPage() {
   const supabase = createClient()
@@ -27,31 +27,25 @@ export default async function CRMPage() {
 
   const admin = createAdminClient()
   const now = new Date()
-  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
   const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
   const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1)
   const sixtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
 
+  const fiveMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 4, 1)
+
   const [
     { data: patientsRaw },
-    { data: turnosThis },
-    { data: turnosLast },
+    { data: turnosAll },
     { data: turnosUpcoming },
     { data: allTurnos },
   ] = await Promise.all([
     admin.from('patients').select('*').eq('org_id', orgRow.id).order('name'),
     admin.from('turnos')
-      .select('patient_id, professional_id, professional_name, start_time, end_time, area, status, appointment_type')
+      .select('professional_name, start_time, end_time, area, status, appointment_type')
       .eq('org_id', orgRow.id)
       .not('is_blocked', 'is', true)
-      .gte('start_time', thisMonthStart.toISOString())
+      .gte('start_time', fiveMonthsAgo.toISOString())
       .lt('start_time', nextMonthStart.toISOString()),
-    admin.from('turnos')
-      .select('patient_id, professional_name, start_time, end_time, area, status, appointment_type')
-      .eq('org_id', orgRow.id)
-      .not('is_blocked', 'is', true)
-      .gte('start_time', lastMonthStart.toISOString())
-      .lt('start_time', thisMonthStart.toISOString()),
     admin.from('turnos')
       .select('id')
       .eq('org_id', orgRow.id)
@@ -116,8 +110,9 @@ export default async function CRMPage() {
           analytics={{
             thisMonthLabel,
             lastMonthLabel,
-            rawTurnosThis: (turnosThis ?? []) as TurnoRow[],
-            rawTurnosLast: (turnosLast ?? []) as TurnoRow[],
+            thisMonthKey: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`,
+            lastMonthKey: `${lastMonthStart.getFullYear()}-${String(lastMonthStart.getMonth() + 1).padStart(2, '0')}`,
+            rawTurnos: (turnosAll ?? []) as TurnoRow[],
             upcoming: turnosUpcoming?.length ?? 0,
             totalPatients: patients.length,
             activePatients: patients.filter(p => p.active).length,

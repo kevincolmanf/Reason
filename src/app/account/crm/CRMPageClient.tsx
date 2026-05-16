@@ -21,7 +21,6 @@ export type RawTurno = {
   status: string
   appointment_type: string | null
   professional_name: string | null
-  patient_id: string | null
   start_time: string
   end_time: string
   area: string | null
@@ -30,8 +29,9 @@ export type RawTurno = {
 export type Analytics = {
   thisMonthLabel: string
   lastMonthLabel: string
-  rawTurnosThis: RawTurno[]
-  rawTurnosLast: RawTurno[]
+  thisMonthKey: string
+  lastMonthKey: string
+  rawTurnos: RawTurno[]
   upcoming: number
   totalPatients: number
   activePatients: number
