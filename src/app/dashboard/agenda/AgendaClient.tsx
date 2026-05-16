@@ -53,7 +53,7 @@ interface Props {
 const STATUS_COLORS: Record<string, string> = {
   programado: 'bg-bg-secondary border-border text-text-secondary',
   confirmado: 'bg-emerald-500/10 border-emerald-500/25 text-emerald-300',
-  presente:   'bg-blue-500/10 border-blue-500/25 text-blue-300',
+  presente:   'bg-emerald-500/15 border-emerald-500/40 text-emerald-300',
   ausente:    'bg-red-500/10 border-red-500/25 text-red-300',
   cancelado:  'bg-bg-secondary border-border text-text-tertiary line-through',
   sobreturno: 'bg-purple-500/10 border-purple-500/25 text-purple-300',
@@ -304,6 +304,11 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
     setWeekStart(startOfWeek(new Date()))
   }
 
+  const quickStatus = useCallback(async (id: string, status: string) => {
+    setTurnos(prev => prev.map(t => t.id === id ? { ...t, status } : t))
+    await supabaseRef.current.from('turnos').update({ status }).eq('id', id)
+  }, [])
+
   const markReminded = useCallback((id: string) => {
     setRemindedIds(prev => {
       const next = new Set(prev)
@@ -394,6 +399,24 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                     </>
                   )}
                 </button>
+                {!t.is_blocked && (
+                  <div className="absolute bottom-0.5 left-0.5 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={e => { e.stopPropagation(); quickStatus(t.id, t.status === 'presente' ? 'programado' : 'presente') }}
+                      title={t.status === 'presente' ? 'Desmarcar presente' : 'Marcar presente'}
+                      className={`text-[9px] leading-none border-[0.5px] rounded px-1 py-0.5 transition-colors ${t.status === 'presente' ? 'bg-emerald-500/40 border-emerald-500/60 text-emerald-300' : 'bg-emerald-500/20 hover:bg-emerald-500/40 border-emerald-500/40 text-emerald-400'}`}
+                    >
+                      ✓
+                    </button>
+                    <button
+                      onClick={e => { e.stopPropagation(); quickStatus(t.id, t.status === 'ausente' ? 'programado' : 'ausente') }}
+                      title={t.status === 'ausente' ? 'Desmarcar ausente' : 'Marcar ausente'}
+                      className={`text-[9px] leading-none border-[0.5px] rounded px-1 py-0.5 transition-colors ${t.status === 'ausente' ? 'bg-red-500/40 border-red-500/60 text-red-300' : 'bg-red-500/20 hover:bg-red-500/40 border-red-500/40 text-red-400'}`}
+                    >
+                      ✗
+                    </button>
+                  </div>
+                )}
                 {waUrl && (
                   <a
                     href={waUrl}
