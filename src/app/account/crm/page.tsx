@@ -27,7 +27,6 @@ export default async function CRMPage() {
 
   const admin = createAdminClient()
   const now = new Date()
-  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
   const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
   const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1)
   const sixtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
