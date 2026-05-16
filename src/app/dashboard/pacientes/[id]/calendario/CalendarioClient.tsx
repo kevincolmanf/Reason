@@ -269,7 +269,7 @@ export default function CalendarioClient({ patientId, userId, patientName, plans
       {plan && planSessions.length > 0 ? (
         <section className="bg-bg-secondary border-[0.5px] border-border rounded-2xl p-5 sm:p-6">
           <h2 className="text-[18px] font-medium mb-1">Programar sesiones</h2>
-          <p className="text-[13px] text-text-secondary mb-5">Elegí la sesión y marcá los días en el calendario.</p>
+          <p className="text-[13px] text-text-secondary mb-5">Seleccioná la sesión y ubicala en los días que quieras.</p>
 
           {/* Session chips */}
           <div className="mb-5">
