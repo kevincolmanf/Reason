@@ -2,32 +2,30 @@ import Link from 'next/link'
 
 const FEATURES_INDIVIDUAL = [
   'Hasta 20 pacientes activos',
-  'Para agregar uno nuevo, tenés que eliminar otro',
-  'Monitoreo de carga por paciente',
-  'Calendario de sesiones',
-  'Fichas clínicas y goniometría',
-  'Protocolo RTS (retorno al deporte)',
+  'Constructor de planes con 1800+ ejercicios en video',
+  'Monitoreo de carga sesión a sesión',
+  'Protocolo RTS integrado al historial del paciente',
+  'Ficha kinésica digital exportable a PDF',
+  'Calendario de sesiones por paciente',
   'Cuestionarios validados (NDI, DASH, Oswestry y más)',
-  'Dinamometría HHD',
-  'Planes de ejercicio ilimitados',
-  'Biblioteca de +1.700 ejercicios',
   'Biblioteca clínica completa',
 ]
 
-const FEATURES_PRO = [
+const FEATURES_PRO_BASE = [
+  'Todo lo del plan individual incluido',
   'Pacientes ilimitados con historial permanente',
-  'Nunca necesitás borrar un paciente',
-  'Usuarios ilimitados con acceso propio',
-  'Pacientes compartidos entre todo el equipo',
-  'Monitoreo de carga por paciente',
-  'Calendario de sesiones',
-  'Fichas clínicas y goniometría',
-  'Protocolo RTS (retorno al deporte)',
-  'Cuestionarios validados (NDI, DASH, Oswestry y más)',
-  'Dinamometría HHD',
-  'Planes de ejercicio ilimitados',
-  'Biblioteca de +1.700 ejercicios',
-  'Biblioteca clínica completa',
+]
+
+const FEATURES_PRO_AGENDA = [
+  'Agenda de turnos integrada',
+  'Recordatorios por WhatsApp con un click',
+  'Vista semanal de agenda por profesional',
+]
+
+const FEATURES_PRO_TEAM = [
+  'Pacientes y planes compartidos entre profesionales',
+  'Historial permanente del equipo',
+  'Control de acceso por profesional',
 ]
 
 export default function PaywallPage() {
@@ -144,14 +142,38 @@ export default function PaywallPage() {
               </Link>
             </div>
 
-            <ul className="space-y-3 flex-grow">
-              {FEATURES_PRO.map(f => (
-                <li key={f} className="flex items-start gap-2.5 text-[13px] text-text-secondary">
-                  <span className="text-accent mt-0.5 shrink-0">✓</span>
-                  {f}
-                </li>
-              ))}
-            </ul>
+            <div className="flex-grow space-y-5">
+              <ul className="space-y-3">
+                {FEATURES_PRO_BASE.map(f => (
+                  <li key={f} className="flex items-start gap-2.5 text-[13px] text-text-secondary">
+                    <span className="text-accent mt-0.5 shrink-0">✓</span>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <div>
+                <p className="text-[11px] font-medium text-text-tertiary uppercase tracking-[0.04em] mb-2">Agenda</p>
+                <ul className="space-y-3">
+                  {FEATURES_PRO_AGENDA.map(f => (
+                    <li key={f} className="flex items-start gap-2.5 text-[13px] text-text-secondary">
+                      <span className="text-accent mt-0.5 shrink-0">✓</span>
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <p className="text-[11px] font-medium text-text-tertiary uppercase tracking-[0.04em] mb-2">Modo equipo</p>
+                <ul className="space-y-3">
+                  {FEATURES_PRO_TEAM.map(f => (
+                    <li key={f} className="flex items-start gap-2.5 text-[13px] text-text-secondary">
+                      <span className="text-accent mt-0.5 shrink-0">✓</span>
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
           </div>
 
         </div>
