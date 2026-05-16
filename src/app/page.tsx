@@ -263,7 +263,7 @@ export default function LandingPage() {
             <div className="bg-bg-secondary border-[0.5px] border-border rounded-2xl p-10">
               <div className="text-[13px] text-text-secondary mb-6 font-medium">Modo equipo · Vista de agenda</div>
               <div className="space-y-3">
-                {['Kevin Colman', 'Lucía Martínez', 'Tomás Pérez'].map((name, i) => (
+                {['Sebastián Ruiz', 'Lucía Martínez', 'Tomás Pérez'].map((name, i) => (
                   <div key={i} className="bg-bg-primary rounded-lg p-4 border-[0.5px] border-border flex justify-between items-center">
                     <span className="text-[14px] text-text-primary font-medium">{name}</span>
                     <div className="flex gap-1">
