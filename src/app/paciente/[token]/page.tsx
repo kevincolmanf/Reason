@@ -40,15 +40,12 @@ export default async function PatientPortalPage({ params }: { params: { token: s
     .order('session_date', { ascending: false })
     .limit(30)
 
-  // Sesiones programadas: hoy en adelante (sin límite de días)
-  const today = new Date().toISOString().split('T')[0]
+  // Todas las sesiones programadas del paciente (pasadas y futuras)
   const { data: scheduledSessions } = await supabase
     .from('scheduled_sessions')
     .select('id, plan_id, session_id, session_name, plan_name, scheduled_date, week, completed')
     .eq('patient_id', patient.id)
-    .gte('scheduled_date', today)
     .order('scheduled_date', { ascending: true })
-    .limit(30)
 
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
