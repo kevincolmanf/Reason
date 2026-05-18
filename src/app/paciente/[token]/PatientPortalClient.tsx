@@ -119,6 +119,7 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
   const [stress, setStress] = useState<number | null>(null)
 
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const [showConfirmEmpty, setShowConfirmEmpty] = useState(false)
   const [localSessions, setLocalSessions] = useState<RecentSession[]>(recentSessions)
 
   const calculatedLoad = formRpe !== null && formDuration ? formRpe * (parseInt(formDuration) || 0) : null
@@ -163,10 +164,18 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
     setExReports(r => ({ ...r, [id]: { ...r[id], [field]: value } }))
   }
 
-  const handleSubmit = async () => {
-    if (!formDate || !formDuration || formRpe === null) return
-    const duration = parseInt(formDuration)
-    if (isNaN(duration) || duration <= 0) return
+  const handleSubmit = async (skipEmptyCheck = false) => {
+    if (!formDate) return
+
+    const hasEmptyData = !formDuration || formRpe === null
+    if (hasEmptyData && !skipEmptyCheck) {
+      setShowConfirmEmpty(true)
+      return
+    }
+    setShowConfirmEmpty(false)
+
+    const duration = parseInt(formDuration) || 0
+    const rpe = formRpe ?? 0
 
     setSubmitStatus('loading')
     try {
@@ -179,7 +188,7 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
           activity: formActivity.trim() || null,
           activity_type: activityType,
           duration_minutes: duration,
-          rpe: formRpe,
+          rpe: rpe,
           vas_pre: vasPre,
           vas_during: showSportSection ? vasDuring : null,
           vas_post: vasPost,
@@ -207,7 +216,7 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
 
       setLocalSessions(prev => [{
         session_date: formDate, activity: formActivity.trim() || null,
-        rpe: formRpe, load_units: formRpe * duration, vas_post: vasPost, source: 'patient',
+        rpe: rpe, load_units: rpe * duration, vas_post: vasPost, source: 'patient',
       }, ...prev].slice(0, 30))
 
       setSubmitStatus('success')
@@ -608,9 +617,31 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
             </div>
           )}
 
+          {/* Confirmación al guardar sin datos */}
+          {showConfirmEmpty && (
+            <div className="bg-bg-secondary border-[0.5px] border-border rounded-xl p-4">
+              <p className="text-[13px] font-medium text-text-primary mb-1">¿Guardar sin completar los datos?</p>
+              <p className="text-[12px] text-text-secondary mb-3">Tu entrenador no va a poder ver el esfuerzo ni la duración de esta sesión.</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleSubmit(true)}
+                  className="flex-1 bg-accent text-bg-primary py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity"
+                >
+                  Sí, guardar igual
+                </button>
+                <button
+                  onClick={() => setShowConfirmEmpty(false)}
+                  className="flex-1 bg-bg-primary border-[0.5px] border-border py-2.5 rounded-lg text-[13px] text-text-secondary hover:text-text-primary transition-colors"
+                >
+                  Completar datos
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Submit */}
-          <button onClick={handleSubmit}
-            disabled={submitStatus === 'loading' || !formDate || !formDuration || formRpe === null}
+          <button onClick={() => handleSubmit()}
+            disabled={submitStatus === 'loading' || !formDate}
             className="w-full bg-accent text-bg-primary py-3.5 rounded-xl text-[15px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
           >
             {submitStatus === 'loading' ? 'Registrando...'
