@@ -77,9 +77,77 @@ function formatScheduledDate(d: string) {
   return `${DAYS_ES_LONG[date.getDay()]} ${date.getDate()} de ${MONTHS_ES[date.getMonth()]}`
 }
 
+const DAY_NAMES_ES_LONG = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
+
+function getMondayOf(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00')
+  const day = d.getDay()
+  const diff = day === 0 ? -6 : 1 - day
+  d.setDate(d.getDate() + diff)
+  return d.toISOString().split('T')[0]
+}
+
+function addDaysToStr(dateStr: string, n: number): string {
+  const d = new Date(dateStr + 'T00:00:00')
+  d.setDate(d.getDate() + n)
+  return d.toISOString().split('T')[0]
+}
+
+function fmtDayMonth(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00')
+  return `${d.getDate()}/${d.getMonth() + 1}`
+}
+
+function getDayLabel(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00')
+  return `${DAY_NAMES_ES_LONG[d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}`
+}
+
+interface WeekGroup {
+  mondayStr: string
+  isCurrentWeek: boolean
+  label: string
+  days: { dateStr: string; sessions: ScheduledItem[] }[]
+}
+
+function groupSessionsByWeek(sessions: ScheduledItem[], today: string): WeekGroup[] {
+  const currentMonday = getMondayOf(today)
+  const weekMap = new Map<string, WeekGroup>()
+
+  for (const s of sessions) {
+    const monday = getMondayOf(s.scheduled_date)
+    if (!weekMap.has(monday)) {
+      const sunday = addDaysToStr(monday, 6)
+      const isCurrentWeek = monday === currentMonday
+      weekMap.set(monday, {
+        mondayStr: monday,
+        isCurrentWeek,
+        label: isCurrentWeek
+          ? `Esta semana · ${fmtDayMonth(monday)} - ${fmtDayMonth(sunday)}`
+          : `${fmtDayMonth(monday)} - ${fmtDayMonth(sunday)}`,
+        days: [],
+      })
+    }
+    const week = weekMap.get(monday)!
+    const dayEntry = week.days.find(d => d.dateStr === s.scheduled_date)
+    if (dayEntry) {
+      dayEntry.sessions.push(s)
+    } else {
+      week.days.push({ dateStr: s.scheduled_date, sessions: [s] })
+    }
+  }
+
+  const weeks = Array.from(weekMap.values()).sort((a, b) => a.mondayStr.localeCompare(b.mondayStr))
+  for (const week of weeks) {
+    week.days.sort((a, b) => a.dateStr.localeCompare(b.dateStr))
+  }
+  return weeks
+}
+
 export default function PatientPortalClient({ token, plans, recentSessions, scheduledSessions }: Props) {
   const [activePlanIdx, setActivePlanIdx] = useState(0)
   const [showHelp, setShowHelp] = useState(false)
+  const [expandedWeeks, setExpandedWeeks] = useState<Set<string>>(() => new Set([getMondayOf(todayStr())]))
   const [jumpSessionIdx, setJumpSessionIdx] = useState<number | undefined>(undefined)
   const [jumpKey, setJumpKey] = useState(0)
 
@@ -325,35 +393,83 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
         <section>
           <h2 className="text-[20px] font-medium tracking-[-0.01em] mb-4">Mi semana</h2>
           <div className="space-y-2">
-            {scheduledSessions.map(s => {
-              const isToday = s.scheduled_date === todayStr()
+            {groupSessionsByWeek(scheduledSessions, todayStr()).map(week => {
+              const isExpanded = expandedWeeks.has(week.mondayStr)
+              const toggleWeek = () => setExpandedWeeks(prev => {
+                const next = new Set(prev)
+                if (next.has(week.mondayStr)) next.delete(week.mondayStr)
+                else next.add(week.mondayStr)
+                return next
+              })
               return (
-                <button
-                  key={s.id}
-                  onClick={() => {
-                    const planIdx = plans.findIndex(p => p.id === s.plan_id)
-                    if (planIdx !== -1) navigateToPlanSession(planIdx, s.session_id)
-                  }}
-                  className={`w-full text-left flex items-center gap-3 rounded-xl border-[0.5px] px-4 py-3 transition-colors ${
-                    isToday
-                      ? 'bg-accent/10 border-accent/40 hover:bg-accent/20'
-                      : 'bg-bg-primary border-border hover:bg-bg-secondary'
-                  } ${s.completed ? 'opacity-50' : ''}`}
-                >
-                  <div className={`w-2 h-2 rounded-full shrink-0 ${s.completed ? 'bg-text-secondary' : isToday ? 'bg-accent' : 'bg-border'}`} />
-                  <div className="flex-1 min-w-0">
-                    <div className={`text-[14px] font-medium truncate ${s.completed ? 'line-through text-text-secondary' : 'text-text-primary'}`}>
-                      {s.session_name}
+                <div key={week.mondayStr} className="bg-bg-primary border-[0.5px] border-border rounded-xl overflow-hidden">
+                  <button
+                    onClick={toggleWeek}
+                    className={`w-full flex items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-bg-secondary ${week.isCurrentWeek ? 'bg-accent/5' : ''}`}
+                  >
+                    <div className="flex items-center gap-2">
+                      {week.isCurrentWeek && <span className="w-2 h-2 rounded-full bg-accent shrink-0" />}
+                      <span className={`text-[14px] font-medium ${week.isCurrentWeek ? 'text-accent' : 'text-text-primary'}`}>
+                        {week.label}
+                      </span>
                     </div>
-                    <div className="text-[12px] text-text-secondary flex items-center gap-1">
-                      <span>{s.plan_name}</span>
-                      <span className="text-accent/70">· Semana {s.week}</span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-[12px] text-text-secondary">
+                        {week.days.length} día{week.days.length !== 1 ? 's' : ''}
+                      </span>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                        className={`text-text-secondary transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
+                        <polyline points="6 9 12 15 18 9" />
+                      </svg>
                     </div>
-                  </div>
-                  <div className={`text-[12px] shrink-0 ${isToday ? 'text-accent font-medium' : 'text-text-secondary'}`}>
-                    {formatScheduledDate(s.scheduled_date)}
-                  </div>
-                </button>
+                  </button>
+
+                  {isExpanded && (
+                    <div className="border-t-[0.5px] border-border divide-y-[0.5px] divide-border">
+                      {week.days.map(day => (
+                        <div key={day.dateStr} className="px-4 py-3">
+                          <div className="text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-2">
+                            {getDayLabel(day.dateStr)}
+                          </div>
+                          <div className="space-y-1.5">
+                            {day.sessions.map(s => (
+                              <button
+                                key={s.id}
+                                onClick={() => {
+                                  const planIdx = plans.findIndex(p => p.id === s.plan_id)
+                                  if (planIdx !== -1) navigateToPlanSession(planIdx, s.session_id)
+                                }}
+                                className={`w-full text-left flex items-center gap-3 rounded-lg px-3 py-2.5 border-[0.5px] transition-colors ${
+                                  s.completed
+                                    ? 'border-border bg-bg-secondary opacity-50'
+                                    : s.scheduled_date === todayStr()
+                                    ? 'border-accent/40 bg-accent/10 hover:bg-accent/15'
+                                    : 'border-border bg-bg-secondary hover:border-accent/40 hover:bg-bg-secondary'
+                                }`}
+                              >
+                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                                  s.completed ? 'bg-text-secondary'
+                                  : s.scheduled_date === todayStr() ? 'bg-accent'
+                                  : 'bg-border'
+                                }`} />
+                                <div className="flex-1 min-w-0">
+                                  <div className={`text-[13px] font-medium ${s.completed ? 'line-through text-text-secondary' : 'text-text-primary'}`}>
+                                    {s.session_name}
+                                  </div>
+                                  <div className="text-[11px] text-text-secondary">{s.plan_name} · Sem. {s.week}</div>
+                                </div>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-text-secondary shrink-0">
+                                  <line x1="5" y1="12" x2="19" y2="12" />
+                                  <polyline points="12 5 19 12 12 19" />
+                                </svg>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               )
             })}
           </div>
