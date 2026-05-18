@@ -135,6 +135,11 @@ export default function CalendarioClient({ patientId, userId, patientName, plans
   const isAlreadyScheduled = (d: string) =>
     bulkSessionId ? scheduled.some(s => s.scheduled_date === d && s.session_id === bulkSessionId) : false
 
+  const otherSessionsOnDay = (d: string): string[] =>
+    bulkSessionId
+      ? Array.from(new Set(scheduled.filter(s => s.scheduled_date === d && s.session_id !== bulkSessionId).map(s => s.session_name)))
+      : []
+
   // ── Actions ────────────────────────────────────────────────────────────────
   const handleDelete = async (id: string) => {
     await supabaseRef.current.from('scheduled_sessions').delete().eq('id', id)
@@ -310,6 +315,8 @@ export default function CalendarioClient({ patientId, userId, patientName, plans
                     const d = makeDateStr(calView.year, calView.month, day)
                     const isSelected = selectedDates.has(d)
                     const alreadyScheduled = isAlreadyScheduled(d)
+                    const others = otherSessionsOnDay(d)
+                    const isOccupied = others.length > 0
                     const isPast = d < today
                     const hasTurno = turnoDateSet.has(d)
                     return (
@@ -317,20 +324,45 @@ export default function CalendarioClient({ patientId, userId, patientName, plans
                         key={day}
                         onClick={() => { if (!isPast && !alreadyScheduled) toggleDate(d) }}
                         disabled={isPast}
+                        title={isOccupied ? `${others.join(', ')} ya programado` : undefined}
                         className={`relative h-9 rounded-lg text-[13px] font-medium transition-colors ${
                           alreadyScheduled ? 'bg-accent/20 text-accent cursor-default' :
                           isSelected ? 'bg-accent text-bg-primary' :
                           isPast ? 'text-text-secondary/30 cursor-default' :
+                          isOccupied ? 'bg-bg-secondary text-text-primary hover:bg-bg-secondary/80' :
                           'hover:bg-bg-secondary text-text-primary'
                         }`}
                       >
                         {day}
+                        {isOccupied && !isSelected && !alreadyScheduled && (
+                          <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-text-secondary/40" />
+                        )}
                         {hasTurno && (
                           <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#c47c5a]" title="Turno en el centro" />
                         )}
                       </button>
                     )
                   })}
+                </div>
+              </div>
+
+              {/* Leyenda */}
+              <div className="flex flex-wrap gap-3 mt-3 mb-1">
+                <div className="flex items-center gap-1.5 text-[11px] text-text-secondary">
+                  <span className="w-3 h-3 rounded bg-accent/20 inline-block shrink-0" />
+                  Esta sesión ya programada
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-text-secondary">
+                  <span className="relative w-3 h-3 rounded bg-bg-secondary inline-block shrink-0 border-[0.5px] border-border">
+                    <span className="absolute top-0 right-0 w-1 h-1 rounded-full bg-text-secondary/40" />
+                  </span>
+                  Otra sesión ese día
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-text-secondary">
+                  <span className="relative w-3 h-3 rounded bg-bg-secondary inline-block shrink-0 border-[0.5px] border-border">
+                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#c47c5a]" />
+                  </span>
+                  Turno en el centro
                 </div>
               </div>
 
