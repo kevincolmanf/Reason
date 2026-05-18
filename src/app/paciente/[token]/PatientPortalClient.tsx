@@ -364,12 +364,37 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
           <div className="border-t-[0.5px] border-border px-4 py-4 space-y-5 text-[13px] leading-[1.6]">
 
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-accent mb-2">Qué podés hacer acá</p>
-              <ul className="space-y-1.5 text-text-secondary">
-                <li className="flex gap-2"><span className="shrink-0 text-accent">→</span><span><span className="text-text-primary font-medium">Mi semana:</span> tus sesiones programadas. Al tocar una te lleva directo al ejercicio del día.</span></li>
-                <li className="flex gap-2"><span className="shrink-0 text-accent">→</span><span><span className="text-text-primary font-medium">Mi plan:</span> todos los ejercicios del programa, con video.</span></li>
-                <li className="flex gap-2"><span className="shrink-0 text-accent">→</span><span><span className="text-text-primary font-medium">Registrar sesión:</span> completá después de entrenar. Tu kine lo ve en tiempo real.</span></li>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-accent mb-2">Qué hay en el portal</p>
+              <ul className="space-y-2 text-text-secondary">
+                <li className="flex gap-2">
+                  <span className="shrink-0 text-accent mt-0.5">→</span>
+                  <span><span className="text-text-primary font-medium">Para hoy / Próxima sesión:</span> la tarjeta destacada al inicio te lleva directo a los ejercicios del día de un toque.</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="shrink-0 text-accent mt-0.5">→</span>
+                  <span><span className="text-text-primary font-medium">Mi semana:</span> todas tus sesiones organizadas por semana. Tocá cualquiera para ver los ejercicios. La semana actual aparece abierta.</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="shrink-0 text-accent mt-0.5">→</span>
+                  <span><span className="text-text-primary font-medium">Mi plan:</span> todos los ejercicios del programa. Tocá <span className="text-text-primary">▶ Ver</span> para abrir el video de cada ejercicio.</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="shrink-0 text-accent mt-0.5">→</span>
+                  <span><span className="text-text-primary font-medium">Registrar sesión:</span> completá después de cada entrenamiento. Tu kinesiólogo lo ve en tiempo real.</span>
+                </li>
               </ul>
+            </div>
+
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-accent mb-2">Cómo registrar una sesión</p>
+              <ul className="space-y-1.5 text-text-secondary">
+                <li className="flex gap-2"><span className="shrink-0 text-accent mt-0.5">1.</span><span><span className="text-text-primary font-medium">Cómo llegás:</span> calificá tu sueño, energía y estrés antes de arrancar (opcional pero útil para tu kine).</span></li>
+                <li className="flex gap-2"><span className="shrink-0 text-accent mt-0.5">2.</span><span><span className="text-text-primary font-medium">Tipo de sesión:</span> elegí si fue rehabilitación, deporte/actividad, o ambos.</span></li>
+                <li className="flex gap-2"><span className="shrink-0 text-accent mt-0.5">3.</span><span><span className="text-text-primary font-medium">Duración y esfuerzo:</span> minutos que entrenaste y RPE del 0 al 10.</span></li>
+                <li className="flex gap-2"><span className="shrink-0 text-accent mt-0.5">4.</span><span><span className="text-text-primary font-medium">Dolor:</span> indicá en la escala 0–100 cómo estuvo el dolor antes, durante y después.</span></li>
+                <li className="flex gap-2"><span className="shrink-0 text-accent mt-0.5">5.</span><span><span className="text-text-primary font-medium">Comentar ejercicios</span> (opcional): podés dejar RPE y nota por ejercicio individual.</span></li>
+              </ul>
+              <p className="text-text-secondary mt-2">Si no tenés todos los datos, podés guardar igual — el sistema te avisa antes de confirmar.</p>
             </div>
 
             <div>
