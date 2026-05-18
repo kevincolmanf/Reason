@@ -684,10 +684,10 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
                                 value={ex.group || ''}
                                 onChange={e => updateExerciseGroup(activeSession as number, bIdx, exIdx, e.target.value)}
                                 className={`shrink-0 text-[11px] font-mono font-medium rounded px-1.5 py-0.5 border-[0.5px] focus:outline-none cursor-pointer appearance-none transition-colors ${ex.group ? 'bg-accent/10 border-accent/40 text-accent' : 'bg-bg-primary border-border text-text-secondary hover:border-accent/40'}`}
-                                title="Grupo / superserie"
+                                title="Superserie: ejercicios con el mismo número van alternados (ej: 1A y 1B)"
                               >
                                 <option value="">—</option>
-                                {['A','A1','A2','A3','B','B1','B2','B3','C','C1','C2','C3','D','D1','D2'].map(g => (
+                                {['1','1A','1B','1C','2','2A','2B','2C','3','3A','3B','3C','4','4A','4B'].map(g => (
                                   <option key={g} value={g}>{g}</option>
                                 ))}
                               </select>
