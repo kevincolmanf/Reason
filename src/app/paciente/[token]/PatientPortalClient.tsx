@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import PatientPlanViewer from '@/app/plan/[token]/PatientPlanViewer'
 
 interface WeekData { week: number; reps: string; sets: string; load: string; eav: string; rpe: string; rest: string }
@@ -148,6 +149,21 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
   const [activePlanIdx, setActivePlanIdx] = useState(0)
   const [showHelp, setShowHelp] = useState(false)
   const [expandedWeeks, setExpandedWeeks] = useState<Set<string>>(() => new Set([getMondayOf(todayStr())]))
+
+  const router = useRouter()
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') router.refresh()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') router.refresh()
+    }, 3 * 60 * 1000)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      clearInterval(interval)
+    }
+  }, [router])
   const [jumpSessionIdx, setJumpSessionIdx] = useState<number | undefined>(undefined)
   const [jumpKey, setJumpKey] = useState(0)
 
