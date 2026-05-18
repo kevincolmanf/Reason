@@ -123,6 +123,16 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
 
   const calculatedLoad = formRpe !== null && formDuration ? formRpe * (parseInt(formDuration) || 0) : null
 
+  const featuredSession = (() => {
+    const today = todayStr()
+    const incomplete = scheduledSessions.filter(s => !s.completed)
+    return incomplete.find(s => s.scheduled_date === today)
+      ?? incomplete
+        .filter(s => s.scheduled_date > today)
+        .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date))[0]
+      ?? null
+  })()
+
   const activePlan = plans[activePlanIdx] ?? null
   const validPlanData: PlanData | null = (() => {
     if (!activePlan?.plan_data) return null
@@ -214,6 +224,32 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
 
   return (
     <div className="space-y-10 pb-12">
+
+      {/* ── PRÓXIMA SESIÓN ─────────────────────────────────── */}
+      {featuredSession && (
+        <section>
+          <button
+            onClick={() => {
+              const planIdx = plans.findIndex(p => p.id === featuredSession.plan_id)
+              if (planIdx !== -1) navigateToPlanSession(planIdx, featuredSession.session_id)
+            }}
+            className="w-full text-left bg-accent/10 border-[0.5px] border-accent/40 rounded-2xl p-5 hover:bg-accent/15 transition-colors"
+          >
+            <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-accent mb-2">
+              {featuredSession.scheduled_date === todayStr() ? 'Para hoy' : `Próxima sesión · ${formatScheduledDate(featuredSession.scheduled_date)}`}
+            </div>
+            <div className="text-[20px] font-medium text-text-primary tracking-[-0.01em] mb-1">{featuredSession.session_name}</div>
+            <div className="text-[13px] text-text-secondary mb-4">{featuredSession.plan_name} · Semana {featuredSession.week}</div>
+            <div className="flex items-center gap-1.5 text-[13px] font-medium text-accent">
+              Ir a los ejercicios
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+              </svg>
+            </div>
+          </button>
+        </section>
+      )}
 
       {/* ── AYUDA ──────────────────────────────────────────── */}
       <div className="bg-bg-secondary border-[0.5px] border-border rounded-xl overflow-hidden">

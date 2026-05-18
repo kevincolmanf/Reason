@@ -80,51 +80,47 @@ export default function PatientPlanViewer({ planData, initialSessionIdx }: { pla
           <div key={block.id} className="bg-bg-primary border-[0.5px] border-border rounded-2xl overflow-hidden">
             <div className="bg-bg-secondary px-4 py-3 border-b-[0.5px] border-border">
               <h3 className="text-[13px] font-medium text-text-primary uppercase tracking-[0.05em]">{block.name}</h3>
+              {block.exercises.filter(ex => ex.group).length >= 2 && (
+                <p className="text-[11px] text-text-secondary mt-0.5">Ejercicios con el mismo número van en superserie — realizalos alternados</p>
+              )}
             </div>
             <div className="divide-y-[0.5px] divide-border">
               {block.exercises.map(ex => {
                 const weekData = ex.weeks[0]
                 if (!weekData) return null
                 return (
-                  <div key={ex.id} className="p-4 sm:p-5 flex flex-col sm:flex-row gap-4 sm:items-center">
-                    <div className="flex-shrink-0 w-full sm:w-[110px]">
-                      {ex.youtube_url ? (
-                        <button
-                          onClick={() => setActiveVideo(getYoutubeId(ex.youtube_url))}
-                          className="w-full aspect-video bg-bg-secondary border-[0.5px] border-border rounded-lg flex items-center justify-center hover:border-accent hover:text-accent transition-all text-text-secondary group overflow-hidden relative"
-                        >
-                          <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors"></div>
-                          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" className="opacity-80 group-hover:opacity-100 z-10">
-                            <path d="M8 5v14l11-7z" />
-                          </svg>
-                        </button>
-                      ) : (
-                        <div className="w-full aspect-video bg-bg-secondary border-[0.5px] border-border rounded-lg flex items-center justify-center text-[10px] text-text-secondary uppercase tracking-[0.05em]">Sin video</div>
-                      )}
-                      {ex.youtube_url && (
-                        <a href={ex.youtube_url} target="_blank" rel="noreferrer" className="text-center text-[11px] text-accent mt-1.5 block hover:underline">Ver en YouTube</a>
-                      )}
-                    </div>
-                    <div className="flex-grow">
-                      <div className="flex items-center gap-2 mb-2">
+                  <div key={ex.id} className="p-4 sm:p-5">
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className="flex items-center gap-2 flex-wrap">
                         {ex.group && (
                           <span className="text-[11px] font-mono font-medium bg-accent/10 border-[0.5px] border-accent/40 text-accent rounded px-1.5 py-0.5 shrink-0">{ex.group}</span>
                         )}
                         <h4 className="text-[15px] font-medium text-text-primary leading-[1.3]">{ex.exercise_name}</h4>
                       </div>
-                      <div className="grid grid-cols-3 gap-x-4 gap-y-2">
-                        <div>
-                          <div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-0.5">Series × Reps</div>
-                          <div className="text-[13px] font-medium text-accent">{weekData.sets || '-'} × {weekData.reps || '-'}</div>
-                        </div>
-                        <div>
-                          <div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-0.5">Carga</div>
-                          <div className="text-[13px] font-medium">{weekData.load || '-'}</div>
-                        </div>
-                        <div>
-                          <div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-0.5">Descanso</div>
-                          <div className="text-[13px] font-medium">{weekData.rest || '-'}</div>
-                        </div>
+                      {ex.youtube_url && (
+                        <button
+                          onClick={() => setActiveVideo(getYoutubeId(ex.youtube_url))}
+                          className="shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border-[0.5px] border-border bg-bg-secondary hover:border-accent hover:text-accent text-text-secondary transition-all text-[12px] font-medium"
+                        >
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M8 5v14l11-7z" />
+                          </svg>
+                          Ver
+                        </button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-3 gap-x-4 gap-y-2">
+                      <div>
+                        <div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-0.5">Series × Reps</div>
+                        <div className="text-[13px] font-medium text-accent">{weekData.sets || '-'} × {weekData.reps || '-'}</div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-0.5">Carga</div>
+                        <div className="text-[13px] font-medium">{weekData.load || '-'}</div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-0.5">Descanso</div>
+                        <div className="text-[13px] font-medium">{weekData.rest || '-'}</div>
                       </div>
                     </div>
                   </div>
