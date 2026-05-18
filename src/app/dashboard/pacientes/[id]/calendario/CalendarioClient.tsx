@@ -141,9 +141,29 @@ export default function CalendarioClient({ patientId, userId, patientName, plans
       : []
 
   // ── Actions ────────────────────────────────────────────────────────────────
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [showAllSessions, setShowAllSessions] = useState(false)
+
   const handleDelete = async (id: string) => {
-    await supabaseRef.current.from('scheduled_sessions').delete().eq('id', id)
-    setScheduled(prev => prev.filter(s => s.id !== id))
+    const { error } = await supabaseRef.current.from('scheduled_sessions').delete().eq('id', id)
+    if (error) {
+      setDeleteError('No se pudo eliminar la sesión. Intentá de nuevo.')
+      setTimeout(() => setDeleteError(null), 4000)
+    } else {
+      setScheduled(prev => prev.filter(s => s.id !== id))
+    }
+  }
+
+  const handleDeleteAll = async () => {
+    if (!confirm(`¿Borrar TODAS las sesiones programadas de ${patientName}? Esta acción no se puede deshacer.`)) return
+    const ids = scheduled.map(s => s.id)
+    const { error } = await supabaseRef.current.from('scheduled_sessions').delete().in('id', ids)
+    if (error) {
+      setDeleteError('No se pudieron eliminar todas las sesiones.')
+      setTimeout(() => setDeleteError(null), 4000)
+    } else {
+      setScheduled([])
+    }
   }
 
   const handleToggleComplete = async (s: ScheduledSession) => {
@@ -428,6 +448,68 @@ export default function CalendarioClient({ patientId, userId, patientName, plans
             Crear plan para {patientName}
           </a>
         </div>
+      )}
+
+      {/* ── ERROR GLOBAL ───────────────────────────────────── */}
+      {deleteError && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-warning text-bg-primary px-4 py-2.5 rounded-xl text-[13px] font-medium shadow-lg z-50">
+          {deleteError}
+        </div>
+      )}
+
+      {/* ── TODAS LAS SESIONES ─────────────────────────────── */}
+      {scheduled.length > 0 && (
+        <section className="border-[0.5px] border-border rounded-2xl overflow-hidden">
+          <button
+            onClick={() => setShowAllSessions(v => !v)}
+            className="w-full flex items-center justify-between px-5 py-4 hover:bg-bg-secondary transition-colors text-left"
+          >
+            <div>
+              <span className="text-[15px] font-medium text-text-primary">Todas las sesiones programadas</span>
+              <span className="ml-2 text-[13px] text-text-secondary">({scheduled.length})</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                className={`text-text-secondary transition-transform ${showAllSessions ? 'rotate-180' : ''}`}>
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </div>
+          </button>
+
+          {showAllSessions && (
+            <div className="border-t-[0.5px] border-border">
+              <div className="flex justify-end px-4 py-2 border-b-[0.5px] border-border">
+                <button
+                  onClick={handleDeleteAll}
+                  className="text-[12px] text-warning hover:underline"
+                >
+                  Borrar todas
+                </button>
+              </div>
+              <div className="divide-y-[0.5px] divide-border max-h-[400px] overflow-y-auto">
+                {[...scheduled].sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date)).map(s => (
+                  <div key={s.id} className="flex items-center gap-3 px-4 py-2.5">
+                    <div className="flex-1 min-w-0">
+                      <span className={`text-[13px] font-medium ${s.completed ? 'line-through text-text-secondary' : 'text-text-primary'}`}>
+                        {s.session_name}
+                      </span>
+                      <span className="text-[11px] text-text-secondary ml-2">
+                        {new Date(s.scheduled_date + 'T00:00:00').toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' })}
+                      </span>
+                      {s.completed && <span className="ml-2 text-[11px] text-text-secondary">✓ completada</span>}
+                    </div>
+                    <button
+                      onClick={() => handleDelete(s.id)}
+                      className="shrink-0 text-[11px] text-text-secondary hover:text-warning transition-colors px-2 py-1"
+                    >
+                      Borrar
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
       )}
 
     </div>
