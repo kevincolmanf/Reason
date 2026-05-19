@@ -70,33 +70,29 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
     setDniError(null)
     setSaving(true)
 
-    // Check for duplicate DNI within same context
-    let dupQuery = supabaseRef.current
-      .from('patients')
-      .select('id')
-      .eq('dni', form.dni.trim())
-    if (isOrgContext) dupQuery = dupQuery.eq('org_id', orgId!)
-    else             dupQuery = dupQuery.eq('user_id', userId).is('org_id', null)
-    const { data: existing } = await dupQuery.maybeSingle()
-    if (existing) {
-      setDniError('Ya existe un paciente registrado con ese DNI.')
+    const res = await fetch('/api/pacientes/crear', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: form.name.trim(),
+        dni: form.dni.trim(),
+        age: form.age || null,
+        occupation: form.occupation.trim() || null,
+        orgId: isOrgContext ? orgId : null,
+      }),
+    })
+    const data = await res.json()
+
+    if (!res.ok) {
+      if (res.status === 409) setDniError(data.error)
+      else setDniError(data.error ?? 'Error al crear el paciente.')
       setSaving(false)
       return
     }
 
-    const { error } = await supabaseRef.current.from('patients').insert({
-      user_id: userId,
-      org_id: isOrgContext ? orgId : null,
-      name: form.name.trim(),
-      dni: form.dni.trim(),
-      age: form.age ? parseInt(form.age) : null,
-      occupation: form.occupation.trim() || null,
-    })
-    if (!error) {
-      setForm({ name: '', dni: '', age: '', occupation: '' })
-      setShowForm(false)
-      await fetchPatients()
-    }
+    setForm({ name: '', dni: '', age: '', occupation: '' })
+    setShowForm(false)
+    await fetchPatients()
     setSaving(false)
   }
 
