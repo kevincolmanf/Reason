@@ -14,6 +14,7 @@ interface Sub {
 interface Result {
   dryRun: boolean
   fixes: Sub[]
+  error?: string
 }
 
 const ROLE_LABEL: Record<string, string> = {
@@ -79,7 +80,7 @@ export default function SuscripcionesPage() {
           {loading ? 'Revisando...' : 'Revisar ahora'}
         </button>
 
-        {result && result.fixes.length > 0 && !done && (
+        {result && result.fixes && result.fixes.length > 0 && !done && (
           <button
             onClick={fix}
             disabled={fixing}
@@ -94,8 +95,14 @@ export default function SuscripcionesPage() {
         )}
       </div>
 
-      {result && (
-        result.fixes.length === 0 ? (
+      {result && result.error && (
+        <div className="bg-bg-primary border-[0.5px] border-red-500/30 rounded-xl p-6 text-[13px] text-red-400">
+          Error: {result.error}
+        </div>
+      )}
+
+      {result && !result.error && (
+        !result.fixes || result.fixes.length === 0 ? (
           <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-8 text-center">
             <p className="text-[15px] font-medium text-text-primary mb-1">Todo está sincronizado</p>
             <p className="text-[13px] text-text-secondary">No se encontraron desincronizaciones entre suscripciones y roles.</p>
