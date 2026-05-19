@@ -61,13 +61,15 @@ export async function POST(request: Request) {
         newRole = isExpired ? 'free' : (isPro ? 'pro' : 'subscriber')
       }
 
+      const planEnum = planType === 'pro_annual' || planType === 'annual' ? 'annual' : 'monthly'
       const { error: subError } = await supabaseAdmin
         .from('subscriptions')
         .upsert({
           user_id: userId,
           mp_subscription_id: preApprovalId,
-          mp_plan_id: planType,
+          plan: planEnum,
           status: dbStatus,
+          started_at: new Date().toISOString(),
           expires_at: nextPaymentDate
         }, { onConflict: 'user_id' })
 
