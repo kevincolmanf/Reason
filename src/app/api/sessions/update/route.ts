@@ -1,0 +1,50 @@
+import { NextResponse } from 'next/server'
+import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
+
+export async function POST(request: Request) {
+  try {
+    const userSupabase = createClient()
+    const { data: { user } } = await userSupabase.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
+    }
+
+    const body = await request.json()
+    const { session_id, session_name, session_data } = body
+
+    if (!session_id) {
+      return NextResponse.json({ error: 'Falta session_id' }, { status: 400 })
+    }
+
+    const admin = createAdminClient()
+
+    // Verificar acceso: la sesión debe pertenecer a un plan al que el usuario tiene acceso
+    const { data: session, error: fetchError } = await userSupabase
+      .from('scheduled_sessions')
+      .select('id')
+      .eq('id', session_id)
+      .single()
+
+    if (fetchError || !session) {
+      return NextResponse.json({ error: 'Sesión no encontrada o sin acceso' }, { status: 404 })
+    }
+
+    // Actualizar con admin client (bypasea RLS)
+    const { error: updateError } = await admin
+      .from('scheduled_sessions')
+      .update({ session_name, session_data })
+      .eq('id', session_id)
+
+    if (updateError) {
+      console.error('[sessions/update] Error:', updateError)
+      return NextResponse.json({ error: updateError.message }, { status: 500 })
+    }
+
+    return NextResponse.json({ ok: true })
+  } catch (err) {
+    console.error('[sessions/update] Unexpected error:', err)
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 })
+  }
+}

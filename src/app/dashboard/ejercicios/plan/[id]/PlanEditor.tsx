@@ -276,14 +276,24 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
   useEffect(() => {
     if (!selectedSession?.id || !selectedSession.session_data) return
     if (sessionSaveRef.current) clearTimeout(sessionSaveRef.current)
+    setSaveStatus('saving')
     sessionSaveRef.current = setTimeout(async () => {
-      await supabaseRef.current
-        .from('scheduled_sessions')
-        .update({
+      const res = await fetch('/api/sessions/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: selectedSession.id,
           session_name: selectedSession.session_name,
           session_data: selectedSession.session_data,
-        })
-        .eq('id', selectedSession.id)
+        }),
+      })
+      if (!res.ok) {
+        setSaveStatus('error')
+        const json = await res.json().catch(() => ({}))
+        console.error('[session save] Error:', json.error)
+      } else {
+        setSaveStatus('saved')
+      }
     }, 1500)
     return () => { if (sessionSaveRef.current) clearTimeout(sessionSaveRef.current) }
   // eslint-disable-next-line react-hooks/exhaustive-deps
