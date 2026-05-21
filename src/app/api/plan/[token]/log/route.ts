@@ -7,7 +7,7 @@ export async function POST(request: Request, { params }: { params: { token: stri
     const token = params.token
     const body = await request.json()
 
-    const { exercise_id, exercise_name, session_id, week, rpe, eva, notes } = body
+    const { exercise_id, exercise_name, session_id, week, rpe, eva, notes, scheduled_date } = body
 
     // 1. Validar que el token existe y no está expirado
     const { data: plan, error: planError } = await supabase
@@ -38,10 +38,11 @@ export async function POST(request: Request, { params }: { params: { token: stri
         exercise_id,
         exercise_name,
         session_id,
-        week,
+        week: week ?? 1,
         rpe,
         eva,
-        notes: notes ? String(notes).substring(0, 300) : null
+        notes: notes ? String(notes).substring(0, 300) : null,
+        ...(scheduled_date ? { scheduled_date } : {})
       })
 
     if (insertError) {
