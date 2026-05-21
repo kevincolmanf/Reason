@@ -171,8 +171,6 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
     if (!plan?.plan_data) return
     const d = plan.plan_data as Record<string, unknown>
     if (!Array.isArray(d.sessions)) return
-    const sessions = d.sessions as Array<{ id: string }>
-    const sessionIdx = sessions.findIndex(s => s.id === sessionId)
     setActivePlanIdx(planIdx)
     setJumpKey(k => k + 1)
     setTimeout(() => {
