@@ -164,7 +164,6 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
       clearInterval(interval)
     }
   }, [router])
-  const [jumpSessionIdx, setJumpSessionIdx] = useState<number | undefined>(undefined)
   const [jumpKey, setJumpKey] = useState(0)
 
   const navigateToPlanSession = (planIdx: number, sessionId: string) => {
@@ -175,7 +174,6 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
     const sessions = d.sessions as Array<{ id: string }>
     const sessionIdx = sessions.findIndex(s => s.id === sessionId)
     setActivePlanIdx(planIdx)
-    setJumpSessionIdx(sessionIdx !== -1 ? sessionIdx : 0)
     setJumpKey(k => k + 1)
     setTimeout(() => {
       document.getElementById('plan-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
