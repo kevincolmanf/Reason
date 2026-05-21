@@ -32,12 +32,13 @@ interface PlanSession {
   blocks: PlanBlock[]
 }
 
-export default function PatientPlanViewer({ planData, initialSessionIdx }: { planData: { sessions: PlanSession[] }, token: string, initialSessionIdx?: number }) {
+export default function PatientPlanViewer({ planData, initialSessionIdx, initialWeek = 0 }: { planData: { sessions: PlanSession[] }, token: string, initialSessionIdx?: number, initialWeek?: number }) {
   const [activeSession, setActiveSession] = useState(() => {
     if (initialSessionIdx !== undefined) return initialSessionIdx
     const firstValid = planData.sessions.findIndex(s => s.blocks.some(b => b.exercises.length > 0))
     return firstValid !== -1 ? firstValid : 0
   })
+  const [activeWeek, setActiveWeek] = useState(initialWeek)
   const [activeVideo, setActiveVideo] = useState<string | null>(null)
 
   const currentSession = planData.sessions[activeSession]
@@ -54,6 +55,20 @@ export default function PatientPlanViewer({ planData, initialSessionIdx }: { pla
   if (availableSessions.length === 0) {
     return <div className="text-center py-12 text-text-secondary">Este plan aún no tiene ejercicios asignados.</div>
   }
+
+  // Determinar cuántas semanas tienen datos en la sesión activa
+  const currentSessionData = planData.sessions[activeSession]
+  const weeksWithData = [0, 1, 2, 3].filter(wIdx =>
+    currentSessionData?.blocks.some(b =>
+      b.exercises.some(ex => {
+        const w = ex.weeks[wIdx]
+        return w && (['sets','reps','load','rest','rpe','eav'] as (keyof WeekData)[]).some(k => w[k] !== '')
+      })
+    )
+  )
+  const showWeekSelector = weeksWithData.length > 1
+  // Si la semana activa no tiene datos, caer a la primera con datos
+  const displayWeek = weeksWithData.includes(activeWeek) ? activeWeek : (weeksWithData[0] ?? 0)
 
   return (
     <div className="pb-4">
@@ -74,6 +89,28 @@ export default function PatientPlanViewer({ planData, initialSessionIdx }: { pla
         })}
       </div>
 
+      {/* SELECTOR DE SEMANA */}
+      {showWeekSelector && (
+        <div className="mb-5 flex items-center gap-3">
+          <span className="text-[12px] text-text-secondary shrink-0">Semana:</span>
+          <div className="flex gap-2">
+            {weeksWithData.map(wIdx => (
+              <button
+                key={wIdx}
+                onClick={() => setActiveWeek(wIdx)}
+                className={`px-4 py-1.5 rounded-full text-[13px] font-medium transition-all border-[0.5px] ${
+                  displayWeek === wIdx
+                    ? 'bg-accent text-bg-primary border-accent'
+                    : 'bg-bg-secondary text-text-secondary border-border hover:border-accent/60'
+                }`}
+              >
+                {wIdx + 1}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* EJERCICIOS */}
       <div className="space-y-6">
         {activeBlocks.map(block => (
@@ -86,7 +123,7 @@ export default function PatientPlanViewer({ planData, initialSessionIdx }: { pla
             </div>
             <div className="divide-y-[0.5px] divide-border">
               {block.exercises.map(ex => {
-                const weekData = ex.weeks[0]
+                const weekData = ex.weeks[displayWeek] ?? ex.weeks[0]
                 if (!weekData) return null
                 return (
                   <div key={ex.id} className="p-4 sm:p-5">
