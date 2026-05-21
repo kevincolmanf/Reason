@@ -45,7 +45,7 @@ export default function PatientFichaEditor({ initialFicha, patientName }: { init
   })
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved')
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const supabase = createClient()
+  const supabaseRef = useRef(createClient())
 
   // Autoguardado
   useEffect(() => {
@@ -53,7 +53,7 @@ export default function PatientFichaEditor({ initialFicha, patientName }: { init
     setSaveStatus('saving')
 
     timeoutRef.current = setTimeout(async () => {
-      const { error } = await supabase
+      const { error } = await supabaseRef.current
         .from('patient_fichas')
         .update({
           fecha: ficha.fecha || null,
@@ -65,7 +65,8 @@ export default function PatientFichaEditor({ initialFicha, patientName }: { init
     }, 1500)
 
     return () => { if (timeoutRef.current) clearTimeout(timeoutRef.current) }
-  }, [ficha, supabase, initialFicha.id])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ficha])
 
   const handleChange = (field: keyof FichaData, value: string) => {
     setFicha(prev => ({ ...prev, [field]: value }))

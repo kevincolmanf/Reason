@@ -5,7 +5,7 @@ export async function POST(request: Request) {
   const body = await request.json()
   const { token, session_date, activity, duration_minutes, rpe, vas_post } = body
 
-  if (!token || !session_date || !duration_minutes || rpe === undefined) {
+  if (!token || !session_date || duration_minutes === undefined || duration_minutes === null || rpe === undefined || rpe === null) {
     return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
   }
 

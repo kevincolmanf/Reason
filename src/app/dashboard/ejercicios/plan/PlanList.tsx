@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -16,7 +16,7 @@ interface ExercisePlan {
 }
 
 const initialPlanData = {
-  sessions: [1, 2, 3, 4].map(s => ({
+  sessions: [1, 2, 3, 4, 5, 6, 7].map(s => ({
     id: `session_${s}`,
     name: `Sesión ${s}`,
     blocks: [
@@ -27,24 +27,27 @@ const initialPlanData = {
   }))
 }
 
-export default function PlanList({ userId }: { userId: string }) {
+export default function PlanList({ userId, patientId }: { userId: string; patientId: string | null }) {
   const [plans, setPlans] = useState<ExercisePlan[]>([])
   const [loading, setLoading] = useState(true)
   const router = useRouter()
-  const supabase = createClient()
+  const supabaseRef = useRef(createClient())
 
   const fetchPlans = useCallback(async () => {
     setLoading(true)
-    const { data, error } = await supabase
+    let query = supabaseRef.current
       .from('exercise_plans')
       .select('id, name, updated_at, share_token, patient_id, patients(name)')
       .order('updated_at', { ascending: false })
 
-    if (!error && data) {
-      setPlans(data)
-    }
+    if (patientId) query = query.eq('patient_id', patientId)
+    else query = query.eq('user_id', userId)
+
+    const { data, error } = await query
+    if (!error && data) setPlans(data)
     setLoading(false)
-  }, [supabase])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [patientId])
 
   useEffect(() => {
     fetchPlans()
@@ -54,12 +57,13 @@ export default function PlanList({ userId }: { userId: string }) {
     const name = prompt('Nombre del nuevo plan (ej: Plan Rodilla Post-quirúrgico):')
     if (!name) return
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseRef.current
       .from('exercise_plans')
       .insert({
         user_id: userId,
         name,
-        plan_data: initialPlanData
+        plan_data: initialPlanData,
+        ...(patientId ? { patient_id: patientId } : {}),
       })
       .select()
       .single()
@@ -76,7 +80,7 @@ export default function PlanList({ userId }: { userId: string }) {
     e.preventDefault()
     if (!confirm('¿Estás seguro de eliminar este plan? Esta acción no se puede deshacer.')) return
 
-    const { error } = await supabase.from('exercise_plans').delete().eq('id', id)
+    const { error } = await supabaseRef.current.from('exercise_plans').delete().eq('id', id)
     if (error) {
       alert('Error al eliminar')
     } else {
@@ -88,7 +92,7 @@ export default function PlanList({ userId }: { userId: string }) {
     e.preventDefault()
     
     // Fetch full plan data to duplicate
-    const { data: fullPlan, error: fetchError } = await supabase
+    const { data: fullPlan, error: fetchError } = await supabaseRef.current
       .from('exercise_plans')
       .select('plan_data, notes')
       .eq('id', plan.id)
@@ -101,7 +105,7 @@ export default function PlanList({ userId }: { userId: string }) {
 
     const newName = `${plan.name} (Copia)`
     
-    const { data, error } = await supabase
+    const { data, error } = await supabaseRef.current
       .from('exercise_plans')
       .insert({
         user_id: userId,
@@ -127,7 +131,7 @@ export default function PlanList({ userId }: { userId: string }) {
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-[20px] font-medium">Tus Planes Guardados</h2>
+        <h2 className="text-[20px] font-medium">{patientId ? 'Planes asignados' : 'Tus Planes Guardados'}</h2>
         <button 
           onClick={handleCreatePlan}
           className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity"
@@ -138,7 +142,7 @@ export default function PlanList({ userId }: { userId: string }) {
 
       {plans.length === 0 ? (
         <div className="text-center py-16 text-text-secondary bg-bg-secondary rounded-xl border-[0.5px] border-border">
-          <p className="text-[16px] mb-2">Aún no creaste ningún plan</p>
+          <p className="text-[16px] mb-2">{patientId ? 'Este paciente no tiene planes asignados' : 'Aún no creaste ningún plan'}</p>
           <p className="text-[14px]">Hacé clic en Crear Nuevo Plan para empezar.</p>
         </div>
       ) : (

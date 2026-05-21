@@ -1,10 +1,62 @@
 import { createClient } from '@/utils/supabase/server'
 import Link from 'next/link'
 import HeaderClient from './HeaderClient'
+import ContextBadge from './ContextBadge'
+import { getActiveContext } from '@/lib/context'
+import type { ActiveContext } from '@/lib/context'
+import type { AvailableContext } from './ContextBadge'
 
 export default async function Header() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
+
+  let currentLabel = 'Mi espacio'
+  let available: AvailableContext[] = []
+  let ctx: ActiveContext = { type: 'personal', orgId: null }
+  let hasAgendaAccess = false
+  let agendaBlockedReason: 'plan' | 'member' = 'plan'
+
+  if (user) {
+    const [activeCtx, ownedOrgsResult, memberOrgsResult, userDataResult] = await Promise.all([
+      getActiveContext(user.id, supabase),
+      supabase.from('organizations').select('id, name').eq('owner_id', user.id),
+      supabase.from('organization_members').select('org_id, agenda_access, organizations(id, name)').eq('user_id', user.id),
+      supabase.from('users').select('role').eq('id', user.id).single(),
+    ])
+
+    ctx = activeCtx
+    const role = userDataResult.data?.role
+    const isOwner = role === 'admin' || role === 'pro'
+    const isOrgCtx = ctx.type === 'org' && !!ctx.orgId
+
+    type MemberRow = { org_id: string; agenda_access: boolean | null; organizations: { id: string; name: string } | null }
+
+    const ownedOrgs = (ownedOrgsResult.data ?? []) as { id: string; name: string }[]
+    const memberRows = (memberOrgsResult.data ?? []) as unknown as MemberRow[]
+    const memberOrgs = memberRows
+      .map(r => r.organizations)
+      .filter((o): o is { id: string; name: string } => o !== null)
+      .filter(o => !ownedOrgs.some(owned => owned.id === o.id))
+
+    if (isOwner) {
+      hasAgendaAccess = true
+    } else if (isOrgCtx && ctx.orgId) {
+      const myMemberRow = memberRows.find(r => r.org_id === ctx.orgId)
+      hasAgendaAccess = myMemberRow?.agenda_access ?? false
+      agendaBlockedReason = 'member'
+    }
+
+    available = [
+      { type: 'personal', orgId: null, label: 'Mi espacio' },
+      ...ownedOrgs.map(o => ({ type: 'org' as const, orgId: o.id, label: o.name })),
+      ...memberOrgs.map(o => ({ type: 'org' as const, orgId: o.id, label: o.name })),
+    ]
+
+    if (ctx.type === 'org' && ctx.orgId) {
+      const found = available.find(a => a.orgId === ctx.orgId)
+      if (found) currentLabel = found.label
+    }
+  }
 
   return (
     <header className="py-6 border-b-[0.5px] border-border sticky top-0 bg-bg-primary/80 backdrop-blur-md z-10">
@@ -25,7 +77,27 @@ export default async function Header() {
           <Link href="/dashboard/pacientes" className="text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
             Pacientes
           </Link>
-          
+          {hasAgendaAccess ? (
+            <Link href="/dashboard/agenda" className="hidden sm:inline text-[13px] sm:text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+              Agenda
+            </Link>
+          ) : (
+            <div className="relative group hidden sm:inline-block">
+              <span className="text-[13px] sm:text-[14px] text-[#c47c5a] cursor-default select-none">Agenda</span>
+              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-2.5 py-1.5 bg-bg-secondary border-[0.5px] border-border rounded-lg text-[11px] text-text-secondary whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 shadow-lg">
+                {agendaBlockedReason === 'member' ? 'Sin acceso habilitado' : 'Disponible en Plan Pro'}
+              </div>
+            </div>
+          )}
+
+          {user && (
+            <ContextBadge
+              current={ctx}
+              currentLabel={currentLabel}
+              available={available}
+            />
+          )}
+
           {user ? (
             <HeaderClient userMetadata={user.user_metadata} />
           ) : (

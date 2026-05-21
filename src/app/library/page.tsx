@@ -85,18 +85,6 @@ export default async function LibraryPage({
               >
                 Aplicación Clínica
               </Link>
-              <Link 
-                href="/library?category=protocolo" 
-                className={`text-[14px] no-underline py-2 px-3 rounded-md transition-colors ${category === 'protocolo' ? 'bg-bg-secondary text-text-primary font-medium' : 'text-text-secondary hover:text-text-primary'}`}
-              >
-                Protocolos
-              </Link>
-              <Link 
-                href="/library?category=caso_real" 
-                className={`text-[14px] no-underline py-2 px-3 rounded-md transition-colors ${category === 'caso_real' ? 'bg-bg-secondary text-text-primary font-medium' : 'text-text-secondary hover:text-text-primary'}`}
-              >
-                Casos Reales
-              </Link>
             </div>
           </div>
         </aside>

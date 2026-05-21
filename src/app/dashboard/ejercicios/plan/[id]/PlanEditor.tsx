@@ -21,6 +21,7 @@ interface PlanExercise {
   exercise_id: string
   exercise_name: string
   youtube_url: string
+  group?: string
   weeks: WeekData[]
 }
 
@@ -52,6 +53,7 @@ interface ExercisePlan {
 
 interface ActivityLog {
   id: string
+  exercise_id: string
   exercise_name: string
   session_id: string
   week: number
@@ -59,6 +61,26 @@ interface ActivityLog {
   eva: number
   notes: string | null
   logged_at: string
+}
+
+type TrafficLight = 'green' | 'yellow' | 'red'
+
+function getTrafficLight(rpe: number, eva: number): TrafficLight {
+  if (rpe >= 8 || eva >= 7) return 'red'
+  if (rpe >= 6 || eva >= 4) return 'yellow'
+  return 'green'
+}
+
+const TRAFFIC_COLORS: Record<TrafficLight, string> = {
+  green:  'bg-green-500',
+  yellow: 'bg-yellow-400',
+  red:    'bg-red-500',
+}
+
+const TRAFFIC_LABELS: Record<TrafficLight, string> = {
+  green:  'Bien tolerado',
+  yellow: 'Esfuerzo moderado-alto',
+  red:    'Esfuerzo muy alto o dolor',
 }
 
 const CATEGORIES = [
@@ -81,6 +103,16 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [targetBlock, setTargetBlock] = useState<{sessionIdx: number, blockIdx: number} | null>(null)
 
+  // Drag state
+  const dragExRef = useRef<{sIdx: number, bIdx: number, exIdx: number} | null>(null)
+  const [dragOverEx, setDragOverEx] = useState<{sIdx: number, bIdx: number, exIdx: number} | null>(null)
+
+  // Copy/paste session state
+  const [copiedBlocks, setCopiedBlocks] = useState<PlanBlock[] | null>(null)
+  const [copiedFromSession, setCopiedFromSession] = useState<number | null>(null)
+  const [pasteConfirm, setPasteConfirm] = useState(false)
+
+
   // Search state
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [searchResults, setSearchResults] = useState<any[]>([])
@@ -91,22 +123,55 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
   // Patients state
   const [patients, setPatients] = useState<{id: string, name: string}[]>([])
 
+  // Create exercise state
+  const [showCreateForm, setShowCreateForm] = useState(false)
+  const [createName, setCreateName] = useState('')
+  const [createUrl, setCreateUrl] = useState('')
+  const [creating, setCreating] = useState(false)
+
   // Logs state
   const [logs, setLogs] = useState<ActivityLog[]>([])
   const [logsLoading, setLogsLoading] = useState(false)
   const [logsGroupBy, setLogsGroupBy] = useState<'exercise' | 'date'>('date')
+
+  // Semáforo: último log por exercise_id
+  const [latestByExercise, setLatestByExercise] = useState<Record<string, ActivityLog>>({})
+  const [hoveredExSignal, setHoveredExSignal] = useState<string | null>(null)
   
-  const supabase = createClient()
+  const supabaseRef = useRef(createClient())
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Cargar pacientes del usuario
   useEffect(() => {
     const fetchPatients = async () => {
-      const { data } = await supabase.from('patients').select('id, name').order('name')
+      const { data } = await supabaseRef.current.from('patients').select('id, name').order('name')
       if (data) setPatients(data)
     }
     fetchPatients()
-  }, [supabase])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Cargar últimos logs por ejercicio para semáforo
+  useEffect(() => {
+    const fetchLatestLogs = async () => {
+      const { data } = await supabaseRef.current
+        .from('plan_activity_logs')
+        .select('id, exercise_id, exercise_name, session_id, week, rpe, eva, notes, logged_at')
+        .eq('plan_id', plan.id)
+        .order('logged_at', { ascending: false })
+      if (data) {
+        const latest: Record<string, ActivityLog> = {}
+        for (const log of data) {
+          if (log.exercise_id && !latest[log.exercise_id]) {
+            latest[log.exercise_id] = log
+          }
+        }
+        setLatestByExercise(latest)
+      }
+    }
+    fetchLatestLogs()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plan.id])
 
   // Autoguardado
   useEffect(() => {
@@ -114,7 +179,7 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
     
     setSaveStatus('saving')
     timeoutRef.current = setTimeout(async () => {
-      const { error } = await supabase
+      const { error } = await supabaseRef.current
         .from('exercise_plans')
         .update({
           name: plan.name,
@@ -136,7 +201,8 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
     }
-  }, [plan, supabase])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plan])
 
   // Buscar ejercicios
   useEffect(() => {
@@ -145,16 +211,19 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
       setIsSearching(true)
 
       if (searchCategory === 'mis_ejercicios') {
-        let query = supabase.from('user_exercises').select('id, name, youtube_url').eq('user_id', userId).limit(50)
+        let query = supabaseRef.current.from('user_exercises').select('id, name, youtube_url').eq('user_id', userId).limit(50)
         if (searchQuery) query = query.ilike('name', `%${searchQuery}%`)
         const { data } = await query
         if (data) setSearchResults(data.map(e => ({ ...e, category: 'mis_ejercicios', equipment: null })))
       } else {
-        let query = supabase.from('exercises').select('id, name, category, equipment, youtube_url').limit(30)
-        if (searchQuery) query = query.ilike('name', `%${searchQuery}%`)
-        if (searchCategory) query = query.eq('category', searchCategory)
-        const { data } = await query
-        if (data) setSearchResults(data)
+        const params = new URLSearchParams()
+        if (searchQuery) params.set('q', searchQuery)
+        if (searchCategory) params.set('category', searchCategory)
+        const res = await fetch(`/api/exercises?${params.toString()}`)
+        if (res.ok) {
+          const data = await res.json()
+          setSearchResults(data)
+        }
       }
 
       setIsSearching(false)
@@ -162,7 +231,7 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
 
     const debounce = setTimeout(searchExercises, 300)
     return () => clearTimeout(debounce)
-  }, [searchQuery, searchCategory, isSearchOpen, supabase, userId])
+  }, [searchQuery, searchCategory, isSearchOpen, userId])
 
   // Cargar logs
   useEffect(() => {
@@ -170,7 +239,7 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
       let cancelled = false
       const fetchLogs = async () => {
         setLogsLoading(true)
-        const { data, error } = await supabase
+        const { data, error } = await supabaseRef.current
           .from('plan_activity_logs')
           .select('*')
           .eq('plan_id', plan.id)
@@ -203,6 +272,12 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
     setPlan(newPlan)
   }
 
+  const updateExerciseGroup = (sIdx: number, bIdx: number, exIdx: number, group: string) => {
+    const newPlan = { ...plan }
+    newPlan.plan_data.sessions[sIdx].blocks[bIdx].exercises[exIdx].group = group || undefined
+    setPlan(newPlan)
+  }
+
   const removeExercise = (sIdx: number, bIdx: number, exIdx: number) => {
     if (!confirm('¿Quitar este ejercicio?')) return
     const newPlan = { ...plan }
@@ -215,6 +290,23 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
     setIsSearchOpen(true)
     setSearchQuery('')
     setSearchCategory('')
+    setShowCreateForm(false)
+    setCreateName('')
+    setCreateUrl('')
+  }
+
+  const handleCreateExercise = async () => {
+    if (!createName.trim()) return
+    setCreating(true)
+    const { data, error } = await supabaseRef.current
+      .from('user_exercises')
+      .insert({ user_id: userId, name: createName.trim(), youtube_url: createUrl.trim() || null })
+      .select()
+      .single()
+    if (!error && data) {
+      addExerciseToBlock({ id: data.id, name: data.name, youtube_url: data.youtube_url, category: 'mis_ejercicios' })
+    }
+    setCreating(false)
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -245,6 +337,36 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
     setIsSearchOpen(false)
     setTargetBlock(null)
   }
+
+  const moveExercise = (sIdx: number, fromBIdx: number, fromExIdx: number, toBIdx: number, toExIdx: number) => {
+    if (fromBIdx === toBIdx && fromExIdx === toExIdx) return
+    const newPlan = JSON.parse(JSON.stringify(plan))
+    const srcExs = newPlan.plan_data.sessions[sIdx].blocks[fromBIdx].exercises
+    const dstExs = newPlan.plan_data.sessions[sIdx].blocks[toBIdx].exercises
+    const [moved] = srcExs.splice(fromExIdx, 1)
+    if (!moved) return
+    dstExs.splice(toExIdx, 0, moved)
+    setPlan(newPlan)
+  }
+
+  const handleCopySession = (sIdx: number) => {
+    const blocks = plan.plan_data.sessions[sIdx].blocks
+    setCopiedBlocks(JSON.parse(JSON.stringify(blocks)))
+    setCopiedFromSession(sIdx)
+    setPasteConfirm(false)
+  }
+
+  const handlePasteSession = (sIdx: number) => {
+    if (!copiedBlocks) return
+    const newPlan = { ...plan }
+    newPlan.plan_data.sessions[sIdx].blocks = copiedBlocks.map(block => ({
+      ...block,
+      exercises: block.exercises.map(ex => ({ ...ex, id: uuidv4() }))
+    }))
+    setPlan(newPlan)
+    setPasteConfirm(false)
+  }
+
 
   const handleExportPDF = async () => {
     const doc = new jsPDF()
@@ -444,13 +566,65 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
       {/* CONTENIDO DE SESION */}
       {typeof activeSession === 'number' && currentSession && (
         <div className="bg-bg-primary border-[0.5px] border-border rounded-b-xl rounded-tl-xl p-6 min-h-[500px]">
-          <div className="mb-8">
-            <input 
-              type="text" 
+          <div className="mb-8 flex items-center gap-3 flex-wrap">
+            <input
+              type="text"
               value={currentSession.name}
               onChange={(e) => updateSessionName(activeSession, e.target.value)}
-              className="bg-transparent text-[20px] font-medium tracking-[-0.01em] text-accent focus:outline-none focus:border-b-[0.5px] border-accent"
+              className="bg-transparent text-[20px] font-medium tracking-[-0.01em] text-accent focus:outline-none focus:border-b-[0.5px] border-accent flex-1 min-w-0"
             />
+            <div className="flex items-center gap-2 shrink-0">
+              {/* Copiar sesión */}
+              <button
+                onClick={() => handleCopySession(activeSession as number)}
+                className={`bg-bg-secondary border-[0.5px] text-text-secondary px-3 py-1.5 rounded-lg text-[12px] hover:text-text-primary hover:border-accent transition-colors flex items-center gap-1.5 ${copiedFromSession === activeSession ? 'border-accent text-accent' : 'border-border'}`}
+                title="Copiar todos los ejercicios de esta sesión"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                {copiedFromSession === activeSession ? 'Copiado' : 'Copiar sesión'}
+              </button>
+
+              {/* Pegar sesión (solo si hay algo copiado y es otra sesión) */}
+              {copiedBlocks && copiedFromSession !== activeSession && (
+                pasteConfirm ? (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[12px] text-text-secondary">¿Reemplazar ejercicios?</span>
+                    <button
+                      onClick={() => handlePasteSession(activeSession as number)}
+                      className="bg-accent text-bg-primary px-3 py-1.5 rounded-lg text-[12px] font-medium hover:opacity-90 transition-opacity"
+                    >
+                      Sí, pegar
+                    </button>
+                    <button
+                      onClick={() => setPasteConfirm(false)}
+                      className="text-text-secondary text-[12px] px-2 py-1.5 hover:text-text-primary"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setPasteConfirm(true)}
+                    className="bg-accent/10 border-[0.5px] border-accent/40 text-accent px-3 py-1.5 rounded-lg text-[12px] font-medium hover:bg-accent/20 transition-colors flex items-center gap-1.5"
+                    title={`Pegar ejercicios copiados de ${plan.plan_data.sessions[copiedFromSession as number]?.name}`}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
+                    Pegar sesión
+                  </button>
+                )
+              )}
+
+              {/* Ir al calendario */}
+              {plan.patient_id && (
+                <a
+                  href={`/dashboard/pacientes/${plan.patient_id}/calendario`}
+                  className="bg-bg-secondary border-[0.5px] border-border text-text-secondary px-3 py-1.5 rounded-lg text-[12px] hover:text-accent hover:border-accent transition-colors flex items-center gap-1.5 no-underline"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  Calendario
+                </a>
+              )}
+            </div>
           </div>
 
           <div className="space-y-12">
@@ -467,70 +641,121 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
                 </div>
 
                 {block.exercises.length === 0 ? (
-                  <div className="text-center py-8 text-text-secondary text-[13px] border-[0.5px] border-dashed border-border rounded-xl">
-                    Bloque vacío. Agregá ejercicios usando el botón superior.
+                  <div
+                    className={`text-center py-8 text-text-secondary text-[13px] border-[0.5px] border-dashed rounded-xl transition-colors ${dragOverEx?.bIdx === bIdx ? 'border-accent bg-accent/5' : 'border-border'}`}
+                    onDragOver={e => { e.preventDefault(); setDragOverEx({ sIdx: activeSession as number, bIdx, exIdx: 0 }) }}
+                    onDragLeave={() => setDragOverEx(null)}
+                    onDrop={() => {
+                      if (dragExRef.current) {
+                        moveExercise(activeSession as number, dragExRef.current.bIdx, dragExRef.current.exIdx, bIdx, 0)
+                        dragExRef.current = null
+                      }
+                      setDragOverEx(null)
+                    }}
+                  >
+                    {dragOverEx?.bIdx === bIdx ? 'Soltar aquí' : 'Bloque vacío. Agregá ejercicios usando el botón superior.'}
                   </div>
                 ) : (
                   <div className="space-y-6">
                     {block.exercises.map((ex, exIdx) => (
-                      <div key={ex.id} className="bg-bg-secondary border-[0.5px] border-border rounded-xl p-4">
+                      <div
+                        key={ex.id}
+                        draggable
+                        onDragStart={() => { dragExRef.current = { sIdx: activeSession as number, bIdx, exIdx } }}
+                        onDragOver={e => { e.preventDefault(); setDragOverEx({ sIdx: activeSession as number, bIdx, exIdx }) }}
+                        onDragLeave={() => setDragOverEx(null)}
+                        onDrop={() => {
+                          if (dragExRef.current) {
+                            moveExercise(activeSession as number, dragExRef.current.bIdx, dragExRef.current.exIdx, bIdx, exIdx)
+                            dragExRef.current = null
+                          }
+                          setDragOverEx(null)
+                        }}
+                        onDragEnd={() => { dragExRef.current = null; setDragOverEx(null) }}
+                        className={`bg-bg-secondary border-[0.5px] rounded-xl p-4 transition-colors ${dragOverEx?.bIdx === bIdx && dragOverEx?.exIdx === exIdx ? 'border-accent bg-accent/5' : 'border-border'}`}
+                      >
                         <div className="flex justify-between items-start mb-4">
-                          <div>
-                            <h4 className="text-[15px] font-medium text-text-primary">{ex.exercise_name}</h4>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="cursor-grab active:cursor-grabbing text-text-secondary hover:text-text-primary transition-colors shrink-0 select-none" title="Arrastrar para reordenar">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="5" r="1.5"/><circle cx="15" cy="5" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="19" r="1.5"/></svg>
+                              </span>
+                              <select
+                                value={ex.group || ''}
+                                onChange={e => updateExerciseGroup(activeSession as number, bIdx, exIdx, e.target.value)}
+                                className={`shrink-0 text-[11px] font-mono font-medium rounded px-1.5 py-0.5 border-[0.5px] focus:outline-none cursor-pointer appearance-none transition-colors ${ex.group ? 'bg-accent/10 border-accent/40 text-accent' : 'bg-bg-primary border-border text-text-secondary hover:border-accent/40'}`}
+                                title="Superserie: ejercicios con el mismo número van alternados (ej: 1A y 1B)"
+                              >
+                                <option value="">—</option>
+                                {['1','1A','1B','1C','2','2A','2B','2C','3','3A','3B','3C','4','4A','4B'].map(g => (
+                                  <option key={g} value={g}>{g}</option>
+                                ))}
+                              </select>
+                              <h4 className="text-[15px] font-medium text-text-primary">{ex.exercise_name}</h4>
+                              {latestByExercise[ex.id] && (() => {
+                                const log = latestByExercise[ex.id]
+                                const signal = getTrafficLight(log.rpe, log.eva)
+                                const isHovered = hoveredExSignal === ex.id
+                                return (
+                                  <div className="relative">
+                                    <button
+                                      onMouseEnter={() => setHoveredExSignal(ex.id)}
+                                      onMouseLeave={() => setHoveredExSignal(null)}
+                                      onClick={() => setHoveredExSignal(isHovered ? null : ex.id)}
+                                      className="flex items-center gap-1.5 focus:outline-none"
+                                    >
+                                      <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${TRAFFIC_COLORS[signal]}`} />
+                                    </button>
+                                    {isHovered && (
+                                      <div className="absolute left-0 top-5 z-20 bg-bg-primary border-[0.5px] border-border rounded-xl shadow-lg p-3 w-[200px]">
+                                        <div className="text-[12px] font-medium text-text-primary mb-1">{TRAFFIC_LABELS[signal]}</div>
+                                        <div className="text-[11px] text-text-secondary space-y-0.5">
+                                          <div>RPE <span className="font-medium text-text-primary">{log.rpe}</span> · EVA <span className="font-medium text-text-primary">{log.eva}</span></div>
+                                          <div>{new Date(log.logged_at).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}</div>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                )
+                              })()}
+                            </div>
                             {ex.youtube_url && (
                               <a href={ex.youtube_url} target="_blank" rel="noreferrer" className="text-[12px] text-accent hover:underline mt-1 inline-block">
                                 Ver video original
                               </a>
                             )}
                           </div>
-                          <button 
+                          <button
                             onClick={() => removeExercise(activeSession, bIdx, exIdx)}
-                            className="text-text-secondary hover:text-warning text-[18px] p-1"
+                            className="text-text-secondary hover:text-warning text-[18px] p-1 shrink-0"
                             title="Eliminar ejercicio"
                           >×</button>
                         </div>
 
-                        {/* TABLA DE SEMANAS EN DESKTOP, STACK EN MOBILE */}
-                        <div className="overflow-x-auto">
-                          <table className="w-full min-w-[700px] text-left border-collapse">
-                            <thead>
-                              <tr className="text-[11px] uppercase tracking-[0.05em] text-text-secondary border-b-[0.5px] border-border">
-                                <th className="pb-2 w-[80px]">Semana</th>
-                                <th className="pb-2 w-[80px]">Series</th>
-                                <th className="pb-2 w-[80px]">Reps</th>
-                                <th className="pb-2 w-[120px]">Carga</th>
-                                <th className="pb-2 w-[120px]">Pausa</th>
-                                <th className="pb-2 w-[80px]" title="Rating of Perceived Exertion (1-10)">RPE</th>
-                                <th className="pb-2 w-[80px]" title="Escala Visual Analógica de dolor (1-10)">EAV</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {ex.weeks.map((w, wIdx) => (
-                                <tr key={w.week} className="border-b-[0.5px] border-border/30 last:border-0">
-                                  <td className="py-2 text-[13px] font-medium text-text-secondary">Sem {w.week}</td>
-                                  <td className="py-2 pr-2">
-                                    <input type="text" value={w.sets} onChange={e => updateWeekData(activeSession, bIdx, exIdx, wIdx, 'sets', e.target.value)} className="w-full bg-bg-primary border-[0.5px] border-border rounded p-1 text-[13px] focus:border-accent outline-none" />
-                                  </td>
-                                  <td className="py-2 pr-2">
-                                    <input type="text" value={w.reps} onChange={e => updateWeekData(activeSession, bIdx, exIdx, wIdx, 'reps', e.target.value)} className="w-full bg-bg-primary border-[0.5px] border-border rounded p-1 text-[13px] focus:border-accent outline-none" />
-                                  </td>
-                                  <td className="py-2 pr-2">
-                                    <input type="text" value={w.load} onChange={e => updateWeekData(activeSession, bIdx, exIdx, wIdx, 'load', e.target.value)} placeholder="ej: 20kg" className="w-full bg-bg-primary border-[0.5px] border-border rounded p-1 text-[13px] focus:border-accent outline-none" />
-                                  </td>
-                                  <td className="py-2 pr-2">
-                                    <input type="text" value={w.rest} onChange={e => updateWeekData(activeSession, bIdx, exIdx, wIdx, 'rest', e.target.value)} placeholder="ej: 90s" className="w-full bg-bg-primary border-[0.5px] border-border rounded p-1 text-[13px] focus:border-accent outline-none" />
-                                  </td>
-                                  <td className="py-2 pr-2">
-                                    <input type="text" value={w.rpe} onChange={e => updateWeekData(activeSession, bIdx, exIdx, wIdx, 'rpe', e.target.value)} className="w-full bg-bg-primary border-[0.5px] border-border rounded p-1 text-[13px] focus:border-accent outline-none" />
-                                  </td>
-                                  <td className="py-2">
-                                    <input type="text" value={w.eav} onChange={e => updateWeekData(activeSession, bIdx, exIdx, wIdx, 'eav', e.target.value)} className="w-full bg-bg-primary border-[0.5px] border-border rounded p-1 text-[13px] focus:border-accent outline-none" />
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
+                        {/* PRESCRIPCIÓN */}
+                        {ex.weeks[0] && (
+                          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                            {[
+                              { field: 'sets' as const, label: 'Series' },
+                              { field: 'reps' as const, label: 'Reps' },
+                              { field: 'load' as const, label: 'Carga', placeholder: 'ej: 20kg' },
+                              { field: 'rest' as const, label: 'Pausa', placeholder: 'ej: 90s' },
+                              { field: 'rpe'  as const, label: 'RPE obj.' },
+                              { field: 'eav'  as const, label: 'EAV obj.' },
+                            ].map(({ field, label, placeholder }) => (
+                              <div key={field}>
+                                <label className="block text-[10px] uppercase tracking-[0.05em] text-text-secondary mb-1">{label}</label>
+                                <input
+                                  type="text"
+                                  value={ex.weeks[0][field]}
+                                  onChange={e => updateWeekData(activeSession, bIdx, exIdx, 0, field, e.target.value)}
+                                  placeholder={placeholder ?? ''}
+                                  className="w-full bg-bg-primary border-[0.5px] border-border rounded-lg px-2 py-1.5 text-[13px] focus:border-accent outline-none"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
 
                       </div>
                     ))}
@@ -698,8 +923,8 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
               ) : searchResults.length === 0 ? (
                 <div className="text-center py-8 text-text-secondary text-[13px]">
                   {searchCategory === 'mis_ejercicios'
-                    ? 'No tenés ejercicios propios aún. Podés agregarlos desde la Biblioteca.'
-                    : 'No hay resultados. Buscá por nombre o cambiá la categoría.'}
+                    ? 'No tenés ejercicios propios aún. Creá uno abajo.'
+                    : 'No hay resultados. Buscá por nombre, cambiá la categoría o creá un ejercicio nuevo abajo.'}
                 </div>
               ) : (
                 searchResults.map(ex => (
@@ -723,9 +948,50 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
                 ))
               )}
             </div>
+
+            {/* CREAR EJERCICIO NUEVO */}
+            <div className="border-t-[0.5px] border-border bg-bg-secondary">
+              <button
+                onClick={() => setShowCreateForm(v => !v)}
+                className="w-full flex items-center justify-between px-4 py-3 text-[13px] text-text-secondary hover:text-text-primary transition-colors"
+              >
+                <span>Crear ejercicio nuevo</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                  className={`transition-transform ${showCreateForm ? 'rotate-180' : ''}`}>
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </button>
+              {showCreateForm && (
+                <div className="px-4 pb-4 space-y-3">
+                  <input
+                    type="text"
+                    value={createName}
+                    onChange={e => setCreateName(e.target.value)}
+                    placeholder="Nombre del ejercicio *"
+                    className="w-full bg-bg-primary border-[0.5px] border-border rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:border-accent"
+                    autoFocus
+                  />
+                  <input
+                    type="text"
+                    value={createUrl}
+                    onChange={e => setCreateUrl(e.target.value)}
+                    placeholder="URL de YouTube (opcional)"
+                    className="w-full bg-bg-primary border-[0.5px] border-border rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:border-accent"
+                  />
+                  <button
+                    onClick={handleCreateExercise}
+                    disabled={creating || !createName.trim()}
+                    className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
+                  >
+                    {creating ? 'Creando...' : 'Crear y agregar al bloque'}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
+
     </div>
   )
 }

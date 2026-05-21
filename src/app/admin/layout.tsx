@@ -26,11 +26,17 @@ export default async function AdminLayout({
           >
             Dashboard
           </Link>
-          <Link 
-            href="/admin/content" 
+          <Link
+            href="/admin/content"
             className="text-[14px] text-text-secondary hover:text-text-primary px-3 py-2 rounded-md hover:bg-bg-secondary transition-colors"
           >
             Contenidos
+          </Link>
+          <Link
+            href="/admin/suscripciones"
+            className="text-[14px] text-text-secondary hover:text-text-primary px-3 py-2 rounded-md hover:bg-bg-secondary transition-colors"
+          >
+            Suscripciones
           </Link>
         </nav>
 

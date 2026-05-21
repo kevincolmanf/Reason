@@ -105,26 +105,35 @@ export default function SaveToPatient({
           </Link>
         </div>
       ) : (
-        <div className="flex flex-wrap items-center gap-3">
-          <select
-            value={selectedPatientId}
-            onChange={e => setSelectedPatientId(e.target.value)}
-            className="bg-bg-primary border-[0.5px] border-border-strong rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:border-accent min-w-[180px]"
-          >
-            {patients.map(p => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-          <button
-            onClick={handleSave}
-            disabled={saving || !selectedPatientId}
-            className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
-          >
-            {saving ? 'Guardando...' : 'Guardar en paciente'}
-          </button>
-          {error && <span className="text-[12px] text-warning">{error}</span>}
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <select
+              value={selectedPatientId}
+              onChange={e => setSelectedPatientId(e.target.value)}
+              className="bg-bg-primary border-[0.5px] border-border-strong rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:border-accent min-w-[180px]"
+            >
+              {patients.map(p => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={handleSave}
+              disabled={saving || !selectedPatientId}
+              className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
+            >
+              {saving ? 'Guardando...' : 'Guardar en paciente'}
+            </button>
+          </div>
+          {error && (
+            <div className="bg-red-500/10 border-[0.5px] border-red-500/40 rounded-lg px-4 py-3 flex items-center justify-between gap-3">
+              <p className="text-[13px] text-red-400 font-medium">⚠ {error} — El resultado <strong>no se guardó</strong>.</p>
+              <button onClick={handleSave} disabled={saving} className="shrink-0 text-[12px] bg-red-500/20 text-red-400 px-3 py-1.5 rounded-lg hover:bg-red-500/30 transition-colors font-medium">
+                Reintentar
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -70,11 +70,17 @@ export async function middleware(request: NextRequest) {
   const isAuthRoute = authRoutes.some(route => pathname.startsWith(route))
 
   // Rutas que requieren suscripción activa (o trial vigente)
-  const subscriberRoutes = ['/library', '/content', '/recursos', '/ficha', '/dashboard/ejercicios']
+  // /dashboard/ejercicios/plan y /calendario son accesibles para free (1 paciente)
+  const subscriberRoutes = ['/library', '/content', '/recursos', '/ficha', '/dashboard/ejercicios/biblioteca']
+
+  // Rutas exclusivas para Pro/admin o miembros de org (agenda)
+  const proRoutes = ['/dashboard/agenda']
+  const isProRoute = proRoutes.some(route => pathname.startsWith(route))
   const isSubscriberRoute = subscriberRoutes.some(route => pathname.startsWith(route))
 
   // Módulos avanzados dentro del dashboard de pacientes — bloqueados para free sin trial
-  const advancedModulePatterns = ['/carga', '/calendario', '/rts', '/fichas']
+  // /calendario no está bloqueado: usuarios free pueden ver el calendario de su único paciente
+  const advancedModulePatterns = ['/carga', '/rts', '/fichas']
   const isAdvancedModule =
     pathname.startsWith('/dashboard/pacientes/') &&
     advancedModulePatterns.some(p => pathname.includes(p))
@@ -83,6 +89,7 @@ export async function middleware(request: NextRequest) {
   const isFreeContent = pathname === '/content/dolor-lumbar-inespecifico'
 
   const isAdminRoute = pathname.startsWith('/admin')
+  const isEquipoRoute = pathname.startsWith('/account/equipo')
 
   // 1. Si no está logueado → login
   if ((isAuthRoute || isAdminRoute) && !user) {
@@ -92,7 +99,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // 2. Si está logueado → verificar acceso para rutas premium y admin
-  if (user && (isSubscriberRoute || isAdvancedModule || isAdminRoute) && !isFreeContent) {
+  if (user && (isSubscriberRoute || isProRoute || isAdvancedModule || isAdminRoute || isEquipoRoute) && !isFreeContent) {
     const { data: userData } = await supabase
       .from('users')
       .select('role, trial_expires_at')
@@ -103,9 +110,19 @@ export async function middleware(request: NextRequest) {
     const trialExpiresAt = userData?.trial_expires_at
     const trialActive = trialExpiresAt ? new Date(trialExpiresAt) > new Date() : false
 
-    // Free users that belong to a Pro team inherit access for subscriber routes
+    // Check if user is actively in an org context (cookie reason_ctx)
+    let isInOrgContext = false
+    try {
+      const ctxRaw = request.cookies.get('reason_ctx')?.value
+      if (ctxRaw) {
+        const ctx = JSON.parse(ctxRaw)
+        isInOrgContext = ctx?.type === 'org' && !!ctx?.orgId
+      }
+    } catch { /* invalid cookie → treat as personal */ }
+
+    // Check org membership only when in org context
     let isOrgMember = false
-    if (role === 'free' && !trialActive) {
+    if ((role === 'free' || role === 'subscriber') && isInOrgContext) {
       const { count } = await supabase
         .from('organization_members')
         .select('*', { count: 'exact', head: true })
@@ -113,7 +130,8 @@ export async function middleware(request: NextRequest) {
       isOrgMember = (count ?? 0) > 0
     }
 
-    const isActive = role === 'subscriber' || role === 'admin' || trialActive || isOrgMember
+    const isActive = role === 'subscriber' || role === 'admin' || role === 'pro' || trialActive || isOrgMember
+    const isProActive = role === 'admin' || role === 'pro' || isOrgMember
 
     if (isAdminRoute && role !== 'admin') {
       const url = request.nextUrl.clone()
@@ -121,7 +139,20 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(url)
     }
 
+    // Only org owners (pro/admin) can manage the team page
+    if (isEquipoRoute && role !== 'pro' && role !== 'admin') {
+      const url = request.nextUrl.clone()
+      url.pathname = '/account'
+      return NextResponse.redirect(url)
+    }
+
     if ((isSubscriberRoute || isAdvancedModule) && !isActive) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/paywall'
+      return NextResponse.redirect(url)
+    }
+
+    if (isProRoute && !isProActive) {
       const url = request.nextUrl.clone()
       url.pathname = '/paywall'
       return NextResponse.redirect(url)
