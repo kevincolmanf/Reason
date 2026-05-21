@@ -355,6 +355,10 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
   }
 
   const createSession = async (dateStr: string) => {
+    if (!plan.patient_id) {
+      alert('Asigná un paciente al plan antes de crear sesiones.')
+      return
+    }
     const { data, error } = await supabaseRef.current
       .from('scheduled_sessions')
       .insert({
@@ -369,7 +373,12 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
       })
       .select('id, scheduled_date, session_name, session_data, completed')
       .single()
-    if (!error && data) {
+    if (error) {
+      console.error('Error creando sesión:', error)
+      alert('No se pudo crear la sesión. Revisá la consola para más detalles.')
+      return
+    }
+    if (data) {
       setScheduledSessions(prev =>
         [...prev, data].sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date))
       )
