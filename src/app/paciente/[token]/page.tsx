@@ -30,12 +30,10 @@ export default async function PatientPortalPage({ params }: { params: { token: s
     .order('session_date', { ascending: false })
     .limit(30)
 
-  // Solo sesiones del nuevo sistema (con session_data) — filtra legacy sin contenido
   const { data: scheduledSessions } = await supabase
     .from('scheduled_sessions')
     .select('id, plan_id, session_id, session_name, scheduled_date, week, completed, session_data, exercise_plans(share_token)')
     .eq('patient_id', patient.id)
-    .not('session_data', 'is', null)
     .order('scheduled_date', { ascending: true })
 
   return (
