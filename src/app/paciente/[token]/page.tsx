@@ -79,9 +79,8 @@ export default async function PatientPortalPage({ params }: { params: { token: s
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const hasExercises = (s.session_data as any)?.blocks?.some((b: any) => b.exercises?.length > 0)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const blocks = hasExercises
-        ? (s.session_data as { blocks: any[] }).blocks
-        : planFallbackBlocksMap[s.plan_id] ?? []
+      const sessionBlocks = (s.session_data as any)?.blocks ?? []
+      const blocks = hasExercises ? sessionBlocks : (planFallbackBlocksMap[s.plan_id] ?? [])
       return {
         ...s,
         session_data: { blocks },
