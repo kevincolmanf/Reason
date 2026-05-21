@@ -30,11 +30,23 @@ export default async function PatientPortalPage({ params }: { params: { token: s
     .order('session_date', { ascending: false })
     .limit(30)
 
-  const { data: scheduledSessions } = await supabase
-    .from('scheduled_sessions')
-    .select('id, plan_id, session_id, session_name, scheduled_date, week, completed, session_data, exercise_plans(share_token)')
+  // Buscar los planes del paciente para obtener sesiones aunque patient_id sea null en scheduled_sessions
+  const { data: patientPlans } = await supabase
+    .from('exercise_plans')
+    .select('id')
     .eq('patient_id', patient.id)
-    .order('scheduled_date', { ascending: true })
+
+  const planIds = patientPlans?.map(p => p.id) ?? []
+
+  let scheduledSessions = null
+  if (planIds.length > 0) {
+    const { data } = await supabase
+      .from('scheduled_sessions')
+      .select('id, plan_id, session_id, session_name, scheduled_date, week, completed, session_data, exercise_plans(share_token)')
+      .in('plan_id', planIds)
+      .order('scheduled_date', { ascending: true })
+    scheduledSessions = data
+  }
 
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
