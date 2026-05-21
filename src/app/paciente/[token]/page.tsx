@@ -8,10 +8,33 @@ export const metadata = {
   title: 'Portal del Paciente | Reason',
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function extractFallbackBlocks(planData: any) {
+  if (!planData?.sessions) return []
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const blockMap = new Map<string, { id: string; name: string; exercises: any[] }>()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  for (const session of planData.sessions as any[]) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    for (const block of session.blocks ?? [] as any[]) {
+      if (!block.exercises?.length) continue
+      if (!blockMap.has(block.id)) {
+        blockMap.set(block.id, { id: block.id, name: block.name, exercises: [] })
+      }
+      for (const ex of block.exercises) {
+        const existing = blockMap.get(block.id)!
+        if (!existing.exercises.find((e: { id: string }) => e.id === ex.id)) {
+          existing.exercises.push(ex)
+        }
+      }
+    }
+  }
+  return Array.from(blockMap.values()).filter(b => b.exercises.length > 0)
+}
+
 export default async function PatientPortalPage({ params }: { params: { token: string } }) {
   const supabase = createAdminClient()
 
-  // Buscar el paciente por load_share_token, ignorando RLS
   const { data: patient, error: patientError } = await supabase
     .from('patients')
     .select('id, name, user_id')
@@ -22,7 +45,6 @@ export default async function PatientPortalPage({ params }: { params: { token: s
     notFound()
   }
 
-  // Últimas 30 sesiones de carga del paciente
   const { data: recentSessions } = await supabase
     .from('load_sessions')
     .select('session_date, activity, rpe, load_units, vas_post, source')
@@ -30,15 +52,18 @@ export default async function PatientPortalPage({ params }: { params: { token: s
     .order('session_date', { ascending: false })
     .limit(30)
 
-  // Buscar los planes del paciente para obtener sesiones aunque patient_id sea null en scheduled_sessions
   const { data: patientPlans } = await supabase
     .from('exercise_plans')
-    .select('id, share_token')
+    .select('id, share_token, plan_data')
     .eq('patient_id', patient.id)
 
   const planIds = patientPlans?.map(p => p.id) ?? []
   const planShareTokenMap: Record<string, string | null> = {}
-  for (const p of patientPlans ?? []) planShareTokenMap[p.id] = p.share_token
+  const planFallbackBlocksMap: Record<string, ReturnType<typeof extractFallbackBlocks>> = {}
+  for (const p of patientPlans ?? []) {
+    planShareTokenMap[p.id] = p.share_token
+    planFallbackBlocksMap[p.id] = extractFallbackBlocks(p.plan_data)
+  }
 
   let scheduledSessions = null
   if (planIds.length > 0) {
@@ -48,11 +73,21 @@ export default async function PatientPortalPage({ params }: { params: { token: s
       .in('plan_id', planIds)
       .not('session_data', 'is', null)
       .order('scheduled_date', { ascending: true })
-    // Inyectar share_token del plan en cada sesión
-    scheduledSessions = (data ?? []).map(s => ({
-      ...s,
-      exercise_plans: [{ share_token: planShareTokenMap[s.plan_id] ?? null }],
-    }))
+
+    scheduledSessions = (data ?? []).map(s => {
+      // Si session_data tiene ejercicios, usarlos; si no, usar plan_data como fallback
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const hasExercises = (s.session_data as any)?.blocks?.some((b: any) => b.exercises?.length > 0)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const blocks = hasExercises
+        ? (s.session_data as { blocks: any[] }).blocks
+        : planFallbackBlocksMap[s.plan_id] ?? []
+      return {
+        ...s,
+        session_data: { blocks },
+        exercise_plans: [{ share_token: planShareTokenMap[s.plan_id] ?? null }],
+      }
+    })
   }
 
   return (
