@@ -368,7 +368,16 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
 
   const deleteSession = async () => {
     if (!selectedSession || !confirm('¿Eliminar la sesión del ' + selectedDate + '?')) return
-    await supabaseRef.current.from('scheduled_sessions').delete().eq('id', selectedSession.id)
+    const res = await fetch('/api/sessions/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: selectedSession.id }),
+    })
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}))
+      alert('Error al eliminar la sesión: ' + (json.error ?? res.status))
+      return
+    }
     setScheduledSessions(prev => prev.filter(s => s.scheduled_date !== selectedDate))
     setSelectedDate(null)
   }
