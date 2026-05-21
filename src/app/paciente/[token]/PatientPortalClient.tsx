@@ -3,12 +3,6 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
-interface WeekData { week: number; reps: string; sets: string; load: string; eav: string; rpe: string; rest: string }
-interface PlanExercise { id: string; exercise_name: string; youtube_url: string; weeks: WeekData[] }
-interface PlanBlock { id: string; name: string; exercises: PlanExercise[] }
-interface PlanSession { id: string; name: string; blocks: PlanBlock[] }
-interface PlanData { sessions: PlanSession[] }
-
 interface Plan {
   id: string; name: string; plan_data: unknown; start_date: string | null; notes: string | null
 }
@@ -21,7 +15,7 @@ interface ScheduledItem {
 
 interface Props {
   patient: { id: string; name: string; user_id: string }
-  token: string; plans: Plan[]; recentSessions: RecentSession[]; scheduledSessions: ScheduledItem[]
+  token: string; recentSessions: RecentSession[]; scheduledSessions: ScheduledItem[]
 }
 type ActivityType = 'rehab' | 'sport' | 'combined'
 
@@ -142,7 +136,7 @@ function groupSessionsByWeek(sessions: ScheduledItem[], today: string): WeekGrou
   return weeks
 }
 
-export default function PatientPortalClient({ token, plans, recentSessions, scheduledSessions }: Props) {
+export default function PatientPortalClient({ token, recentSessions, scheduledSessions }: Props) {
   const [showHelp, setShowHelp] = useState(false)
   const [expandedWeeks, setExpandedWeeks] = useState<Set<string>>(() => new Set([getMondayOf(todayStr())]))
 
@@ -192,7 +186,6 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
       ?? null
   })()
 
-  const showRehabSection = activityType === 'rehab' || activityType === 'combined'
   const showSportSection = activityType === 'sport' || activityType === 'combined'
 
   const handleSubmit = async (skipEmptyCheck = false) => {
