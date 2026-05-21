@@ -355,39 +355,26 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
   }
 
   const createSession = async (dateStr: string) => {
-    console.log('[createSession] dateStr:', dateStr, '| patient_id:', plan.patient_id)
     if (!plan.patient_id) {
       alert('Asigná un paciente al plan antes de crear sesiones.')
       return
     }
-    console.log('[createSession] insertando...')
-    const { data, error } = await supabaseRef.current
-      .from('scheduled_sessions')
-      .insert({
-        user_id: userId,
-        patient_id: plan.patient_id,
-        plan_id: plan.id,
-        plan_name: plan.name,
-        scheduled_date: dateStr,
-        session_name: 'Nueva sesión',
-        session_data: { blocks: [] },
-        session_id: uuidv4(),
-        week: 1,
-      })
-      .select('id, scheduled_date, session_name, session_data, completed')
-      .single()
-    console.log('[createSession] resultado — data:', data, '| error:', error)
-    if (error) {
-      console.error('Error creando sesión:', error)
-      alert('Error: ' + error.message)
+    const res = await fetch('/api/sessions/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan_id: plan.id, scheduled_date: dateStr }),
+    })
+    const json = await res.json()
+    if (!res.ok) {
+      alert('Error al crear sesión: ' + (json.error ?? res.status))
       return
     }
-    if (data) {
-      setScheduledSessions(prev =>
-        [...prev, data].sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date))
+    setScheduledSessions(prev =>
+      [...prev, json.session].sort((a: ScheduledSession, b: ScheduledSession) =>
+        a.scheduled_date.localeCompare(b.scheduled_date)
       )
-      setSelectedDate(dateStr)
-    }
+    )
+    setSelectedDate(dateStr)
   }
 
   const deleteSession = async () => {
