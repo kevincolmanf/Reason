@@ -148,7 +148,7 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
   const [viewStart, setViewStart] = useState<Date>(() => getMondayOfWeek(new Date()))
   const [copiedSessionData, setCopiedSessionData] = useState<SessionData | null>(null)
   const [copiedFromDate, setCopiedFromDate] = useState<string | null>(null)
-  const sessionSaveRef = useRef<NodeJS.Timeout | null>(null)
+  const [sessionSaveStatus, setSessionSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
 
   // Search/modal state
   const [isSearchOpen, setIsSearchOpen] = useState(false)
@@ -272,32 +272,10 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plan])
 
-  // Autoguardado de session_data
+  // Reset session save status al cambiar de día
   useEffect(() => {
-    if (!selectedSession?.id || !selectedSession.session_data) return
-    if (sessionSaveRef.current) clearTimeout(sessionSaveRef.current)
-    setSaveStatus('saving')
-    sessionSaveRef.current = setTimeout(async () => {
-      const res = await fetch('/api/sessions/update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          session_id: selectedSession.id,
-          session_name: selectedSession.session_name,
-          session_data: selectedSession.session_data,
-        }),
-      })
-      if (!res.ok) {
-        setSaveStatus('error')
-        const json = await res.json().catch(() => ({}))
-        console.error('[session save] Error:', json.error)
-      } else {
-        setSaveStatus('saved')
-      }
-    }, 1500)
-    return () => { if (sessionSaveRef.current) clearTimeout(sessionSaveRef.current) }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedSession?.session_data, selectedSession?.session_name])
+    setSessionSaveStatus('idle')
+  }, [selectedDate])
 
   // Buscar ejercicios
   useEffect(() => {
@@ -357,6 +335,7 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
 
   const updateSelectedSession = (updater: (data: SessionData) => SessionData) => {
     if (!selectedDate || !selectedSession) return
+    setSessionSaveStatus('idle')
     setScheduledSessions(prev => prev.map(s => {
       if (s.scheduled_date !== selectedDate) return s
       const newData = updater(s.session_data ?? { blocks: [] })
@@ -394,8 +373,30 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
     setSelectedDate(null)
   }
 
+  const saveSession = async () => {
+    if (!selectedSession) return
+    setSessionSaveStatus('saving')
+    const res = await fetch('/api/sessions/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        session_id: selectedSession.id,
+        session_name: selectedSession.session_name,
+        session_data: selectedSession.session_data,
+      }),
+    })
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}))
+      console.error('[saveSession] Error:', json.error)
+      setSessionSaveStatus('error')
+    } else {
+      setSessionSaveStatus('saved')
+    }
+  }
+
   const updateSessionName = (name: string) => {
     if (!selectedDate || !selectedSession) return
+    setSessionSaveStatus('idle')
     setScheduledSessions(prev => prev.map(s =>
       s.scheduled_date !== selectedDate ? s : { ...s, session_name: name }
     ))
@@ -829,6 +830,26 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
 
                 {selectedSession ? (
                   <div className="flex items-center gap-2 flex-wrap">
+                    {/* Guardar */}
+                    <button
+                      onClick={saveSession}
+                      disabled={sessionSaveStatus === 'saving'}
+                      className={`px-3 py-1.5 rounded-lg text-[12px] font-medium border-[0.5px] transition-colors flex items-center gap-1.5 ${
+                        sessionSaveStatus === 'saved'
+                          ? 'bg-green-500/10 border-green-500/40 text-green-500'
+                          : sessionSaveStatus === 'error'
+                          ? 'bg-warning/10 border-warning/40 text-warning'
+                          : sessionSaveStatus === 'saving'
+                          ? 'bg-bg-secondary border-border text-text-secondary opacity-60'
+                          : 'bg-accent text-bg-primary border-accent hover:opacity-90'
+                      }`}
+                    >
+                      {sessionSaveStatus === 'saving' && 'Guardando...'}
+                      {sessionSaveStatus === 'saved' && '✓ Guardado'}
+                      {sessionSaveStatus === 'error' && 'Error al guardar'}
+                      {sessionSaveStatus === 'idle' && 'Guardar sesión'}
+                    </button>
+
                     {/* Copiar */}
                     <button
                       onClick={handleCopySession}
