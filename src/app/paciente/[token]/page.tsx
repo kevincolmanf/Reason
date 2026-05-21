@@ -33,19 +33,25 @@ export default async function PatientPortalPage({ params }: { params: { token: s
   // Buscar los planes del paciente para obtener sesiones aunque patient_id sea null en scheduled_sessions
   const { data: patientPlans } = await supabase
     .from('exercise_plans')
-    .select('id')
+    .select('id, share_token')
     .eq('patient_id', patient.id)
 
   const planIds = patientPlans?.map(p => p.id) ?? []
+  const planShareTokenMap: Record<string, string | null> = {}
+  for (const p of patientPlans ?? []) planShareTokenMap[p.id] = p.share_token
 
   let scheduledSessions = null
   if (planIds.length > 0) {
     const { data } = await supabase
       .from('scheduled_sessions')
-      .select('id, plan_id, session_id, session_name, scheduled_date, week, completed, session_data, exercise_plans(share_token)')
+      .select('id, plan_id, session_id, session_name, scheduled_date, week, completed, session_data')
       .in('plan_id', planIds)
       .order('scheduled_date', { ascending: true })
-    scheduledSessions = data
+    // Inyectar share_token del plan en cada sesión
+    scheduledSessions = (data ?? []).map(s => ({
+      ...s,
+      exercise_plans: [{ share_token: planShareTokenMap[s.plan_id] ?? null }],
+    }))
   }
 
   return (
