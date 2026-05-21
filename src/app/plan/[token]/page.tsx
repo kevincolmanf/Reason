@@ -6,7 +6,8 @@ export const metadata = {
   title: 'Tu Plan de Ejercicio | Reason',
 }
 
-export default async function PlanPacientePage({ params }: { params: { token: string } }) {
+export default async function PlanPacientePage({ params, searchParams }: { params: { token: string }, searchParams?: { week?: string } }) {
+  const initialWeek = Math.max(0, Math.min(3, parseInt(searchParams?.week ?? '1') - 1))
   const supabase = createAdminClient()
 
   // Buscar el plan con el share_token, ignorando RLS
@@ -67,7 +68,7 @@ export default async function PlanPacientePage({ params }: { params: { token: st
           )}
         </div>
 
-        <PatientPlanViewer planData={plan.plan_data} token={params.token} />
+        <PatientPlanViewer planData={plan.plan_data} token={params.token} initialWeek={initialWeek} />
       </main>
     </div>
   )

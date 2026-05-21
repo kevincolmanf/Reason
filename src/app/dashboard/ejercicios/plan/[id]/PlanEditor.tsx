@@ -107,6 +107,9 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
   const dragExRef = useRef<{sIdx: number, bIdx: number, exIdx: number} | null>(null)
   const [dragOverEx, setDragOverEx] = useState<{sIdx: number, bIdx: number, exIdx: number} | null>(null)
 
+  // Semana activa (0-based: 0 = Semana 1)
+  const [activeWeek, setActiveWeek] = useState(0)
+
   // Copy/paste session state
   const [copiedBlocks, setCopiedBlocks] = useState<PlanBlock[] | null>(null)
   const [copiedFromSession, setCopiedFromSession] = useState<number | null>(null)
@@ -573,6 +576,37 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
               onChange={(e) => updateSessionName(activeSession, e.target.value)}
               className="bg-transparent text-[20px] font-medium tracking-[-0.01em] text-accent focus:outline-none focus:border-b-[0.5px] border-accent flex-1 min-w-0"
             />
+
+            {/* SELECTOR DE SEMANA */}
+            <div className="flex items-center gap-1 shrink-0">
+              {[0,1,2,3].map(wIdx => {
+                const session = plan.plan_data.sessions[activeSession as number]
+                const hasData = session?.blocks.some(b =>
+                  b.exercises.some(ex => {
+                    const w = ex.weeks[wIdx]
+                    return w && (['sets','reps','load','rest','rpe','eav'] as (keyof WeekData)[]).some(k => w[k] !== '')
+                  })
+                )
+                return (
+                  <button
+                    key={wIdx}
+                    onClick={() => setActiveWeek(wIdx)}
+                    className={`relative px-3 py-1.5 rounded-lg text-[12px] font-medium transition-colors border-[0.5px] ${
+                      activeWeek === wIdx
+                        ? 'bg-accent text-bg-primary border-accent'
+                        : 'bg-bg-secondary text-text-secondary border-border hover:border-accent/60 hover:text-text-primary'
+                    }`}
+                    title={`Editar dosis Semana ${wIdx + 1}`}
+                  >
+                    S{wIdx + 1}
+                    {hasData && activeWeek !== wIdx && (
+                      <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-accent/70" />
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+
             <div className="flex items-center gap-2 shrink-0">
               {/* Copiar sesión */}
               <button
@@ -732,8 +766,8 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
                           >×</button>
                         </div>
 
-                        {/* PRESCRIPCIÓN */}
-                        {ex.weeks[0] && (
+                        {/* PRESCRIPCIÓN — semana activa */}
+                        {ex.weeks[activeWeek] && (
                           <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                             {[
                               { field: 'sets' as const, label: 'Series' },
@@ -747,8 +781,8 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
                                 <label className="block text-[10px] uppercase tracking-[0.05em] text-text-secondary mb-1">{label}</label>
                                 <input
                                   type="text"
-                                  value={ex.weeks[0][field]}
-                                  onChange={e => updateWeekData(activeSession, bIdx, exIdx, 0, field, e.target.value)}
+                                  value={ex.weeks[activeWeek][field]}
+                                  onChange={e => updateWeekData(activeSession as number, bIdx, exIdx, activeWeek, field, e.target.value)}
                                   placeholder={placeholder ?? ''}
                                   className="w-full bg-bg-primary border-[0.5px] border-border rounded-lg px-2 py-1.5 text-[13px] focus:border-accent outline-none"
                                 />
