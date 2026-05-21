@@ -6,8 +6,18 @@ import { useRouter } from 'next/navigation'
 interface RecentSession {
   session_date: string; activity: string | null; rpe: number; load_units: number; vas_post: number | null; source: string
 }
+interface SessionExercise {
+  id: string; exercise_id: string; exercise_name: string; youtube_url: string; group?: string
+  sets: string; reps: string; load: string; rpe_obj: string; eav_obj: string; rest: string
+}
+interface SessionBlock { id: string; name: string; exercises: SessionExercise[] }
+interface SessionData { blocks: SessionBlock[] }
+
 interface ScheduledItem {
-  id: string; plan_id: string; session_id: string; session_name: string; plan_name: string; scheduled_date: string; week: number; completed: boolean
+  id: string; plan_id: string; session_id: string; session_name: string; scheduled_date: string
+  week: number; completed: boolean
+  session_data: SessionData | null
+  exercise_plans: { share_token: string | null }[] | null
 }
 
 interface Props {
@@ -133,9 +143,16 @@ function groupSessionsByWeek(sessions: ScheduledItem[], today: string): WeekGrou
   return weeks
 }
 
+interface LogState {
+  ex: SessionExercise; shareToken: string; sessionId: string; scheduledDate: string
+  rpe: string; eva: string; notes: string; loading: boolean; done: boolean; error: string | null
+}
+
 export default function PatientPortalClient({ token, recentSessions, scheduledSessions }: Props) {
   const [showHelp, setShowHelp] = useState(false)
   const [expandedWeeks, setExpandedWeeks] = useState<Set<string>>(() => new Set([getMondayOf(todayStr())]))
+  const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null)
+  const [logState, setLogState] = useState<LogState | null>(null)
 
   const router = useRouter()
   useEffect(() => {
@@ -184,6 +201,38 @@ export default function PatientPortalClient({ token, recentSessions, scheduledSe
   })()
 
   const showSportSection = activityType === 'sport' || activityType === 'combined'
+
+  function openLog(ex: SessionExercise, shareToken: string, sessionId: string, scheduledDate: string) {
+    setLogState({ ex, shareToken, sessionId, scheduledDate, rpe: '', eva: '', notes: '', loading: false, done: false, error: null })
+  }
+
+  async function submitLog() {
+    if (!logState) return
+    const rpe = Number(logState.rpe)
+    const eva = Number(logState.eva)
+    if (!logState.rpe || isNaN(rpe) || rpe < 1 || rpe > 10) { setLogState(s => s ? { ...s, error: 'RPE debe ser entre 1 y 10' } : null); return }
+    if (logState.eva !== '' && (isNaN(eva) || eva < 0 || eva > 10)) { setLogState(s => s ? { ...s, error: 'EVA debe ser entre 0 y 10' } : null); return }
+    setLogState(s => s ? { ...s, loading: true, error: null } : null)
+    try {
+      const res = await fetch(`/api/plan/${logState.shareToken}/log`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          exercise_id: logState.ex.exercise_id,
+          exercise_name: logState.ex.exercise_name,
+          session_id: logState.sessionId,
+          week: 1, rpe, eva: logState.eva !== '' ? eva : 0,
+          notes: logState.notes || null,
+          scheduled_date: logState.scheduledDate,
+        }),
+      })
+      if (!res.ok) throw new Error()
+      setLogState(s => s ? { ...s, loading: false, done: true } : null)
+      setTimeout(() => setLogState(null), 1500)
+    } catch {
+      setLogState(s => s ? { ...s, loading: false, error: 'No se pudo guardar. Intentá de nuevo.' } : null)
+    }
+  }
 
   const handleSubmit = async (skipEmptyCheck = false) => {
     if (!formDate) return
@@ -243,15 +292,24 @@ export default function PatientPortalClient({ token, recentSessions, scheduledSe
       {/* ── PRÓXIMA SESIÓN ─────────────────────────────────── */}
       {featuredSession && (
         <section>
-          <div
-            className="w-full text-left bg-accent/10 border-[0.5px] border-accent/40 rounded-2xl p-5"
+          <button
+            onClick={() => setExpandedSessionId(prev => prev === featuredSession.id ? null : featuredSession.id)}
+            className="w-full text-left bg-accent/10 border-[0.5px] border-accent/40 rounded-2xl p-5 hover:bg-accent/15 transition-colors"
           >
             <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-accent mb-2">
               {featuredSession.scheduled_date === todayStr() ? 'Para hoy' : `Próxima sesión · ${formatScheduledDate(featuredSession.scheduled_date)}`}
             </div>
-            <div className="text-[20px] font-medium text-text-primary tracking-[-0.01em] mb-1">{featuredSession.session_name}</div>
-            <div className="text-[13px] text-text-secondary mb-4">{formatScheduledDate(featuredSession.scheduled_date)}</div>
-          </div>
+            <div className="flex items-center justify-between">
+              <div className="text-[20px] font-medium text-text-primary tracking-[-0.01em]">{featuredSession.session_name}</div>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                className={`text-accent shrink-0 transition-transform ${expandedSessionId === featuredSession.id ? 'rotate-180' : ''}`}>
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </div>
+          </button>
+          {expandedSessionId === featuredSession.id && (
+            <SessionExercisesInline session={featuredSession} onLog={openLog} />
+          )}
         </section>
       )}
 
@@ -385,26 +443,35 @@ export default function PatientPortalClient({ token, recentSessions, scheduledSe
                           </div>
                           <div className="space-y-1.5">
                             {day.sessions.map(s => (
-                              <div
-                                key={s.id}
-                                className={`w-full text-left flex items-center gap-3 rounded-lg px-3 py-2.5 border-[0.5px] ${
-                                  s.completed
-                                    ? 'border-border bg-bg-secondary opacity-50'
-                                    : s.scheduled_date === todayStr()
-                                    ? 'border-accent/40 bg-accent/10'
-                                    : 'border-border bg-bg-secondary'
-                                }`}
-                              >
-                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                                  s.completed ? 'bg-text-secondary'
-                                  : s.scheduled_date === todayStr() ? 'bg-accent'
-                                  : 'bg-border'
-                                }`} />
-                                <div className="flex-1 min-w-0">
-                                  <div className={`text-[13px] font-medium ${s.completed ? 'line-through text-text-secondary' : 'text-text-primary'}`}>
-                                    {s.session_name}
+                              <div key={s.id}>
+                                <button
+                                  onClick={() => setExpandedSessionId(prev => prev === s.id ? null : s.id)}
+                                  className={`w-full text-left flex items-center gap-3 rounded-lg px-3 py-2.5 border-[0.5px] transition-colors ${
+                                    s.completed
+                                      ? 'border-border bg-bg-secondary opacity-50'
+                                      : s.scheduled_date === todayStr()
+                                      ? 'border-accent/40 bg-accent/10 hover:bg-accent/15'
+                                      : 'border-border bg-bg-secondary hover:border-accent/40'
+                                  }`}
+                                >
+                                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                                    s.completed ? 'bg-text-secondary'
+                                    : s.scheduled_date === todayStr() ? 'bg-accent'
+                                    : 'bg-border'
+                                  }`} />
+                                  <div className="flex-1 min-w-0">
+                                    <div className={`text-[13px] font-medium ${s.completed ? 'line-through text-text-secondary' : 'text-text-primary'}`}>
+                                      {s.session_name}
+                                    </div>
                                   </div>
-                                </div>
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                                    className={`text-text-secondary shrink-0 transition-transform ${expandedSessionId === s.id ? 'rotate-180' : ''}`}>
+                                    <polyline points="6 9 12 15 18 9" />
+                                  </svg>
+                                </button>
+                                {expandedSessionId === s.id && (
+                                  <SessionExercisesInline session={s} onLog={openLog} />
+                                )}
                               </div>
                             ))}
                           </div>
@@ -596,6 +663,98 @@ export default function PatientPortalClient({ token, recentSessions, scheduledSe
           </div>
         </section>
       )}
+
+      {/* ── LOG MODAL ─────────────────────────────────────── */}
+      {logState && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-end sm:items-center justify-center p-4">
+          <div className="bg-bg-secondary border-[0.5px] border-border rounded-xl w-full max-w-[400px] p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-[16px] font-medium text-text-primary">Reportar ejercicio</h3>
+              <button onClick={() => setLogState(null)} className="text-text-secondary hover:text-text-primary">✕</button>
+            </div>
+            <p className="text-[13px] text-text-secondary">{logState.ex.exercise_name}</p>
+            {logState.done ? (
+              <p className="text-[14px] text-accent text-center py-4">¡Registrado correctamente!</p>
+            ) : (
+              <>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-[12px] text-text-secondary uppercase tracking-[0.05em] block mb-1">RPE (esfuerzo percibido, 1–10)</label>
+                    <input type="number" min="1" max="10" value={logState.rpe} onChange={e => setLogState(s => s ? { ...s, rpe: e.target.value } : null)}
+                      className="w-full bg-bg-primary border-[0.5px] border-border rounded-lg px-3 py-2 text-[14px] text-text-primary outline-none focus:border-accent" placeholder="ej: 7" />
+                  </div>
+                  <div>
+                    <label className="text-[12px] text-text-secondary uppercase tracking-[0.05em] block mb-1">Dolor (EVA, 0–10)</label>
+                    <input type="number" min="0" max="10" value={logState.eva} onChange={e => setLogState(s => s ? { ...s, eva: e.target.value } : null)}
+                      className="w-full bg-bg-primary border-[0.5px] border-border rounded-lg px-3 py-2 text-[14px] text-text-primary outline-none focus:border-accent" placeholder="ej: 2" />
+                  </div>
+                  <div>
+                    <label className="text-[12px] text-text-secondary uppercase tracking-[0.05em] block mb-1">Notas (opcional)</label>
+                    <textarea value={logState.notes} onChange={e => setLogState(s => s ? { ...s, notes: e.target.value } : null)}
+                      className="w-full bg-bg-primary border-[0.5px] border-border rounded-lg px-3 py-2 text-[14px] text-text-primary outline-none focus:border-accent min-h-[60px] resize-none" maxLength={300} />
+                  </div>
+                  {logState.error && <p className="text-[13px] text-warning">{logState.error}</p>}
+                </div>
+                <button onClick={submitLog} disabled={logState.loading}
+                  className="w-full bg-accent text-bg-primary py-2.5 rounded-lg text-[14px] font-medium hover:opacity-90 disabled:opacity-50">
+                  {logState.loading ? 'Guardando...' : 'Guardar reporte'}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function SessionExercisesInline({
+  session, onLog,
+}: {
+  session: ScheduledItem
+  onLog: (ex: SessionExercise, shareToken: string, sessionId: string, scheduledDate: string) => void
+}) {
+  const blocks = (session.session_data?.blocks ?? []).filter(b => b.exercises.length > 0)
+  const shareToken = session.exercise_plans?.[0]?.share_token ?? null
+
+  if (blocks.length === 0) {
+    return <p className="text-[13px] text-text-secondary px-3 py-3">Esta sesión no tiene ejercicios asignados.</p>
+  }
+
+  return (
+    <div className="mt-2 space-y-3">
+      {blocks.map(block => (
+        <div key={block.id} className="bg-bg-primary border-[0.5px] border-border rounded-xl overflow-hidden">
+          <div className="px-4 py-2.5 bg-bg-secondary border-b-[0.5px] border-border">
+            <span className="text-[12px] font-medium text-text-primary uppercase tracking-[0.05em]">{block.name}</span>
+          </div>
+          <div className="divide-y-[0.5px] divide-border">
+            {block.exercises.map(ex => (
+              <div key={ex.id} className="p-4">
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {ex.group && (
+                      <span className="text-[11px] font-mono font-medium bg-accent/10 border-[0.5px] border-accent/40 text-accent rounded px-1.5 py-0.5">{ex.group}</span>
+                    )}
+                    <span className="text-[14px] font-medium text-text-primary">{ex.exercise_name}</span>
+                  </div>
+                  {shareToken && (
+                    <button onClick={() => onLog(ex, shareToken, session.id, session.scheduled_date)}
+                      className="shrink-0 px-2.5 py-1.5 rounded-lg border-[0.5px] border-border bg-bg-secondary hover:border-accent hover:text-accent text-text-secondary text-[12px] font-medium transition-colors">
+                      Reportar
+                    </button>
+                  )}
+                </div>
+                <div className="grid grid-cols-3 gap-x-4 gap-y-1.5">
+                  <div><div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-0.5">Series × Reps</div><div className="text-[13px] font-medium text-accent">{ex.sets || '-'} × {ex.reps || '-'}</div></div>
+                  <div><div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-0.5">Carga</div><div className="text-[13px] font-medium">{ex.load || '-'}</div></div>
+                  <div><div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-0.5">Descanso</div><div className="text-[13px] font-medium">{ex.rest || '-'}</div></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
