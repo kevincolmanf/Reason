@@ -327,7 +327,7 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
 
   // ─── Plan info ─────────────────────────────────────────────────────────────
 
-  const updatePlanInfo = (field: 'name' | 'notes' | 'start_date', value: string) => {
+  const updatePlanInfo = (field: 'notes' | 'start_date', value: string) => {
     setPlan(prev => ({ ...prev, [field]: value }))
   }
 
@@ -564,7 +564,8 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
     const doc = new jsPDF()
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(16)
-    doc.text(plan.name || 'Plan de Ejercicio', 20, 20)
+    const patientName = patients.find(p => p.id === plan.patient_id)?.name ?? 'Plan de Ejercicio'
+    doc.text(patientName, 20, 20)
 
     doc.setFontSize(10)
     doc.setFont('helvetica', 'normal')
@@ -644,7 +645,8 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
     doc.setTextColor(150)
     doc.text('Documento generado con Reason — reason.com.ar', 20, 285)
 
-    doc.save(`Plan_${plan.name.replace(/\s+/g, '_')}.pdf`)
+    const pdfPatientName = patients.find(p => p.id === plan.patient_id)?.name ?? 'Plan'
+    doc.save(`Plan_${pdfPatientName.replace(/\s+/g, '_')}.pdf`)
   }
 
   // ─── Calendar helpers ──────────────────────────────────────────────────────
@@ -676,13 +678,9 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
       <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 mb-8 flex flex-col md:flex-row gap-6">
         <div className="flex-grow space-y-4">
           <div>
-            <input
-              type="text"
-              value={plan.name}
-              onChange={(e) => updatePlanInfo('name', e.target.value)}
-              placeholder="Nombre del Plan"
-              className="w-full bg-transparent text-[24px] font-medium tracking-[-0.01em] focus:outline-none focus:border-b border-accent pb-1"
-            />
+            <p className="text-[24px] font-medium tracking-[-0.01em] text-text-primary">
+              {patients.find(p => p.id === plan.patient_id)?.name ?? 'Sin paciente asignado'}
+            </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="w-full sm:w-[200px]">

@@ -54,14 +54,11 @@ export default function PlanList({ userId, patientId }: { userId: string; patien
   }, [fetchPlans])
 
   const handleCreatePlan = async () => {
-    const name = prompt('Nombre del nuevo plan (ej: Plan Rodilla Post-quirúrgico):')
-    if (!name) return
-
     const { data, error } = await supabaseRef.current
       .from('exercise_plans')
       .insert({
         user_id: userId,
-        name,
+        name: 'Plan de ejercicios',
         plan_data: initialPlanData,
         ...(patientId ? { patient_id: patientId } : {}),
       })
@@ -103,13 +100,11 @@ export default function PlanList({ userId, patientId }: { userId: string; patien
       return
     }
 
-    const newName = `${plan.name} (Copia)`
-    
     const { data, error } = await supabaseRef.current
       .from('exercise_plans')
       .insert({
         user_id: userId,
-        name: newName,
+        name: 'Plan de ejercicios',
         plan_data: fullPlan.plan_data,
         notes: fullPlan.notes,
         // No copiamos el share_token
@@ -151,7 +146,9 @@ export default function PlanList({ userId, patientId }: { userId: string; patien
             <Link key={plan.id} href={`/dashboard/ejercicios/plan/${plan.id}`} className="block no-underline">
               <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 hover:bg-bg-secondary transition-colors h-full flex flex-col group">
                 <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-[18px] font-medium text-text-primary leading-[1.3] pr-4">{plan.name}</h3>
+                  <h3 className="text-[18px] font-medium text-text-primary leading-[1.3] pr-4">
+                    {plan.patients?.name ?? 'Sin paciente asignado'}
+                  </h3>
                   {plan.share_token && (
                     <span title="Compartido con paciente" className="text-accent flex-shrink-0">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -160,10 +157,6 @@ export default function PlanList({ userId, patientId }: { userId: string; patien
                     </span>
                   )}
                 </div>
-                
-                {plan.patients && (
-                  <p className="text-[12px] text-accent mb-1">{plan.patients.name}</p>
-                )}
                 <p className="text-[12px] text-text-secondary mb-6">
                   Modificado: {new Date(plan.updated_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}
                 </p>
