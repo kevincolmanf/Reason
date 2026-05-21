@@ -47,7 +47,7 @@ export default async function DashboardPage() {
     getActiveContext(user.id, supabase),
     supabase
       .from('scheduled_sessions')
-      .select('patient_id, scheduled_date, patients!inner(name)')
+      .select('patient_id, scheduled_date')
       .eq('user_id', user.id)
       .eq('completed', false)
       .gte('scheduled_date', todayStr),
@@ -95,17 +95,29 @@ export default async function DashboardPage() {
   const showTrialBanner = role === 'free'
 
   // Find patients whose last scheduled session is today or tomorrow
-  const patientLastDate = new Map<string, { name: string; lastDate: string }>()
+  const patientLastDate = new Map<string, string>()
   for (const s of upcomingSessions || []) {
-    const patientData = s.patients as unknown as { name: string }
     const existing = patientLastDate.get(s.patient_id)
-    if (!existing || s.scheduled_date > existing.lastDate) {
-      patientLastDate.set(s.patient_id, { name: patientData.name, lastDate: s.scheduled_date })
+    if (!existing || s.scheduled_date > existing) {
+      patientLastDate.set(s.patient_id, s.scheduled_date)
     }
   }
-  const planningAlerts = Array.from(patientLastDate.entries())
-    .filter(([, { lastDate }]) => lastDate <= tomorrowStr)
-    .map(([id, { name, lastDate }]) => ({ id, name, lastDate }))
+  const alertPatientIds = Array.from(patientLastDate.entries())
+    .filter(([, lastDate]) => lastDate <= tomorrowStr)
+    .map(([id]) => id)
+
+  let planningAlerts: { id: string; name: string; lastDate: string }[] = []
+  if (alertPatientIds.length > 0) {
+    const { data: alertPatients } = await supabase
+      .from('patients')
+      .select('id, name')
+      .in('id', alertPatientIds)
+    planningAlerts = (alertPatients ?? []).map(p => ({
+      id: p.id,
+      name: p.name,
+      lastDate: patientLastDate.get(p.id)!,
+    }))
+  }
 
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
