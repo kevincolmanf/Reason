@@ -566,9 +566,11 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
                 {validPlanData ? (
                   <PatientPlanViewer
                     key={jumpKey}
-                    planData={validPlanData}
+                    daySessions={[]}
+                    legacyPlanData={validPlanData}
+                    legacyActiveWeek={0}
+                    legacyStartDate={activePlan?.start_date ?? null}
                     token={token}
-                    initialSessionIdx={jumpSessionIdx}
                   />
                 ) : (
                   <div className="text-center py-8 text-text-secondary text-[13px] border-[0.5px] border-dashed border-border rounded-xl">
