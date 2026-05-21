@@ -32,13 +32,25 @@ interface PlanSession {
   blocks: PlanBlock[]
 }
 
-export default function PatientPlanViewer({ planData, initialSessionIdx, initialWeek = 0 }: { planData: { sessions: PlanSession[] }, token: string, initialSessionIdx?: number, initialWeek?: number }) {
+export default function PatientPlanViewer({ planData, initialSessionIdx, initialWeek = 0, startDate }: { planData: { sessions: PlanSession[] }, token: string, initialSessionIdx?: number, initialWeek?: number, startDate?: string | null }) {
   const [activeSession, setActiveSession] = useState(() => {
     if (initialSessionIdx !== undefined) return initialSessionIdx
     const firstValid = planData.sessions.findIndex(s => s.blocks.some(b => b.exercises.length > 0))
     return firstValid !== -1 ? firstValid : 0
   })
   const [activeVideo, setActiveVideo] = useState<string | null>(null)
+
+  // Calcular rango de fechas de la semana activa
+  const weekLabel = (() => {
+    const weekNum = initialWeek + 1
+    if (!startDate) return `Semana ${weekNum}`
+    const start = new Date(startDate)
+    start.setDate(start.getDate() + initialWeek * 7)
+    const end = new Date(start)
+    end.setDate(end.getDate() + 6)
+    const fmt = (d: Date) => d.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })
+    return `Semana ${weekNum} · ${fmt(start)} – ${fmt(end)}`
+  })()
 
   const currentSession = planData.sessions[activeSession]
   const activeBlocks = currentSession?.blocks.filter(b => b.exercises.length > 0) || []
@@ -60,6 +72,19 @@ export default function PatientPlanViewer({ planData, initialSessionIdx, initial
 
   return (
     <div className="pb-4">
+
+      {/* INDICADOR DE SEMANA ACTIVA */}
+      <div className="mb-5 flex items-center gap-2">
+        <span className="inline-flex items-center gap-1.5 bg-accent/10 border-[0.5px] border-accent/30 text-accent rounded-full px-3 py-1 text-[12px] font-medium">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+          </svg>
+          {weekLabel}
+        </span>
+      </div>
 
       {/* NAVEGACIÓN SESIONES */}
       <div className="flex gap-2 overflow-x-auto mb-5 pb-1 hide-scrollbar">
