@@ -2,6 +2,8 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import PatientPlanViewer from './PatientPlanViewer'
 import { notFound } from 'next/navigation'
 
+export const dynamic = 'force-dynamic'
+
 export const metadata = {
   title: 'Tu Plan de Ejercicio | Reason',
 }
