@@ -38,7 +38,6 @@ interface LegacySession {
 // ─── Props ───────────────────────────────────────────────────────────────────
 
 interface Props {
-  planName: string
   daySessions: DaySession[]
   legacyPlanData: { sessions: LegacySession[] } | null
   legacyActiveWeek: number   // 0-based
@@ -219,13 +218,11 @@ interface LogState {
 
 function LogModal({
   state,
-  token,
   onClose,
   onChange,
   onSubmit,
 }: {
   state: LogState
-  token: string
   onClose: () => void
   onChange: (patch: Partial<LogState>) => void
   onSubmit: () => void
@@ -575,7 +572,6 @@ function NewSystemViewer({ daySessions, token }: { daySessions: DaySession[]; to
       {logState && (
         <LogModal
           state={logState}
-          token={token}
           onClose={() => setLogState(null)}
           onChange={patch => setLogState(prev => prev ? { ...prev, ...patch } : null)}
           onSubmit={handleLogSubmit}
@@ -862,7 +858,6 @@ function LegacyViewer({
 // ─── MAIN EXPORT ──────────────────────────────────────────────────────────────
 
 export default function PatientPlanViewer({
-  planName,
   daySessions,
   legacyPlanData,
   legacyActiveWeek,

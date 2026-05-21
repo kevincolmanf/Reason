@@ -97,7 +97,6 @@ export default async function PlanPacientePage({ params }: { params: { token: st
         )}
 
         <PatientPlanViewer
-          planName={plan.name}
           daySessions={hasNewSessions ? (daySessions as DaySession[]) : []}
           legacyPlanData={!hasNewSessions ? plan.plan_data : null}
           legacyActiveWeek={!hasNewSessions ? Math.max(0, Math.min(3, (plan.active_week ?? 1) - 1)) : 0}
