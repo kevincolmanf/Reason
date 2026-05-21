@@ -16,15 +16,15 @@ function extractFallbackBlocks(planData: any) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   for (const session of planData.sessions as any[]) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    for (const block of session.blocks ?? [] as any[]) {
+    for (const block of (session.blocks ?? []) as any[]) {
       if (!block.exercises?.length) continue
       if (!blockMap.has(block.id)) {
         blockMap.set(block.id, { id: block.id, name: block.name, exercises: [] })
       }
+      const mapped = blockMap.get(block.id)!
       for (const ex of block.exercises) {
-        const existing = blockMap.get(block.id)!
-        if (!existing.exercises.find((e: { id: string }) => e.id === ex.id)) {
-          existing.exercises.push(ex)
+        if (!mapped.exercises.find((e: { id: string }) => e.id === ex.id)) {
+          mapped.exercises.push(ex)
         }
       }
     }
@@ -52,42 +52,80 @@ export default async function PatientPortalPage({ params }: { params: { token: s
     .order('session_date', { ascending: false })
     .limit(30)
 
-  const { data: patientPlans } = await supabase
+  // ── Buscar sesiones por dos vías y mergear ─────────────────────────────────
+
+  // Vía 1: planes donde patient_id está seteado
+  const { data: plansByPatient } = await supabase
     .from('exercise_plans')
     .select('id, share_token, plan_data')
     .eq('patient_id', patient.id)
 
-  const planIds = patientPlans?.map(p => p.id) ?? []
+  // Vía 2: sesiones donde patient_id está seteado directamente
+  const { data: sessionsByPatientId } = await supabase
+    .from('scheduled_sessions')
+    .select('id, plan_id, session_id, session_name, scheduled_date, week, completed, session_data')
+    .eq('patient_id', patient.id)
+    .not('session_data', 'is', null)
+    .order('scheduled_date', { ascending: true })
+
+  // Vía 3: plans del kine asignados a este paciente que no estén en vía 1
+  //        (por si la sesión tiene plan_id correcto pero plan no tiene patient_id)
+  const extraPlanIds = (sessionsByPatientId ?? [])
+    .map(s => s.plan_id)
+    .filter(pid => !(plansByPatient ?? []).find(p => p.id === pid))
+  const uniqueExtraPlanIds = Array.from(new Set(extraPlanIds))
+
+  let extraPlans: typeof plansByPatient = []
+  if (uniqueExtraPlanIds.length > 0) {
+    const { data } = await supabase
+      .from('exercise_plans')
+      .select('id, share_token, plan_data')
+      .in('id', uniqueExtraPlanIds)
+    extraPlans = data ?? []
+  }
+
+  // Merge plans
+  const allPlans = [...(plansByPatient ?? []), ...(extraPlans ?? [])]
+  const allPlanIds = allPlans.map(p => p.id)
+
   const planShareTokenMap: Record<string, string | null> = {}
   const planFallbackBlocksMap: Record<string, ReturnType<typeof extractFallbackBlocks>> = {}
-  for (const p of patientPlans ?? []) {
+  for (const p of allPlans) {
     planShareTokenMap[p.id] = p.share_token
     planFallbackBlocksMap[p.id] = extractFallbackBlocks(p.plan_data)
   }
 
-  let scheduledSessions = null
-  if (planIds.length > 0) {
+  // Sesiones por plan_id (cubre planes con patient_id seteado)
+  let sessionsByPlanId: typeof sessionsByPatientId = []
+  if (allPlanIds.length > 0) {
     const { data } = await supabase
       .from('scheduled_sessions')
       .select('id, plan_id, session_id, session_name, scheduled_date, week, completed, session_data')
-      .in('plan_id', planIds)
+      .in('plan_id', allPlanIds)
       .not('session_data', 'is', null)
       .order('scheduled_date', { ascending: true })
-
-    scheduledSessions = (data ?? []).map(s => {
-      // Si session_data tiene ejercicios, usarlos; si no, usar plan_data como fallback
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const hasExercises = (s.session_data as any)?.blocks?.some((b: any) => b.exercises?.length > 0)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const sessionBlocks = (s.session_data as any)?.blocks ?? []
-      const blocks = hasExercises ? sessionBlocks : (planFallbackBlocksMap[s.plan_id] ?? [])
-      return {
-        ...s,
-        session_data: { blocks },
-        exercise_plans: [{ share_token: planShareTokenMap[s.plan_id] ?? null }],
-      }
-    })
+    sessionsByPlanId = data ?? []
   }
+
+  // Merge y dedup sesiones por id
+  const seenIds = new Set<string>()
+  const rawSessions = [...(sessionsByPlanId ?? []), ...(sessionsByPatientId ?? [])]
+    .filter(s => { if (seenIds.has(s.id)) return false; seenIds.add(s.id); return true })
+    .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date))
+
+  // Inyectar ejercicios (session_data o fallback desde plan_data) y share_token
+  const scheduledSessions = rawSessions.map(s => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const hasExercises = (s.session_data as any)?.blocks?.some((b: any) => b.exercises?.length > 0)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sessionBlocks = (s.session_data as any)?.blocks ?? []
+    const blocks = hasExercises ? sessionBlocks : (planFallbackBlocksMap[s.plan_id] ?? [])
+    return {
+      ...s,
+      session_data: { blocks },
+      exercise_plans: [{ share_token: planShareTokenMap[s.plan_id] ?? null }],
+    }
+  })
 
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
@@ -107,7 +145,7 @@ export default async function PatientPortalPage({ params }: { params: { token: s
           patient={patient}
           token={params.token}
           recentSessions={recentSessions ?? []}
-          scheduledSessions={scheduledSessions ?? []}
+          scheduledSessions={scheduledSessions}
         />
       </main>
     </div>
