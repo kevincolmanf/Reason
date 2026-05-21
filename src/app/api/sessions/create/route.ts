@@ -20,19 +20,15 @@ export async function POST(request: Request) {
 
     const admin = createAdminClient()
 
-    // Verificar que el plan pertenece al usuario (o puede verlo via org)
-    const { data: plan, error: planError } = await admin
+    // Verificar acceso usando el cliente del usuario (respeta RLS de exercise_plans)
+    const { data: plan, error: planError } = await userSupabase
       .from('exercise_plans')
       .select('id, user_id, patient_id, name')
       .eq('id', plan_id)
       .single()
 
     if (planError || !plan) {
-      return NextResponse.json({ error: 'Plan no encontrado' }, { status: 404 })
-    }
-
-    if (plan.user_id !== user.id) {
-      return NextResponse.json({ error: 'Sin permiso' }, { status: 403 })
+      return NextResponse.json({ error: 'Plan no encontrado o sin acceso' }, { status: 404 })
     }
 
     // Insertar sesión con admin client (bypasea RLS)
