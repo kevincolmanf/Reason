@@ -369,6 +369,7 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
         scheduled_date: dateStr,
         session_name: 'Nueva sesión',
         session_data: { blocks: [] },
+        session_id: uuidv4(),
         week: 1,
       })
       .select('id, scheduled_date, session_name, session_data, completed')
