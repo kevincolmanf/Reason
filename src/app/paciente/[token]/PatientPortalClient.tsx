@@ -166,7 +166,7 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
   }, [router])
   const [jumpKey, setJumpKey] = useState(0)
 
-  const navigateToPlanSession = (planIdx: number, sessionId: string) => {
+  const navigateToPlanSession = (planIdx: number) => {
     const plan = plans[planIdx]
     if (!plan?.plan_data) return
     const d = plan.plan_data as Record<string, unknown>
@@ -320,7 +320,7 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
           <button
             onClick={() => {
               const planIdx = plans.findIndex(p => p.id === featuredSession.plan_id)
-              if (planIdx !== -1) navigateToPlanSession(planIdx, featuredSession.session_id)
+              if (planIdx !== -1) navigateToPlanSession(planIdx)
             }}
             className="w-full text-left bg-accent/10 border-[0.5px] border-accent/40 rounded-2xl p-5 hover:bg-accent/15 transition-colors"
           >
@@ -474,7 +474,7 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
                                 key={s.id}
                                 onClick={() => {
                                   const planIdx = plans.findIndex(p => p.id === s.plan_id)
-                                  if (planIdx !== -1) navigateToPlanSession(planIdx, s.session_id)
+                                  if (planIdx !== -1) navigateToPlanSession(planIdx)
                                 }}
                                 className={`w-full text-left flex items-center gap-3 rounded-lg px-3 py-2.5 border-[0.5px] transition-colors ${
                                   s.completed
