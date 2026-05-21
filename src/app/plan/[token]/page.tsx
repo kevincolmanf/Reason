@@ -72,7 +72,7 @@ export default async function PlanPacientePage({ params }: { params: { token: st
           )}
         </div>
 
-        <PatientPlanViewer planData={plan.plan_data} token={params.token} initialWeek={initialWeek} />
+        <PatientPlanViewer planData={plan.plan_data} token={params.token} initialWeek={initialWeek} startDate={plan.start_date} />
       </main>
     </div>
   )
