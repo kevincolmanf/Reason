@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import ContentCard from '@/components/ContentCard'
 import Header from '@/components/Header'
+import PlanningReminderBanner from '@/components/PlanningReminderBanner'
 import { getActiveContext } from '@/lib/context'
 
 function CategoryCard({ title, slug, desc }: { title: string, slug: string, desc: string }) {
@@ -24,7 +25,14 @@ export default async function DashboardPage() {
     redirect('/login')
   }
 
-  const [{ data: latestContents }, { data: userData }, ctx] = await Promise.all([
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const todayStr = today.toISOString().split('T')[0]
+  const tomorrow = new Date(today)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  const tomorrowStr = tomorrow.toISOString().split('T')[0]
+
+  const [{ data: latestContents }, { data: userData }, ctx, { data: upcomingSessions }] = await Promise.all([
     supabase
       .from('content')
       .select('id, title, subtitle, slug, category, tiempo_lectura_min, body_que_saber')
@@ -37,6 +45,12 @@ export default async function DashboardPage() {
       .eq('id', user.id)
       .single(),
     getActiveContext(user.id, supabase),
+    supabase
+      .from('scheduled_sessions')
+      .select('patient_id, scheduled_date, patients!inner(name)')
+      .eq('user_id', user.id)
+      .eq('completed', false)
+      .gte('scheduled_date', todayStr),
   ])
 
   const contextOrgId: string | null = ctx.type === 'org' ? ctx.orgId : null
@@ -80,6 +94,19 @@ export default async function DashboardPage() {
   const inTrial = daysLeft > 0
   const showTrialBanner = role === 'free'
 
+  // Find patients whose last scheduled session is today or tomorrow
+  const patientLastDate = new Map<string, { name: string; lastDate: string }>()
+  for (const s of upcomingSessions || []) {
+    const patientData = s.patients as unknown as { name: string }
+    const existing = patientLastDate.get(s.patient_id)
+    if (!existing || s.scheduled_date > existing.lastDate) {
+      patientLastDate.set(s.patient_id, { name: patientData.name, lastDate: s.scheduled_date })
+    }
+  }
+  const planningAlerts = Array.from(patientLastDate.entries())
+    .filter(([, { lastDate }]) => lastDate <= tomorrowStr)
+    .map(([id, { name, lastDate }]) => ({ id, name, lastDate }))
+
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
       {/* HEADER */}
@@ -97,7 +124,7 @@ export default async function DashboardPage() {
         </div>
 
         {showTrialBanner && (
-          <div className={`flex items-center justify-between gap-4 rounded-xl border-[0.5px] px-5 py-4 mb-10 ${
+          <div className={`flex items-center justify-between gap-4 rounded-xl border-[0.5px] px-5 py-4 mb-6 ${
             inTrial
               ? 'bg-amber-500/10 border-amber-500/30'
               : 'bg-bg-secondary border-border'
@@ -131,6 +158,8 @@ export default async function DashboardPage() {
             </Link>
           </div>
         )}
+
+        <PlanningReminderBanner patients={planningAlerts} />
 
         {/* PACIENTES — contexto activo */}
         <section className="mb-16">
@@ -213,6 +242,16 @@ export default async function DashboardPage() {
               title="Aplicaciones Clínicas"
               slug="aplicacion_clinica"
               desc="De la teoría a la práctica"
+            />
+            <CategoryCard
+              title="Protocolos"
+              slug="protocolo"
+              desc="Pasos claros para actuar"
+            />
+            <CategoryCard
+              title="Casos Reales"
+              slug="caso_real"
+              desc="Experiencia de consultorio"
             />
           </div>
         </section>
