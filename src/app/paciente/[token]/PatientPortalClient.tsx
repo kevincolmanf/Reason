@@ -328,7 +328,7 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
               {featuredSession.scheduled_date === todayStr() ? 'Para hoy' : `Próxima sesión · ${formatScheduledDate(featuredSession.scheduled_date)}`}
             </div>
             <div className="text-[20px] font-medium text-text-primary tracking-[-0.01em] mb-1">{featuredSession.session_name}</div>
-            <div className="text-[13px] text-text-secondary mb-4">{featuredSession.plan_name} · Semana {featuredSession.week}</div>
+            <div className="text-[13px] text-text-secondary mb-4">{formatScheduledDate(featuredSession.scheduled_date)}</div>
             <div className="flex items-center gap-1.5 text-[13px] font-medium text-accent">
               Ir a los ejercicios
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -493,7 +493,6 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
                                   <div className={`text-[13px] font-medium ${s.completed ? 'line-through text-text-secondary' : 'text-text-primary'}`}>
                                     {s.session_name}
                                   </div>
-                                  <div className="text-[11px] text-text-secondary">{s.plan_name} · Sem. {s.week}</div>
                                 </div>
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-text-secondary shrink-0">
                                   <line x1="5" y1="12" x2="19" y2="12" />
