@@ -13,9 +13,6 @@ interface LoadSession {
   vas_pre: number | null
   vas_during: number | null
   vas_post: number | null
-  sleep_quality: number | null
-  energy: number | null
-  stress: number | null
   notes: string | null
   source: string
 }
@@ -202,90 +199,6 @@ export default function LoadMonitorClient({
     return { acute, chronic, acwr, validAcwr, sessionsThisWeek: sessionsThisWeek.length, avgVasPost, monotony, strain }
   }, [sessions, today])
 
-  // ─── Consejo de carga ──────────────────────────────────────────────────────
-
-  const advice = useMemo(() => {
-    const sorted = [...sessions].sort((a, b) => b.session_date.localeCompare(a.session_date))
-    if (sorted.length < 3) return null
-
-    const last5 = sorted.slice(0, 5)
-    const vasLast5 = last5.filter(s => s.vas_post !== null)
-    const avgVas5 = vasLast5.length > 0
-      ? vasLast5.reduce((sum, s) => sum + (s.vas_post ?? 0), 0) / vasLast5.length
-      : null
-    const avgRpe5 = last5.reduce((sum, s) => sum + s.rpe, 0) / last5.length
-
-    // Consecutive high-pain sessions (VAS post > 50)
-    let consecutiveHighPain = 0
-    for (const s of sorted) {
-      if (s.vas_post !== null && s.vas_post > 50) consecutiveHighPain++
-      else break
-    }
-
-    const reasons: string[] = []
-    const alerts: string[] = []
-
-    // ACWR base
-    let action: 'bajar' | 'mantener' | 'subir' = 'mantener'
-    const { acwr, validAcwr } = metrics
-
-    if (!validAcwr) {
-      reasons.push('Historial insuficiente para calcular ACWR — se necesitan al menos 4 semanas de datos.')
-    } else if (acwr === null) {
-      reasons.push('Sin carga crónica registrada.')
-    } else if (acwr < 0.8) {
-      action = 'subir'
-      reasons.push(`ACWR ${acwr.toFixed(2)} — subcarga. El cuerpo está por debajo del estímulo óptimo.`)
-    } else if (acwr <= 1.3) {
-      action = 'mantener'
-      reasons.push(`ACWR ${acwr.toFixed(2)} — zona segura (0.8–1.3).`)
-    } else if (acwr <= 1.5) {
-      action = 'mantener'
-      reasons.push(`ACWR ${acwr.toFixed(2)} — zona de precaución. Evitar aumentos bruscos.`)
-    } else {
-      action = 'bajar'
-      reasons.push(`ACWR ${acwr.toFixed(2)} — zona de riesgo (> 1.5). Reducir carga 10–15%.`)
-    }
-
-    // Pain override
-    if (avgVas5 !== null) {
-      if (avgVas5 > 50) {
-        action = 'bajar'
-        reasons.push(`Dolor post-sesión promedio ${avgVas5.toFixed(0)}/100 (últimas 5 sesiones) — nivel elevado.`)
-      } else if (avgVas5 > 30) {
-        if (action === 'subir') action = 'mantener'
-        else if (action === 'mantener') action = 'bajar'
-        reasons.push(`Dolor post-sesión promedio ${avgVas5.toFixed(0)}/100 — moderado. Se baja un nivel de recomendación.`)
-      } else {
-        reasons.push(`Dolor post-sesión promedio ${avgVas5.toFixed(0)}/100 — bajo.`)
-      }
-    }
-
-    // Promote to subir if pain is low and acwr in safe zone
-    if (validAcwr && acwr !== null && acwr >= 0.8 && acwr <= 1.3 && (avgVas5 === null || avgVas5 <= 20) && avgRpe5 <= 7) {
-      action = 'subir'
-      reasons.push('Buena tolerancia: sin dolor y RPE controlado. Se puede progresar.')
-    }
-
-    // RPE
-    if (avgRpe5 > 8) {
-      if (action === 'subir') action = 'mantener'
-      alerts.push(`RPE promedio ${avgRpe5.toFixed(1)}/10 (últimas 5 sesiones) — esfuerzo muy alto sostenido.`)
-    } else if (avgRpe5 < 3 && action === 'subir') {
-      reasons.push(`RPE promedio ${avgRpe5.toFixed(1)}/10 — sesiones muy suaves, hay margen de progresión.`)
-    } else {
-      reasons.push(`RPE promedio ${avgRpe5.toFixed(1)}/10.`)
-    }
-
-    // Consecutive high pain alert
-    if (consecutiveHighPain >= 2) {
-      action = 'bajar'
-      alerts.push(`${consecutiveHighPain} sesiones consecutivas con dolor post > 50/100.`)
-    }
-
-    return { action, reasons, alerts }
-  }, [sessions, metrics])
-
   // ─── Weekly chart data — last 8 weeks ──────────────────────────────────────
 
   const weeklyData = useMemo(() => {
@@ -370,7 +283,7 @@ export default function LoadMonitorClient({
         notes: formNotes.trim() || null,
         source: 'clinician',
       })
-      .select('id, session_date, activity, duration_minutes, rpe, load_units, vas_pre, vas_during, vas_post, sleep_quality, energy, stress, notes, source')
+      .select('id, session_date, activity, duration_minutes, rpe, load_units, vas_pre, vas_during, vas_post, notes, source')
       .single()
 
     if (!error && data) {
@@ -402,49 +315,8 @@ export default function LoadMonitorClient({
       ? formRpe * (parseInt(formDuration) || 0)
       : null
 
-  const adviceConfig = {
-    bajar: { label: 'Bajar carga', sub: 'Reducir volumen o intensidad', bg: 'bg-red-500/10', border: 'border-red-500/30', text: 'text-red-400', icon: '↓' },
-    mantener: { label: 'Mantener carga', sub: 'Continuar la misma dosis', bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', text: 'text-yellow-400', icon: '→' },
-    subir: { label: 'Progresar carga', sub: 'Aumentar gradualmente', bg: 'bg-green-500/10', border: 'border-green-500/30', text: 'text-green-400', icon: '↑' },
-  }
-
   return (
     <div className="space-y-10">
-
-      {/* ── 0. Consejo de carga ────────────────────────────────────────────── */}
-      {advice ? (
-        <div className={`border-[0.5px] rounded-xl p-5 ${adviceConfig[advice.action].bg} ${adviceConfig[advice.action].border}`}>
-          <div className="flex items-start justify-between gap-4 mb-4">
-            <div>
-              <div className="text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Consejo para la próxima semana</div>
-              <div className={`text-[24px] font-medium ${adviceConfig[advice.action].text}`}>
-                {adviceConfig[advice.action].icon} {adviceConfig[advice.action].label}
-              </div>
-              <div className="text-[13px] text-text-secondary">{adviceConfig[advice.action].sub}</div>
-            </div>
-          </div>
-          <ul className="space-y-1.5 mb-3">
-            {advice.reasons.map((r, i) => (
-              <li key={i} className="text-[13px] text-text-primary flex gap-2">
-                <span className="text-text-secondary mt-0.5">·</span>{r}
-              </li>
-            ))}
-          </ul>
-          {advice.alerts.length > 0 && (
-            <div className="bg-warning/10 border-[0.5px] border-warning/30 rounded-lg px-4 py-3 space-y-1 mb-3">
-              {advice.alerts.map((a, i) => (
-                <p key={i} className="text-[13px] text-warning">⚠ {a}</p>
-              ))}
-            </div>
-          )}
-          <p className="text-[11px] text-text-secondary">Basado en ACWR, dolor y RPE de las últimas 5 sesiones. Siempre aplicar criterio clínico.</p>
-        </div>
-      ) : sessions.length > 0 ? (
-        <div className="bg-bg-secondary border-[0.5px] border-border rounded-xl p-5 text-[13px] text-text-secondary">
-          Se necesitan al menos 3 sesiones registradas para generar una recomendación de carga.
-        </div>
-      ) : null}
-
       {/* ── 1. KPIs ────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <KpiCard
@@ -730,63 +602,33 @@ export default function LoadMonitorClient({
           <p className="text-[13px] text-text-secondary">Sin sesiones registradas todavía.</p>
         ) : (
           <div className="space-y-2">
-            {/* Header — solo desktop */}
-            <div className="hidden sm:grid grid-cols-[100px_1fr_80px_60px_80px_80px_90px_60px] gap-3 px-3 py-1">
+            {/* Header */}
+            <div className="grid grid-cols-[100px_1fr_80px_60px_80px_80px_90px_60px] gap-3 px-3 py-1">
               {['Fecha', 'Actividad', 'Duración', 'RPE', 'Carga', 'VAS post', 'Origen', ''].map(h => (
                 <span key={h} className="text-[11px] uppercase tracking-[0.05em] text-text-secondary">{h}</span>
               ))}
             </div>
 
             {sessions.slice(0, 20).map(s => (
-              <div key={s.id} className="group border-[0.5px] border-border rounded-lg hover:bg-bg-secondary transition-colors">
-                {/* Mobile layout */}
-                <div className="sm:hidden px-4 py-3">
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <span className="text-[13px] text-text-primary truncate flex-1">{s.activity || '—'}</span>
-                    <span className="text-[12px] text-text-secondary shrink-0">{formatShortDate(s.session_date)}</span>
-                  </div>
-                  <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[12px] text-text-secondary">
-                    {s.duration_minutes && <span>{s.duration_minutes} min</span>}
-                    <span>RPE <span className="text-text-primary font-medium">{s.rpe}</span></span>
-                    <span><span className="text-text-primary font-medium">{s.load_units}</span> UA</span>
-                    {s.vas_post !== null && <span>VAS <span className={`font-medium ${vasColor(s.vas_post)}`}>{s.vas_post}</span></span>}
-                    <SourceBadge source={s.source} />
-                  </div>
-                  {(s.sleep_quality !== null || s.energy !== null || s.stress !== null) && (
-                    <div className="flex gap-x-3 mt-0.5 text-[11px] text-text-secondary">
-                      {s.sleep_quality !== null && <span>😴 <span className="font-medium text-text-primary">{s.sleep_quality}</span></span>}
-                      {s.energy !== null && <span>⚡ <span className="font-medium text-text-primary">{s.energy}</span></span>}
-                      {s.stress !== null && <span>🧠 <span className="font-medium text-text-primary">{s.stress}</span></span>}
-                    </div>
-                  )}
-                  <button onClick={() => handleDeleteSession(s.id)} className="text-text-secondary hover:text-warning text-[11px] mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    Eliminar
-                  </button>
-                </div>
-                {/* Desktop layout */}
-                <div className="hidden sm:block px-3 py-3">
-                  <div className="grid grid-cols-[100px_1fr_80px_60px_80px_80px_90px_60px] gap-3 items-center">
-                    <span className="text-[13px] text-text-primary">{formatShortDate(s.session_date)}</span>
-                    <span className="text-[13px] text-text-secondary truncate">{s.activity || '—'}</span>
-                    <span className="text-[13px] text-text-secondary">{s.duration_minutes} min</span>
-                    <span className="text-[13px] text-text-primary">{s.rpe}/10</span>
-                    <span className="text-[13px] text-text-primary">{s.load_units} UA</span>
-                    <span className={`text-[13px] ${s.vas_post !== null ? vasColor(s.vas_post) : 'text-text-secondary'}`}>
-                      {s.vas_post !== null ? s.vas_post : '—'}
-                    </span>
-                    <SourceBadge source={s.source} />
-                    <button onClick={() => handleDeleteSession(s.id)} className="text-text-secondary hover:text-warning text-[12px] opacity-0 group-hover:opacity-100 transition-opacity text-right">
-                      Eliminar
-                    </button>
-                  </div>
-                  {(s.sleep_quality !== null || s.energy !== null || s.stress !== null) && (
-                    <div className="flex gap-x-4 mt-1 text-[11px] text-text-secondary">
-                      {s.sleep_quality !== null && <span>😴 Sueño <span className="font-medium text-text-primary">{s.sleep_quality}/10</span></span>}
-                      {s.energy !== null && <span>⚡ Energía <span className="font-medium text-text-primary">{s.energy}/10</span></span>}
-                      {s.stress !== null && <span>🧠 Estrés <span className="font-medium text-text-primary">{s.stress}/10</span></span>}
-                    </div>
-                  )}
-                </div>
+              <div
+                key={s.id}
+                className="grid grid-cols-[100px_1fr_80px_60px_80px_80px_90px_60px] gap-3 items-center bg-bg-secondary rounded-lg px-3 py-3 hover:bg-bg-primary transition-colors group border-[0.5px] border-border"
+              >
+                <span className="text-[13px] text-text-primary">{formatShortDate(s.session_date)}</span>
+                <span className="text-[13px] text-text-secondary truncate">{s.activity || '—'}</span>
+                <span className="text-[13px] text-text-secondary">{s.duration_minutes} min</span>
+                <span className="text-[13px] text-text-primary">{s.rpe}/10</span>
+                <span className="text-[13px] text-text-primary">{s.load_units} UA</span>
+                <span className={`text-[13px] ${s.vas_post !== null ? vasColor(s.vas_post) : 'text-text-secondary'}`}>
+                  {s.vas_post !== null ? s.vas_post : '—'}
+                </span>
+                <SourceBadge source={s.source} />
+                <button
+                  onClick={() => handleDeleteSession(s.id)}
+                  className="text-text-secondary hover:text-warning text-[12px] opacity-0 group-hover:opacity-100 transition-opacity text-right"
+                >
+                  Eliminar
+                </button>
               </div>
             ))}
           </div>

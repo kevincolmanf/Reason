@@ -16,7 +16,7 @@ interface ExercisePlan {
 }
 
 const initialPlanData = {
-  sessions: [1, 2, 3, 4, 5, 6, 7].map(s => ({
+  sessions: [1, 2, 3, 4].map(s => ({
     id: `session_${s}`,
     name: `Sesión ${s}`,
     blocks: [
@@ -27,7 +27,7 @@ const initialPlanData = {
   }))
 }
 
-export default function PlanList({ userId, patientId }: { userId: string; patientId: string | null }) {
+export default function PlanList({ userId }: { userId: string }) {
   const [plans, setPlans] = useState<ExercisePlan[]>([])
   const [loading, setLoading] = useState(true)
   const router = useRouter()
@@ -35,17 +35,16 @@ export default function PlanList({ userId, patientId }: { userId: string; patien
 
   const fetchPlans = useCallback(async () => {
     setLoading(true)
-    let query = supabase
+    const { data, error } = await supabase
       .from('exercise_plans')
       .select('id, name, updated_at, share_token, patient_id, patients(name)')
       .order('updated_at', { ascending: false })
 
-    if (patientId) query = query.eq('patient_id', patientId)
-
-    const { data, error } = await query
-    if (!error && data) setPlans(data)
+    if (!error && data) {
+      setPlans(data)
+    }
     setLoading(false)
-  }, [supabase, patientId])
+  }, [supabase])
 
   useEffect(() => {
     fetchPlans()
@@ -60,8 +59,7 @@ export default function PlanList({ userId, patientId }: { userId: string; patien
       .insert({
         user_id: userId,
         name,
-        plan_data: initialPlanData,
-        ...(patientId ? { patient_id: patientId } : {}),
+        plan_data: initialPlanData
       })
       .select()
       .single()
@@ -129,7 +127,7 @@ export default function PlanList({ userId, patientId }: { userId: string; patien
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-[20px] font-medium">{patientId ? 'Planes asignados' : 'Tus Planes Guardados'}</h2>
+        <h2 className="text-[20px] font-medium">Tus Planes Guardados</h2>
         <button 
           onClick={handleCreatePlan}
           className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity"
@@ -140,7 +138,7 @@ export default function PlanList({ userId, patientId }: { userId: string; patien
 
       {plans.length === 0 ? (
         <div className="text-center py-16 text-text-secondary bg-bg-secondary rounded-xl border-[0.5px] border-border">
-          <p className="text-[16px] mb-2">{patientId ? 'Este paciente no tiene planes asignados' : 'Aún no creaste ningún plan'}</p>
+          <p className="text-[16px] mb-2">Aún no creaste ningún plan</p>
           <p className="text-[14px]">Hacé clic en Crear Nuevo Plan para empezar.</p>
         </div>
       ) : (

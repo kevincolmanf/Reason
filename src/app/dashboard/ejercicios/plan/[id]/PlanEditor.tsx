@@ -52,7 +52,6 @@ interface ExercisePlan {
 
 interface ActivityLog {
   id: string
-  exercise_id: string
   exercise_name: string
   session_id: string
   week: number
@@ -60,26 +59,6 @@ interface ActivityLog {
   eva: number
   notes: string | null
   logged_at: string
-}
-
-type TrafficLight = 'green' | 'yellow' | 'red'
-
-function getTrafficLight(rpe: number, eva: number): TrafficLight {
-  if (rpe >= 8 || eva >= 7) return 'red'
-  if (rpe >= 6 || eva >= 4) return 'yellow'
-  return 'green'
-}
-
-const TRAFFIC_COLORS: Record<TrafficLight, string> = {
-  green:  'bg-green-500',
-  yellow: 'bg-yellow-400',
-  red:    'bg-red-500',
-}
-
-const TRAFFIC_LABELS: Record<TrafficLight, string> = {
-  green:  'Bien tolerado',
-  yellow: 'Esfuerzo moderado-alto',
-  red:    'Esfuerzo muy alto o dolor',
 }
 
 const CATEGORIES = [
@@ -102,12 +81,6 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [targetBlock, setTargetBlock] = useState<{sessionIdx: number, blockIdx: number} | null>(null)
 
-  // Schedule modal state
-  const [scheduleModal, setScheduleModal] = useState<{sessionId: string, sessionName: string} | null>(null)
-  const [scheduleDate, setScheduleDate] = useState('')
-  const [scheduleSaving, setScheduleSaving] = useState(false)
-  const [scheduleSuccess, setScheduleSuccess] = useState(false)
-
   // Search state
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [searchResults, setSearchResults] = useState<any[]>([])
@@ -118,20 +91,10 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
   // Patients state
   const [patients, setPatients] = useState<{id: string, name: string}[]>([])
 
-  // Create exercise state
-  const [showCreateForm, setShowCreateForm] = useState(false)
-  const [createName, setCreateName] = useState('')
-  const [createUrl, setCreateUrl] = useState('')
-  const [creating, setCreating] = useState(false)
-
   // Logs state
   const [logs, setLogs] = useState<ActivityLog[]>([])
   const [logsLoading, setLogsLoading] = useState(false)
   const [logsGroupBy, setLogsGroupBy] = useState<'exercise' | 'date'>('date')
-
-  // Semáforo: último log por exercise_id
-  const [latestByExercise, setLatestByExercise] = useState<Record<string, ActivityLog>>({})
-  const [hoveredExSignal, setHoveredExSignal] = useState<string | null>(null)
   
   const supabase = createClient()
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -144,28 +107,6 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
     }
     fetchPatients()
   }, [supabase])
-
-  // Cargar últimos logs por ejercicio para semáforo
-  useEffect(() => {
-    const fetchLatestLogs = async () => {
-      const { data } = await supabase
-        .from('plan_activity_logs')
-        .select('id, exercise_id, exercise_name, session_id, week, rpe, eva, notes, logged_at')
-        .eq('plan_id', plan.id)
-        .order('logged_at', { ascending: false })
-      if (data) {
-        const latest: Record<string, ActivityLog> = {}
-        for (const log of data) {
-          if (log.exercise_id && !latest[log.exercise_id]) {
-            latest[log.exercise_id] = log
-          }
-        }
-        setLatestByExercise(latest)
-      }
-    }
-    fetchLatestLogs()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [plan.id])
 
   // Autoguardado
   useEffect(() => {
@@ -274,23 +215,6 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
     setIsSearchOpen(true)
     setSearchQuery('')
     setSearchCategory('')
-    setShowCreateForm(false)
-    setCreateName('')
-    setCreateUrl('')
-  }
-
-  const handleCreateExercise = async () => {
-    if (!createName.trim()) return
-    setCreating(true)
-    const { data, error } = await supabase
-      .from('user_exercises')
-      .insert({ user_id: userId, name: createName.trim(), youtube_url: createUrl.trim() || null })
-      .select()
-      .single()
-    if (!error && data) {
-      addExerciseToBlock({ id: data.id, name: data.name, youtube_url: data.youtube_url, category: 'mis_ejercicios' })
-    }
-    setCreating(false)
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -320,34 +244,6 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
     setPlan(newPlan)
     setIsSearchOpen(false)
     setTargetBlock(null)
-  }
-
-  const calcWeek = (scheduledDate: string): number => {
-    if (!plan.start_date) return 1
-    const start = new Date(plan.start_date + 'T00:00:00')
-    const scheduled = new Date(scheduledDate + 'T00:00:00')
-    const diffDays = Math.floor((scheduled.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
-    if (diffDays < 0) return 1
-    return Math.min(Math.floor(diffDays / 7) + 1, 4)
-  }
-
-  const handleScheduleSession = async () => {
-    if (!scheduleModal || !scheduleDate || !plan.patient_id) return
-    setScheduleSaving(true)
-    const week = calcWeek(scheduleDate)
-    await supabase.from('scheduled_sessions').insert({
-      user_id: userId,
-      patient_id: plan.patient_id,
-      plan_id: plan.id,
-      session_id: scheduleModal.sessionId,
-      session_name: scheduleModal.sessionName,
-      plan_name: plan.name,
-      scheduled_date: scheduleDate,
-      week,
-    })
-    setScheduleSaving(false)
-    setScheduleSuccess(true)
-    setTimeout(() => { setScheduleModal(null); setScheduleSuccess(false) }, 1200)
   }
 
   const handleExportPDF = async () => {
@@ -548,27 +444,13 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
       {/* CONTENIDO DE SESION */}
       {typeof activeSession === 'number' && currentSession && (
         <div className="bg-bg-primary border-[0.5px] border-border rounded-b-xl rounded-tl-xl p-6 min-h-[500px]">
-          <div className="mb-8 flex items-center gap-4">
-            <input
-              type="text"
+          <div className="mb-8">
+            <input 
+              type="text" 
               value={currentSession.name}
               onChange={(e) => updateSessionName(activeSession, e.target.value)}
-              className="bg-transparent text-[20px] font-medium tracking-[-0.01em] text-accent focus:outline-none focus:border-b-[0.5px] border-accent flex-1"
+              className="bg-transparent text-[20px] font-medium tracking-[-0.01em] text-accent focus:outline-none focus:border-b-[0.5px] border-accent"
             />
-            {plan.patient_id && (
-              <button
-                onClick={() => {
-                  setScheduleDate(new Date().toISOString().split('T')[0])
-                  setScheduleSuccess(false)
-                  setScheduleModal({ sessionId: currentSession.id, sessionName: currentSession.name })
-                }}
-                className="shrink-0 bg-bg-secondary border-[0.5px] border-border text-text-secondary px-3 py-1.5 rounded-lg text-[12px] hover:text-accent hover:border-accent transition-colors flex items-center gap-1.5"
-                title="Programar esta sesión en el calendario"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                Programar
-              </button>
-            )}
           </div>
 
           <div className="space-y-12">
@@ -593,73 +475,62 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
                     {block.exercises.map((ex, exIdx) => (
                       <div key={ex.id} className="bg-bg-secondary border-[0.5px] border-border rounded-xl p-4">
                         <div className="flex justify-between items-start mb-4">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <h4 className="text-[15px] font-medium text-text-primary">{ex.exercise_name}</h4>
-                              {latestByExercise[ex.id] && (() => {
-                                const log = latestByExercise[ex.id]
-                                const signal = getTrafficLight(log.rpe, log.eva)
-                                const isHovered = hoveredExSignal === ex.id
-                                return (
-                                  <div className="relative">
-                                    <button
-                                      onMouseEnter={() => setHoveredExSignal(ex.id)}
-                                      onMouseLeave={() => setHoveredExSignal(null)}
-                                      onClick={() => setHoveredExSignal(isHovered ? null : ex.id)}
-                                      className="flex items-center gap-1.5 focus:outline-none"
-                                    >
-                                      <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${TRAFFIC_COLORS[signal]}`} />
-                                    </button>
-                                    {isHovered && (
-                                      <div className="absolute left-0 top-5 z-20 bg-bg-primary border-[0.5px] border-border rounded-xl shadow-lg p-3 w-[200px]">
-                                        <div className="text-[12px] font-medium text-text-primary mb-1">{TRAFFIC_LABELS[signal]}</div>
-                                        <div className="text-[11px] text-text-secondary space-y-0.5">
-                                          <div>RPE <span className="font-medium text-text-primary">{log.rpe}</span> · EVA <span className="font-medium text-text-primary">{log.eva}</span></div>
-                                          <div>{new Date(log.logged_at).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}</div>
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                )
-                              })()}
-                            </div>
+                          <div>
+                            <h4 className="text-[15px] font-medium text-text-primary">{ex.exercise_name}</h4>
                             {ex.youtube_url && (
                               <a href={ex.youtube_url} target="_blank" rel="noreferrer" className="text-[12px] text-accent hover:underline mt-1 inline-block">
                                 Ver video original
                               </a>
                             )}
                           </div>
-                          <button
+                          <button 
                             onClick={() => removeExercise(activeSession, bIdx, exIdx)}
-                            className="text-text-secondary hover:text-warning text-[18px] p-1 shrink-0"
+                            className="text-text-secondary hover:text-warning text-[18px] p-1"
                             title="Eliminar ejercicio"
                           >×</button>
                         </div>
 
-                        {/* PRESCRIPCIÓN */}
-                        {ex.weeks[0] && (
-                          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                            {[
-                              { field: 'sets' as const, label: 'Series' },
-                              { field: 'reps' as const, label: 'Reps' },
-                              { field: 'load' as const, label: 'Carga', placeholder: 'ej: 20kg' },
-                              { field: 'rest' as const, label: 'Pausa', placeholder: 'ej: 90s' },
-                              { field: 'rpe'  as const, label: 'RPE obj.' },
-                              { field: 'eav'  as const, label: 'EAV obj.' },
-                            ].map(({ field, label, placeholder }) => (
-                              <div key={field}>
-                                <label className="block text-[10px] uppercase tracking-[0.05em] text-text-secondary mb-1">{label}</label>
-                                <input
-                                  type="text"
-                                  value={ex.weeks[0][field]}
-                                  onChange={e => updateWeekData(activeSession, bIdx, exIdx, 0, field, e.target.value)}
-                                  placeholder={placeholder ?? ''}
-                                  className="w-full bg-bg-primary border-[0.5px] border-border rounded-lg px-2 py-1.5 text-[13px] focus:border-accent outline-none"
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                        {/* TABLA DE SEMANAS EN DESKTOP, STACK EN MOBILE */}
+                        <div className="overflow-x-auto">
+                          <table className="w-full min-w-[700px] text-left border-collapse">
+                            <thead>
+                              <tr className="text-[11px] uppercase tracking-[0.05em] text-text-secondary border-b-[0.5px] border-border">
+                                <th className="pb-2 w-[80px]">Semana</th>
+                                <th className="pb-2 w-[80px]">Series</th>
+                                <th className="pb-2 w-[80px]">Reps</th>
+                                <th className="pb-2 w-[120px]">Carga</th>
+                                <th className="pb-2 w-[120px]">Pausa</th>
+                                <th className="pb-2 w-[80px]" title="Rating of Perceived Exertion (1-10)">RPE</th>
+                                <th className="pb-2 w-[80px]" title="Escala Visual Analógica de dolor (1-10)">EAV</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {ex.weeks.map((w, wIdx) => (
+                                <tr key={w.week} className="border-b-[0.5px] border-border/30 last:border-0">
+                                  <td className="py-2 text-[13px] font-medium text-text-secondary">Sem {w.week}</td>
+                                  <td className="py-2 pr-2">
+                                    <input type="text" value={w.sets} onChange={e => updateWeekData(activeSession, bIdx, exIdx, wIdx, 'sets', e.target.value)} className="w-full bg-bg-primary border-[0.5px] border-border rounded p-1 text-[13px] focus:border-accent outline-none" />
+                                  </td>
+                                  <td className="py-2 pr-2">
+                                    <input type="text" value={w.reps} onChange={e => updateWeekData(activeSession, bIdx, exIdx, wIdx, 'reps', e.target.value)} className="w-full bg-bg-primary border-[0.5px] border-border rounded p-1 text-[13px] focus:border-accent outline-none" />
+                                  </td>
+                                  <td className="py-2 pr-2">
+                                    <input type="text" value={w.load} onChange={e => updateWeekData(activeSession, bIdx, exIdx, wIdx, 'load', e.target.value)} placeholder="ej: 20kg" className="w-full bg-bg-primary border-[0.5px] border-border rounded p-1 text-[13px] focus:border-accent outline-none" />
+                                  </td>
+                                  <td className="py-2 pr-2">
+                                    <input type="text" value={w.rest} onChange={e => updateWeekData(activeSession, bIdx, exIdx, wIdx, 'rest', e.target.value)} placeholder="ej: 90s" className="w-full bg-bg-primary border-[0.5px] border-border rounded p-1 text-[13px] focus:border-accent outline-none" />
+                                  </td>
+                                  <td className="py-2 pr-2">
+                                    <input type="text" value={w.rpe} onChange={e => updateWeekData(activeSession, bIdx, exIdx, wIdx, 'rpe', e.target.value)} className="w-full bg-bg-primary border-[0.5px] border-border rounded p-1 text-[13px] focus:border-accent outline-none" />
+                                  </td>
+                                  <td className="py-2">
+                                    <input type="text" value={w.eav} onChange={e => updateWeekData(activeSession, bIdx, exIdx, wIdx, 'eav', e.target.value)} className="w-full bg-bg-primary border-[0.5px] border-border rounded p-1 text-[13px] focus:border-accent outline-none" />
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
 
                       </div>
                     ))}
@@ -827,8 +698,8 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
               ) : searchResults.length === 0 ? (
                 <div className="text-center py-8 text-text-secondary text-[13px]">
                   {searchCategory === 'mis_ejercicios'
-                    ? 'No tenés ejercicios propios aún. Creá uno abajo.'
-                    : 'No hay resultados. Buscá por nombre, cambiá la categoría o creá un ejercicio nuevo abajo.'}
+                    ? 'No tenés ejercicios propios aún. Podés agregarlos desde la Biblioteca.'
+                    : 'No hay resultados. Buscá por nombre o cambiá la categoría.'}
                 </div>
               ) : (
                 searchResults.map(ex => (
@@ -851,89 +722,6 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
                   </button>
                 ))
               )}
-            </div>
-
-            {/* CREAR EJERCICIO NUEVO */}
-            <div className="border-t-[0.5px] border-border bg-bg-secondary">
-              <button
-                onClick={() => setShowCreateForm(v => !v)}
-                className="w-full flex items-center justify-between px-4 py-3 text-[13px] text-text-secondary hover:text-text-primary transition-colors"
-              >
-                <span>Crear ejercicio nuevo</span>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                  className={`transition-transform ${showCreateForm ? 'rotate-180' : ''}`}>
-                  <polyline points="6 9 12 15 18 9"></polyline>
-                </svg>
-              </button>
-              {showCreateForm && (
-                <div className="px-4 pb-4 space-y-3">
-                  <input
-                    type="text"
-                    value={createName}
-                    onChange={e => setCreateName(e.target.value)}
-                    placeholder="Nombre del ejercicio *"
-                    className="w-full bg-bg-primary border-[0.5px] border-border rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:border-accent"
-                    autoFocus
-                  />
-                  <input
-                    type="text"
-                    value={createUrl}
-                    onChange={e => setCreateUrl(e.target.value)}
-                    placeholder="URL de YouTube (opcional)"
-                    className="w-full bg-bg-primary border-[0.5px] border-border rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:border-accent"
-                  />
-                  <button
-                    onClick={handleCreateExercise}
-                    disabled={creating || !createName.trim()}
-                    className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
-                  >
-                    {creating ? 'Creando...' : 'Crear y agregar al bloque'}
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL PROGRAMAR SESIÓN */}
-      {scheduleModal && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setScheduleModal(null)}>
-          <div className="bg-bg-primary border-[0.5px] border-border rounded-2xl p-6 w-full max-w-[340px]" onClick={e => e.stopPropagation()}>
-            <h2 className="text-[16px] font-medium mb-1">Programar sesión</h2>
-            <p className="text-[13px] text-text-secondary mb-5">{scheduleModal.sessionName}</p>
-
-            <div>
-              <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Fecha</label>
-              <input
-                type="date"
-                value={scheduleDate}
-                onChange={e => setScheduleDate(e.target.value)}
-                className="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent"
-              />
-            </div>
-
-            {scheduleDate && (
-              <div className={`mt-4 rounded-lg px-4 py-2.5 ${plan.start_date ? 'bg-accent/10 border-[0.5px] border-accent/30' : 'bg-bg-secondary border-[0.5px] border-border'}`}>
-                {plan.start_date ? (
-                  <p className="text-[13px] text-accent font-medium">Semana {calcWeek(scheduleDate)} del plan</p>
-                ) : (
-                  <p className="text-[12px] text-text-secondary">Sin fecha de inicio en el plan → se asigna semana 1. Podés editarla arriba.</p>
-                )}
-              </div>
-            )}
-
-            <div className="flex gap-3 mt-5">
-              <button
-                onClick={handleScheduleSession}
-                disabled={scheduleSaving || !scheduleDate || scheduleSuccess}
-                className="bg-accent text-bg-primary px-5 py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 flex-1"
-              >
-                {scheduleSuccess ? '✓ Guardado' : scheduleSaving ? 'Guardando...' : 'Programar'}
-              </button>
-              <button onClick={() => setScheduleModal(null)} className="text-text-secondary px-4 py-2.5 rounded-lg text-[13px] hover:text-text-primary">
-                Cancelar
-              </button>
             </div>
           </div>
         </div>

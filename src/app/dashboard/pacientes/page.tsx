@@ -23,7 +23,17 @@ export default async function PacientesPage() {
   const role = userData?.role
   const trialExpiresAt = userData?.trial_expires_at
   const trialActive = trialExpiresAt ? new Date(trialExpiresAt) > new Date() : false
-  const isActiveUser = role === 'subscriber' || role === 'admin' || trialActive
+
+  let isOrgMember = false
+  if (role === 'free' && !trialActive) {
+    const { count } = await supabase
+      .from('organization_members')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+    isOrgMember = (count ?? 0) > 0
+  }
+
+  const isActiveUser = role === 'subscriber' || role === 'admin' || trialActive || isOrgMember
 
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">

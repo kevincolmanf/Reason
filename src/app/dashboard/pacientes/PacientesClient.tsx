@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
 
 interface Patient {
   id: string
@@ -14,27 +14,13 @@ interface Patient {
   plan_count?: number
 }
 
-export default function PacientesClient({ userId, isActiveUser }: { userId: string; isActiveUser: boolean }) {
+export default function PacientesClient({ userId, isActiveUser }: { userId: string; isActiveUser?: boolean }) {
   const [patients, setPatients] = useState<Patient[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [saving, setSaving] = useState(false)
   const [limitError, setLimitError] = useState(false)
   const searchParams = useSearchParams()
-
-  const atFreeLimit = !isActiveUser && patients.length >= 1
-
-  useEffect(() => {
-    if (searchParams.get('new') === '1') {
-      if (atFreeLimit) {
-        setShowForm(false)
-        setLimitError(true)
-      } else {
-        setShowForm(true)
-      }
-    }
-  }, [searchParams, atFreeLimit])
-  const [form, setForm] = useState({ name: '', age: '', occupation: '' })
 
   const supabase = createClient()
 
@@ -47,7 +33,6 @@ export default function PacientesClient({ userId, isActiveUser }: { userId: stri
       .order('name')
 
     if (!error && data) {
-      // Fetch plan count per patient
       const patientsWithCount = await Promise.all(
         data.map(async (p) => {
           const { count } = await supabase
@@ -65,6 +50,21 @@ export default function PacientesClient({ userId, isActiveUser }: { userId: stri
   useEffect(() => {
     fetchPatients()
   }, [fetchPatients])
+
+  const atFreeLimit = !isActiveUser && patients.length >= 1
+
+  useEffect(() => {
+    if (searchParams.get('new') === '1') {
+      if (atFreeLimit) {
+        setShowForm(false)
+        setLimitError(true)
+      } else {
+        setShowForm(true)
+      }
+    }
+  }, [searchParams, atFreeLimit])
+
+  const [form, setForm] = useState({ name: '', age: '', occupation: '' })
 
   const handleCreate = async () => {
     if (!form.name.trim()) return
