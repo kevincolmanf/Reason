@@ -46,6 +46,7 @@ export default async function PatientPortalPage({ params }: { params: { token: s
       .from('scheduled_sessions')
       .select('id, plan_id, session_id, session_name, scheduled_date, week, completed, session_data')
       .in('plan_id', planIds)
+      .not('session_data', 'is', null)
       .order('scheduled_date', { ascending: true })
     // Inyectar share_token del plan en cada sesión
     scheduledSessions = (data ?? []).map(s => ({
