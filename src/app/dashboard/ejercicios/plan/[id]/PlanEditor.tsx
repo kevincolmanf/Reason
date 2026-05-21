@@ -49,6 +49,7 @@ interface ExercisePlan {
   plan_data: PlanData
   share_token: string | null
   patient_id: string | null
+  active_week: number | null
 }
 
 interface ActivityLog {
@@ -189,7 +190,8 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
           notes: plan.notes,
           start_date: plan.start_date,
           plan_data: plan.plan_data,
-          patient_id: plan.patient_id
+          patient_id: plan.patient_id,
+          active_week: plan.active_week ?? 1,
         })
         .eq('id', plan.id)
         
@@ -516,6 +518,20 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
                 ))}
               </select>
             </div>
+            <div className="w-full sm:w-auto shrink-0">
+              <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Semana del paciente</label>
+              <div className="flex items-center gap-2 h-[34px]">
+                <button
+                  onClick={() => setPlan(prev => ({ ...prev, active_week: Math.max(1, (prev.active_week ?? 1) - 1) }))}
+                  className="w-7 h-7 flex items-center justify-center rounded-lg border-[0.5px] border-border bg-bg-secondary hover:border-accent text-text-secondary hover:text-accent text-[16px] transition-colors leading-none"
+                >−</button>
+                <span className="text-[15px] font-medium text-accent w-5 text-center">{plan.active_week ?? 1}</span>
+                <button
+                  onClick={() => setPlan(prev => ({ ...prev, active_week: Math.min(4, (prev.active_week ?? 1) + 1) }))}
+                  className="w-7 h-7 flex items-center justify-center rounded-lg border-[0.5px] border-border bg-bg-secondary hover:border-accent text-text-secondary hover:text-accent text-[16px] transition-colors leading-none"
+                >+</button>
+              </div>
+            </div>
           </div>
         </div>
         <div className="flex flex-col justify-between items-end min-w-[200px]">
@@ -587,6 +603,7 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
                     return w && (['sets','reps','load','rest','rpe','eav'] as (keyof WeekData)[]).some(k => w[k] !== '')
                   })
                 )
+                const isPatientWeek = (plan.active_week ?? 1) - 1 === wIdx
                 return (
                   <button
                     key={wIdx}
@@ -596,11 +613,14 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
                         ? 'bg-accent text-bg-primary border-accent'
                         : 'bg-bg-secondary text-text-secondary border-border hover:border-accent/60 hover:text-text-primary'
                     }`}
-                    title={`Editar dosis Semana ${wIdx + 1}`}
+                    title={`Editar dosis Semana ${wIdx + 1}${isPatientWeek ? ' · semana activa del paciente' : ''}`}
                   >
                     S{wIdx + 1}
                     {hasData && activeWeek !== wIdx && (
                       <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-accent/70" />
+                    )}
+                    {isPatientWeek && (
+                      <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-accent" />
                     )}
                   </button>
                 )
