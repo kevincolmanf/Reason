@@ -3,9 +3,6 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
-interface Plan {
-  id: string; name: string; plan_data: unknown; start_date: string | null; notes: string | null
-}
 interface RecentSession {
   session_date: string; activity: string | null; rpe: number; load_units: number; vas_post: number | null; source: string
 }
