@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import PatientPlanViewer from '@/app/plan/[token]/PatientPlanViewer'
 
 interface WeekData { week: number; reps: string; sets: string; load: string; eav: string; rpe: string; rest: string }
 interface PlanExercise { id: string; exercise_name: string; youtube_url: string; weeks: WeekData[] }
@@ -24,8 +23,6 @@ interface Props {
   patient: { id: string; name: string; user_id: string }
   token: string; plans: Plan[]; recentSessions: RecentSession[]; scheduledSessions: ScheduledItem[]
 }
-interface ExerciseReport { rpe: number; eva: number; notes: string }
-
 type ActivityType = 'rehab' | 'sport' | 'combined'
 
 const ACTIVITY_TYPES: { value: ActivityType; label: string; desc: string }[] = [
@@ -146,7 +143,6 @@ function groupSessionsByWeek(sessions: ScheduledItem[], today: string): WeekGrou
 }
 
 export default function PatientPortalClient({ token, plans, recentSessions, scheduledSessions }: Props) {
-  const [activePlanIdx, setActivePlanIdx] = useState(0)
   const [showHelp, setShowHelp] = useState(false)
   const [expandedWeeks, setExpandedWeeks] = useState<Set<string>>(() => new Set([getMondayOf(todayStr())]))
 
@@ -164,19 +160,6 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
       clearInterval(interval)
     }
   }, [router])
-  const [jumpKey, setJumpKey] = useState(0)
-
-  const navigateToPlanSession = (planIdx: number) => {
-    const plan = plans[planIdx]
-    if (!plan?.plan_data) return
-    const d = plan.plan_data as Record<string, unknown>
-    if (!Array.isArray(d.sessions)) return
-    setActivePlanIdx(planIdx)
-    setJumpKey(k => k + 1)
-    setTimeout(() => {
-      document.getElementById('plan-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }, 50)
-  }
 
   // Form
   const [activityType, setActivityType] = useState<ActivityType>('rehab')
@@ -187,11 +170,6 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
   const [vasPre, setVasPre] = useState(0)
   const [vasDuring, setVasDuring] = useState(0)
   const [vasPost, setVasPost] = useState(0)
-
-  // Per-exercise
-  const [showExercises, setShowExercises] = useState(false)
-  const [expandedEx, setExpandedEx] = useState<Set<string>>(new Set())
-  const [exReports, setExReports] = useState<Record<string, ExerciseReport>>({})
 
   // Bienestar pre-sesión
   const [sleepQuality, setSleepQuality] = useState<number | null>(null)
@@ -214,35 +192,8 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
       ?? null
   })()
 
-  const activePlan = plans[activePlanIdx] ?? null
-  const validPlanData: PlanData | null = (() => {
-    if (!activePlan?.plan_data) return null
-    const d = activePlan.plan_data as Record<string, unknown>
-    if (typeof d !== 'object' || !Array.isArray(d.sessions)) return null
-    return d as unknown as PlanData
-  })()
-
-  const allExercises = validPlanData
-    ? validPlanData.sessions.flatMap(s => s.blocks.flatMap(b => b.exercises.map(ex => ({ ...ex, sessionId: s.id, sessionName: s.name }))))
-    : []
-
   const showRehabSection = activityType === 'rehab' || activityType === 'combined'
   const showSportSection = activityType === 'sport' || activityType === 'combined'
-
-  function toggleEx(id: string) {
-    setExpandedEx(prev => {
-      const next = new Set(prev)
-      if (next.has(id)) { next.delete(id) } else {
-        next.add(id)
-        if (!exReports[id]) setExReports(r => ({ ...r, [id]: { rpe: 5, eva: 0, notes: '' } }))
-      }
-      return next
-    })
-  }
-
-  function updateExReport(id: string, field: keyof ExerciseReport, value: number | string) {
-    setExReports(r => ({ ...r, [id]: { ...r[id], [field]: value } }))
-  }
 
   const handleSubmit = async (skipEmptyCheck = false) => {
     if (!formDate) return
@@ -280,20 +231,6 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
 
       if (!res.ok) { setSubmitStatus('error'); setTimeout(() => setSubmitStatus('idle'), 3000); return }
 
-      // Per-exercise reports (fire-and-forget)
-      if (showRehabSection) {
-        await Promise.all(Array.from(expandedEx).map(exId => {
-          const report = exReports[exId]
-          const ex = allExercises.find(e => e.id === exId)
-          if (!report || !ex) return Promise.resolve()
-          return fetch(`/api/paciente/${token}/log`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ plan_id: activePlan?.id, exercise_id: ex.id, exercise_name: ex.exercise_name, session_id: ex.sessionId, week: 1, rpe: report.rpe, eva: report.eva, notes: report.notes || null }),
-          }).catch(() => {})
-        }))
-      }
-
       setLocalSessions(prev => [{
         session_date: formDate, activity: formActivity.trim() || null,
         rpe: rpe, load_units: rpe * duration, vas_post: vasPost, source: 'patient',
@@ -303,7 +240,6 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
       setFormDate(todayStr()); setFormActivity(''); setFormDuration(''); setFormRpe(null)
       setSleepQuality(null); setEnergy(null); setStress(null)
       setVasPre(0); setVasDuring(0); setVasPost(0)
-      setShowExercises(false); setExpandedEx(new Set()); setExReports({})
       setTimeout(() => setSubmitStatus('idle'), 3000)
     } catch {
       setSubmitStatus('error')
@@ -317,26 +253,15 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
       {/* ── PRÓXIMA SESIÓN ─────────────────────────────────── */}
       {featuredSession && (
         <section>
-          <button
-            onClick={() => {
-              const planIdx = plans.findIndex(p => p.id === featuredSession.plan_id)
-              if (planIdx !== -1) navigateToPlanSession(planIdx)
-            }}
-            className="w-full text-left bg-accent/10 border-[0.5px] border-accent/40 rounded-2xl p-5 hover:bg-accent/15 transition-colors"
+          <div
+            className="w-full text-left bg-accent/10 border-[0.5px] border-accent/40 rounded-2xl p-5"
           >
             <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-accent mb-2">
               {featuredSession.scheduled_date === todayStr() ? 'Para hoy' : `Próxima sesión · ${formatScheduledDate(featuredSession.scheduled_date)}`}
             </div>
             <div className="text-[20px] font-medium text-text-primary tracking-[-0.01em] mb-1">{featuredSession.session_name}</div>
             <div className="text-[13px] text-text-secondary mb-4">{formatScheduledDate(featuredSession.scheduled_date)}</div>
-            <div className="flex items-center gap-1.5 text-[13px] font-medium text-accent">
-              Ir a los ejercicios
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-                <polyline points="12 5 19 12 12 19"></polyline>
-              </svg>
-            </div>
-          </button>
+          </div>
         </section>
       )}
 
@@ -470,18 +395,14 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
                           </div>
                           <div className="space-y-1.5">
                             {day.sessions.map(s => (
-                              <button
+                              <div
                                 key={s.id}
-                                onClick={() => {
-                                  const planIdx = plans.findIndex(p => p.id === s.plan_id)
-                                  if (planIdx !== -1) navigateToPlanSession(planIdx)
-                                }}
-                                className={`w-full text-left flex items-center gap-3 rounded-lg px-3 py-2.5 border-[0.5px] transition-colors ${
+                                className={`w-full text-left flex items-center gap-3 rounded-lg px-3 py-2.5 border-[0.5px] ${
                                   s.completed
                                     ? 'border-border bg-bg-secondary opacity-50'
                                     : s.scheduled_date === todayStr()
-                                    ? 'border-accent/40 bg-accent/10 hover:bg-accent/15'
-                                    : 'border-border bg-bg-secondary hover:border-accent/40 hover:bg-bg-secondary'
+                                    ? 'border-accent/40 bg-accent/10'
+                                    : 'border-border bg-bg-secondary'
                                 }`}
                               >
                                 <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
@@ -494,11 +415,7 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
                                     {s.session_name}
                                   </div>
                                 </div>
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-text-secondary shrink-0">
-                                  <line x1="5" y1="12" x2="19" y2="12" />
-                                  <polyline points="12 5 19 12 12 19" />
-                                </svg>
-                              </button>
+                              </div>
                             ))}
                           </div>
                         </div>
@@ -511,72 +428,6 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
           </div>
         </section>
       )}
-
-      {/* ── MI PLAN ────────────────────────────────────────── */}
-      <section id="plan-section">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-[20px] font-medium tracking-[-0.01em]">Mi Plan de Ejercicios</h2>
-          <button
-            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            className="flex items-center gap-1.5 text-[12px] text-text-secondary hover:text-text-primary transition-colors"
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="19" x2="12" y2="5" />
-              <polyline points="5 12 12 5 19 12" />
-            </svg>
-            Volver al inicio
-          </button>
-        </div>
-        {plans.length === 0 ? (
-          <div className="text-center py-10 bg-bg-secondary rounded-xl border-[0.5px] border-dashed border-border">
-            <p className="text-[14px] text-text-secondary">Tu kinesiólogo aún no asoció un plan a tu perfil.</p>
-          </div>
-        ) : (
-          <>
-            {plans.length > 1 && (
-              <div className="flex gap-2 overflow-x-auto mb-4 pb-1">
-                {plans.map((plan, idx) => (
-                  <button key={plan.id} onClick={() => setActivePlanIdx(idx)}
-                    className={`whitespace-nowrap px-4 py-2 rounded-full text-[13px] font-medium transition-all border-[0.5px] ${activePlanIdx === idx ? 'bg-bg-primary text-text-primary border-accent shadow-sm' : 'bg-transparent text-text-secondary border-border hover:border-text-secondary'}`}
-                  >{plan.name}</button>
-                ))}
-              </div>
-            )}
-            {activePlan && (
-              <div>
-                <div className="mb-4 pb-4 border-b-[0.5px] border-border">
-                  <h3 className="text-[20px] font-medium tracking-[-0.01em] text-accent mb-1">{activePlan.name}</h3>
-                  {activePlan.start_date && (
-                    <p className="text-[12px] text-text-secondary uppercase tracking-[0.05em]">
-                      Inicio: {new Date(activePlan.start_date + 'T00:00:00').toLocaleDateString('es-AR')}
-                    </p>
-                  )}
-                  {activePlan.notes && (
-                    <div className="mt-3 bg-[#451A1A]/20 border-[0.5px] border-accent/30 rounded-lg p-4 text-[14px] text-text-primary leading-[1.5]">
-                      <span className="font-medium text-accent block mb-1">Indicaciones:</span>
-                      {activePlan.notes}
-                    </div>
-                  )}
-                </div>
-                {validPlanData ? (
-                  <PatientPlanViewer
-                    key={jumpKey}
-                    daySessions={[]}
-                    legacyPlanData={validPlanData}
-                    legacyActiveWeek={0}
-                    legacyStartDate={activePlan?.start_date ?? null}
-                    token={token}
-                  />
-                ) : (
-                  <div className="text-center py-8 text-text-secondary text-[13px] border-[0.5px] border-dashed border-border rounded-xl">
-                    Este plan aún no tiene ejercicios asignados.
-                  </div>
-                )}
-              </div>
-            )}
-          </>
-        )}
-      </section>
 
       {/* ── REGISTRAR SESIÓN ───────────────────────────────── */}
       <section>
@@ -698,90 +549,6 @@ export default function PatientPortalClient({ token, plans, recentSessions, sche
 
           {/* Dolor POST */}
           <VasSlider label="Dolor después de entrenar (0–100)" value={vasPost} onChange={setVasPost} />
-
-          {/* Comentar ejercicios — solo para rehab/combinado */}
-          {showRehabSection && (
-            <div className="border-t-[0.5px] border-border pt-5">
-              <button onClick={() => setShowExercises(v => !v)}
-                className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border-[0.5px] text-[13px] font-medium transition-all ${showExercises ? 'bg-bg-secondary border-accent/50 text-text-primary' : 'bg-bg-secondary border-border text-text-secondary hover:border-accent hover:text-text-primary'}`}
-              >
-                <span>Comentar ejercicios del plan <span className="font-normal opacity-60">(opcional)</span></span>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                  className={`transition-transform flex-shrink-0 ml-2 ${showExercises ? 'rotate-180' : ''}`}>
-                  <polyline points="6 9 12 15 18 9"></polyline>
-                </svg>
-              </button>
-
-              {showExercises && (
-                <div className="mt-3 space-y-2">
-                  {allExercises.length === 0 ? (
-                    <p className="text-[13px] text-text-secondary text-center py-4">No hay ejercicios en el plan activo.</p>
-                  ) : allExercises.map(ex => {
-                    const isOpen = expandedEx.has(ex.id)
-                    const report = exReports[ex.id]
-                    return (
-                      <div key={ex.id} className="border-[0.5px] border-border rounded-xl overflow-hidden">
-                        <button onClick={() => toggleEx(ex.id)}
-                          className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-bg-secondary transition-colors"
-                        >
-                          <div>
-                            <span className="text-[13px] font-medium text-text-primary">{ex.exercise_name}</span>
-                            {ex.sessionName && <span className="text-[11px] text-text-secondary ml-2">{ex.sessionName}</span>}
-                          </div>
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            {isOpen && report && <span className="text-[11px] text-accent">RPE {report.rpe} · EVA {report.eva}</span>}
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                              className={`transition-transform text-text-secondary ${isOpen ? 'rotate-180' : ''}`}>
-                              <polyline points="6 9 12 15 18 9"></polyline>
-                            </svg>
-                          </div>
-                        </button>
-
-                        {isOpen && report && (
-                          <div className="px-4 pb-4 pt-3 bg-bg-secondary space-y-4 border-t-[0.5px] border-border">
-                            <div>
-                              <div className="flex justify-between mb-1.5">
-                                <label className="text-[12px] text-text-secondary">Esfuerzo del ejercicio</label>
-                                <span className="text-[13px] font-bold text-accent">{report.rpe} / 10</span>
-                              </div>
-                              <input type="range" min="1" max="10" value={report.rpe}
-                                onChange={e => updateExReport(ex.id, 'rpe', parseInt(e.target.value))}
-                                className="w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-accent"
-                              />
-                              <div className="flex justify-between text-[10px] text-text-secondary mt-0.5">
-                                <span>Muy fácil</span><span>Máximo</span>
-                              </div>
-                            </div>
-                            <div>
-                              <div className="flex justify-between mb-1.5">
-                                <label className="text-[12px] text-text-secondary">Dolor durante el ejercicio</label>
-                                <span className="text-[13px] font-bold text-warning">{report.eva} / 10</span>
-                              </div>
-                              <input type="range" min="0" max="10" value={report.eva}
-                                onChange={e => updateExReport(ex.id, 'eva', parseInt(e.target.value))}
-                                className="w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-warning"
-                              />
-                              <div className="flex justify-between text-[10px] text-text-secondary mt-0.5">
-                                <span>Sin dolor</span><span>Intenso</span>
-                              </div>
-                            </div>
-                            <div>
-                              <label className="block text-[12px] text-text-secondary mb-1.5">Nota (opcional)</label>
-                              <textarea value={report.notes} onChange={e => updateExReport(ex.id, 'notes', e.target.value)}
-                                placeholder="Ej: Me molestó al bajar..."
-                                className="w-full bg-bg-primary border-[0.5px] border-border rounded-lg p-2.5 text-[13px] focus:outline-none focus:border-accent min-h-[60px] resize-none"
-                                maxLength={300}
-                              />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          )}
 
           {/* Confirmación al guardar sin datos */}
           {showConfirmEmpty && (
