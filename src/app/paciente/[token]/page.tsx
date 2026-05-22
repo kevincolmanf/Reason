@@ -60,12 +60,11 @@ export default async function PatientPortalPage({ params }: { params: { token: s
     .select('id, share_token, plan_data')
     .eq('patient_id', patient.id)
 
-  // Vía 2: sesiones donde patient_id está seteado directamente
+  // Vía 2: sesiones donde patient_id está seteado directamente (sin filtrar session_data)
   const { data: sessionsByPatientId } = await supabase
     .from('scheduled_sessions')
     .select('id, plan_id, session_id, session_name, scheduled_date, week, completed, session_data')
     .eq('patient_id', patient.id)
-    .not('session_data', 'is', null)
     .order('scheduled_date', { ascending: true })
 
   // Vía 3: plans del kine asignados a este paciente que no estén en vía 1
@@ -102,7 +101,6 @@ export default async function PatientPortalPage({ params }: { params: { token: s
       .from('scheduled_sessions')
       .select('id, plan_id, session_id, session_name, scheduled_date, week, completed, session_data')
       .in('plan_id', allPlanIds)
-      .not('session_data', 'is', null)
       .order('scheduled_date', { ascending: true })
     sessionsByPlanId = data ?? []
   }
@@ -116,10 +114,17 @@ export default async function PatientPortalPage({ params }: { params: { token: s
   // Inyectar ejercicios (session_data o fallback desde plan_data) y share_token
   const scheduledSessions = rawSessions.map(s => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const hasExercises = (s.session_data as any)?.blocks?.some((b: any) => b.exercises?.length > 0)
+    const sessionData = s.session_data as any
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const sessionBlocks = (s.session_data as any)?.blocks ?? []
-    const blocks = hasExercises ? sessionBlocks : (planFallbackBlocksMap[s.plan_id] ?? [])
+    const hasSessionExercises = sessionData?.blocks?.some((b: any) => b.exercises?.length > 0)
+    const sessionBlocks = sessionData?.blocks ?? []
+    // Si no hay ejercicios en session_data, usar plan_data como fallback
+    // Para legacy: intentar matching por session_id primero, luego todos los bloques del plan
+    let fallback = planFallbackBlocksMap[s.plan_id] ?? []
+    if (!hasSessionExercises && s.session_id && planFallbackBlocksMap[s.plan_id] === undefined) {
+      fallback = []
+    }
+    const blocks = hasSessionExercises ? sessionBlocks : fallback
     return {
       ...s,
       session_data: { blocks },
