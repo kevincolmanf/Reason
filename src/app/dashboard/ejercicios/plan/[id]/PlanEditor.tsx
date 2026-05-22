@@ -40,6 +40,16 @@ interface ScheduledSession {
   completed: boolean
 }
 
+interface PlanDataSession {
+  id: string
+  name: string
+  blocks: Array<{
+    id: string
+    name: string
+    exercises: SessionExercise[]
+  }>
+}
+
 interface ExercisePlan {
   id: string
   name: string
@@ -149,6 +159,7 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
   const [copiedSessionData, setCopiedSessionData] = useState<SessionData | null>(null)
   const [copiedFromDate, setCopiedFromDate] = useState<string | null>(null)
   const [sessionSaveStatus, setSessionSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [showImportModal, setShowImportModal] = useState(false)
 
   // Search/modal state
   const [isSearchOpen, setIsSearchOpen] = useState(false)
@@ -191,6 +202,9 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
   const selectedSession = selectedDate
     ? scheduledSessions.find(s => s.scheduled_date === selectedDate) ?? null
     : null
+
+  const importablePlanSessions = ((plan.plan_data?.sessions ?? []) as PlanDataSession[])
+    .filter(s => (s.blocks ?? []).some(b => b.exercises?.length > 0))
 
   // ─── Effects ───────────────────────────────────────────────────────────────
 
@@ -529,6 +543,22 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
       })),
     }))
     setCopiedFromDate(null)
+  }
+
+  const handleImportFromPlan = (planSession: PlanDataSession) => {
+    const currentBlocks = selectedSession?.session_data?.blocks ?? []
+    const hasExisting = currentBlocks.some(b => b.exercises.length > 0)
+    if (hasExisting && !confirm(`¿Reemplazar los ejercicios actuales con los de "${planSession.name}"?`)) return
+    updateSelectedSession(() => ({
+      blocks: (planSession.blocks ?? [])
+        .filter(b => b.exercises?.length > 0)
+        .map(b => ({
+          ...b,
+          id: uuidv4(),
+          exercises: b.exercises.map(ex => ({ ...ex, id: uuidv4() })),
+        })),
+    }))
+    setShowImportModal(false)
   }
 
   // ─── Search modal helpers ──────────────────────────────────────────────────
@@ -1063,10 +1093,21 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
                     ))}
                   </div>
 
+                  {/* Importar del plan (solo si hay sesiones con ejercicios en plan_data) */}
+                  {importablePlanSessions.length > 0 && (
+                    <button
+                      onClick={() => setShowImportModal(true)}
+                      className="mt-6 w-full py-2.5 border-[0.5px] border-dashed border-accent/50 rounded-xl text-[13px] text-accent hover:border-accent hover:bg-accent/5 transition-colors flex items-center justify-center gap-2"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                      Importar ejercicios del plan
+                    </button>
+                  )}
+
                   {/* Agregar bloque */}
                   <button
                     onClick={addBlock}
-                    className="mt-8 w-full py-3 border-[0.5px] border-dashed border-border rounded-xl text-[13px] text-text-secondary hover:border-accent hover:text-accent transition-colors"
+                    className="mt-4 w-full py-3 border-[0.5px] border-dashed border-border rounded-xl text-[13px] text-text-secondary hover:border-accent hover:text-accent transition-colors"
                   >
                     + Agregar bloque
                   </button>
@@ -1293,6 +1334,41 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
                   </button>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL IMPORTAR DEL PLAN */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-bg-primary/90 backdrop-blur-sm z-50 flex items-center justify-center p-4 sm:p-8" onClick={() => setShowImportModal(false)}>
+          <div className="bg-bg-primary border-[0.5px] border-border rounded-xl w-full max-w-[480px] shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b-[0.5px] border-border bg-bg-secondary">
+              <div>
+                <h3 className="text-[15px] font-medium text-text-primary">Importar ejercicios del plan</h3>
+                <p className="text-[12px] text-text-secondary mt-0.5">Elegí una sesión para copiar sus ejercicios a este día</p>
+              </div>
+              <button onClick={() => setShowImportModal(false)} className="text-text-secondary hover:text-text-primary p-1 text-[18px]">✕</button>
+            </div>
+            <div className="p-4 space-y-2 max-h-[400px] overflow-y-auto">
+              {importablePlanSessions.map(s => {
+                const exerciseCount = (s.blocks ?? []).reduce((acc, b) => acc + (b.exercises?.length ?? 0), 0)
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => handleImportFromPlan(s)}
+                    className="w-full text-left bg-bg-secondary border-[0.5px] border-border rounded-xl p-4 hover:border-accent transition-colors group"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-[14px] font-medium text-text-primary mb-0.5">{s.name}</div>
+                        <div className="text-[12px] text-text-secondary">{exerciseCount} ejercicio{exerciseCount !== 1 ? 's' : ''}</div>
+                      </div>
+                      <span className="text-accent text-[20px] opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-3">→</span>
+                    </div>
+                  </button>
+                )
+              })}
             </div>
           </div>
         </div>
