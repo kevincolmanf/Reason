@@ -20,15 +20,26 @@ export async function POST(request: Request) {
 
     const admin = createAdminClient()
 
-    // Verificar acceso: la sesión debe pertenecer a un plan al que el usuario tiene acceso
-    const { data: session, error: fetchError } = await userSupabase
+    // Obtener la sesión con admin (sin RLS) para leer plan_id
+    const { data: session, error: fetchError } = await admin
       .from('scheduled_sessions')
-      .select('id')
+      .select('id, plan_id')
       .eq('id', session_id)
       .single()
 
     if (fetchError || !session) {
-      return NextResponse.json({ error: 'Sesión no encontrada o sin acceso' }, { status: 404 })
+      return NextResponse.json({ error: 'Sesión no encontrada' }, { status: 404 })
+    }
+
+    // Verificar que el usuario tiene acceso al plan (respeta RLS de exercise_plans)
+    const { data: plan, error: planError } = await userSupabase
+      .from('exercise_plans')
+      .select('id')
+      .eq('id', session.plan_id)
+      .single()
+
+    if (planError || !plan) {
+      return NextResponse.json({ error: 'Sin acceso a esta sesión' }, { status: 403 })
     }
 
     // Actualizar con admin client (bypasea RLS)
