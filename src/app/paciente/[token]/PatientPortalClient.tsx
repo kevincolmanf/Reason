@@ -20,9 +20,15 @@ interface ScheduledItem {
   exercise_plans: { share_token: string | null }[] | null
 }
 
+interface PlanSession {
+  id: string; name: string; shareToken: string | null
+  blocks: SessionBlock[]
+}
+
 interface Props {
   patient: { id: string; name: string; user_id: string }
   token: string; recentSessions: RecentSession[]; scheduledSessions: ScheduledItem[]
+  planSessions: PlanSession[]
 }
 type ActivityType = 'rehab' | 'sport' | 'combined'
 
@@ -148,7 +154,7 @@ interface LogState {
   rpe: string; eva: string; notes: string; loading: boolean; done: boolean; error: string | null
 }
 
-export default function PatientPortalClient({ token, recentSessions, scheduledSessions }: Props) {
+export default function PatientPortalClient({ token, recentSessions, scheduledSessions, planSessions }: Props) {
   const [showHelp, setShowHelp] = useState(false)
   const [expandedWeeks, setExpandedWeeks] = useState<Set<string>>(() => new Set([getMondayOf(todayStr())]))
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null)
@@ -482,6 +488,37 @@ export default function PatientPortalClient({ token, recentSessions, scheduledSe
                 </div>
               )
             })}
+          </div>
+        </section>
+      )}
+
+      {/* ── MI PROGRAMA (fallback plan_data viejo) ────────── */}
+      {planSessions.length > 0 && (
+        <section>
+          <h2 className="text-[20px] font-medium tracking-[-0.01em] mb-4">Mi programa</h2>
+          <div className="space-y-2">
+            {planSessions.map(ps => (
+              <div key={ps.id} className="bg-bg-primary border-[0.5px] border-border rounded-xl overflow-hidden">
+                <button
+                  onClick={() => setExpandedSessionId(prev => prev === ps.id ? null : ps.id)}
+                  className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-bg-secondary transition-colors"
+                >
+                  <span className="text-[14px] font-medium text-text-primary">{ps.name}</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                    className={`text-text-secondary shrink-0 transition-transform ${expandedSessionId === ps.id ? 'rotate-180' : ''}`}>
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
+                {expandedSessionId === ps.id && (
+                  <div className="border-t-[0.5px] border-border">
+                    <SessionExercisesInline
+                      session={{ id: ps.id, scheduled_date: '', session_data: { blocks: ps.blocks }, exercise_plans: ps.shareToken ? [{ share_token: ps.shareToken }] : null } as ScheduledItem}
+                      onLog={openLog}
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </section>
       )}

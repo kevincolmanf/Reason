@@ -32,6 +32,22 @@ function extractFallbackBlocks(planData: any) {
   return Array.from(blockMap.values()).filter(b => b.exercises.length > 0)
 }
 
+// Extrae cada sesión de plan_data que tenga ejercicios
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function extractPlanSessions(planData: any, shareToken: string | null) {
+  if (!planData?.sessions) return []
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (planData.sessions as any[])
+    .map((s: { id: string; name: string; blocks: { id: string; name: string; exercises: { id: string; exercise_id: string; exercise_name: string; youtube_url: string; group?: string; sets: string; reps: string; load: string; rpe_obj: string; eav_obj: string; rest: string }[] }[] }) => ({
+      id: s.id,
+      name: s.name,
+      shareToken,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      blocks: (s.blocks ?? []).filter((b: any) => b.exercises?.length > 0),
+    }))
+    .filter(s => s.blocks.length > 0)
+}
+
 export default async function PatientPortalPage({ params }: { params: { token: string } }) {
   const supabase = createAdminClient()
 
@@ -52,38 +68,34 @@ export default async function PatientPortalPage({ params }: { params: { token: s
     .order('session_date', { ascending: false })
     .limit(30)
 
-  // ── Buscar sesiones por dos vías y mergear ─────────────────────────────────
-
-  // Vía 1: planes donde patient_id está seteado
+  // ── Planes del paciente ────────────────────────────────────────────────────
   const { data: plansByPatient } = await supabase
     .from('exercise_plans')
     .select('id, share_token, plan_data')
     .eq('patient_id', patient.id)
 
-  // Vía 2: sesiones donde patient_id está seteado directamente (sin filtrar session_data)
+  // ── Sesiones por patient_id ────────────────────────────────────────────────
   const { data: sessionsByPatientId } = await supabase
     .from('scheduled_sessions')
     .select('id, plan_id, session_id, session_name, scheduled_date, week, completed, session_data')
     .eq('patient_id', patient.id)
     .order('scheduled_date', { ascending: true })
 
-  // Vía 3: plans del kine asignados a este paciente que no estén en vía 1
-  //        (por si la sesión tiene plan_id correcto pero plan no tiene patient_id)
-  const extraPlanIds = (sessionsByPatientId ?? [])
-    .map(s => s.plan_id)
-    .filter(pid => !(plansByPatient ?? []).find(p => p.id === pid))
-  const uniqueExtraPlanIds = Array.from(new Set(extraPlanIds))
-
+  // Planes adicionales referenciados por sesiones (por si plan no tiene patient_id)
+  const extraPlanIds = Array.from(new Set(
+    (sessionsByPatientId ?? [])
+      .map(s => s.plan_id)
+      .filter(pid => !(plansByPatient ?? []).find(p => p.id === pid))
+  ))
   let extraPlans: typeof plansByPatient = []
-  if (uniqueExtraPlanIds.length > 0) {
+  if (extraPlanIds.length > 0) {
     const { data } = await supabase
       .from('exercise_plans')
       .select('id, share_token, plan_data')
-      .in('id', uniqueExtraPlanIds)
+      .in('id', extraPlanIds)
     extraPlans = data ?? []
   }
 
-  // Merge plans
   const allPlans = [...(plansByPatient ?? []), ...(extraPlans ?? [])]
   const allPlanIds = allPlans.map(p => p.id)
 
@@ -94,7 +106,7 @@ export default async function PatientPortalPage({ params }: { params: { token: s
     planFallbackBlocksMap[p.id] = extractFallbackBlocks(p.plan_data)
   }
 
-  // Sesiones por plan_id (cubre planes con patient_id seteado)
+  // ── Sesiones por plan_id ───────────────────────────────────────────────────
   let sessionsByPlanId: typeof sessionsByPatientId = []
   if (allPlanIds.length > 0) {
     const { data } = await supabase
@@ -105,32 +117,31 @@ export default async function PatientPortalPage({ params }: { params: { token: s
     sessionsByPlanId = data ?? []
   }
 
-  // Merge y dedup sesiones por id
+  // Merge y dedup
   const seenIds = new Set<string>()
   const rawSessions = [...(sessionsByPlanId ?? []), ...(sessionsByPatientId ?? [])]
     .filter(s => { if (seenIds.has(s.id)) return false; seenIds.add(s.id); return true })
     .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date))
 
-  // Inyectar ejercicios (session_data o fallback desde plan_data) y share_token
   const scheduledSessions = rawSessions.map(s => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const sessionData = s.session_data as any
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const hasSessionExercises = sessionData?.blocks?.some((b: any) => b.exercises?.length > 0)
     const sessionBlocks = sessionData?.blocks ?? []
-    // Si no hay ejercicios en session_data, usar plan_data como fallback
-    // Para legacy: intentar matching por session_id primero, luego todos los bloques del plan
-    let fallback = planFallbackBlocksMap[s.plan_id] ?? []
-    if (!hasSessionExercises && s.session_id && planFallbackBlocksMap[s.plan_id] === undefined) {
-      fallback = []
-    }
-    const blocks = hasSessionExercises ? sessionBlocks : fallback
+    const blocks = hasSessionExercises ? sessionBlocks : (planFallbackBlocksMap[s.plan_id] ?? [])
     return {
       ...s,
       session_data: { blocks },
       exercise_plans: [{ share_token: planShareTokenMap[s.plan_id] ?? null }],
     }
   })
+
+  // ── Fallback: sesiones estáticas desde plan_data (sistema viejo) ───────────
+  // Solo se usa cuando no hay scheduled_sessions
+  const planSessions = scheduledSessions.length === 0
+    ? allPlans.flatMap(p => extractPlanSessions(p.plan_data, p.share_token))
+    : []
 
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
@@ -146,19 +157,12 @@ export default async function PatientPortalPage({ params }: { params: { token: s
       </header>
 
       <main className="flex-grow w-full max-w-[800px] mx-auto px-4 py-8">
-        {/* DEBUG TEMP — borrar después */}
-        <div className="mb-4 p-3 bg-yellow-900/30 border border-yellow-600/50 rounded-lg text-[11px] text-yellow-300 font-mono space-y-1">
-          <div>patient.id: {patient.id}</div>
-          <div>plansByPatient: {plansByPatient?.length ?? 0} — ids: {(plansByPatient ?? []).map((p: {id:string}) => p.id.slice(0,8)).join(', ') || 'ninguno'}</div>
-          <div>sessionsByPatientId: {sessionsByPatientId?.length ?? 0}</div>
-          <div>sessionsByPlanId: {sessionsByPlanId?.length ?? 0}</div>
-          <div>scheduledSessions final: {scheduledSessions.length}</div>
-        </div>
         <PatientPortalClient
           patient={patient}
           token={params.token}
           recentSessions={recentSessions ?? []}
           scheduledSessions={scheduledSessions}
+          planSessions={planSessions}
         />
       </main>
     </div>
