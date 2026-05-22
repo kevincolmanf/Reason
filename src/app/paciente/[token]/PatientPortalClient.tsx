@@ -70,17 +70,6 @@ function formatShortDate(d: string) {
   return new Date(d + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' })
 }
 
-const DAYS_ES_LONG = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']
-const MONTHS_ES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
-
-function formatScheduledDate(d: string) {
-  const date = new Date(d + 'T00:00:00')
-  const today = todayStr()
-  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0]
-  if (d === today) return 'Hoy'
-  if (d === tomorrow) return 'Mañana'
-  return `${DAYS_ES_LONG[date.getDay()]} ${date.getDate()} de ${MONTHS_ES[date.getMonth()]}`
-}
 
 const DAY_NAMES_ES_LONG = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
 
@@ -152,7 +141,10 @@ function groupSessionsByWeek(sessions: ScheduledItem[], today: string): WeekGrou
 export default function PatientPortalClient({ token, recentSessions, scheduledSessions, planSessions }: Props) {
   const [showHelp, setShowHelp] = useState(false)
   const [selectedWeekMonday, setSelectedWeekMonday] = useState(() => getMondayOf(todayStr()))
-  const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null)
+  const [expandedSessionId, setExpandedSessionId] = useState<string | null>(() => {
+    const today = todayStr()
+    return scheduledSessions.find(s => s.scheduled_date === today && !s.completed)?.id ?? null
+  })
 
   const router = useRouter()
   useEffect(() => {
@@ -189,16 +181,6 @@ export default function PatientPortalClient({ token, recentSessions, scheduledSe
   const [localSessions, setLocalSessions] = useState<RecentSession[]>(recentSessions)
 
   const calculatedLoad = formRpe !== null && formDuration ? formRpe * (parseInt(formDuration) || 0) : null
-
-  const featuredSession = (() => {
-    const today = todayStr()
-    const incomplete = scheduledSessions.filter(s => !s.completed)
-    return incomplete.find(s => s.scheduled_date === today)
-      ?? incomplete
-        .filter(s => s.scheduled_date > today)
-        .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date))[0]
-      ?? null
-  })()
 
   const showSportSection = activityType === 'sport' || activityType === 'combined'
 
@@ -257,30 +239,6 @@ export default function PatientPortalClient({ token, recentSessions, scheduledSe
   return (
     <div className="space-y-10 pb-12">
 
-      {/* ── PRÓXIMA SESIÓN ─────────────────────────────────── */}
-      {featuredSession && (
-        <section>
-          <button
-            onClick={() => setExpandedSessionId(prev => prev === featuredSession.id ? null : featuredSession.id)}
-            className="w-full text-left bg-accent/10 border-[0.5px] border-accent/40 rounded-2xl p-5 hover:bg-accent/15 transition-colors"
-          >
-            <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-accent mb-2">
-              {featuredSession.scheduled_date === todayStr() ? 'Para hoy' : `Próxima sesión · ${formatScheduledDate(featuredSession.scheduled_date)}`}
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="text-[20px] font-medium text-text-primary tracking-[-0.01em]">{featuredSession.session_name}</div>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                className={`text-accent shrink-0 transition-transform ${expandedSessionId === featuredSession.id ? 'rotate-180' : ''}`}>
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </div>
-          </button>
-          {expandedSessionId === featuredSession.id && (
-            <SessionExercisesInline session={featuredSession} />
-          )}
-        </section>
-      )}
-
       {/* ── AYUDA ──────────────────────────────────────────── */}
       <div className="bg-bg-secondary border-[0.5px] border-border rounded-xl overflow-hidden">
         <button
@@ -305,7 +263,7 @@ export default function PatientPortalClient({ token, recentSessions, scheduledSe
               <ul className="space-y-2 text-text-secondary">
                 <li className="flex gap-2">
                   <span className="shrink-0 text-accent mt-0.5">→</span>
-                  <span><span className="text-text-primary font-medium">Para hoy / Próxima sesión:</span> la tarjeta destacada al inicio te lleva directo a los ejercicios del día de un toque.</span>
+                  <span><span className="text-text-primary font-medium">Mi semana:</span> la sesión de hoy aparece abierta al entrar. Tocá cualquier otra para ver sus ejercicios.</span>
                 </li>
                 <li className="flex gap-2">
                   <span className="shrink-0 text-accent mt-0.5">→</span>
@@ -430,7 +388,7 @@ export default function PatientPortalClient({ token, recentSessions, scheduledSe
                             </svg>
                           </button>
                           {expandedSessionId === s.id && (
-                            <SessionExercisesInline session={s} />
+                            <SessionExercisesInline session={s} portalToken={token} />
                           )}
                         </div>
                       ))}
@@ -464,6 +422,7 @@ export default function PatientPortalClient({ token, recentSessions, scheduledSe
                   <div className="border-t-[0.5px] border-border">
                     <SessionExercisesInline
                       session={{ id: ps.id, scheduled_date: '', session_data: { blocks: ps.blocks }, exercise_plans: ps.shareToken ? [{ share_token: ps.shareToken }] : null } as ScheduledItem}
+                      portalToken={token}
                     />
                   </div>
                 )}
@@ -655,7 +614,7 @@ export default function PatientPortalClient({ token, recentSessions, scheduledSe
   )
 }
 
-function SessionExercisesInline({ session }: { session: ScheduledItem }) {
+function SessionExercisesInline({ session, portalToken }: { session: ScheduledItem; portalToken: string }) {
   const blocks = (session.session_data?.blocks ?? []).filter(b => b.exercises.length > 0)
   const shareToken = session.exercise_plans?.[0]?.share_token ?? null
 
@@ -671,12 +630,15 @@ function SessionExercisesInline({ session }: { session: ScheduledItem }) {
   }
 
   const submitInlineLog = async (ex: SessionExercise) => {
-    if (!shareToken) return
     const rpe = Number(logRpe)
     if (!logRpe || isNaN(rpe) || rpe < 1 || rpe > 10) return
     setLogStatus('loading')
     try {
-      const res = await fetch(`/api/plan/${shareToken}/log`, {
+      // Use plan share_token if available, otherwise fall back to patient portal token
+      const url = shareToken
+        ? `/api/plan/${shareToken}/log`
+        : `/api/paciente/${portalToken}/log`
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -744,7 +706,7 @@ function SessionExercisesInline({ session }: { session: ScheduledItem }) {
                 </div>
 
                 {/* Log inline */}
-                {shareToken && expandedLogId !== ex.id && (
+                {expandedLogId !== ex.id && (
                   <button
                     onClick={() => openInlineLog(ex.id)}
                     className="mt-2.5 flex items-center gap-1 text-[11px] text-text-secondary hover:text-accent transition-colors"
@@ -756,7 +718,7 @@ function SessionExercisesInline({ session }: { session: ScheduledItem }) {
                   </button>
                 )}
 
-                {shareToken && expandedLogId === ex.id && (
+                {expandedLogId === ex.id && (
                   <div className="mt-3 pt-3 border-t-[0.5px] border-border/50 space-y-2">
                     {logStatus === 'done' ? (
                       <p className="text-[12px] text-accent py-1">✓ Registrado correctamente</p>
