@@ -196,7 +196,7 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
   const [loggedDates, setLoggedDates] = useState<Set<string>>(new Set())
 
   // Patients state
-  const [patients, setPatients] = useState<{ id: string; name: string }[]>([])
+  const [patients, setPatients] = useState<{ id: string; name: string; load_share_token: string | null }[]>([])
 
   const supabaseRef = useRef(createClient())
   const planSaveRef = useRef<NodeJS.Timeout | null>(null)
@@ -220,7 +220,7 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
   // Cargar pacientes
   useEffect(() => {
     const fetchPatients = async () => {
-      const { data } = await supabaseRef.current.from('patients').select('id, name').order('name')
+      const { data } = await supabaseRef.current.from('patients').select('id, name, load_share_token').order('name')
       if (data) setPatients(data)
     }
     fetchPatients()
@@ -777,10 +777,27 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
       {/* HEADER DEL PLAN */}
       <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 mb-8 flex flex-col md:flex-row gap-6">
         <div className="flex-grow space-y-4">
-          <div>
+          <div className="flex items-center gap-3 flex-wrap">
             <p className="text-[24px] font-medium tracking-[-0.01em] text-text-primary">
               {patients.find(p => p.id === plan.patient_id)?.name ?? 'Sin paciente asignado'}
             </p>
+            {plan.patient_id && (() => {
+              const pt = patients.find(p => p.id === plan.patient_id)
+              return pt?.load_share_token ? (
+                <a
+                  href={`/paciente/${pt.load_share_token}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[12px] text-accent border-[0.5px] border-accent/40 rounded-full px-2.5 py-0.5 hover:bg-accent/10 transition-colors"
+                >
+                  Ver portal →
+                </a>
+              ) : (
+                <span className="text-[11px] text-text-secondary border-[0.5px] border-border rounded-full px-2.5 py-0.5">
+                  Sin portal generado
+                </span>
+              )
+            })()}
           </div>
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="w-full sm:w-[200px]">
