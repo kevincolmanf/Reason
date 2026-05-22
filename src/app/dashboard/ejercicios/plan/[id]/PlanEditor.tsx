@@ -407,6 +407,10 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
   const saveSession = async () => {
     if (!selectedSession) return
     setSessionSaveStatus('saving')
+    const blocksToSave = selectedSession.session_data?.blocks ?? []
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const exToSave = blocksToSave.reduce((n: number, b: any) => n + (b.exercises?.length ?? 0), 0)
+    console.log('[saveSession] Enviando:', { id: selectedSession.id, blocks: blocksToSave.length, exercises: exToSave })
     const res = await fetch('/api/sessions/update', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -594,11 +598,15 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
       })
 
       if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}))
+        console.error('[bulkLoad] Error en sesión', session.id, ':', errJson.error)
         setBulkLoadState('error')
-        setBulkLoadError(`Error en la sesión ${i + 1}. Las anteriores sí quedaron guardadas.`)
+        setBulkLoadError(`Error en la sesión ${i + 1}: ${errJson.error ?? res.status}. Las anteriores sí quedaron guardadas.`)
         return
       }
 
+      const okJson = await res.json().catch(() => ({}))
+      console.log('[bulkLoad] Sesión', session.id, 'guardada:', { blocks: okJson.blocks, exercises: okJson.exercises })
       setScheduledSessions(prev =>
         prev.map(s => s.id !== session.id ? s : { ...s, session_data: { blocks: newBlocks } })
       )
