@@ -242,6 +242,7 @@ export default function PatientPortalClient({ token, recentSessions, scheduledSe
     date: s.scheduled_date,
     blocks: s.session_data?.blocks?.length ?? 0,
     rawBlocks: s._rawBlockCount ?? 'n/a',
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     exercises: (s.session_data?.blocks ?? []).reduce((n: number, b: any) => n + (b.exercises?.length ?? 0), 0),
   }))
 

@@ -124,6 +124,7 @@ export default async function PatientPortalPage({ params }: { params: { token: s
       ...s,
       session_data: { blocks },
       // DEBUG: also pass raw for display
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       _rawBlockCount: ((s.session_data as any)?.blocks ?? []).length,
       exercise_plans: [{ share_token: planShareTokenMap[s.plan_id] ?? null }],
     }
