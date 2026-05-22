@@ -70,17 +70,6 @@ function formatShortDate(d: string) {
   return new Date(d + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' })
 }
 
-const DAYS_ES_LONG = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']
-const MONTHS_ES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
-
-function formatScheduledDate(d: string) {
-  const date = new Date(d + 'T00:00:00')
-  const today = todayStr()
-  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0]
-  if (d === today) return 'Hoy'
-  if (d === tomorrow) return 'Mañana'
-  return `${DAYS_ES_LONG[date.getDay()]} ${date.getDate()} de ${MONTHS_ES[date.getMonth()]}`
-}
 
 const DAY_NAMES_ES_LONG = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
 
