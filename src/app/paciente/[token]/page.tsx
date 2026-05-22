@@ -8,11 +8,13 @@ export const metadata = {
   title: 'Portal del Paciente | Reason',
 }
 
+// Combina bloques de todas las sesiones de plan_data, deduplicando por exercise_id
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function extractFallbackBlocks(planData: any) {
+function getPlanFallbackBlocks(planData: any) {
   if (!planData?.sessions) return []
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const blockMap = new Map<string, { id: string; name: string; exercises: any[] }>()
+  const seenExerciseIds = new Set<string>()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   for (const session of planData.sessions as any[]) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -23,29 +25,15 @@ function extractFallbackBlocks(planData: any) {
       }
       const mapped = blockMap.get(block.id)!
       for (const ex of block.exercises) {
-        if (!mapped.exercises.find((e: { id: string }) => e.id === ex.id)) {
+        const key = ex.exercise_id ?? ex.id
+        if (!seenExerciseIds.has(key)) {
+          seenExerciseIds.add(key)
           mapped.exercises.push(ex)
         }
       }
     }
   }
   return Array.from(blockMap.values()).filter(b => b.exercises.length > 0)
-}
-
-// Extrae cada sesión de plan_data que tenga ejercicios
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function extractPlanSessions(planData: any, shareToken: string | null) {
-  if (!planData?.sessions) return []
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (planData.sessions as any[])
-    .map((s: { id: string; name: string; blocks: { id: string; name: string; exercises: { id: string; exercise_id: string; exercise_name: string; youtube_url: string; group?: string; sets: string; reps: string; load: string; rpe_obj: string; eav_obj: string; rest: string }[] }[] }) => ({
-      id: s.id,
-      name: s.name,
-      shareToken,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      blocks: (s.blocks ?? []).filter((b: any) => b.exercises?.length > 0),
-    }))
-    .filter(s => s.blocks.length > 0)
 }
 
 export default async function PatientPortalPage({ params }: { params: { token: string } }) {
@@ -57,9 +45,7 @@ export default async function PatientPortalPage({ params }: { params: { token: s
     .eq('load_share_token', params.token)
     .single()
 
-  if (patientError || !patient) {
-    notFound()
-  }
+  if (patientError || !patient) notFound()
 
   const { data: recentSessions } = await supabase
     .from('load_sessions')
@@ -81,7 +67,7 @@ export default async function PatientPortalPage({ params }: { params: { token: s
     .eq('patient_id', patient.id)
     .order('scheduled_date', { ascending: true })
 
-  // Planes adicionales referenciados por sesiones (por si plan no tiene patient_id)
+  // Planes adicionales referenciados por sesiones
   const extraPlanIds = Array.from(new Set(
     (sessionsByPatientId ?? [])
       .map(s => s.plan_id)
@@ -100,10 +86,11 @@ export default async function PatientPortalPage({ params }: { params: { token: s
   const allPlanIds = allPlans.map(p => p.id)
 
   const planShareTokenMap: Record<string, string | null> = {}
-  const planFallbackBlocksMap: Record<string, ReturnType<typeof extractFallbackBlocks>> = {}
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const planFallbackMap: Record<string, any[]> = {}
   for (const p of allPlans) {
     planShareTokenMap[p.id] = p.share_token
-    planFallbackBlocksMap[p.id] = extractFallbackBlocks(p.plan_data)
+    planFallbackMap[p.id] = getPlanFallbackBlocks(p.plan_data)
   }
 
   // ── Sesiones por plan_id ───────────────────────────────────────────────────
@@ -125,20 +112,17 @@ export default async function PatientPortalPage({ params }: { params: { token: s
 
   const scheduledSessions = rawSessions.map(s => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const sessionData = s.session_data as any
-    // Solo usar los bloques que tengan ejercicios (sin fallback a plan_data)
+    const sessionBlocks: any[] = (s.session_data as any)?.blocks ?? []
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const blocks = (sessionData?.blocks ?? []).filter((b: any) => b.exercises?.length > 0)
+    const hasOwn = sessionBlocks.some((b: any) => b.exercises?.length > 0)
+    // Si la sesión no tiene ejercicios propios, usar los del plan (deduplicados)
+    const blocks = hasOwn ? sessionBlocks : (planFallbackMap[s.plan_id] ?? [])
     return {
       ...s,
       session_data: { blocks },
       exercise_plans: [{ share_token: planShareTokenMap[s.plan_id] ?? null }],
     }
   })
-
-  // ── Mi programa: sesiones de plan_data (siempre que haya ejercicios) ────────
-  // Se muestra como sección separada, sin mezclarse con scheduled_sessions
-  const planSessions = allPlans.flatMap(p => extractPlanSessions(p.plan_data, p.share_token))
 
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
@@ -159,7 +143,7 @@ export default async function PatientPortalPage({ params }: { params: { token: s
           token={params.token}
           recentSessions={recentSessions ?? []}
           scheduledSessions={scheduledSessions}
-          planSessions={planSessions}
+          planSessions={[]}
         />
       </main>
     </div>
