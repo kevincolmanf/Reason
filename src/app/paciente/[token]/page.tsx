@@ -98,25 +98,10 @@ export default async function PatientPortalPage({ params }: { params: { token: s
     .filter(s => { if (seenIds.has(s.id)) return false; seenIds.add(s.id); return true })
     .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date))
 
-  // Sesiones del calendario — usa session_data si tiene ejercicios; si no, fallback a plan_data
+  // Sesiones del calendario — solo los ejercicios propios de cada día (session_data)
   const scheduledSessions = rawSessions.map(s => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let blocks = ((s.session_data as any)?.blocks ?? []).filter((b: any) => b.exercises?.length > 0)
-
-    // Fallback automático: si la sesión no tiene ejercicios propios, buscar en plan_data
-    if (blocks.length === 0) {
-      const plan = allPlans.find(p => p.id === s.plan_id)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const planSessions = (plan?.plan_data as any)?.sessions as any[] | undefined
-      if (planSessions?.length) {
-        // Intentar matchear por nombre; si no coincide, usar la primera sesión disponible
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const matched = planSessions.find((ps: any) => ps.name === s.session_name) ?? planSessions[0]
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        blocks = (matched?.blocks ?? []).filter((b: any) => b.exercises?.length > 0)
-      }
-    }
-
+    const blocks = ((s.session_data as any)?.blocks ?? []).filter((b: any) => b.exercises?.length > 0)
     return {
       ...s,
       session_data: { blocks },

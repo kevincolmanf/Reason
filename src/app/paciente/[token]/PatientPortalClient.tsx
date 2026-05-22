@@ -768,27 +768,52 @@ function SessionExercisesInline({
           <div className="divide-y-[0.5px] divide-border">
             {block.exercises.map(ex => (
               <div key={ex.id} className="p-4">
+                {/* Nombre + grupo + botón reportar */}
                 <div className="flex items-start justify-between gap-3 mb-2">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    {ex.group && (
-                      <span className="text-[11px] font-mono font-medium bg-accent/10 border-[0.5px] border-accent/40 text-accent rounded px-1.5 py-0.5">{ex.group}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {ex.group && (
+                        <span className="text-[11px] font-mono font-medium bg-accent/10 border-[0.5px] border-accent/40 text-accent rounded px-1.5 py-0.5">{ex.group}</span>
+                      )}
+                      <span className="text-[14px] font-medium text-text-primary">{ex.exercise_name}</span>
+                    </div>
+                    {ex.youtube_url && (
+                      <a
+                        href={ex.youtube_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-[12px] text-accent hover:underline mt-1"
+                      >
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                        Ver video
+                      </a>
                     )}
-                    <span className="text-[14px] font-medium text-text-primary">{ex.exercise_name}</span>
                   </div>
                   {shareToken && (
-                    <button onClick={() => onLog(ex, shareToken, session.id, session.scheduled_date)}
-                      className="shrink-0 px-2.5 py-1.5 rounded-lg border-[0.5px] border-border bg-bg-secondary hover:border-accent hover:text-accent text-text-secondary text-[12px] font-medium transition-colors">
+                    <button
+                      onClick={() => onLog(ex, shareToken, session.id, session.scheduled_date)}
+                      className="shrink-0 px-2.5 py-1.5 rounded-lg border-[0.5px] border-border bg-bg-secondary hover:border-accent hover:text-accent text-text-secondary text-[12px] font-medium transition-colors"
+                    >
                       Reportar
                     </button>
                   )}
                 </div>
-                {(ex.sets || ex.reps || ex.load || ex.rest) && (
-                  <div className="grid grid-cols-3 gap-x-4 gap-y-1.5">
-                    <div><div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-0.5">Series × Reps</div><div className="text-[13px] font-medium text-accent">{ex.sets || '-'} × {ex.reps || '-'}</div></div>
-                    <div><div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-0.5">Carga</div><div className="text-[13px] font-medium">{ex.load || '-'}</div></div>
-                    <div><div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-0.5">Descanso</div><div className="text-[13px] font-medium">{ex.rest || '-'}</div></div>
+
+                {/* Dosificación — siempre visible */}
+                <div className="grid grid-cols-3 gap-x-4 gap-y-1.5 mt-2">
+                  <div>
+                    <div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-0.5">Series × Reps</div>
+                    <div className="text-[13px] font-medium text-accent">{ex.sets || '–'} × {ex.reps || '–'}</div>
                   </div>
-                )}
+                  <div>
+                    <div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-0.5">Carga</div>
+                    <div className="text-[13px] font-medium">{ex.load || '–'}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-0.5">Descanso</div>
+                    <div className="text-[13px] font-medium">{ex.rest || '–'}</div>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
