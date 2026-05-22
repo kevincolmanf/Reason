@@ -160,6 +160,10 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
   const [copiedFromDate, setCopiedFromDate] = useState<string | null>(null)
   const [sessionSaveStatus, setSessionSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [showImportModal, setShowImportModal] = useState(false)
+  const [showBulkLoadModal, setShowBulkLoadModal] = useState(false)
+  const [bulkLoadState, setBulkLoadState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
+  const [bulkLoadDone, setBulkLoadDone] = useState(0)
+  const [bulkLoadError, setBulkLoadError] = useState<string | null>(null)
 
   // Search/modal state
   const [isSearchOpen, setIsSearchOpen] = useState(false)
@@ -205,6 +209,11 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
 
   const importablePlanSessions = ((plan.plan_data?.sessions ?? []) as PlanDataSession[])
     .filter(s => (s.blocks ?? []).some(b => b.exercises?.length > 0))
+
+  const emptySessions = scheduledSessions.filter(
+    s => !(s.session_data?.blocks ?? []).some(b => b.exercises.length > 0)
+  )
+  const canBulkLoad = emptySessions.length > 0 && importablePlanSessions.length > 0
 
   // ─── Effects ───────────────────────────────────────────────────────────────
 
@@ -545,6 +554,54 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
     setCopiedFromDate(null)
   }
 
+  const closeBulkModal = () => {
+    setShowBulkLoadModal(false)
+    setBulkLoadState('idle')
+    setBulkLoadDone(0)
+    setBulkLoadError(null)
+  }
+
+  const handleBulkLoad = async () => {
+    if (!canBulkLoad) return
+    setBulkLoadState('loading')
+    setBulkLoadDone(0)
+
+    for (let i = 0; i < emptySessions.length; i++) {
+      const session = emptySessions[i]
+      const planSession = importablePlanSessions[i % importablePlanSessions.length]
+      const newBlocks = (planSession.blocks ?? [])
+        .filter(b => b.exercises?.length > 0)
+        .map(b => ({
+          ...b,
+          id: uuidv4(),
+          exercises: b.exercises.map(ex => ({ ...ex, id: uuidv4() })),
+        }))
+
+      const res = await fetch('/api/sessions/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: session.id,
+          session_name: session.session_name,
+          session_data: { blocks: newBlocks },
+        }),
+      })
+
+      if (!res.ok) {
+        setBulkLoadState('error')
+        setBulkLoadError(`Error en la sesión ${i + 1}. Las anteriores sí quedaron guardadas.`)
+        return
+      }
+
+      setScheduledSessions(prev =>
+        prev.map(s => s.id !== session.id ? s : { ...s, session_data: { blocks: newBlocks } })
+      )
+      setBulkLoadDone(i + 1)
+    }
+
+    setBulkLoadState('done')
+  }
+
   const handleImportFromPlan = (planSession: PlanDataSession) => {
     const currentBlocks = selectedSession?.session_data?.blocks ?? []
     const hasExisting = currentBlocks.some(b => b.exercises.length > 0)
@@ -753,6 +810,14 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
             {saveStatus === 'error' && <span className="text-warning">Error al guardar</span>}
           </div>
           <div className="flex flex-col gap-2 mt-4 w-full">
+            {canBulkLoad && (
+              <button
+                onClick={() => setShowBulkLoadModal(true)}
+                className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 w-full"
+              >
+                Cargar plan al calendario
+              </button>
+            )}
             <button
               onClick={handleExportPDF}
               className="bg-bg-primary border-[0.5px] border-border-strong text-text-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:bg-bg-secondary w-full"
@@ -1335,6 +1400,90 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL CARGAR PLAN AL CALENDARIO */}
+      {showBulkLoadModal && (
+        <div className="fixed inset-0 bg-bg-primary/90 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-bg-primary border-[0.5px] border-border rounded-xl w-full max-w-[420px] shadow-2xl p-6">
+
+            {bulkLoadState === 'idle' && (
+              <>
+                <h3 className="text-[16px] font-medium text-text-primary mb-2">Cargar plan al calendario</h3>
+                <p className="text-[13px] text-text-secondary mb-1">
+                  Hay <span className="font-medium text-text-primary">{emptySessions.length}</span> día{emptySessions.length !== 1 ? 's' : ''} sin ejercicios.
+                </p>
+                <p className="text-[13px] text-text-secondary mb-5">
+                  {importablePlanSessions.length === 1
+                    ? <>Se usará <span className="font-medium text-text-primary">{importablePlanSessions[0].name}</span> para todos los días.</>
+                    : <>Se rotarán las <span className="font-medium text-text-primary">{importablePlanSessions.length} sesiones</span> del plan en orden.</>
+                  }
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleBulkLoad}
+                    className="flex-1 bg-accent text-bg-primary py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90"
+                  >
+                    Cargar todo
+                  </button>
+                  <button
+                    onClick={closeBulkModal}
+                    className="flex-1 border-[0.5px] border-border py-2.5 rounded-lg text-[13px] text-text-secondary hover:text-text-primary transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </>
+            )}
+
+            {bulkLoadState === 'loading' && (
+              <>
+                <h3 className="text-[16px] font-medium text-text-primary mb-3">Cargando ejercicios...</h3>
+                <p className="text-[13px] text-text-secondary mb-3">
+                  {bulkLoadDone} de {emptySessions.length} días guardados
+                </p>
+                <div className="w-full bg-bg-secondary rounded-full h-1.5">
+                  <div
+                    className="bg-accent h-1.5 rounded-full transition-all duration-300"
+                    style={{ width: `${Math.round((bulkLoadDone / emptySessions.length) * 100)}%` }}
+                  />
+                </div>
+              </>
+            )}
+
+            {bulkLoadState === 'done' && (
+              <>
+                <div className="text-center py-2">
+                  <div className="text-[32px] mb-2">✓</div>
+                  <h3 className="text-[16px] font-medium text-text-primary mb-1">Listo</h3>
+                  <p className="text-[13px] text-text-secondary mb-5">
+                    {emptySessions.length} día{emptySessions.length !== 1 ? 's' : ''} cargado{emptySessions.length !== 1 ? 's' : ''} con ejercicios y dosificación.
+                  </p>
+                  <button
+                    onClick={closeBulkModal}
+                    className="bg-accent text-bg-primary px-6 py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              </>
+            )}
+
+            {bulkLoadState === 'error' && (
+              <>
+                <h3 className="text-[16px] font-medium text-text-primary mb-2">Error parcial</h3>
+                <p className="text-[13px] text-text-secondary mb-4">{bulkLoadError}</p>
+                <button
+                  onClick={closeBulkModal}
+                  className="w-full border-[0.5px] border-border py-2.5 rounded-lg text-[13px] text-text-secondary hover:text-text-primary"
+                >
+                  Cerrar
+                </button>
+              </>
+            )}
+
           </div>
         </div>
       )}
