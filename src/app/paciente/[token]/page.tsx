@@ -141,6 +141,14 @@ export default async function PatientPortalPage({ params }: { params: { token: s
       </header>
 
       <main className="flex-grow w-full max-w-[800px] mx-auto px-4 py-8">
+        {/* DEBUG TEMP — borrar después */}
+        <div className="mb-4 p-3 bg-yellow-900/30 border border-yellow-600/50 rounded-lg text-[11px] text-yellow-300 font-mono space-y-1">
+          <div>patient.id: {patient.id}</div>
+          <div>plansByPatient: {plansByPatient?.length ?? 0} — ids: {(plansByPatient ?? []).map((p: {id:string}) => p.id.slice(0,8)).join(', ') || 'ninguno'}</div>
+          <div>sessionsByPatientId: {sessionsByPatientId?.length ?? 0}</div>
+          <div>sessionsByPlanId: {sessionsByPlanId?.length ?? 0}</div>
+          <div>scheduledSessions final: {scheduledSessions.length}</div>
+        </div>
         <PatientPortalClient
           patient={patient}
           token={params.token}
