@@ -211,7 +211,6 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
         .from('scheduled_sessions')
         .select('id, scheduled_date, session_name, session_data, completed')
         .eq('plan_id', plan.id)
-        .not('session_data', 'is', null)
         .order('scheduled_date')
       if (data) setScheduledSessions(data)
     }
