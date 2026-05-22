@@ -98,6 +98,24 @@ export default async function PatientPortalPage({ params }: { params: { token: s
     .filter(s => { if (seenIds.has(s.id)) return false; seenIds.add(s.id); return true })
     .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date))
 
+  // DEBUG TEMPORAL
+  const _serverDbg = rawSessions.map(s => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sd = s.session_data as any
+    const rawBlocks = sd?.blocks ?? []
+    return {
+      date: s.scheduled_date,
+      sd_type: typeof sd,
+      sd_null: sd === null,
+      rawBlocks: rawBlocks.length,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      firstBlockExType: rawBlocks[0] ? typeof (rawBlocks[0] as any).exercises : 'no-block',
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      firstBlockExLen: rawBlocks[0] ? ((rawBlocks[0] as any).exercises?.length ?? 'undefined') : 'no-block',
+    }
+  })
+  console.log('[portal-debug]', JSON.stringify(_serverDbg))
+
   // Sesiones del calendario — solo los ejercicios propios de cada día (session_data)
   const scheduledSessions = rawSessions.map(s => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -105,6 +123,8 @@ export default async function PatientPortalPage({ params }: { params: { token: s
     return {
       ...s,
       session_data: { blocks },
+      // DEBUG: also pass raw for display
+      _rawBlockCount: ((s.session_data as any)?.blocks ?? []).length,
       exercise_plans: [{ share_token: planShareTokenMap[s.plan_id] ?? null }],
     }
   })

@@ -237,10 +237,12 @@ export default function PatientPortalClient({ token, recentSessions, scheduledSe
   }
 
   // DEBUG TEMPORAL — borrar después
-  const _dbg = scheduledSessions.map(s => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const _dbg = scheduledSessions.map((s: any) => ({
     date: s.scheduled_date,
     blocks: s.session_data?.blocks?.length ?? 0,
-    exercises: (s.session_data?.blocks ?? []).reduce((n, b) => n + (b.exercises?.length ?? 0), 0),
+    rawBlocks: s._rawBlockCount ?? 'n/a',
+    exercises: (s.session_data?.blocks ?? []).reduce((n: number, b: any) => n + (b.exercises?.length ?? 0), 0),
   }))
 
   return (
