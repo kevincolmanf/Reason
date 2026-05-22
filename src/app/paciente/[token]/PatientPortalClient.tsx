@@ -149,16 +149,10 @@ function groupSessionsByWeek(sessions: ScheduledItem[], today: string): WeekGrou
   return weeks
 }
 
-interface LogState {
-  ex: SessionExercise; shareToken: string; sessionId: string; scheduledDate: string
-  rpe: string; eva: string; notes: string; loading: boolean; done: boolean; error: string | null
-}
-
 export default function PatientPortalClient({ token, recentSessions, scheduledSessions, planSessions }: Props) {
   const [showHelp, setShowHelp] = useState(false)
-  const [expandedWeeks, setExpandedWeeks] = useState<Set<string>>(() => new Set([getMondayOf(todayStr())]))
+  const [selectedWeekMonday, setSelectedWeekMonday] = useState(() => getMondayOf(todayStr()))
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null)
-  const [logState, setLogState] = useState<LogState | null>(null)
 
   const router = useRouter()
   useEffect(() => {
@@ -207,38 +201,6 @@ export default function PatientPortalClient({ token, recentSessions, scheduledSe
   })()
 
   const showSportSection = activityType === 'sport' || activityType === 'combined'
-
-  function openLog(ex: SessionExercise, shareToken: string, sessionId: string, scheduledDate: string) {
-    setLogState({ ex, shareToken, sessionId, scheduledDate, rpe: '', eva: '', notes: '', loading: false, done: false, error: null })
-  }
-
-  async function submitLog() {
-    if (!logState) return
-    const rpe = Number(logState.rpe)
-    const eva = Number(logState.eva)
-    if (!logState.rpe || isNaN(rpe) || rpe < 1 || rpe > 10) { setLogState(s => s ? { ...s, error: 'RPE debe ser entre 1 y 10' } : null); return }
-    if (logState.eva !== '' && (isNaN(eva) || eva < 0 || eva > 10)) { setLogState(s => s ? { ...s, error: 'EVA debe ser entre 0 y 10' } : null); return }
-    setLogState(s => s ? { ...s, loading: true, error: null } : null)
-    try {
-      const res = await fetch(`/api/plan/${logState.shareToken}/log`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          exercise_id: logState.ex.exercise_id,
-          exercise_name: logState.ex.exercise_name,
-          session_id: logState.sessionId,
-          week: 1, rpe, eva: logState.eva !== '' ? eva : 0,
-          notes: logState.notes || null,
-          scheduled_date: logState.scheduledDate,
-        }),
-      })
-      if (!res.ok) throw new Error()
-      setLogState(s => s ? { ...s, loading: false, done: true } : null)
-      setTimeout(() => setLogState(null), 1500)
-    } catch {
-      setLogState(s => s ? { ...s, loading: false, error: 'No se pudo guardar. Intentá de nuevo.' } : null)
-    }
-  }
 
   const handleSubmit = async (skipEmptyCheck = false) => {
     if (!formDate) return
@@ -314,7 +276,7 @@ export default function PatientPortalClient({ token, recentSessions, scheduledSe
             </div>
           </button>
           {expandedSessionId === featuredSession.id && (
-            <SessionExercisesInline session={featuredSession} onLog={openLog} />
+            <SessionExercisesInline session={featuredSession} />
           )}
         </section>
       )}
@@ -405,92 +367,81 @@ export default function PatientPortalClient({ token, recentSessions, scheduledSe
       </div>
 
       {/* ── MI SEMANA ──────────────────────────────────────── */}
-      {scheduledSessions.length > 0 && (
-        <section>
-          <h2 className="text-[20px] font-medium tracking-[-0.01em] mb-4">Mi semana</h2>
-          <div className="space-y-2">
-            {groupSessionsByWeek(scheduledSessions, todayStr()).map(week => {
-              const isExpanded = expandedWeeks.has(week.mondayStr)
-              const toggleWeek = () => setExpandedWeeks(prev => {
-                const next = new Set(prev)
-                if (next.has(week.mondayStr)) next.delete(week.mondayStr)
-                else next.add(week.mondayStr)
-                return next
-              })
-              return (
-                <div key={week.mondayStr} className="bg-bg-primary border-[0.5px] border-border rounded-xl overflow-hidden">
-                  <button
-                    onClick={toggleWeek}
-                    className={`w-full flex items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-bg-secondary ${week.isCurrentWeek ? 'bg-accent/5' : ''}`}
-                  >
-                    <div className="flex items-center gap-2">
-                      {week.isCurrentWeek && <span className="w-2 h-2 rounded-full bg-accent shrink-0" />}
-                      <span className={`text-[14px] font-medium ${week.isCurrentWeek ? 'text-accent' : 'text-text-primary'}`}>
-                        {week.label}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-[12px] text-text-secondary">
-                        {week.days.length} día{week.days.length !== 1 ? 's' : ''}
-                      </span>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                        className={`text-text-secondary transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
-                        <polyline points="6 9 12 15 18 9" />
-                      </svg>
-                    </div>
-                  </button>
+      {scheduledSessions.length > 0 && (() => {
+        const weekGroups = groupSessionsByWeek(scheduledSessions, todayStr())
+        const activeWeek = weekGroups.find(w => w.mondayStr === selectedWeekMonday) ?? weekGroups[0] ?? null
+        return (
+          <section>
+            <h2 className="text-[20px] font-medium tracking-[-0.01em] mb-3">Mi semana</h2>
 
-                  {isExpanded && (
-                    <div className="border-t-[0.5px] border-border divide-y-[0.5px] divide-border">
-                      {week.days.map(day => (
-                        <div key={day.dateStr} className="px-4 py-3">
-                          <div className="text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-2">
-                            {getDayLabel(day.dateStr)}
-                          </div>
-                          <div className="space-y-1.5">
-                            {day.sessions.map(s => (
-                              <div key={s.id}>
-                                <button
-                                  onClick={() => setExpandedSessionId(prev => prev === s.id ? null : s.id)}
-                                  className={`w-full text-left flex items-center gap-3 rounded-lg px-3 py-2.5 border-[0.5px] transition-colors ${
-                                    s.completed
-                                      ? 'border-border bg-bg-secondary opacity-50'
-                                      : s.scheduled_date === todayStr()
-                                      ? 'border-accent/40 bg-accent/10 hover:bg-accent/15'
-                                      : 'border-border bg-bg-secondary hover:border-accent/40'
-                                  }`}
-                                >
-                                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                                    s.completed ? 'bg-text-secondary'
-                                    : s.scheduled_date === todayStr() ? 'bg-accent'
-                                    : 'bg-border'
-                                  }`} />
-                                  <div className="flex-1 min-w-0">
-                                    <div className={`text-[13px] font-medium ${s.completed ? 'line-through text-text-secondary' : 'text-text-primary'}`}>
-                                      {s.session_name}
-                                    </div>
-                                  </div>
-                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                                    className={`text-text-secondary shrink-0 transition-transform ${expandedSessionId === s.id ? 'rotate-180' : ''}`}>
-                                    <polyline points="6 9 12 15 18 9" />
-                                  </svg>
-                                </button>
-                                {expandedSessionId === s.id && (
-                                  <SessionExercisesInline session={s} onLog={openLog} />
-                                )}
+            {/* Chips de semana */}
+            <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1 mb-4">
+              {weekGroups.map(week => (
+                <button
+                  key={week.mondayStr}
+                  onClick={() => setSelectedWeekMonday(week.mondayStr)}
+                  className={`shrink-0 px-3 py-1.5 rounded-full text-[12px] font-medium border-[0.5px] whitespace-nowrap transition-colors ${
+                    selectedWeekMonday === week.mondayStr
+                      ? 'bg-accent text-bg-primary border-accent'
+                      : week.isCurrentWeek
+                      ? 'bg-accent/10 border-accent/40 text-accent'
+                      : 'bg-bg-secondary border-border text-text-secondary hover:text-text-primary'
+                  }`}
+                >
+                  {week.isCurrentWeek ? 'Esta semana' : `${fmtDayMonth(week.mondayStr)} – ${fmtDayMonth(addDaysToStr(week.mondayStr, 6))}`}
+                </button>
+              ))}
+            </div>
+
+            {/* Días de la semana seleccionada */}
+            {activeWeek && (
+              <div className="space-y-3">
+                {activeWeek.days.map(day => (
+                  <div key={day.dateStr}>
+                    <div className="text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1.5 px-1">
+                      {getDayLabel(day.dateStr)}
+                    </div>
+                    <div className="space-y-1.5">
+                      {day.sessions.map(s => (
+                        <div key={s.id}>
+                          <button
+                            onClick={() => setExpandedSessionId(prev => prev === s.id ? null : s.id)}
+                            className={`w-full text-left flex items-center gap-3 rounded-xl px-4 py-3 border-[0.5px] transition-colors ${
+                              s.completed
+                                ? 'border-border bg-bg-secondary opacity-50'
+                                : s.scheduled_date === todayStr()
+                                ? 'border-accent/40 bg-accent/10 hover:bg-accent/15'
+                                : 'border-border bg-bg-secondary hover:border-accent/40'
+                            }`}
+                          >
+                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                              s.completed ? 'bg-text-secondary'
+                              : s.scheduled_date === todayStr() ? 'bg-accent'
+                              : 'bg-border'
+                            }`} />
+                            <div className="flex-1 min-w-0">
+                              <div className={`text-[13px] font-medium ${s.completed ? 'line-through text-text-secondary' : 'text-text-primary'}`}>
+                                {s.session_name}
                               </div>
-                            ))}
-                          </div>
+                            </div>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                              className={`text-text-secondary shrink-0 transition-transform ${expandedSessionId === s.id ? 'rotate-180' : ''}`}>
+                              <polyline points="6 9 12 15 18 9" />
+                            </svg>
+                          </button>
+                          {expandedSessionId === s.id && (
+                            <SessionExercisesInline session={s} />
+                          )}
                         </div>
                       ))}
                     </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </section>
-      )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )
+      })()}
 
       {/* ── MI PROGRAMA (fallback: solo si no hay sesiones de calendario) ─── */}
       {planSessions.length > 0 && scheduledSessions.length === 0 && (
@@ -513,7 +464,6 @@ export default function PatientPortalClient({ token, recentSessions, scheduledSe
                   <div className="border-t-[0.5px] border-border">
                     <SessionExercisesInline
                       session={{ id: ps.id, scheduled_date: '', session_data: { blocks: ps.blocks }, exercise_plans: ps.shareToken ? [{ share_token: ps.shareToken }] : null } as ScheduledItem}
-                      onLog={openLog}
                     />
                   </div>
                 )}
@@ -701,58 +651,52 @@ export default function PatientPortalClient({ token, recentSessions, scheduledSe
         </section>
       )}
 
-      {/* ── LOG MODAL ─────────────────────────────────────── */}
-      {logState && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-end sm:items-center justify-center p-4">
-          <div className="bg-bg-secondary border-[0.5px] border-border rounded-xl w-full max-w-[400px] p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-[16px] font-medium text-text-primary">Reportar ejercicio</h3>
-              <button onClick={() => setLogState(null)} className="text-text-secondary hover:text-text-primary">✕</button>
-            </div>
-            <p className="text-[13px] text-text-secondary">{logState.ex.exercise_name}</p>
-            {logState.done ? (
-              <p className="text-[14px] text-accent text-center py-4">¡Registrado correctamente!</p>
-            ) : (
-              <>
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-[12px] text-text-secondary uppercase tracking-[0.05em] block mb-1">RPE (esfuerzo percibido, 1–10)</label>
-                    <input type="number" min="1" max="10" value={logState.rpe} onChange={e => setLogState(s => s ? { ...s, rpe: e.target.value } : null)}
-                      className="w-full bg-bg-primary border-[0.5px] border-border rounded-lg px-3 py-2 text-[14px] text-text-primary outline-none focus:border-accent" placeholder="ej: 7" />
-                  </div>
-                  <div>
-                    <label className="text-[12px] text-text-secondary uppercase tracking-[0.05em] block mb-1">Dolor (EVA, 0–10)</label>
-                    <input type="number" min="0" max="10" value={logState.eva} onChange={e => setLogState(s => s ? { ...s, eva: e.target.value } : null)}
-                      className="w-full bg-bg-primary border-[0.5px] border-border rounded-lg px-3 py-2 text-[14px] text-text-primary outline-none focus:border-accent" placeholder="ej: 2" />
-                  </div>
-                  <div>
-                    <label className="text-[12px] text-text-secondary uppercase tracking-[0.05em] block mb-1">Notas (opcional)</label>
-                    <textarea value={logState.notes} onChange={e => setLogState(s => s ? { ...s, notes: e.target.value } : null)}
-                      className="w-full bg-bg-primary border-[0.5px] border-border rounded-lg px-3 py-2 text-[14px] text-text-primary outline-none focus:border-accent min-h-[60px] resize-none" maxLength={300} />
-                  </div>
-                  {logState.error && <p className="text-[13px] text-warning">{logState.error}</p>}
-                </div>
-                <button onClick={submitLog} disabled={logState.loading}
-                  className="w-full bg-accent text-bg-primary py-2.5 rounded-lg text-[14px] font-medium hover:opacity-90 disabled:opacity-50">
-                  {logState.loading ? 'Guardando...' : 'Guardar reporte'}
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   )
 }
 
-function SessionExercisesInline({
-  session, onLog,
-}: {
-  session: ScheduledItem
-  onLog: (ex: SessionExercise, shareToken: string, sessionId: string, scheduledDate: string) => void
-}) {
+function SessionExercisesInline({ session }: { session: ScheduledItem }) {
   const blocks = (session.session_data?.blocks ?? []).filter(b => b.exercises.length > 0)
   const shareToken = session.exercise_plans?.[0]?.share_token ?? null
+
+  const [expandedLogId, setExpandedLogId] = useState<string | null>(null)
+  const [logRpe, setLogRpe] = useState('')
+  const [logEva, setLogEva] = useState('')
+  const [logNotes, setLogNotes] = useState('')
+  const [logStatus, setLogStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
+
+  const openInlineLog = (exId: string) => {
+    setExpandedLogId(exId)
+    setLogRpe(''); setLogEva(''); setLogNotes(''); setLogStatus('idle')
+  }
+
+  const submitInlineLog = async (ex: SessionExercise) => {
+    if (!shareToken) return
+    const rpe = Number(logRpe)
+    if (!logRpe || isNaN(rpe) || rpe < 1 || rpe > 10) return
+    setLogStatus('loading')
+    try {
+      const res = await fetch(`/api/plan/${shareToken}/log`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          exercise_id: ex.exercise_id,
+          exercise_name: ex.exercise_name,
+          session_id: session.id,
+          week: 1,
+          rpe,
+          eva: logEva ? Number(logEva) : 0,
+          notes: logNotes || null,
+          scheduled_date: session.scheduled_date,
+        }),
+      })
+      if (!res.ok) throw new Error()
+      setLogStatus('done')
+      setTimeout(() => { setExpandedLogId(null); setLogStatus('idle') }, 1800)
+    } catch {
+      setLogStatus('error')
+    }
+  }
 
   if (blocks.length === 0) {
     return <p className="text-[13px] text-text-secondary px-3 py-3">Esta sesión no tiene ejercicios asignados.</p>
@@ -768,39 +712,23 @@ function SessionExercisesInline({
           <div className="divide-y-[0.5px] divide-border">
             {block.exercises.map(ex => (
               <div key={ex.id} className="p-4">
-                {/* Nombre + grupo + botón reportar */}
-                <div className="flex items-start justify-between gap-3 mb-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {ex.group && (
-                        <span className="text-[11px] font-mono font-medium bg-accent/10 border-[0.5px] border-accent/40 text-accent rounded px-1.5 py-0.5">{ex.group}</span>
-                      )}
-                      <span className="text-[14px] font-medium text-text-primary">{ex.exercise_name}</span>
-                    </div>
-                    {ex.youtube_url && (
-                      <a
-                        href={ex.youtube_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1 text-[12px] text-accent hover:underline mt-1"
-                      >
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-                        Ver video
-                      </a>
-                    )}
-                  </div>
-                  {shareToken && (
-                    <button
-                      onClick={() => onLog(ex, shareToken, session.id, session.scheduled_date)}
-                      className="shrink-0 px-2.5 py-1.5 rounded-lg border-[0.5px] border-border bg-bg-secondary hover:border-accent hover:text-accent text-text-secondary text-[12px] font-medium transition-colors"
-                    >
-                      Reportar
-                    </button>
+                {/* Nombre + grupo + video */}
+                <div className="flex items-start gap-1.5 flex-wrap mb-2">
+                  {ex.group && (
+                    <span className="text-[11px] font-mono font-medium bg-accent/10 border-[0.5px] border-accent/40 text-accent rounded px-1.5 py-0.5">{ex.group}</span>
                   )}
+                  <span className="text-[14px] font-medium text-text-primary">{ex.exercise_name}</span>
                 </div>
+                {ex.youtube_url && (
+                  <a href={ex.youtube_url} target="_blank" rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-[12px] text-accent hover:underline mb-2">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                    Ver video
+                  </a>
+                )}
 
-                {/* Dosificación — siempre visible */}
-                <div className="grid grid-cols-3 gap-x-4 gap-y-1.5 mt-2">
+                {/* Dosificación */}
+                <div className="grid grid-cols-3 gap-x-4 gap-y-1.5">
                   <div>
                     <div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-0.5">Series × Reps</div>
                     <div className="text-[13px] font-medium text-accent">{ex.sets || '–'} × {ex.reps || '–'}</div>
@@ -814,6 +742,61 @@ function SessionExercisesInline({
                     <div className="text-[13px] font-medium">{ex.rest || '–'}</div>
                   </div>
                 </div>
+
+                {/* Log inline */}
+                {shareToken && expandedLogId !== ex.id && (
+                  <button
+                    onClick={() => openInlineLog(ex.id)}
+                    className="mt-2.5 flex items-center gap-1 text-[11px] text-text-secondary hover:text-accent transition-colors"
+                  >
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                    Reportar ejercicio
+                  </button>
+                )}
+
+                {shareToken && expandedLogId === ex.id && (
+                  <div className="mt-3 pt-3 border-t-[0.5px] border-border/50 space-y-2">
+                    {logStatus === 'done' ? (
+                      <p className="text-[12px] text-accent py-1">✓ Registrado correctamente</p>
+                    ) : (
+                      <>
+                        <div className="flex gap-2">
+                          <div className="flex-1">
+                            <label className="text-[10px] text-text-secondary uppercase tracking-[0.05em]">RPE (1–10) *</label>
+                            <input type="number" min="1" max="10" value={logRpe}
+                              onChange={e => setLogRpe(e.target.value)} placeholder="ej: 7"
+                              className="w-full bg-bg-primary border-[0.5px] border-border rounded-lg px-2 py-1.5 text-[13px] outline-none focus:border-accent mt-0.5" />
+                          </div>
+                          <div className="flex-1">
+                            <label className="text-[10px] text-text-secondary uppercase tracking-[0.05em]">Dolor EVA (0–10)</label>
+                            <input type="number" min="0" max="10" value={logEva}
+                              onChange={e => setLogEva(e.target.value)} placeholder="ej: 2"
+                              className="w-full bg-bg-primary border-[0.5px] border-border rounded-lg px-2 py-1.5 text-[13px] outline-none focus:border-accent mt-0.5" />
+                          </div>
+                        </div>
+                        <input type="text" value={logNotes} onChange={e => setLogNotes(e.target.value)}
+                          placeholder="Observaciones (opcional)"
+                          className="w-full bg-bg-primary border-[0.5px] border-border rounded-lg px-2 py-1.5 text-[13px] outline-none focus:border-accent" />
+                        {logStatus === 'error' && (
+                          <p className="text-[11px] text-warning">No se pudo guardar. Intentá de nuevo.</p>
+                        )}
+                        <div className="flex gap-2">
+                          <button onClick={() => submitInlineLog(ex)}
+                            disabled={!logRpe || logStatus === 'loading'}
+                            className="flex-1 bg-accent text-bg-primary py-2 rounded-lg text-[12px] font-medium hover:opacity-90 disabled:opacity-40">
+                            {logStatus === 'loading' ? 'Guardando...' : 'Guardar'}
+                          </button>
+                          <button onClick={() => setExpandedLogId(null)}
+                            className="px-4 py-2 border-[0.5px] border-border rounded-lg text-[12px] text-text-secondary hover:text-text-primary transition-colors">
+                            Cancelar
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>
