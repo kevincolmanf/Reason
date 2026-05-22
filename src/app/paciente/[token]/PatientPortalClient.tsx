@@ -6,9 +6,12 @@ import { useRouter } from 'next/navigation'
 interface RecentSession {
   session_date: string; activity: string | null; rpe: number; load_units: number; vas_post: number | null; source: string
 }
+interface ExWeek { week: number; sets: string; reps: string; load: string; rest: string; rpe: string; eav: string }
 interface SessionExercise {
   id: string; exercise_id: string; exercise_name: string; youtube_url: string; group?: string
-  sets: string; reps: string; load: string; rpe_obj: string; eav_obj: string; rest: string
+  sets?: string; reps?: string; load?: string; rpe_obj?: string; eav_obj?: string; rest?: string
+  // Formato alternativo: dosificación por semana
+  weeks?: ExWeek[]
 }
 interface SessionBlock { id: string; name: string; exercises: SessionExercise[] }
 interface SessionData { blocks: SessionBlock[] }
@@ -236,25 +239,8 @@ export default function PatientPortalClient({ token, recentSessions, scheduledSe
     }
   }
 
-  // DEBUG TEMPORAL — borrar después
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const _dbg = scheduledSessions.map((s: any) => ({
-    date: s.scheduled_date,
-    id: s._sessionId ?? s.id,
-    blocks: s.session_data?.blocks?.length ?? 0,
-    rawBlocks: s._rawBlockCount ?? 'n/a',
-    rawEx: s._rawExerciseCount ?? 'n/a',
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    exercises: (s.session_data?.blocks ?? []).reduce((n: number, b: any) => n + (b.exercises?.length ?? 0), 0),
-    sd: s._rawSdSnippet ?? 'n/a',
-  }))
-
   return (
     <div className="space-y-10 pb-12">
-      {/* DEBUG — borrar */}
-      <pre style={{fontSize:10,background:'#111',color:'#0f0',padding:8,borderRadius:8,overflowX:'auto'}}>
-        {JSON.stringify(_dbg, null, 2)}
-      </pre>
 
       {/* ── AYUDA ──────────────────────────────────────────── */}
       <div className="bg-bg-secondary border-[0.5px] border-border rounded-xl overflow-hidden">
@@ -706,21 +692,32 @@ function SessionExercisesInline({ session, portalToken }: { session: ScheduledIt
                   </a>
                 )}
 
-                {/* Dosificación */}
-                <div className="grid grid-cols-3 gap-x-4 gap-y-1.5">
-                  <div>
-                    <div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-0.5">Series × Reps</div>
-                    <div className="text-[13px] font-medium text-accent">{ex.sets || '–'} × {ex.reps || '–'}</div>
-                  </div>
-                  <div>
-                    <div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-0.5">Carga</div>
-                    <div className="text-[13px] font-medium">{ex.load || '–'}</div>
-                  </div>
-                  <div>
-                    <div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-0.5">Descanso</div>
-                    <div className="text-[13px] font-medium">{ex.rest || '–'}</div>
-                  </div>
-                </div>
+                {/* Dosificación — soporta tanto el formato plano como el de weeks[] */}
+                {(() => {
+                  const w0 = ex.weeks?.[0]
+                  const sets  = ex.sets  || w0?.sets  || ''
+                  const reps  = ex.reps  || w0?.reps  || ''
+                  const load  = ex.load  || w0?.load  || ''
+                  const rest  = ex.rest  || w0?.rest  || ''
+                  const hasDose = sets || reps || load || rest
+                  if (!hasDose) return null
+                  return (
+                    <div className="grid grid-cols-3 gap-x-4 gap-y-1.5">
+                      <div>
+                        <div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-0.5">Series × Reps</div>
+                        <div className="text-[13px] font-medium text-accent">{sets || '–'} × {reps || '–'}</div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-0.5">Carga</div>
+                        <div className="text-[13px] font-medium">{load || '–'}</div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-0.5">Descanso</div>
+                        <div className="text-[13px] font-medium">{rest || '–'}</div>
+                      </div>
+                    </div>
+                  )
+                })()}
 
                 {/* Log inline */}
                 {expandedLogId !== ex.id && (

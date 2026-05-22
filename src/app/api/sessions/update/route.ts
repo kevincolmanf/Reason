@@ -55,16 +55,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: updateError.message }, { status: 500 })
     }
 
-    // Verificar que el session_data se guardó correctamente
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const savedBlocks = (updated?.session_data as any)?.blocks ?? []
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const savedExercises = savedBlocks.reduce((n: number, b: any) => n + (b.exercises?.length ?? 0), 0)
-    console.log('[sessions/update] Guardado:', {
-      id: updated?.id,
-      blocks: savedBlocks.length,
-      exercises: savedExercises,
-    })
 
     return NextResponse.json({ ok: true, blocks: savedBlocks.length, exercises: savedExercises })
   } catch (err) {
