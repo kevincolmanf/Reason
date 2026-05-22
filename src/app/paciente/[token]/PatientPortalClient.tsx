@@ -492,8 +492,8 @@ export default function PatientPortalClient({ token, recentSessions, scheduledSe
         </section>
       )}
 
-      {/* ── MI PROGRAMA (fallback plan_data viejo) ────────── */}
-      {planSessions.length > 0 && (
+      {/* ── MI PROGRAMA (fallback: solo si no hay sesiones de calendario) ─── */}
+      {planSessions.length > 0 && scheduledSessions.length === 0 && (
         <section>
           <h2 className="text-[20px] font-medium tracking-[-0.01em] mb-4">Mi programa</h2>
           <div className="space-y-2">
@@ -782,11 +782,13 @@ function SessionExercisesInline({
                     </button>
                   )}
                 </div>
-                <div className="grid grid-cols-3 gap-x-4 gap-y-1.5">
-                  <div><div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-0.5">Series × Reps</div><div className="text-[13px] font-medium text-accent">{ex.sets || '-'} × {ex.reps || '-'}</div></div>
-                  <div><div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-0.5">Carga</div><div className="text-[13px] font-medium">{ex.load || '-'}</div></div>
-                  <div><div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-0.5">Descanso</div><div className="text-[13px] font-medium">{ex.rest || '-'}</div></div>
-                </div>
+                {(ex.sets || ex.reps || ex.load || ex.rest) && (
+                  <div className="grid grid-cols-3 gap-x-4 gap-y-1.5">
+                    <div><div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-0.5">Series × Reps</div><div className="text-[13px] font-medium text-accent">{ex.sets || '-'} × {ex.reps || '-'}</div></div>
+                    <div><div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-0.5">Carga</div><div className="text-[13px] font-medium">{ex.load || '-'}</div></div>
+                    <div><div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-0.5">Descanso</div><div className="text-[13px] font-medium">{ex.rest || '-'}</div></div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
