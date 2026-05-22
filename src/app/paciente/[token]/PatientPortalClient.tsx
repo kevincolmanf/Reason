@@ -236,8 +236,19 @@ export default function PatientPortalClient({ token, recentSessions, scheduledSe
     }
   }
 
+  // DEBUG TEMPORAL — borrar después
+  const _dbg = scheduledSessions.map(s => ({
+    date: s.scheduled_date,
+    blocks: s.session_data?.blocks?.length ?? 0,
+    exercises: (s.session_data?.blocks ?? []).reduce((n, b) => n + (b.exercises?.length ?? 0), 0),
+  }))
+
   return (
     <div className="space-y-10 pb-12">
+      {/* DEBUG — borrar */}
+      <pre style={{fontSize:10,background:'#111',color:'#0f0',padding:8,borderRadius:8,overflowX:'auto'}}>
+        {JSON.stringify(_dbg, null, 2)}
+      </pre>
 
       {/* ── AYUDA ──────────────────────────────────────────── */}
       <div className="bg-bg-secondary border-[0.5px] border-border rounded-xl overflow-hidden">
