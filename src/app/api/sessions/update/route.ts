@@ -42,18 +42,31 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Sin acceso a esta sesión' }, { status: 403 })
     }
 
-    // Actualizar con admin client (bypasea RLS)
-    const { error: updateError } = await admin
+    // Actualizar con admin client (bypasea RLS) y devolver la fila actualizada
+    const { data: updated, error: updateError } = await admin
       .from('scheduled_sessions')
       .update({ session_name, session_data })
       .eq('id', session_id)
+      .select('id, session_name, session_data')
+      .single()
 
     if (updateError) {
       console.error('[sessions/update] Error:', updateError)
       return NextResponse.json({ error: updateError.message }, { status: 500 })
     }
 
-    return NextResponse.json({ ok: true })
+    // Verificar que el session_data se guardó correctamente
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const savedBlocks = (updated?.session_data as any)?.blocks ?? []
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const savedExercises = savedBlocks.reduce((n: number, b: any) => n + (b.exercises?.length ?? 0), 0)
+    console.log('[sessions/update] Guardado:', {
+      id: updated?.id,
+      blocks: savedBlocks.length,
+      exercises: savedExercises,
+    })
+
+    return NextResponse.json({ ok: true, blocks: savedBlocks.length, exercises: savedExercises })
   } catch (err) {
     console.error('[sessions/update] Unexpected error:', err)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })

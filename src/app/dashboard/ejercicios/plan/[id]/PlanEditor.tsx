@@ -422,6 +422,11 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
       alert(`Error al guardar: ${json.error ?? res.status}`)
       setSessionSaveStatus('error')
     } else {
+      const json = await res.json().catch(() => ({}))
+      console.log('[saveSession] Guardado OK:', { blocks: json.blocks, exercises: json.exercises })
+      if (json.blocks === 0) {
+        console.warn('[saveSession] ATENCIÓN: se guardaron 0 bloques. session_data enviada:', JSON.stringify(selectedSession.session_data).slice(0, 200))
+      }
       setSessionSaveStatus('saved')
     }
   }

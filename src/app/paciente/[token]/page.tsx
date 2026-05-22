@@ -119,13 +119,19 @@ export default async function PatientPortalPage({ params }: { params: { token: s
   // Sesiones del calendario — solo los ejercicios propios de cada día (session_data)
   const scheduledSessions = rawSessions.map(s => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const blocks = ((s.session_data as any)?.blocks ?? []).filter((b: any) => b.exercises?.length > 0)
+    const rawBlocks = ((s.session_data as any)?.blocks ?? [])
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const blocks = rawBlocks.filter((b: any) => b.exercises?.length > 0)
     return {
       ...s,
       session_data: { blocks },
-      // DEBUG: also pass raw for display
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      _rawBlockCount: ((s.session_data as any)?.blocks ?? []).length,
+      _rawBlockCount: rawBlocks.length,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      _rawExerciseCount: rawBlocks.reduce((n: number, b: any) => n + (b.exercises?.length ?? 0), 0),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      _rawSdSnippet: JSON.stringify(s.session_data).slice(0, 300),
+      _sessionId: s.id,
       exercise_plans: [{ share_token: planShareTokenMap[s.plan_id] ?? null }],
     }
   })
