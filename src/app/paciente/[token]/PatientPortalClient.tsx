@@ -404,8 +404,8 @@ export default function PatientPortalClient({ token, recentSessions, scheduledSe
         )
       })()}
 
-      {/* ── MI PROGRAMA (fallback: solo si no hay sesiones de calendario) ─── */}
-      {planSessions.length > 0 && scheduledSessions.length === 0 && (
+      {/* ── MI PROGRAMA (fallback: si ninguna sesión de calendario tiene ejercicios) ─── */}
+      {planSessions.length > 0 && !scheduledSessions.some(s => (s.session_data?.blocks?.length ?? 0) > 0) && (
         <section>
           <h2 className="text-[20px] font-medium tracking-[-0.01em] mb-4">Mi programa</h2>
           <div className="space-y-2">
