@@ -126,10 +126,9 @@ export default async function PatientPortalPage({ params }: { params: { token: s
   const scheduledSessions = rawSessions.map(s => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const sessionData = s.session_data as any
+    // Solo usar los bloques que tengan ejercicios (sin fallback a plan_data)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const hasSessionExercises = sessionData?.blocks?.some((b: any) => b.exercises?.length > 0)
-    const sessionBlocks = sessionData?.blocks ?? []
-    const blocks = hasSessionExercises ? sessionBlocks : (planFallbackBlocksMap[s.plan_id] ?? [])
+    const blocks = (sessionData?.blocks ?? []).filter((b: any) => b.exercises?.length > 0)
     return {
       ...s,
       session_data: { blocks },
@@ -137,11 +136,9 @@ export default async function PatientPortalPage({ params }: { params: { token: s
     }
   })
 
-  // ── Fallback: sesiones estáticas desde plan_data (sistema viejo) ───────────
-  // Solo se usa cuando no hay scheduled_sessions
-  const planSessions = scheduledSessions.length === 0
-    ? allPlans.flatMap(p => extractPlanSessions(p.plan_data, p.share_token))
-    : []
+  // ── Mi programa: sesiones de plan_data (siempre que haya ejercicios) ────────
+  // Se muestra como sección separada, sin mezclarse con scheduled_sessions
+  const planSessions = allPlans.flatMap(p => extractPlanSessions(p.plan_data, p.share_token))
 
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
