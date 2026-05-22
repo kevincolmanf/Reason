@@ -419,6 +419,7 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
     if (!res.ok) {
       const json = await res.json().catch(() => ({}))
       console.error('[saveSession] Error:', json.error)
+      alert(`Error al guardar: ${json.error ?? res.status}`)
       setSessionSaveStatus('error')
     } else {
       setSessionSaveStatus('saved')
