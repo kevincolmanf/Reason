@@ -389,16 +389,19 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
   }
 
   const deleteSession = async () => {
-    if (!selectedSession || !confirm('¿Eliminar la sesión del ' + selectedDate + '?')) return
-    const res = await fetch('/api/sessions/delete', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ session_id: selectedSession.id }),
-    })
-    if (!res.ok) {
-      const json = await res.json().catch(() => ({}))
-      alert('Error al eliminar la sesión: ' + (json.error ?? res.status))
-      return
+    if (!selectedDate || !confirm('¿Eliminar la sesión del ' + selectedDate + '?')) return
+    const sessionsForDate = scheduledSessions.filter(s => s.scheduled_date === selectedDate)
+    for (const session of sessionsForDate) {
+      const res = await fetch('/api/sessions/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: session.id }),
+      })
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}))
+        alert('Error al eliminar la sesión: ' + (json.error ?? res.status))
+        return
+      }
     }
     setScheduledSessions(prev => prev.filter(s => s.scheduled_date !== selectedDate))
     setSelectedDate(null)

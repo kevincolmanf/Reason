@@ -99,15 +99,18 @@ export default async function PatientPortalPage({ params }: { params: { token: s
     .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date))
 
   // Sesiones del calendario — solo los ejercicios propios de cada día (session_data)
-  const scheduledSessions = rawSessions.map(s => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const blocks = ((s.session_data as any)?.blocks ?? []).filter((b: any) => b.exercises?.length > 0)
-    return {
-      ...s,
-      session_data: { blocks },
-      exercise_plans: [{ share_token: planShareTokenMap[s.plan_id] ?? null }],
-    }
-  })
+  // Filtramos sesiones sin ejercicios (ej: "Nueva sesión" vacía creada por accidente)
+  const scheduledSessions = rawSessions
+    .map(s => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const blocks = ((s.session_data as any)?.blocks ?? []).filter((b: any) => b.exercises?.length > 0)
+      return {
+        ...s,
+        session_data: { blocks },
+        exercise_plans: [{ share_token: planShareTokenMap[s.plan_id] ?? null }],
+      }
+    })
+    .filter(s => s.session_data.blocks.length > 0)
 
   // ── Mi programa: ejercicios de plan_data por sesión (sección separada) ─────
   const planSessions = allPlans.flatMap(p => extractPlanSessions(p.plan_data, p.share_token))

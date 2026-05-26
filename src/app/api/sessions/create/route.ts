@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { broadcastPortalRefresh } from '@/utils/portal-broadcast'
 
 export async function POST(request: Request) {
   try {
@@ -51,6 +52,10 @@ export async function POST(request: Request) {
     if (insertError) {
       console.error('[sessions/create] Error:', insertError)
       return NextResponse.json({ error: insertError.message }, { status: 500 })
+    }
+
+    if (plan.patient_id) {
+      broadcastPortalRefresh(plan.patient_id)
     }
 
     return NextResponse.json({ session })

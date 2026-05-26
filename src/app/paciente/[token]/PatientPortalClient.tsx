@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@/utils/supabase/client'
 
 interface RecentSession {
   session_date: string; activity: string | null; rpe: number; load_units: number; vas_post: number | null; source: string
@@ -141,7 +142,7 @@ function groupSessionsByWeek(sessions: ScheduledItem[], today: string): WeekGrou
   return weeks
 }
 
-export default function PatientPortalClient({ token, recentSessions, scheduledSessions, planSessions }: Props) {
+export default function PatientPortalClient({ patient, token, recentSessions, scheduledSessions, planSessions }: Props) {
   const [showHelp, setShowHelp] = useState(false)
   const [selectedWeekMonday, setSelectedWeekMonday] = useState(() => getMondayOf(todayStr()))
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(() => {
@@ -152,17 +153,28 @@ export default function PatientPortalClient({ token, recentSessions, scheduledSe
   const router = useRouter()
   useEffect(() => {
     const onVisible = () => {
-      if (document.visibilityState === 'visible') router.refresh()
+      if (document.visibilityState === 'visible') window.location.reload()
     }
     document.addEventListener('visibilitychange', onVisible)
     const interval = setInterval(() => {
-      if (document.visibilityState === 'visible') router.refresh()
+      if (document.visibilityState === 'visible') window.location.reload()
     }, 3 * 60 * 1000)
+
+    // Realtime: recarga inmediata cuando el kine guarda cambios
+    const supabase = createClient()
+    const channel = supabase
+      .channel(`portal:${patient.id}`)
+      .on('broadcast', { event: 'refresh' }, () => {
+        window.location.reload()
+      })
+      .subscribe()
+
     return () => {
       document.removeEventListener('visibilitychange', onVisible)
       clearInterval(interval)
+      supabase.removeChannel(channel)
     }
-  }, [router])
+  }, [router, patient.id])
 
   // Form
   const [activityType, setActivityType] = useState<ActivityType>('rehab')

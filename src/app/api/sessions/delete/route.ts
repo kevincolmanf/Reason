@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { broadcastPortalRefresh } from '@/utils/portal-broadcast'
 
 export async function POST(request: Request) {
   try {
@@ -20,7 +21,7 @@ export async function POST(request: Request) {
     // Verificar acceso usando el cliente del usuario
     const { data: session, error: fetchError } = await userSupabase
       .from('scheduled_sessions')
-      .select('id')
+      .select('id, patient_id')
       .eq('id', session_id)
       .single()
 
@@ -37,6 +38,10 @@ export async function POST(request: Request) {
     if (deleteError) {
       console.error('[sessions/delete] Error:', deleteError)
       return NextResponse.json({ error: deleteError.message }, { status: 500 })
+    }
+
+    if (session.patient_id) {
+      broadcastPortalRefresh(session.patient_id)
     }
 
     return NextResponse.json({ ok: true })

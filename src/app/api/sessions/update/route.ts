@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { broadcastPortalRefresh } from '@/utils/portal-broadcast'
 
 export async function POST(request: Request) {
   try {
@@ -23,7 +24,7 @@ export async function POST(request: Request) {
     // Obtener la sesión con admin (sin RLS) para leer plan_id
     const { data: session, error: fetchError } = await admin
       .from('scheduled_sessions')
-      .select('id, plan_id')
+      .select('id, plan_id, patient_id')
       .eq('id', session_id)
       .single()
 
@@ -53,6 +54,10 @@ export async function POST(request: Request) {
     if (updateError) {
       console.error('[sessions/update] Error:', updateError)
       return NextResponse.json({ error: updateError.message }, { status: 500 })
+    }
+
+    if (session.patient_id) {
+      broadcastPortalRefresh(session.patient_id)
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
