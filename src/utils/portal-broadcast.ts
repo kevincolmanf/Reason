@@ -1,6 +1,6 @@
 export async function broadcastPortalRefresh(patientId: string): Promise<void> {
   try {
-    await fetch(
+    const res = await fetch(
       `${process.env.NEXT_PUBLIC_SUPABASE_URL}/realtime/v1/api/broadcast`,
       {
         method: 'POST',
@@ -14,7 +14,11 @@ export async function broadcastPortalRefresh(patientId: string): Promise<void> {
         }),
       }
     )
-  } catch {
-    // non-critical: portal falls back to 3-minute reload interval
+    if (!res.ok) {
+      const text = await res.text()
+      console.error(`[portal-broadcast] HTTP ${res.status}:`, text)
+    }
+  } catch (err) {
+    console.error('[portal-broadcast] fetch error:', err)
   }
 }

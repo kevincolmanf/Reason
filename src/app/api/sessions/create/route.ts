@@ -55,7 +55,7 @@ export async function POST(request: Request) {
     }
 
     if (plan.patient_id) {
-      broadcastPortalRefresh(plan.patient_id)
+      await broadcastPortalRefresh(plan.patient_id)
     }
 
     return NextResponse.json({ session })
