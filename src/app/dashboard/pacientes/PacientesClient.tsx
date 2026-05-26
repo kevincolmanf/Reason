@@ -84,6 +84,11 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
     const data = await res.json()
 
     if (!res.ok) {
+      if (res.status === 401) {
+        // Sesión expirada — redirigir al login
+        window.location.href = '/login'
+        return
+      }
       if (res.status === 409) setDniError(data.error)
       else setDniError(data.error ?? 'Error al crear el paciente.')
       setSaving(false)
