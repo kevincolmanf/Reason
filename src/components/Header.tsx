@@ -64,17 +64,17 @@ export default async function Header() {
         <Link href="/dashboard" className="text-[20px] font-medium tracking-[-0.01em] no-underline text-text-primary">
           reason<span className="text-accent">.</span>
         </Link>
-        <nav className="flex items-center gap-6">
-          <Link href="/library" className="text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+        <nav className="flex items-center gap-4 sm:gap-6">
+          <Link href="/library" className="hidden sm:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
             Biblioteca
           </Link>
-          <Link href="/recursos" className="text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+          <Link href="/recursos" className="hidden sm:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
             Recursos
           </Link>
-          <Link href="/dashboard/ejercicios" className="text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+          <Link href="/dashboard/ejercicios" className="hidden sm:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
             Ejercicios
           </Link>
-          <Link href="/dashboard/pacientes" className="text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+          <Link href="/dashboard/pacientes" className="hidden sm:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
             Pacientes
           </Link>
           {hasAgendaAccess ? (

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 
@@ -144,34 +144,79 @@ function groupSessionsByWeek(sessions: ScheduledItem[], today: string): WeekGrou
 
 export default function PatientPortalClient({ patient, token, recentSessions, scheduledSessions, planSessions }: Props) {
   const [showHelp, setShowHelp] = useState(false)
-  const [selectedWeekMonday, setSelectedWeekMonday] = useState(() => getMondayOf(todayStr()))
-  const [expandedSessionId, setExpandedSessionId] = useState<string | null>(() => {
+
+  // Próxima sesión incompleta (hoy o futura) — para highlight y auto-open
+  const nextUpcomingId = useMemo(() => {
     const today = todayStr()
-    return scheduledSessions.find(s => s.scheduled_date === today && !s.completed)?.id ?? null
-  })
+    return scheduledSessions
+      .filter(s => !s.completed && s.scheduled_date >= today)
+      .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date))[0]?.id ?? null
+  }, [scheduledSessions])
+
+  const nextUpcomingDate = useMemo(() => {
+    return scheduledSessions.find(s => s.id === nextUpcomingId)?.scheduled_date ?? todayStr()
+  }, [nextUpcomingId, scheduledSessions])
+
+  const [selectedWeekMonday, setSelectedWeekMonday] = useState(() => getMondayOf(nextUpcomingDate))
+  const [expandedSessionId, setExpandedSessionId] = useState<string | null>(() => nextUpcomingId)
+
+  // Refs para poder leer el estado actual dentro del effect sin re-suscribir
+  const expandedSessionIdRef = useRef(expandedSessionId)
+  const selectedWeekMondayRef = useRef(selectedWeekMonday)
+  useEffect(() => { expandedSessionIdRef.current = expandedSessionId }, [expandedSessionId])
+  useEffect(() => { selectedWeekMondayRef.current = selectedWeekMonday }, [selectedWeekMonday])
 
   const router = useRouter()
-  useEffect(() => {
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') window.location.reload()
-    }
-    document.addEventListener('visibilitychange', onVisible)
-    const interval = setInterval(() => {
-      if (document.visibilityState === 'visible') window.location.reload()
-    }, 3 * 60 * 1000)
 
-    // Realtime: recarga inmediata cuando el kine guarda cambios
+  // Restaurar posición y estado tras recarga
+  useEffect(() => {
+    const savedScroll = sessionStorage.getItem('portal_scroll')
+    const savedSession = sessionStorage.getItem('portal_session')
+    const savedWeek = sessionStorage.getItem('portal_week')
+
+    if (savedScroll !== null || savedSession !== null || savedWeek !== null) {
+      if (savedSession !== null) setExpandedSessionId(savedSession || null)
+      if (savedWeek) setSelectedWeekMonday(savedWeek)
+      if (savedScroll) {
+        requestAnimationFrame(() => window.scrollTo({ top: Number(savedScroll), behavior: 'instant' as ScrollBehavior }))
+      }
+      sessionStorage.removeItem('portal_scroll')
+      sessionStorage.removeItem('portal_session')
+      sessionStorage.removeItem('portal_week')
+    }
+  }, [])
+
+  // Visibilidad: recargar solo si estuvo oculto >= 5 min. Realtime para cambios del kine.
+  useEffect(() => {
+    let hiddenAt: number | null = null
+
+    const saveAndReload = () => {
+      sessionStorage.setItem('portal_scroll', String(window.scrollY))
+      sessionStorage.setItem('portal_week', selectedWeekMondayRef.current)
+      sessionStorage.setItem('portal_session', expandedSessionIdRef.current ?? '')
+      window.location.reload()
+    }
+
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        hiddenAt = Date.now()
+      } else if (document.visibilityState === 'visible' && hiddenAt !== null) {
+        const ms = Date.now() - hiddenAt
+        hiddenAt = null
+        if (ms >= 5 * 60 * 1000) saveAndReload()
+      }
+    }
+
+    document.addEventListener('visibilitychange', onVisibility)
+
     const supabase = createClient()
     const channel = supabase
       .channel(`portal:${patient.id}`)
-      .on('broadcast', { event: 'refresh' }, () => {
-        window.location.reload()
-      })
+      .on('broadcast', { event: 'refresh' }, () => { saveAndReload() })
       .subscribe()
 
     return () => {
-      document.removeEventListener('visibilitychange', onVisible)
-      clearInterval(interval)
+      document.removeEventListener('visibilitychange', onVisibility)
       supabase.removeChannel(channel)
     }
   }, [router, patient.id])
@@ -382,14 +427,14 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
                             className={`w-full text-left flex items-center gap-3 rounded-xl px-4 py-3 border-[0.5px] transition-colors ${
                               s.completed
                                 ? 'border-border bg-bg-secondary opacity-50'
-                                : s.scheduled_date === todayStr()
+                                : s.id === nextUpcomingId
                                 ? 'border-accent/40 bg-accent/10 hover:bg-accent/15'
                                 : 'border-border bg-bg-secondary hover:border-accent/40'
                             }`}
                           >
                             <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
                               s.completed ? 'bg-text-secondary'
-                              : s.scheduled_date === todayStr() ? 'bg-accent'
+                              : s.id === nextUpcomingId ? 'bg-accent'
                               : 'bg-border'
                             }`} />
                             <div className="flex-1 min-w-0">
