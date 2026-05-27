@@ -101,8 +101,22 @@ export async function POST(request: Request) {
   let logId: string | null = null
 
   try {
-    const body = await request.json()
-    const eventType: string = body.type || body.topic || 'unknown'
+    // Soportar formato Webhook (JSON body) y formato IPN (query params)
+    const url = new URL(request.url)
+    const ipnTopic = url.searchParams.get('topic')
+    const ipnId = url.searchParams.get('id')
+
+    let body: Record<string, unknown>
+
+    if (ipnTopic && ipnId) {
+      // Formato IPN: topic=preapproval&id=SUB_ID → normalizar a estructura Webhook
+      const normalizedType = ipnTopic === 'preapproval' ? 'subscription_preapproval' : ipnTopic
+      body = { type: normalizedType, data: { id: ipnId }, _source: 'ipn' }
+    } else {
+      body = await request.json()
+    }
+
+    const eventType: string = (body.type as string) || (body.topic as string) || 'unknown'
 
     const { data: logRow } = await supabaseAdmin
       .from('webhook_logs')
@@ -111,14 +125,17 @@ export async function POST(request: Request) {
       .single()
     logId = (logRow as { id: string } | null)?.id ?? null
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data = body.data as any
+
     if (eventType === 'subscription_preapproval') {
-      const preApprovalId: string | undefined = body.data?.id
+      const preApprovalId: string | undefined = data?.id
       if (!preApprovalId) throw new Error('subscription_preapproval sin data.id')
       await syncUserFromPreApproval(supabaseAdmin, mpClient, preApprovalId)
 
     } else if (eventType === 'subscription_authorized_payment') {
       // Pago recurrente de una suscripción activa
-      const authorizedPaymentId: string | undefined = body.data?.id
+      const authorizedPaymentId: string | undefined = data?.id
       if (authorizedPaymentId) {
         const invoice = new Invoice(mpClient)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -133,7 +150,7 @@ export async function POST(request: Request) {
 
     } else if (eventType === 'payment') {
       // Pago individual — puede ser de una suscripción
-      const paymentId: string | undefined = body.data?.id
+      const paymentId: string | undefined = data?.id
       if (paymentId) {
         const payment = new Payment(mpClient)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
