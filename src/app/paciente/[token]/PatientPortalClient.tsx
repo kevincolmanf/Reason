@@ -158,7 +158,7 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
   }, [nextUpcomingId, scheduledSessions])
 
   const [selectedWeekMonday, setSelectedWeekMonday] = useState(() => getMondayOf(nextUpcomingDate))
-  const [expandedSessionId, setExpandedSessionId] = useState<string | null>(() => nextUpcomingId)
+  const [expandedSessionId, setExpandedSessionId] = useState<string | null>(nextUpcomingId)
 
   // Refs para poder leer el estado actual dentro del effect sin re-suscribir
   const expandedSessionIdRef = useRef(expandedSessionId)
@@ -168,22 +168,26 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
 
   const router = useRouter()
 
-  // Restaurar posición y estado tras recarga
+  // Restaurar posición y estado desde localStorage (persiste a través de bloqueos y salidas de app)
   useEffect(() => {
-    const savedScroll = sessionStorage.getItem('portal_scroll')
-    const savedSession = sessionStorage.getItem('portal_session')
-    const savedWeek = sessionStorage.getItem('portal_week')
+    const savedSession = localStorage.getItem('portal_session')
+    const savedWeek = localStorage.getItem('portal_week')
+    const savedScroll = localStorage.getItem('portal_scroll')
 
-    if (savedScroll !== null || savedSession !== null || savedWeek !== null) {
-      if (savedSession !== null) setExpandedSessionId(savedSession || null)
-      if (savedWeek) setSelectedWeekMonday(savedWeek)
-      if (savedScroll) {
-        requestAnimationFrame(() => window.scrollTo({ top: Number(savedScroll), behavior: 'instant' as ScrollBehavior }))
-      }
-      sessionStorage.removeItem('portal_scroll')
-      sessionStorage.removeItem('portal_session')
-      sessionStorage.removeItem('portal_week')
+    if (savedSession !== null) setExpandedSessionId(savedSession || null)
+    if (savedWeek) setSelectedWeekMonday(savedWeek)
+    if (savedScroll) {
+      requestAnimationFrame(() => window.scrollTo({ top: Number(savedScroll), behavior: 'instant' as ScrollBehavior }))
     }
+  }, [])
+
+  // Persistir estado continuamente para sobrevivir bloqueos de pantalla y salidas de app
+  useEffect(() => { localStorage.setItem('portal_week', selectedWeekMonday) }, [selectedWeekMonday])
+  useEffect(() => { localStorage.setItem('portal_session', expandedSessionId ?? '') }, [expandedSessionId])
+  useEffect(() => {
+    const save = () => localStorage.setItem('portal_scroll', String(window.scrollY))
+    window.addEventListener('scroll', save, { passive: true })
+    return () => window.removeEventListener('scroll', save)
   }, [])
 
   // Visibilidad: recargar solo si estuvo oculto >= 5 min. Realtime para cambios del kine.
@@ -191,9 +195,9 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
     let hiddenAt: number | null = null
 
     const saveAndReload = () => {
-      sessionStorage.setItem('portal_scroll', String(window.scrollY))
-      sessionStorage.setItem('portal_week', selectedWeekMondayRef.current)
-      sessionStorage.setItem('portal_session', expandedSessionIdRef.current ?? '')
+      localStorage.setItem('portal_scroll', String(window.scrollY))
+      localStorage.setItem('portal_week', selectedWeekMondayRef.current)
+      localStorage.setItem('portal_session', expandedSessionIdRef.current ?? '')
       window.location.reload()
     }
 
@@ -428,7 +432,7 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
                               s.completed
                                 ? 'border-border bg-bg-secondary opacity-50'
                                 : s.id === nextUpcomingId
-                                ? 'border-accent/40 bg-accent/10 hover:bg-accent/15'
+                                ? 'border-accent bg-accent/15 hover:bg-accent/20'
                                 : 'border-border bg-bg-secondary hover:border-accent/40'
                             }`}
                           >
@@ -441,6 +445,9 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
                               <div className={`text-[13px] font-medium ${s.completed ? 'line-through text-text-secondary' : 'text-text-primary'}`}>
                                 {s.session_name}
                               </div>
+                              {s.id === nextUpcomingId && (
+                                <div className="text-[10px] font-medium text-accent mt-0.5 uppercase tracking-[0.06em]">Próxima</div>
+                              )}
                             </div>
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
                               className={`text-text-secondary shrink-0 transition-transform ${expandedSessionId === s.id ? 'rotate-180' : ''}`}>

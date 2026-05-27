@@ -60,29 +60,29 @@ export default async function Header() {
 
   return (
     <header className="py-6 border-b-[0.5px] border-border sticky top-0 bg-bg-primary/80 backdrop-blur-md z-10">
-      <div className="w-full max-w-[1080px] mx-auto px-8 flex justify-between items-center">
+      <div className="w-full max-w-[1080px] mx-auto px-4 md:px-8 flex justify-between items-center">
         <Link href="/dashboard" className="text-[20px] font-medium tracking-[-0.01em] no-underline text-text-primary">
           reason<span className="text-accent">.</span>
         </Link>
-        <nav className="flex items-center gap-4 sm:gap-6">
-          <Link href="/library" className="hidden sm:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+        <nav className="flex items-center gap-4 md:gap-6">
+          <Link href="/library" className="hidden md:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
             Biblioteca
           </Link>
-          <Link href="/recursos" className="hidden sm:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+          <Link href="/recursos" className="hidden md:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
             Recursos
           </Link>
-          <Link href="/dashboard/ejercicios" className="hidden sm:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+          <Link href="/dashboard/ejercicios" className="hidden md:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
             Ejercicios
           </Link>
-          <Link href="/dashboard/pacientes" className="hidden sm:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+          <Link href="/dashboard/pacientes" className="hidden md:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
             Pacientes
           </Link>
           {hasAgendaAccess ? (
-            <Link href="/dashboard/agenda" className="hidden sm:inline text-[13px] sm:text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+            <Link href="/dashboard/agenda" className="hidden md:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
               Agenda
             </Link>
           ) : (
-            <div className="relative group hidden sm:inline-block">
+            <div className="relative group hidden md:inline-block">
               <span className="text-[13px] sm:text-[14px] text-[#c47c5a] cursor-default select-none">Agenda</span>
               <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-2.5 py-1.5 bg-bg-secondary border-[0.5px] border-border rounded-lg text-[11px] text-text-secondary whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 shadow-lg">
                 {agendaBlockedReason === 'member' ? 'Sin acceso habilitado' : 'Disponible en Plan Pro'}
