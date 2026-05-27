@@ -39,7 +39,7 @@ export async function createSubscriptionPreference(formData: FormData) {
         // Codificamos userId|planType para que el webhook pueda asignar el rol correcto
         external_reference: `${user.id}|${planType}`,
         payer_email: user.email || '',
-        back_url: "https://www.reason.com.ar/dashboard",
+        back_url: "https://www.reason.com.ar/checkout/success",
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ...({ notification_url: "https://www.reason.com.ar/api/webhooks/mercadopago" } as any),
         auto_recurring: {
