@@ -58,10 +58,11 @@ async function syncUserFromPreApproval(supabaseAdmin: any, mpClient: MercadoPago
     )
   if (subError) throw subError
 
+  // Upsert so users missing a public.users row (e.g. signup race condition) still get created
+  const { data: { user: authUser } } = await supabaseAdmin.auth.admin.getUserById(userId)
   const { error: userError } = await supabaseAdmin
     .from('users')
-    .update({ role: newRole })
-    .eq('id', userId)
+    .upsert({ id: userId, email: authUser?.email ?? '', role: newRole }, { onConflict: 'id' })
   if (userError) throw userError
 
   // Para planes Pro: propagar rol a miembros de la organización

@@ -75,7 +75,11 @@ export async function POST(request: Request) {
       expires_at: nextPaymentDate,
     }, { onConflict: 'user_id' })
 
-    await admin.from('users').update({ role: newRole }).eq('id', userId)
+    const { error: userUpsertError } = await admin.from('users').upsert(
+      { id: userId, email: targetAuth.email ?? '', role: newRole },
+      { onConflict: 'id' }
+    )
+    if (userUpsertError) throw userUpsertError
 
     return NextResponse.json({
       ok: true,
@@ -99,7 +103,10 @@ export async function POST(request: Request) {
   if (dbSub && dbSub.status === 'active') {
     const isPro = dbSub.mp_plan_id === 'pro_monthly' || dbSub.mp_plan_id === 'pro_annual'
     const newRole = isPro ? 'pro' : 'subscriber'
-    await admin.from('users').update({ role: newRole }).eq('id', userId)
+    await admin.from('users').upsert(
+      { id: userId, email: targetAuth.email ?? '', role: newRole },
+      { onConflict: 'id' }
+    )
     return NextResponse.json({
       ok: true,
       source: 'db_only',

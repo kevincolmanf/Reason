@@ -36,7 +36,8 @@ export async function POST() {
     const planType = parts[1] ?? 'monthly'
 
     // Verificar que la suscripción pertenece a este usuario
-    if (refUserId !== user.id) {
+    // refUserId puede estar vacío si la external_reference no tiene el formato userId|plan
+    if (refUserId && refUserId !== user.id) {
       return NextResponse.json({ role: 'free', synced: false })
     }
 
@@ -58,7 +59,7 @@ export async function POST() {
       },
       { onConflict: 'user_id' }
     )
-    await admin.from('users').update({ role: newRole }).eq('id', user.id)
+    await admin.from('users').upsert({ id: user.id, email: user.email ?? '', role: newRole }, { onConflict: 'id' })
 
     return NextResponse.json({ role: newRole, synced: true })
   } catch (error) {
