@@ -690,15 +690,20 @@ function SessionExercisesInline({ session, portalToken }: { session: ScheduledIt
   const [logEva, setLogEva] = useState('')
   const [logNotes, setLogNotes] = useState('')
   const [logStatus, setLogStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
+  const [logRpeError, setLogRpeError] = useState(false)
 
   const openInlineLog = (exId: string) => {
     setExpandedLogId(exId)
-    setLogRpe(''); setLogEva(''); setLogNotes(''); setLogStatus('idle')
+    setLogRpe(''); setLogEva(''); setLogNotes(''); setLogStatus('idle'); setLogRpeError(false)
   }
 
   const submitInlineLog = async (ex: SessionExercise) => {
     const rpe = Number(logRpe)
-    if (!logRpe || isNaN(rpe) || rpe < 1 || rpe > 10) return
+    if (!logRpe || isNaN(rpe) || rpe < 1 || rpe > 10) {
+      setLogRpeError(true)
+      return
+    }
+    setLogRpeError(false)
     setLogStatus('loading')
     try {
       // Use plan share_token if available, otherwise fall back to patient portal token
@@ -806,8 +811,9 @@ function SessionExercisesInline({ session, portalToken }: { session: ScheduledIt
                           <div className="flex-1">
                             <label className="text-[10px] text-text-secondary uppercase tracking-[0.05em]">RPE (1–10) *</label>
                             <input type="number" min="1" max="10" value={logRpe}
-                              onChange={e => setLogRpe(e.target.value)} placeholder="ej: 7"
-                              className="w-full bg-bg-primary border-[0.5px] border-border rounded-lg px-2 py-1.5 text-[13px] outline-none focus:border-accent mt-0.5" />
+                              onChange={e => { setLogRpe(e.target.value); setLogRpeError(false) }} placeholder="ej: 7"
+                              className={`w-full bg-bg-primary border-[0.5px] rounded-lg px-2 py-1.5 text-[13px] outline-none mt-0.5 ${logRpeError ? 'border-red-400 focus:border-red-400' : 'border-border focus:border-accent'}`} />
+                          {logRpeError && <p className="text-[10px] text-red-400 mt-0.5">Ingresá un valor entre 1 y 10</p>}
                           </div>
                           <div className="flex-1">
                             <label className="text-[10px] text-text-secondary uppercase tracking-[0.05em]">Dolor EVA (0–10)</label>
