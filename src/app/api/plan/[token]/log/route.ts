@@ -26,7 +26,7 @@ export async function POST(request: Request, { params }: { params: { token: stri
 
     // 2. Validar que el ejercicio exista en el plan (opcional, pero buena práctica)
     // 3. Validar rangos
-    if (rpe < 1 || rpe > 10) return NextResponse.json({ error: 'RPE debe ser entre 1 y 10' }, { status: 400 })
+    if (rpe < 0 || rpe > 10) return NextResponse.json({ error: 'RPE debe ser entre 0 y 10' }, { status: 400 })
     if (eva < 0 || eva > 10) return NextResponse.json({ error: 'EVA debe ser entre 0 y 10' }, { status: 400 })
 
     // 4. Insertar en log
