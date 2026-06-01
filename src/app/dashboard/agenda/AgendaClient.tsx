@@ -240,6 +240,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
   const [turnos, setTurnos]       = useState<Turno[]>([])
   const [loading, setLoading]     = useState(true)
   const [filterProf, setFilterProf] = useState<string>('all')
+  const [filterArea, setFilterArea] = useState<string>('all')
   const [areas, setAreas] = useState<string[]>(initialAreas)
   const [slotInterval, setSlotInterval] = useState(initialSlotInterval)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -445,7 +446,10 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
 
   const MIN_COL_WIDTH = 130
 
-  const dayTurnos = turnos.filter(t => isSameDay(new Date(t.start_time), selectedDay))
+  // Filtro de área client-side (permite mostrar contadores por área sin queries extra)
+  const visibleTurnos = filterArea === 'all' ? turnos : turnos.filter(t => t.area === filterArea)
+
+  const dayTurnos = visibleTurnos.filter(t => isSameDay(new Date(t.start_time), selectedDay))
   const dayColLayout = assignColumns(dayTurnos)
   const maxSimultaneousCols = dayTurnos.length > 0
     ? Math.max(...Array.from(dayColLayout.values()).map(v => v.totalCols))
@@ -456,7 +460,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
   return (
     <div>
       {/* TOOLBAR */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
         <div>
           <h1 className="text-[24px] font-medium tracking-[-0.01em]">
             {orgName ? `Agenda — ${orgName}` : 'Agenda'}
@@ -475,7 +479,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
             <button onClick={() => setView('week')} className={`px-3 py-2 text-[13px] transition-colors ${view === 'week' ? 'bg-accent text-bg-primary' : 'text-text-secondary hover:text-text-primary'}`}>Semana</button>
           </div>
 
-          {professionals.length > 1 && (
+          {professionals.length > 0 && (
             <select
               value={filterProf}
               onChange={e => setFilterProf(e.target.value)}
@@ -493,7 +497,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
           <button onClick={nextPeriod} className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors">→</button>
 
           {view === 'day' && (
-            <button onClick={() => exportDay(dayTurnos, selectedDay)} className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors">
+            <button onClick={() => exportDay(dayTurnos, selectedDay)} className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors" title={filterArea !== 'all' ? `Exportar ${filterArea}` : 'Exportar día'}>
               Exportar
             </button>
           )}
@@ -507,6 +511,47 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
           </button>
         </div>
       </div>
+
+      {/* TABS DE ÁREA — se muestran solo si hay más de 1 área configurada */}
+      {areas.length > 1 && (
+        <div className="flex gap-1 mb-5 overflow-x-auto pb-1">
+          <button
+            onClick={() => setFilterArea('all')}
+            className={`shrink-0 px-4 py-2 rounded-lg text-[13px] font-medium transition-colors border-[0.5px] ${
+              filterArea === 'all'
+                ? 'bg-accent text-bg-primary border-accent'
+                : 'bg-bg-secondary text-text-secondary border-border hover:text-text-primary'
+            }`}
+          >
+            Todas
+            {(() => {
+              const n = view === 'day'
+                ? turnos.filter(t => isSameDay(new Date(t.start_time), selectedDay) && !t.is_blocked).length
+                : turnos.filter(t => !t.is_blocked).length
+              return n > 0 ? <span className="ml-1.5 text-[11px] opacity-70">{n}</span> : null
+            })()}
+          </button>
+          {areas.map(area => {
+            const count = view === 'day'
+              ? turnos.filter(t => isSameDay(new Date(t.start_time), selectedDay) && !t.is_blocked && t.area === area).length
+              : turnos.filter(t => !t.is_blocked && t.area === area).length
+            return (
+              <button
+                key={area}
+                onClick={() => setFilterArea(area)}
+                className={`shrink-0 px-4 py-2 rounded-lg text-[13px] font-medium transition-colors border-[0.5px] ${
+                  filterArea === area
+                    ? 'bg-accent text-bg-primary border-accent'
+                    : 'bg-bg-secondary text-text-secondary border-border hover:text-text-primary'
+                }`}
+              >
+                {area}
+                {count > 0 && <span className="ml-1.5 text-[11px] opacity-70">{count}</span>}
+              </button>
+            )
+          })}
+        </div>
+      )}
 
       {/* CALENDAR GRID */}
       <div className="bg-bg-primary border-[0.5px] border-border rounded-xl overflow-hidden">
@@ -566,7 +611,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
               <div className="border-r-[0.5px] border-border" />
               {weekDays.map((day, i) => {
                 const isToday = isSameDay(day, today)
-                const dayCount = turnos.filter(t => isSameDay(new Date(t.start_time), day) && !t.is_blocked).length
+                const dayCount = visibleTurnos.filter(t => isSameDay(new Date(t.start_time), day) && !t.is_blocked).length
                 return (
                   <button
                     key={i}
@@ -610,7 +655,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                   })}
                   <div className="absolute inset-0 left-[48px] grid" style={{ gridTemplateColumns: 'repeat(7, 1fr)' }}>
                     {weekDays.map((day) => {
-                      const dt = turnos.filter(t => isSameDay(new Date(t.start_time), day))
+                      const dt = visibleTurnos.filter(t => isSameDay(new Date(t.start_time), day))
                       const layout = assignColumns(dt)
                       return renderDayColumn(day, dt, layout)
                     })}
