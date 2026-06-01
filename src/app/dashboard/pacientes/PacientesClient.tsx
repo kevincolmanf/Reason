@@ -222,22 +222,34 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
           )}
         </div>
 
-        {atFreeLimit ? (
-          <a href="/paywall" className="bg-accent/10 text-accent border-[0.5px] border-accent/40 px-4 py-2 rounded-lg text-[13px] font-medium hover:bg-accent/20 transition-colors">
-            Suscribite para agregar más
-          </a>
-        ) : atSubscriberLimit ? (
-          <a href="/paywall" className="bg-accent/10 text-accent border-[0.5px] border-accent/40 px-4 py-2 rounded-lg text-[13px] font-medium hover:bg-accent/20 transition-colors">
-            Actualizá a Plan Pro
-          </a>
-        ) : !showForm ? (
-          <button
-            onClick={() => setShowForm(true)}
-            className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity"
-          >
-            + Nuevo Paciente
-          </button>
-        ) : null}
+        <div className="flex items-center gap-2">
+          {isPro && (
+            <button
+              onClick={() => setShowSourcesConfig(true)}
+              className="border-[0.5px] border-border text-text-secondary px-3 py-2 rounded-lg text-[13px] hover:text-text-primary hover:border-border-strong transition-colors flex items-center gap-1.5"
+              title="Configurar vías de llegada"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+              Vías de llegada
+            </button>
+          )}
+          {atFreeLimit ? (
+            <a href="/paywall" className="bg-accent/10 text-accent border-[0.5px] border-accent/40 px-4 py-2 rounded-lg text-[13px] font-medium hover:bg-accent/20 transition-colors">
+              Suscribite para agregar más
+            </a>
+          ) : atSubscriberLimit ? (
+            <a href="/paywall" className="bg-accent/10 text-accent border-[0.5px] border-accent/40 px-4 py-2 rounded-lg text-[13px] font-medium hover:bg-accent/20 transition-colors">
+              Actualizá a Plan Pro
+            </a>
+          ) : !showForm ? (
+            <button
+              onClick={() => setShowForm(true)}
+              className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity"
+            >
+              + Nuevo Paciente
+            </button>
+          ) : null}
+        </div>
       </div>
 
       {/* Paywall banners */}
@@ -324,43 +336,39 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
         </div>
       )}
 
-      {/* Configuración de vías de llegada — solo Pro */}
-      {isPro && (
-        <div className="mb-6">
-          <button
-            onClick={() => setShowSourcesConfig(v => !v)}
-            className="text-[12px] text-text-secondary hover:text-text-primary flex items-center gap-1.5 transition-colors"
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
-            {showSourcesConfig ? 'Ocultar' : 'Configurar'} vías de llegada
-          </button>
-          {showSourcesConfig && (
-            <div className="mt-3 bg-bg-secondary border-[0.5px] border-border rounded-xl p-5">
-              <p className="text-[13px] text-text-secondary mb-4">Definí las opciones que aparecen al registrar cómo llegó cada paciente.</p>
-              <div className="space-y-2 mb-4">
-                {sources.length === 0 && <p className="text-[12px] text-text-secondary italic">Todavía no hay vías configuradas.</p>}
-                {sources.map(s => (
-                  <div key={s.id} className="flex items-center justify-between gap-2 bg-bg-primary border-[0.5px] border-border rounded-lg px-3 py-2">
-                    <span className="text-[13px]">{s.label}</span>
-                    <button onClick={() => handleDeleteSource(s.id)} className="text-[11px] text-text-secondary hover:text-red-400 transition-colors">Eliminar</button>
-                  </div>
-                ))}
-              </div>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={newSourceLabel}
-                  onChange={e => setNewSourceLabel(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleAddSource()}
-                  placeholder="Ej: Redes sociales, Traumatólogo..."
-                  className="flex-1 bg-bg-primary border-[0.5px] border-border-strong rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:border-accent"
-                />
-                <button onClick={handleAddSource} disabled={savingSource || !newSourceLabel.trim()} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity">
-                  {savingSource ? '...' : 'Agregar'}
-                </button>
-              </div>
+      {/* Modal: Configuración de vías de llegada */}
+      {showSourcesConfig && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" onClick={e => { if (e.target === e.currentTarget) setShowSourcesConfig(false) }}>
+          <div className="bg-bg-secondary border-[0.5px] border-border rounded-2xl p-6 w-full max-w-[440px] shadow-xl">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-[16px] font-medium">Vías de llegada</h2>
+              <button onClick={() => setShowSourcesConfig(false)} className="text-text-secondary hover:text-text-primary text-[18px] leading-none">×</button>
             </div>
-          )}
+            <p className="text-[13px] text-text-secondary mb-5">Definí las opciones que aparecen al registrar cómo llegó cada paciente al centro.</p>
+            <div className="space-y-2 mb-5">
+              {sources.length === 0 && <p className="text-[12px] text-text-secondary italic">Todavía no hay vías configuradas.</p>}
+              {sources.map(s => (
+                <div key={s.id} className="flex items-center justify-between gap-2 bg-bg-primary border-[0.5px] border-border rounded-lg px-3 py-2.5">
+                  <span className="text-[13px]">{s.label}</span>
+                  <button onClick={() => handleDeleteSource(s.id)} className="text-[11px] text-text-secondary hover:text-red-400 transition-colors shrink-0">Eliminar</button>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newSourceLabel}
+                onChange={e => setNewSourceLabel(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleAddSource()}
+                placeholder="Ej: Redes sociales, Traumatólogo..."
+                autoFocus
+                className="flex-1 bg-bg-primary border-[0.5px] border-border-strong rounded-lg px-3 py-2.5 text-[13px] focus:outline-none focus:border-accent"
+              />
+              <button onClick={handleAddSource} disabled={savingSource || !newSourceLabel.trim()} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity">
+                {savingSource ? '...' : 'Agregar'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
