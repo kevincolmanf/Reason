@@ -317,7 +317,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
               <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Obra social</label>
               <input type="text" value={form.obra_social} onChange={e => setForm(f => ({ ...f, obra_social: e.target.value }))} placeholder="Ej: OSDE, PAMI, IOMA..." className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent" />
             </div>
-            {isPro && sources.length > 0 && (
+            {sources.length > 0 && (
               <div className="sm:col-span-2">
                 <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">¿Cómo llegó?</label>
                 <select value={form.source} onChange={e => setForm(f => ({ ...f, source: e.target.value }))} className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent">

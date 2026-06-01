@@ -17,6 +17,7 @@ interface Patient {
   occupation: string | null
   source: string | null
   created_at: string
+  org_id: string | null
   load_share_token: string | null
   user_id: string
 }
@@ -55,8 +56,11 @@ export default function PacienteDetail({ patient: initialPatient, userId }: { pa
   const supabaseRef = useRef(createClient())
 
   useEffect(() => {
-    fetch('/api/pacientes/fuentes').then(r => r.ok ? r.json() : []).then(setSources)
-  }, [])
+    const url = initialPatient.org_id
+      ? `/api/pacientes/fuentes?orgId=${initialPatient.org_id}`
+      : '/api/pacientes/fuentes'
+    fetch(url).then(r => r.ok ? r.json() : []).then(setSources)
+  }, [initialPatient.org_id])
 
   const generatePortalToken = async () => {
     setGeneratingToken(true)
