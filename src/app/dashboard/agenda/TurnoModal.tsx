@@ -149,6 +149,7 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
 
   const [patientSearch, setPatientSearch]     = useState(turno?.patient_name ?? '')
   const [patientResults, setPatientResults]   = useState<PatientResult[]>([])
+  const [patientBirthDate, setPatientBirthDate] = useState('')
   const [patientDni, setPatientDni]           = useState('')
   const [dniDupWarning, setDniDupWarning]     = useState<PatientResult | null>(null)
   const [searchOpen, setSearchOpen]           = useState(false)
@@ -276,17 +277,7 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
       phone = lastTurno?.patient_phone ?? ''
     }
 
-    // Calculate age from birth_date if available
-    let age = ''
-    if (p.birth_date) {
-      const today = new Date()
-      const dob = new Date(p.birth_date)
-      let a = today.getFullYear() - dob.getFullYear()
-      if (today.getMonth() < dob.getMonth() || (today.getMonth() === dob.getMonth() && today.getDate() < dob.getDate())) a--
-      age = String(a)
-    } else if (p.age) {
-      age = String(p.age)
-    }
+    if (p.birth_date) setPatientBirthDate(p.birth_date)
 
     setForm(f => ({
       ...f,
@@ -295,7 +286,6 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
       patient_phone: phone,
       patient_email: p.email ?? f.patient_email,
       patient_obra_social: p.obra_social ?? f.patient_obra_social,
-      patient_age: age || f.patient_age,
     }))
   }
 
@@ -303,6 +293,7 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
     setForm(f => ({ ...f, patient_id: null }))
     setPatientSearch('')
     setPatientDni('')
+    setPatientBirthDate('')
     setDniDupWarning(null)
     setPatientResults([])
     setHistorialLoaded(false)
@@ -331,7 +322,15 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
       patient_id:          form.is_blocked ? null : patientId,
       patient_phone:       form.is_blocked ? null : (form.patient_phone.trim() || null),
       patient_email:       form.is_blocked ? null : (form.patient_email.trim() || null),
-      patient_age:         form.is_blocked ? null : (form.patient_age ? parseInt(form.patient_age, 10) : null),
+      patient_age:         form.is_blocked ? null : (() => {
+        if (patientBirthDate) {
+          const today = new Date(); const dob = new Date(patientBirthDate)
+          let a = today.getFullYear() - dob.getFullYear()
+          if (today.getMonth() < dob.getMonth() || (today.getMonth() === dob.getMonth() && today.getDate() < dob.getDate())) a--
+          return a
+        }
+        return form.patient_age ? parseInt(form.patient_age, 10) : null
+      })(),
       patient_obra_social: form.is_blocked ? null : (form.patient_obra_social.trim() || null),
       professional_id:     form.professional_id,
       professional_name:   professionals.find(p => p.id === form.professional_id)?.full_name ?? null,
@@ -564,8 +563,8 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Edad</label>
-                <input type="number" value={form.patient_age} onChange={e => setForm(f => ({ ...f, patient_age: e.target.value }))} placeholder="Años" min={0} max={120} className={inputCls} />
+                <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Fecha de nacimiento</label>
+                <input type="date" value={patientBirthDate} onChange={e => setPatientBirthDate(e.target.value)} className={inputCls} />
               </div>
               <div>
                 <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Obra social</label>
