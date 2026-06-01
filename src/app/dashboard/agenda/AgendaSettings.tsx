@@ -102,9 +102,7 @@ export default function AgendaSettings({
     setSaving(true)
 
     if (orgId && isOwner) {
-      await supabase.rpc('set_org_agenda_areas', { p_org_id: orgId, p_areas: areas })
-      await supabase.rpc('set_org_agenda_share', { p_org_id: orgId, p_enabled: shareEnabled })
-      await supabase.from('organizations').update({ agenda_slot_interval: slotInterval }).eq('id', orgId)
+      await supabase.from('organizations').update({ agenda_areas: areas, agenda_slot_interval: slotInterval, agenda_share_enabled: shareEnabled }).eq('id', orgId)
     } else {
       await supabase.from('users').update({ agenda_areas: areas, agenda_slot_interval: slotInterval }).eq('id', userId)
     }
