@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -15,6 +15,7 @@ interface Patient {
   email: string | null
   obra_social: string | null
   occupation: string | null
+  source: string | null
   created_at: string
   load_share_token: string | null
   user_id: string
@@ -29,6 +30,8 @@ function calcAge(birth_date: string | null): number | null {
   return age
 }
 
+interface PatientSource { id: string; label: string }
+
 export default function PacienteDetail({ patient: initialPatient, userId }: { patient: Patient; userId: string }) {
   const isOwner = initialPatient.user_id === userId
   const [patient, setPatient] = useState<Patient>(initialPatient)
@@ -41,13 +44,19 @@ export default function PacienteDetail({ patient: initialPatient, userId }: { pa
     email: initialPatient.email || '',
     obra_social: initialPatient.obra_social || '',
     occupation: initialPatient.occupation || '',
+    source: initialPatient.source || '',
   })
+  const [sources, setSources] = useState<PatientSource[]>([])
   const [saving, setSaving] = useState(false)
   const [dniError, setDniError] = useState<string | null>(null)
   const [generatingToken, setGeneratingToken] = useState(false)
 
   const router = useRouter()
   const supabaseRef = useRef(createClient())
+
+  useEffect(() => {
+    fetch('/api/pacientes/fuentes').then(r => r.ok ? r.json() : []).then(setSources)
+  }, [])
 
   const generatePortalToken = async () => {
     setGeneratingToken(true)
@@ -103,6 +112,7 @@ export default function PacienteDetail({ patient: initialPatient, userId }: { pa
         email: editForm.email.trim() || null,
         obra_social: editForm.obra_social.trim() || null,
         occupation: editForm.occupation.trim() || null,
+        source: editForm.source || null,
       })
       .eq('id', patient.id)
       .select()
@@ -161,6 +171,15 @@ export default function PacienteDetail({ patient: initialPatient, userId }: { pa
                 <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Obra social</label>
                 <input type="text" value={editForm.obra_social} onChange={e => setEditForm(f => ({ ...f, obra_social: e.target.value }))} placeholder="Ej: OSDE, PAMI, IOMA..." className="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent" />
               </div>
+              {sources.length > 0 && (
+                <div className="sm:col-span-2">
+                  <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">¿Cómo llegó?</label>
+                  <select value={editForm.source} onChange={e => setEditForm(f => ({ ...f, source: e.target.value }))} className="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent">
+                    <option value="">Sin especificar</option>
+                    {sources.map(s => <option key={s.id} value={s.label}>{s.label}</option>)}
+                  </select>
+                </div>
+              )}
             </div>
             <div className="flex gap-3">
               <button onClick={handleSaveEdit} disabled={saving || !editForm.name.trim() || !editForm.dni.trim()} className="bg-accent text-bg-primary px-5 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40">
@@ -183,6 +202,7 @@ export default function PacienteDetail({ patient: initialPatient, userId }: { pa
                 {patient.phone && <span className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1 text-[13px] text-text-secondary">📞 {patient.phone}</span>}
                 {patient.email && <span className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1 text-[13px] text-text-secondary">✉ {patient.email}</span>}
                 {patient.obra_social && <span className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1 text-[13px] text-text-secondary">{patient.obra_social}</span>}
+                {patient.source && <span className="bg-accent/10 border-[0.5px] border-accent/30 rounded-full px-3 py-1 text-[12px] text-accent">Vía: {patient.source}</span>}
                 <span className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1 text-[12px] text-text-secondary">
                   Desde {new Date(patient.created_at).toLocaleDateString('es-AR', { month: 'short', year: 'numeric' })}
                 </span>

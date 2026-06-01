@@ -14,9 +14,16 @@ interface Patient {
   email: string | null
   obra_social: string | null
   occupation: string | null
+  source: string | null
   created_at: string
   user_id: string
   plan_count?: number
+}
+
+interface PatientSource {
+  id: string
+  label: string
+  sort_order: number
 }
 
 function calcAge(birth_date: string | null): number | null {
@@ -45,8 +52,12 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
   const [search, setSearch] = useState('')
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
-  const [form, setForm] = useState({ name: '', dni: '', birth_date: '', phone: '', email: '', obra_social: '', occupation: '' })
+  const [form, setForm] = useState({ name: '', dni: '', birth_date: '', phone: '', email: '', obra_social: '', occupation: '', source: '' })
   const [dniError, setDniError] = useState<string | null>(null)
+  const [sources, setSources] = useState<PatientSource[]>([])
+  const [showSourcesConfig, setShowSourcesConfig] = useState(false)
+  const [newSourceLabel, setNewSourceLabel] = useState('')
+  const [savingSource, setSavingSource] = useState(false)
 
   const supabaseRef = useRef(createClient())
 
@@ -59,8 +70,8 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
     const sb = supabaseRef.current
 
     const query = isOrgContext
-      ? sb.from('patients').select('id, name, dni, age, birth_date, phone, email, obra_social, occupation, created_at, user_id').eq('org_id', orgId).order('created_at', { ascending: true })
-      : sb.from('patients').select('id, name, dni, age, birth_date, phone, email, obra_social, occupation, created_at, user_id').eq('user_id', userId).is('org_id', null).order('created_at', { ascending: true })
+      ? sb.from('patients').select('id, name, dni, age, birth_date, phone, email, obra_social, occupation, source, created_at, user_id').eq('org_id', orgId).order('created_at', { ascending: true })
+      : sb.from('patients').select('id, name, dni, age, birth_date, phone, email, obra_social, occupation, source, created_at, user_id').eq('user_id', userId).is('org_id', null).order('created_at', { ascending: true })
 
     const { data } = await query
     const rows = (data ?? []) as Patient[]
@@ -78,6 +89,36 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
 
   useEffect(() => { fetchPatients() }, [fetchPatients])
 
+  const fetchSources = useCallback(async () => {
+    if (!isPro) return
+    const url = isOrgContext ? `/api/pacientes/fuentes?orgId=${orgId}` : '/api/pacientes/fuentes'
+    const res = await fetch(url)
+    if (res.ok) setSources(await res.json())
+  }, [isPro, isOrgContext, orgId])
+
+  useEffect(() => { fetchSources() }, [fetchSources])
+
+  const handleAddSource = async () => {
+    if (!newSourceLabel.trim()) return
+    setSavingSource(true)
+    const res = await fetch('/api/pacientes/fuentes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ label: newSourceLabel.trim(), orgId: isOrgContext ? orgId : null }),
+    })
+    if (res.ok) { setNewSourceLabel(''); await fetchSources() }
+    setSavingSource(false)
+  }
+
+  const handleDeleteSource = async (id: string) => {
+    await fetch('/api/pacientes/fuentes', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    })
+    await fetchSources()
+  }
+
   const handleCreate = async () => {
     if (!form.name.trim() || !form.dni.trim()) return
     setDniError(null)
@@ -94,6 +135,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
         email: form.email.trim() || null,
         obra_social: form.obra_social.trim() || null,
         occupation: form.occupation.trim() || null,
+        source: form.source || null,
         orgId: isOrgContext ? orgId : null,
       }),
     })
@@ -111,7 +153,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
       return
     }
 
-    setForm({ name: '', dni: '', birth_date: '', phone: '', email: '', obra_social: '', occupation: '' })
+    setForm({ name: '', dni: '', birth_date: '', phone: '', email: '', obra_social: '', occupation: '', source: '' })
     setShowForm(false)
     await fetchPatients()
     setSaving(false)
@@ -125,7 +167,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
     await fetchPatients()
   }
 
-  const closeForm = () => { setShowForm(false); setForm({ name: '', dni: '', birth_date: '', phone: '', email: '', obra_social: '', occupation: '' }); setDniError(null) }
+  const closeForm = () => { setShowForm(false); setForm({ name: '', dni: '', birth_date: '', phone: '', email: '', obra_social: '', occupation: '', source: '' }); setDniError(null) }
 
   const filtered = search.trim()
     ? (() => {
@@ -263,6 +305,15 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
               <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Obra social</label>
               <input type="text" value={form.obra_social} onChange={e => setForm(f => ({ ...f, obra_social: e.target.value }))} placeholder="Ej: OSDE, PAMI, IOMA..." className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent" />
             </div>
+            {isPro && sources.length > 0 && (
+              <div className="sm:col-span-2">
+                <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">¿Cómo llegó?</label>
+                <select value={form.source} onChange={e => setForm(f => ({ ...f, source: e.target.value }))} className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent">
+                  <option value="">Sin especificar</option>
+                  {sources.map(s => <option key={s.id} value={s.label}>{s.label}</option>)}
+                </select>
+              </div>
+            )}
           </div>
           <div className="flex gap-3">
             <button onClick={handleCreate} disabled={saving || !form.name.trim() || !form.dni.trim()} className="bg-accent text-bg-primary px-5 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity">
@@ -270,6 +321,46 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
             </button>
             <button onClick={closeForm} className="text-text-secondary px-4 py-2 rounded-lg text-[13px] hover:text-text-primary">Cancelar</button>
           </div>
+        </div>
+      )}
+
+      {/* Configuración de vías de llegada — solo Pro */}
+      {isPro && (
+        <div className="mb-6">
+          <button
+            onClick={() => setShowSourcesConfig(v => !v)}
+            className="text-[12px] text-text-secondary hover:text-text-primary flex items-center gap-1.5 transition-colors"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+            {showSourcesConfig ? 'Ocultar' : 'Configurar'} vías de llegada
+          </button>
+          {showSourcesConfig && (
+            <div className="mt-3 bg-bg-secondary border-[0.5px] border-border rounded-xl p-5">
+              <p className="text-[13px] text-text-secondary mb-4">Definí las opciones que aparecen al registrar cómo llegó cada paciente.</p>
+              <div className="space-y-2 mb-4">
+                {sources.length === 0 && <p className="text-[12px] text-text-secondary italic">Todavía no hay vías configuradas.</p>}
+                {sources.map(s => (
+                  <div key={s.id} className="flex items-center justify-between gap-2 bg-bg-primary border-[0.5px] border-border rounded-lg px-3 py-2">
+                    <span className="text-[13px]">{s.label}</span>
+                    <button onClick={() => handleDeleteSource(s.id)} className="text-[11px] text-text-secondary hover:text-red-400 transition-colors">Eliminar</button>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newSourceLabel}
+                  onChange={e => setNewSourceLabel(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleAddSource()}
+                  placeholder="Ej: Redes sociales, Traumatólogo..."
+                  className="flex-1 bg-bg-primary border-[0.5px] border-border-strong rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:border-accent"
+                />
+                <button onClick={handleAddSource} disabled={savingSource || !newSourceLabel.trim()} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity">
+                  {savingSource ? '...' : 'Agregar'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -323,6 +414,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
                         return parts.join(' · ')
                       })()}
                     </p>
+                    {p.source && <p className="text-[11px] text-text-secondary mt-1 opacity-60">Vía: {p.source}</p>}
                     <div className="mt-4 pt-4 border-t-[0.5px] border-border flex justify-between items-center">
                       <span className="text-[12px] text-text-secondary">{p.plan_count} plan{p.plan_count !== 1 ? 'es' : ''}</span>
                       <span className="text-accent text-[13px] font-medium opacity-0 group-hover:opacity-100 transition-opacity">Ver →</span>
