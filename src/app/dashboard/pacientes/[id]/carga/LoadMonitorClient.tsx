@@ -181,11 +181,41 @@ export default function LoadMonitorClient({
       .filter(s => daysBetween(s.session_date, today) <= 7)
       .reduce((sum, s) => sum + s.load_units, 0)
 
-    const last28 = sessions.filter(s => daysBetween(s.session_date, today) <= 28)
-    const chronic = last28.reduce((sum, s) => sum + s.load_units, 0) / 4
-
-    const acwr = chronic > 0 ? acute / chronic : null
-    const validAcwr = last28.length >= 4
+    // EWMA-based ACWR (λa=0.25 ≈ 7d, λc=0.069 ≈ 28d)
+    // Iterates day by day from first session so short histories don't get penalised
+    // by weeks of zero before the patient started using the app.
+    let ewmaAcute = 0
+    let ewmaChronic = 0
+    let ewmaAcwr: number | null = null
+    let ewmaDays = 0
+    if (sessions.length > 0) {
+      const λa = 2 / (7 + 1)
+      const λc = 2 / (28 + 1)
+      const dailyLoadMap: Record<string, number> = {}
+      for (const s of sessions) {
+        dailyLoadMap[s.session_date] = (dailyLoadMap[s.session_date] ?? 0) + s.load_units
+      }
+      const sorted = [...sessions].sort((a, b) => a.session_date.localeCompare(b.session_date))
+      const startDate = new Date(sorted[0].session_date + 'T00:00:00')
+      const endDate = new Date(today + 'T00:00:00')
+      let initialized = false
+      for (const d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+        const ds = d.toISOString().split('T')[0]
+        const load = dailyLoadMap[ds] ?? 0
+        if (!initialized) {
+          ewmaAcute = load
+          ewmaChronic = load
+          initialized = true
+        } else {
+          ewmaAcute = λa * load + (1 - λa) * ewmaAcute
+          ewmaChronic = λc * load + (1 - λc) * ewmaChronic
+        }
+        ewmaDays++
+      }
+      ewmaAcwr = ewmaChronic > 0 ? ewmaAcute / ewmaChronic : null
+    }
+    // Mark as preliminary if history is under 14 days (EWMA hasn't converged yet)
+    const ewmaPreliminary = ewmaDays < 14
 
     const sessionsThisWeek = sessions.filter(s => daysBetween(s.session_date, today) <= 7)
     const vasPostThisWeek = sessionsThisWeek.filter(s => s.vas_post !== null)
@@ -212,7 +242,7 @@ export default function LoadMonitorClient({
     const monotony = stdDaily > 0 ? meanDaily / stdDaily : null
     const strain = monotony !== null ? acute * monotony : null
 
-    return { acute, chronic, acwr, validAcwr, sessionsThisWeek: sessionsThisWeek.length, avgVasPost, monotony, strain }
+    return { acute, acwr: ewmaAcwr, validAcwr: sessions.length > 0, ewmaPreliminary, sessionsThisWeek: sessionsThisWeek.length, avgVasPost, monotony, strain }
   }, [sessions, today])
 
   // ─── Consejo de carga ──────────────────────────────────────────────────────
@@ -470,7 +500,7 @@ export default function LoadMonitorClient({
               ))}
             </div>
           )}
-          <p className="text-[11px] text-text-secondary">Basado en ACWR, dolor y RPE de las últimas 5 sesiones. Siempre aplicar criterio clínico.</p>
+          <p className="text-[11px] text-text-secondary">Basado en ACWR (EWMA), dolor y RPE de las últimas 5 sesiones. Siempre aplicar criterio clínico.{metrics.ewmaPreliminary ? ' Historial < 2 semanas — estimación preliminar.' : ''}</p>
         </div>
       ) : sessions.length > 0 ? (
         <div className="bg-bg-secondary border-[0.5px] border-border rounded-xl p-5 text-[13px] text-text-secondary">
@@ -665,11 +695,11 @@ export default function LoadMonitorClient({
 
       {/* ── 4. ACWR ────────────────────────────────────────────────────────── */}
       <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">
-        <h2 className="text-[16px] font-medium mb-4">ACWR — Ratio Agudo:Crónico</h2>
+        <h2 className="text-[16px] font-medium mb-4">ACWR — Ratio Agudo:Crónico <span className="text-[12px] font-normal text-text-secondary">(EWMA)</span></h2>
 
         {!metrics.validAcwr ? (
           <div className="text-[13px] text-text-secondary bg-bg-secondary rounded-lg px-4 py-3 border-[0.5px] border-border">
-            Se necesitan al menos 4 semanas de datos para calcular el ACWR con precisión.
+            Sin sesiones registradas todavía.
           </div>
         ) : metrics.acwr === null ? (
           <div className="text-[13px] text-text-secondary">Sin carga crónica registrada.</div>
@@ -703,6 +733,12 @@ export default function LoadMonitorClient({
               <span>1.5</span>
               <span>2.5+</span>
             </div>
+
+            {metrics.ewmaPreliminary && (
+              <div className="mt-3 bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[12px] text-text-secondary">
+                ⚠ Estimación preliminar — el EWMA converge progresivamente a partir de las 2 semanas de datos. Usá el valor como orientación, no como certeza.
+              </div>
+            )}
 
             {/* Monotony & Strain */}
             <div className="grid grid-cols-2 gap-4 mt-2 pt-4 border-t-[0.5px] border-border">
