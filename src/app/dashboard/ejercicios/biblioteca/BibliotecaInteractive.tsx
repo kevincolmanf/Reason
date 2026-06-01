@@ -67,7 +67,7 @@ export default function BibliotecaInteractive({ equipments, userId }: { equipmen
       .order('name')
       .range(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE - 1)
 
-    if (search) query = query.ilike('name', `%${search}%`)
+    if (search) { for (const t of search.trim().split(/\s+/)) query = query.ilike('name', `%${t}%`) }
     if (category) query = query.eq('category', category)
     if (equipment) query = query.eq('equipment', equipment)
 

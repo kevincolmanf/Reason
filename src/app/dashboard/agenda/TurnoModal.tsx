@@ -42,6 +42,10 @@ interface PatientResult {
   name: string
   dni: string | null
   age: number | null
+  birth_date?: string | null
+  phone?: string | null
+  email?: string | null
+  obra_social?: string | null
   occupation: string | null
 }
 
@@ -188,15 +192,17 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
     if (patientSearch.length < 2) { setPatientResults([]); return }
     if (searchTimeout.current) clearTimeout(searchTimeout.current)
     searchTimeout.current = setTimeout(async () => {
-      const isNumeric = /^\d+$/.test(patientSearch.trim())
+      const trimmed = patientSearch.trim()
+      const isNumeric = /^\d+$/.test(trimmed)
       let query = supabaseRef.current
         .from('patients')
-        .select('id, name, dni, age, occupation')
+        .select('id, name, dni, age, birth_date, phone, email, obra_social, occupation')
         .limit(6)
       if (isNumeric) {
-        query = query.ilike('dni', `%${patientSearch.trim()}%`)
+        query = query.ilike('dni', `%${trimmed}%`)
       } else {
-        query = query.ilike('name', `%${patientSearch}%`)
+        const terms = trimmed.split(/\s+/)
+        for (const t of terms) query = query.ilike('name', `%${t}%`)
       }
       if (orgId) query = query.eq('org_id', orgId)
       else       query = query.eq('user_id', userId)
@@ -255,20 +261,42 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
     setHistorialLoaded(false)
     setHistorial([])
 
-    // Fetch last known phone from turno history
-    let phone = ''
-    const phoneQuery = supabaseRef.current
-      .from('turnos')
-      .select('patient_phone')
-      .eq('patient_id', p.id)
-      .not('patient_phone', 'is', null)
-      .neq('patient_phone', '')
-      .order('start_time', { ascending: false })
-      .limit(1)
-    const { data: lastTurno } = await (orgId ? phoneQuery.eq('org_id', orgId) : phoneQuery.eq('created_by', userId)).maybeSingle()
-    phone = lastTurno?.patient_phone ?? ''
+    // Use patient's stored phone/email/obra_social; fallback to last turno for phone
+    let phone = p.phone ?? ''
+    if (!phone) {
+      const phoneQuery = supabaseRef.current
+        .from('turnos')
+        .select('patient_phone')
+        .eq('patient_id', p.id)
+        .not('patient_phone', 'is', null)
+        .neq('patient_phone', '')
+        .order('start_time', { ascending: false })
+        .limit(1)
+      const { data: lastTurno } = await (orgId ? phoneQuery.eq('org_id', orgId) : phoneQuery.eq('created_by', userId)).maybeSingle()
+      phone = lastTurno?.patient_phone ?? ''
+    }
 
-    setForm(f => ({ ...f, patient_name: p.name, patient_id: p.id, patient_phone: phone }))
+    // Calculate age from birth_date if available
+    let age = ''
+    if (p.birth_date) {
+      const today = new Date()
+      const dob = new Date(p.birth_date)
+      let a = today.getFullYear() - dob.getFullYear()
+      if (today.getMonth() < dob.getMonth() || (today.getMonth() === dob.getMonth() && today.getDate() < dob.getDate())) a--
+      age = String(a)
+    } else if (p.age) {
+      age = String(p.age)
+    }
+
+    setForm(f => ({
+      ...f,
+      patient_name: p.name,
+      patient_id: p.id,
+      patient_phone: phone,
+      patient_email: p.email ?? f.patient_email,
+      patient_obra_social: p.obra_social ?? f.patient_obra_social,
+      patient_age: age || f.patient_age,
+    }))
   }
 
   const clearPatient = () => {

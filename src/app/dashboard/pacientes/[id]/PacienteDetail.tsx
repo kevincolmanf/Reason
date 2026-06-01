@@ -10,17 +10,38 @@ interface Patient {
   name: string
   dni: string | null
   age: number | null
+  birth_date: string | null
+  phone: string | null
+  email: string | null
+  obra_social: string | null
   occupation: string | null
   created_at: string
   load_share_token: string | null
   user_id: string
 }
 
+function calcAge(birth_date: string | null): number | null {
+  if (!birth_date) return null
+  const today = new Date()
+  const dob = new Date(birth_date)
+  let age = today.getFullYear() - dob.getFullYear()
+  if (today.getMonth() < dob.getMonth() || (today.getMonth() === dob.getMonth() && today.getDate() < dob.getDate())) age--
+  return age
+}
+
 export default function PacienteDetail({ patient: initialPatient, userId }: { patient: Patient; userId: string }) {
   const isOwner = initialPatient.user_id === userId
   const [patient, setPatient] = useState<Patient>(initialPatient)
   const [editing, setEditing] = useState(false)
-  const [editForm, setEditForm] = useState({ name: initialPatient.name, dni: initialPatient.dni || '', age: initialPatient.age?.toString() || '', occupation: initialPatient.occupation || '' })
+  const [editForm, setEditForm] = useState({
+    name: initialPatient.name,
+    dni: initialPatient.dni || '',
+    birth_date: initialPatient.birth_date || '',
+    phone: initialPatient.phone || '',
+    email: initialPatient.email || '',
+    obra_social: initialPatient.obra_social || '',
+    occupation: initialPatient.occupation || '',
+  })
   const [saving, setSaving] = useState(false)
   const [dniError, setDniError] = useState<string | null>(null)
   const [generatingToken, setGeneratingToken] = useState(false)
@@ -77,7 +98,10 @@ export default function PacienteDetail({ patient: initialPatient, userId }: { pa
       .update({
         name: editForm.name.trim(),
         dni: editForm.dni.trim(),
-        age: editForm.age ? parseInt(editForm.age) : null,
+        birth_date: editForm.birth_date || null,
+        phone: editForm.phone.trim() || null,
+        email: editForm.email.trim() || null,
+        obra_social: editForm.obra_social.trim() || null,
         occupation: editForm.occupation.trim() || null,
       })
       .eq('id', patient.id)
@@ -118,12 +142,24 @@ export default function PacienteDetail({ patient: initialPatient, userId }: { pa
                 {dniError && <p className="text-[11px] text-red-400 mt-1">{dniError}</p>}
               </div>
               <div>
-                <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Edad</label>
-                <input type="number" value={editForm.age} onChange={e => setEditForm(f => ({ ...f, age: e.target.value }))} min="1" max="120" className="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent" />
+                <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Fecha de nacimiento</label>
+                <input type="date" value={editForm.birth_date} onChange={e => setEditForm(f => ({ ...f, birth_date: e.target.value }))} className="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent" />
               </div>
               <div>
                 <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Ocupación</label>
                 <input type="text" value={editForm.occupation} onChange={e => setEditForm(f => ({ ...f, occupation: e.target.value }))} className="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent" />
+              </div>
+              <div>
+                <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Teléfono</label>
+                <input type="tel" value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} placeholder="11 1234-5678" className="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent" />
+              </div>
+              <div>
+                <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Email</label>
+                <input type="email" value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} placeholder="paciente@email.com" className="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent" />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Obra social</label>
+                <input type="text" value={editForm.obra_social} onChange={e => setEditForm(f => ({ ...f, obra_social: e.target.value }))} placeholder="Ej: OSDE, PAMI, IOMA..." className="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent" />
               </div>
             </div>
             <div className="flex gap-3">
@@ -141,8 +177,12 @@ export default function PacienteDetail({ patient: initialPatient, userId }: { pa
               <h1 className="text-[24px] sm:text-[28px] font-medium tracking-[-0.01em] mb-3">{patient.name}</h1>
               <div className="flex flex-wrap gap-2">
                 {patient.dni && <span className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1 text-[13px] text-text-secondary">DNI {patient.dni}</span>}
-                {patient.age && <span className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1 text-[13px] text-text-secondary">{patient.age} años</span>}
+                {(() => { const age = calcAge(patient.birth_date) ?? patient.age; return age ? <span className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1 text-[13px] text-text-secondary">{age} años</span> : null })()}
+                {patient.birth_date && <span className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1 text-[13px] text-text-secondary">{new Date(patient.birth_date + 'T12:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' })}</span>}
                 {patient.occupation && <span className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1 text-[13px] text-text-secondary">{patient.occupation}</span>}
+                {patient.phone && <span className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1 text-[13px] text-text-secondary">📞 {patient.phone}</span>}
+                {patient.email && <span className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1 text-[13px] text-text-secondary">✉ {patient.email}</span>}
+                {patient.obra_social && <span className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1 text-[13px] text-text-secondary">{patient.obra_social}</span>}
                 <span className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1 text-[12px] text-text-secondary">
                   Desde {new Date(patient.created_at).toLocaleDateString('es-AR', { month: 'short', year: 'numeric' })}
                 </span>

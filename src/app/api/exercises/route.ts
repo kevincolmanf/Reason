@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     .select('id, name, category, equipment, youtube_url')
     .limit(1000)
 
-  if (q) query = query.ilike('name', `%${q}%`)
+  if (q) { for (const t of q.trim().split(/\s+/)) query = query.ilike('name', `%${t}%`) }
   if (category) query = query.eq('category', category)
 
   const { data, error } = await query

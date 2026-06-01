@@ -9,10 +9,23 @@ interface Patient {
   name: string
   dni: string | null
   age: number | null
+  birth_date: string | null
+  phone: string | null
+  email: string | null
+  obra_social: string | null
   occupation: string | null
   created_at: string
   user_id: string
   plan_count?: number
+}
+
+function calcAge(birth_date: string | null): number | null {
+  if (!birth_date) return null
+  const today = new Date()
+  const dob = new Date(birth_date)
+  let age = today.getFullYear() - dob.getFullYear()
+  if (today.getMonth() < dob.getMonth() || (today.getMonth() === dob.getMonth() && today.getDate() < dob.getDate())) age--
+  return age
 }
 
 interface Props {
@@ -32,7 +45,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
   const [search, setSearch] = useState('')
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
-  const [form, setForm] = useState({ name: '', dni: '', age: '', occupation: '' })
+  const [form, setForm] = useState({ name: '', dni: '', birth_date: '', phone: '', email: '', obra_social: '', occupation: '' })
   const [dniError, setDniError] = useState<string | null>(null)
 
   const supabaseRef = useRef(createClient())
@@ -46,8 +59,8 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
     const sb = supabaseRef.current
 
     const query = isOrgContext
-      ? sb.from('patients').select('id, name, dni, age, occupation, created_at, user_id').eq('org_id', orgId).order('created_at', { ascending: true })
-      : sb.from('patients').select('id, name, dni, age, occupation, created_at, user_id').eq('user_id', userId).is('org_id', null).order('created_at', { ascending: true })
+      ? sb.from('patients').select('id, name, dni, age, birth_date, phone, email, obra_social, occupation, created_at, user_id').eq('org_id', orgId).order('created_at', { ascending: true })
+      : sb.from('patients').select('id, name, dni, age, birth_date, phone, email, obra_social, occupation, created_at, user_id').eq('user_id', userId).is('org_id', null).order('created_at', { ascending: true })
 
     const { data } = await query
     const rows = (data ?? []) as Patient[]
@@ -76,7 +89,10 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
       body: JSON.stringify({
         name: form.name.trim(),
         dni: form.dni.trim(),
-        age: form.age || null,
+        birth_date: form.birth_date || null,
+        phone: form.phone.trim() || null,
+        email: form.email.trim() || null,
+        obra_social: form.obra_social.trim() || null,
         occupation: form.occupation.trim() || null,
         orgId: isOrgContext ? orgId : null,
       }),
@@ -95,7 +111,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
       return
     }
 
-    setForm({ name: '', dni: '', age: '', occupation: '' })
+    setForm({ name: '', dni: '', birth_date: '', phone: '', email: '', obra_social: '', occupation: '' })
     setShowForm(false)
     await fetchPatients()
     setSaving(false)
@@ -109,14 +125,21 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
     await fetchPatients()
   }
 
-  const closeForm = () => { setShowForm(false); setForm({ name: '', dni: '', age: '', occupation: '' }); setDniError(null) }
+  const closeForm = () => { setShowForm(false); setForm({ name: '', dni: '', birth_date: '', phone: '', email: '', obra_social: '', occupation: '' }); setDniError(null) }
 
   const filtered = search.trim()
-    ? patients.filter(p =>
-        p.name.toLowerCase().includes(search.toLowerCase()) ||
-        p.occupation?.toLowerCase().includes(search.toLowerCase()) ||
-        p.dni?.includes(search.trim())
-      )
+    ? (() => {
+        const terms = search.trim().toLowerCase().split(/\s+/)
+        const rawDni = search.replace(/\D/g, '')
+        return patients.filter(p => {
+          const nameLower = p.name.toLowerCase()
+          return (
+            terms.every(t => nameLower.includes(t)) ||
+            p.occupation?.toLowerCase().includes(search.toLowerCase()) ||
+            (rawDni && p.dni?.includes(rawDni))
+          )
+        })
+      })()
     : patients
 
   if (loading) return <div className="text-text-secondary text-[14px]">Cargando pacientes...</div>
@@ -146,13 +169,13 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
         <div className="flex items-center gap-3">
           <span className="text-[14px] text-text-secondary">{patients.length} paciente{patients.length !== 1 ? 's' : ''}</span>
-          {patients.length > 3 && (
+          {patients.length > 0 && (
             <input
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Buscar..."
-              className="bg-bg-secondary border-[0.5px] border-border-strong rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:border-accent w-[200px]"
+              placeholder="Buscar por nombre, DNI..."
+              className="bg-bg-secondary border-[0.5px] border-border-strong rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:border-accent w-[220px]"
             />
           )}
         </div>
@@ -221,12 +244,24 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
               {dniError && <p className="text-[11px] text-red-400 mt-1">{dniError}</p>}
             </div>
             <div>
-              <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Edad</label>
-              <input type="number" value={form.age} onChange={e => setForm(f => ({ ...f, age: e.target.value }))} placeholder="Ej: 34" min="1" max="120" className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent" />
+              <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Fecha de nacimiento</label>
+              <input type="date" value={form.birth_date} onChange={e => setForm(f => ({ ...f, birth_date: e.target.value }))} className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent" />
             </div>
             <div>
               <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Ocupación</label>
               <input type="text" value={form.occupation} onChange={e => setForm(f => ({ ...f, occupation: e.target.value }))} placeholder="Ej: Docente" className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent" />
+            </div>
+            <div>
+              <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Teléfono</label>
+              <input type="tel" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="Ej: 11 1234-5678" className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent" />
+            </div>
+            <div>
+              <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Email</label>
+              <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="paciente@email.com" className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent" />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Obra social</label>
+              <input type="text" value={form.obra_social} onChange={e => setForm(f => ({ ...f, obra_social: e.target.value }))} placeholder="Ej: OSDE, PAMI, IOMA..." className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent" />
             </div>
           </div>
           <div className="flex gap-3">
@@ -264,7 +299,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
                 <div key={p.id} className="relative rounded-xl overflow-hidden cursor-default select-none">
                   <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 h-full flex flex-col opacity-40 pointer-events-none">
                     <p className="text-[17px] font-medium mb-1">{p.name}</p>
-                    <p className="text-[13px] text-text-secondary flex-grow">{p.age ? `${p.age} años` : ''}{p.age && p.occupation ? ' · ' : ''}{p.occupation || ''}</p>
+                    <p className="text-[13px] text-text-secondary flex-grow">{(() => { const age = calcAge(p.birth_date) ?? p.age; return [age ? `${age} años` : null, p.occupation || null].filter(Boolean).join(' · ') })()}</p>
                     <p className="text-[12px] text-text-secondary mt-4 pt-4 border-t-[0.5px] border-border">{p.plan_count} plan{p.plan_count !== 1 ? 'es' : ''}</p>
                   </div>
                   <a href="/paywall" className="absolute inset-0 flex items-center justify-center">
@@ -282,7 +317,11 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
                   <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 hover:bg-bg-secondary transition-colors h-full flex flex-col">
                     <p className="text-[17px] font-medium text-text-primary mb-1">{p.name}</p>
                     <p className="text-[13px] text-text-secondary flex-grow">
-                      {p.dni ? `DNI ${p.dni}` : ''}{p.dni && (p.age || p.occupation) ? ' · ' : ''}{p.age ? `${p.age} años` : ''}{p.age && p.occupation ? ' · ' : ''}{p.occupation || ''}
+                      {(() => {
+                        const age = calcAge(p.birth_date) ?? p.age
+                        const parts = [p.dni ? `DNI ${p.dni}` : null, age ? `${age} años` : null, p.occupation || null].filter(Boolean)
+                        return parts.join(' · ')
+                      })()}
                     </p>
                     <div className="mt-4 pt-4 border-t-[0.5px] border-border flex justify-between items-center">
                       <span className="text-[12px] text-text-secondary">{p.plan_count} plan{p.plan_count !== 1 ? 'es' : ''}</span>
@@ -290,7 +329,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
                     </div>
                   </div>
                 </Link>
-                {(isPro || p.user_id === userId) && (
+                {p.user_id === userId && (
                   <button onClick={() => setDeleteConfirm(p.id)} className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity text-[11px] text-text-secondary hover:text-red-400 bg-bg-primary border-[0.5px] border-border rounded-lg px-2 py-1">
                     Eliminar
                   </button>
