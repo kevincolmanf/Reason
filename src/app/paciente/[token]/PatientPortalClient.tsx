@@ -243,6 +243,15 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [showConfirmEmpty, setShowConfirmEmpty] = useState(false)
   const [localSessions, setLocalSessions] = useState<RecentSession[]>(recentSessions)
+  const [dismissedReminder, setDismissedReminder] = useState(false)
+
+  // Mostrar recordatorio si no registró sesión en las últimas 24 h
+  const showSessionReminder = !dismissedReminder && (() => {
+    if (localSessions.length === 0) return true
+    const last = localSessions.reduce((a, b) => a.session_date > b.session_date ? a : b)
+    const diff = (Date.now() - new Date(last.session_date + 'T00:00:00').getTime()) / 86400000
+    return diff >= 1
+  })()
 
   const calculatedLoad = formRpe !== null && formDuration ? formRpe * (parseInt(formDuration) || 0) : null
 
@@ -387,6 +396,28 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
           </div>
         )}
       </div>
+
+      {/* ── RECORDATORIO DE REGISTRO ───────────────────────── */}
+      {showSessionReminder && (
+        <div className="flex items-start gap-3 bg-accent/10 border-[0.5px] border-accent/30 rounded-xl px-4 py-3.5">
+          <span className="text-[20px] shrink-0 mt-0.5">📋</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-[13px] font-medium text-text-primary leading-snug">
+              Registrá tu sesión después de entrenar
+            </p>
+            <p className="text-[12px] text-text-secondary mt-0.5 leading-relaxed">
+              Tu kinesiólogo usa esos datos para planificar mejor tu próxima semana.
+            </p>
+          </div>
+          <button
+            onClick={() => setDismissedReminder(true)}
+            aria-label="Cerrar"
+            className="shrink-0 text-text-secondary hover:text-text-primary text-[18px] leading-none mt-0.5 transition-colors"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {/* ── MI SEMANA ──────────────────────────────────────── */}
       {scheduledSessions.length > 0 && (() => {
