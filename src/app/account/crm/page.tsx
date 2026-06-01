@@ -9,8 +9,18 @@ export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Panel de gestión | Reason' }
 
 type TurnoRow = { status: string; appointment_type: string | null; professional_name: string | null; start_time: string; end_time: string; area: string | null }
-type PatientRow = { id: string; name: string | null; age: number | null; dni: string | null; phone: string | null; email: string | null; user_id: string }
-type AllTurnoRow = { patient_id: string | null; start_time: string; professional_name: string | null; patient_phone: string | null; patient_email: string | null; patient_age: number | null }
+type PatientRow = { id: string; name: string | null; age: number | null; birth_date: string | null; dni: string | null; phone: string | null; email: string | null; obra_social: string | null; occupation: string | null; source: string | null; user_id: string }
+type AllTurnoRow = { patient_id: string | null; start_time: string; professional_name: string | null; patient_phone: string | null; patient_email: string | null; patient_age: number | null; area: string | null }
+
+function calcAge(birth_date: string | null, fallback: number | null): number | null {
+  if (birth_date) {
+    const today = new Date(); const dob = new Date(birth_date)
+    let a = today.getFullYear() - dob.getFullYear()
+    if (today.getMonth() < dob.getMonth() || (today.getMonth() === dob.getMonth() && today.getDate() < dob.getDate())) a--
+    return a
+  }
+  return fallback
+}
 
 export default async function CRMPage() {
   const supabase = createClient()
@@ -53,14 +63,14 @@ export default async function CRMPage() {
       .gt('start_time', now.toISOString())
       .lt('start_time', nextMonthStart.toISOString()),
     admin.from('turnos')
-      .select('patient_id, start_time, professional_name, patient_phone, patient_email, patient_age')
+      .select('patient_id, start_time, professional_name, patient_phone, patient_email, patient_age, area')
       .eq('org_id', orgRow.id)
       .not('is_blocked', 'is', true)
       .order('start_time', { ascending: false }),
   ])
 
   // Last turno per patient (already sorted desc, first match wins)
-  const lastTurnoMap = new Map<string, { date: string; phone: string | null; email: string | null; age: number | null; professionalName: string | null }>()
+  const lastTurnoMap = new Map<string, { date: string; phone: string | null; email: string | null; age: number | null; professionalName: string | null; area: string | null }>()
   ;(allTurnos as AllTurnoRow[] ?? []).forEach((t) => {
     if (t.patient_id && !lastTurnoMap.has(t.patient_id)) {
       lastTurnoMap.set(t.patient_id, {
@@ -69,6 +79,7 @@ export default async function CRMPage() {
         email: t.patient_email ?? null,
         age: t.patient_age ?? null,
         professionalName: t.professional_name ?? null,
+        area: t.area ?? null,
       })
     }
   })
@@ -79,15 +90,29 @@ export default async function CRMPage() {
     return {
       id: p.id as string,
       name: (p.name ?? '') as string,
-      age: (p.age ?? lt?.age ?? null) as number | null,
+      age: calcAge(p.birth_date, p.age ?? lt?.age ?? null),
       dni: (p.dni ?? null) as string | null,
       phone: (p.phone ?? lt?.phone ?? null) as string | null,
       email: (p.email ?? lt?.email ?? null) as string | null,
+      obra_social: (p.obra_social ?? null) as string | null,
+      occupation: (p.occupation ?? null) as string | null,
+      source: (p.source ?? null) as string | null,
+      area: (lt?.area ?? null) as string | null,
       professionalName: (lt?.professionalName ?? null) as string | null,
       lastTurnoDate: (lt?.date ?? null) as string | null,
       active,
     }
   })
+
+  // Distribución de vías de llegada
+  const sourceDistMap = new Map<string, number>()
+  patients.forEach(p => {
+    const key = p.source ?? 'Sin especificar'
+    sourceDistMap.set(key, (sourceDistMap.get(key) ?? 0) + 1)
+  })
+  const sourceDist = Array.from(sourceDistMap.entries())
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value)
 
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
   const thisMonthLabel = cap(now.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }))
@@ -116,6 +141,7 @@ export default async function CRMPage() {
             upcoming: turnosUpcoming?.length ?? 0,
             totalPatients: patients.length,
             activePatients: patients.filter(p => p.active).length,
+            sourceDist,
           }}
         />
       </main>

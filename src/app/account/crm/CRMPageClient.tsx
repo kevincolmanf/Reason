@@ -12,6 +12,10 @@ export type CRMPatient = {
   dni: string | null
   phone: string | null
   email: string | null
+  obra_social: string | null
+  occupation: string | null
+  source: string | null
+  area: string | null
   professionalName: string | null
   lastTurnoDate: string | null
   active: boolean
@@ -35,16 +39,21 @@ export type Analytics = {
   upcoming: number
   totalPatients: number
   activePatients: number
+  sourceDist: { name: string; value: number }[]
 }
 
 function exportCSV(patients: CRMPatient[]) {
-  const headers = ['Nombre', 'Edad', 'DNI', 'Teléfono', 'Email', 'Profesional', 'Último turno', 'Estado']
+  const headers = ['Nombre', 'Edad', 'DNI', 'Teléfono', 'Email', 'Obra social', 'Ocupación', 'Vía de llegada', 'Área', 'Profesional', 'Último turno', 'Estado']
   const rows = patients.map(p => [
     p.name,
     p.age ?? '',
     p.dni ?? '',
     p.phone ?? '',
     p.email ?? '',
+    p.obra_social ?? '',
+    p.occupation ?? '',
+    p.source ?? '',
+    p.area ?? '',
     p.professionalName ?? '',
     p.lastTurnoDate ? new Date(p.lastTurnoDate).toLocaleDateString('es-AR') : '',
     p.active ? 'Activo' : 'Inactivo',
@@ -65,6 +74,8 @@ export default function CRMPageClient({ patients, analytics }: { patients: CRMPa
   const [tab, setTab] = useState<'pacientes' | 'analitica'>('pacientes')
   const [filterProf, setFilterProf] = useState('all')
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all')
+  const [filterSource, setFilterSource] = useState('all')
+  const [filterArea, setFilterArea] = useState('all')
   const [search, setSearch] = useState('')
 
   const professionals = useMemo(() => {
@@ -72,21 +83,35 @@ export default function CRMPageClient({ patients, analytics }: { patients: CRMPa
     return names as string[]
   }, [patients])
 
+  const sources = useMemo(() => {
+    const vals = Array.from(new Set(patients.map(p => p.source).filter((s): s is string => !!s)))
+    return vals
+  }, [patients])
+
+  const areas = useMemo(() => {
+    const vals = Array.from(new Set(patients.map(p => p.area).filter((a): a is string => !!a)))
+    return vals
+  }, [patients])
+
   const filtered = useMemo(() => {
     return patients.filter(p => {
       if (filterProf !== 'all' && p.professionalName !== filterProf) return false
       if (filterStatus === 'active' && !p.active) return false
       if (filterStatus === 'inactive' && p.active) return false
+      if (filterSource !== 'all' && p.source !== filterSource) return false
+      if (filterArea !== 'all' && p.area !== filterArea) return false
       if (search) {
         const q = search.toLowerCase()
         if (!p.name.toLowerCase().includes(q) &&
             !(p.dni ?? '').includes(q) &&
             !(p.phone ?? '').includes(q) &&
-            !(p.email ?? '').toLowerCase().includes(q)) return false
+            !(p.email ?? '').toLowerCase().includes(q) &&
+            !(p.obra_social ?? '').toLowerCase().includes(q) &&
+            !(p.source ?? '').toLowerCase().includes(q)) return false
       }
       return true
     })
-  }, [patients, filterProf, filterStatus, search])
+  }, [patients, filterProf, filterStatus, filterSource, filterArea, search])
 
   return (
     <div>
@@ -128,6 +153,26 @@ export default function CRMPageClient({ patients, analytics }: { patients: CRMPa
                   {professionals.map(n => <option key={n} value={n}>{n}</option>)}
                 </select>
               )}
+              {areas.length > 0 && (
+                <select
+                  value={filterArea}
+                  onChange={e => setFilterArea(e.target.value)}
+                  className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary focus:outline-none focus:border-accent"
+                >
+                  <option value="all">Todas las áreas</option>
+                  {areas.map(a => <option key={a} value={a}>{a}</option>)}
+                </select>
+              )}
+              {sources.length > 0 && (
+                <select
+                  value={filterSource}
+                  onChange={e => setFilterSource(e.target.value)}
+                  className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary focus:outline-none focus:border-accent"
+                >
+                  <option value="all">Todas las vías</option>
+                  {sources.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              )}
               <select
                 value={filterStatus}
                 onChange={e => setFilterStatus(e.target.value as 'all' | 'active' | 'inactive')}
@@ -163,6 +208,9 @@ export default function CRMPageClient({ patients, analytics }: { patients: CRMPa
                       <th className="text-left px-4 py-3 text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em]">DNI</th>
                       <th className="text-left px-4 py-3 text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em]">Teléfono</th>
                       <th className="text-left px-4 py-3 text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em]">Email</th>
+                      <th className="text-left px-4 py-3 text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em]">Obra social</th>
+                      <th className="text-left px-4 py-3 text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em]">Vía de llegada</th>
+                      <th className="text-left px-4 py-3 text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em]">Área</th>
                       <th className="text-left px-4 py-3 text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em]">Profesional</th>
                       <th className="text-left px-4 py-3 text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em]">Último turno</th>
                       <th className="text-left px-4 py-3 text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em]">Estado</th>
@@ -176,6 +224,14 @@ export default function CRMPageClient({ patients, analytics }: { patients: CRMPa
                         <td className="px-4 py-3 text-[13px] text-text-secondary font-mono">{p.dni ?? '—'}</td>
                         <td className="px-4 py-3 text-[13px] text-text-secondary font-mono">{p.phone ?? '—'}</td>
                         <td className="px-4 py-3 text-[13px] text-text-secondary">{p.email ?? '—'}</td>
+                        <td className="px-4 py-3 text-[13px] text-text-secondary">{p.obra_social ?? '—'}</td>
+                        <td className="px-4 py-3">
+                          {p.source
+                            ? <span className="text-[11px] px-2 py-0.5 rounded-full bg-accent/10 text-accent border-[0.5px] border-accent/20">{p.source}</span>
+                            : <span className="text-[13px] text-text-tertiary">—</span>
+                          }
+                        </td>
+                        <td className="px-4 py-3 text-[13px] text-text-secondary">{p.area ?? '—'}</td>
                         <td className="px-4 py-3 text-[13px] text-text-secondary">{p.professionalName ?? '—'}</td>
                         <td className="px-4 py-3 text-[13px] text-text-secondary">
                           {p.lastTurnoDate ? new Date(p.lastTurnoDate).toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}

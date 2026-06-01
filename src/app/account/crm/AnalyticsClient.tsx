@@ -168,7 +168,7 @@ function monthLabel(key: string) {
 }
 
 export default function AnalyticsClient({ analytics }: { analytics: Analytics }) {
-  const { rawTurnos, upcoming, thisMonthLabel, lastMonthLabel, thisMonthKey, lastMonthKey, totalPatients, activePatients } = analytics
+  const { rawTurnos, upcoming, thisMonthLabel, lastMonthLabel, thisMonthKey, lastMonthKey, totalPatients, activePatients, sourceDist } = analytics
 
   // Derive available areas
   const areas = useMemo(() => {
@@ -307,6 +307,61 @@ export default function AnalyticsClient({ analytics }: { analytics: Analytics })
             <div className={`font-mono text-[32px] font-medium tracking-[-0.02em] ${ausenteRate > 20 ? 'text-red-400' : 'text-text-primary'}`}>{ausenteRate}%</div>
             <div className={`text-[12px] mt-2 ${ausenteRate > prevAusenteRate ? 'text-red-400' : 'text-emerald-400'}`}>
               {delta(ausenteRate, prevAusenteRate)} <span className="text-text-tertiary">vs {lastMonthLabel}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Origen de pacientes — vías de llegada */}
+      {sourceDist.length > 0 && selectedArea === 'all' && (
+        <div>
+          <h2 className="text-[16px] font-medium mb-4">Origen de pacientes</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">
+              <div className="text-[12px] text-text-secondary mb-4">Distribución por vía de llegada</div>
+              <ResponsiveContainer width="100%" height={220}>
+                <PieChart>
+                  <Pie
+                    data={sourceDist}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={80}
+                    label={({ name, percent }: { name?: string; percent?: number }) =>
+                      `${name ?? ''} ${Math.round((percent ?? 0) * 100)}%`
+                    }
+                    labelLine={false}
+                  >
+                    {sourceDist.map((_, i) => (
+                      <Cell key={i} fill={PROF_COLORS[i % PROF_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<CustomTooltip />} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">
+              <div className="text-[12px] text-text-secondary mb-4">Ranking de vías</div>
+              <div className="space-y-3">
+                {sourceDist.map((s, i) => {
+                  const pct = totalPatients > 0 ? Math.round((s.value / totalPatients) * 100) : 0
+                  return (
+                    <div key={i}>
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-[13px] text-text-primary">{s.name}</span>
+                        <span className="text-[13px] font-mono text-text-secondary">{s.value} <span className="text-text-tertiary text-[11px]">({pct}%)</span></span>
+                      </div>
+                      <div className="h-1.5 bg-bg-secondary rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all"
+                          style={{ width: `${pct}%`, backgroundColor: PROF_COLORS[i % PROF_COLORS.length] }}
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           </div>
         </div>
