@@ -329,7 +329,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
                     </div>
                   </div>
                 </Link>
-                {p.user_id === userId && (
+                {(isPro || p.user_id === userId) && (
                   <button onClick={() => setDeleteConfirm(p.id)} className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity text-[11px] text-text-secondary hover:text-red-400 bg-bg-primary border-[0.5px] border-border rounded-lg px-2 py-1">
                     Eliminar
                   </button>
