@@ -158,6 +158,7 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
   const [viewStart, setViewStart] = useState<Date>(() => getMondayOfWeek(new Date()))
   const [copiedSessionData, setCopiedSessionData] = useState<SessionData | null>(null)
   const [copiedFromDate, setCopiedFromDate] = useState<string | null>(null)
+  const [copiedFromPlanId, setCopiedFromPlanId] = useState<string | null>(null)
   const [sessionSaveStatus, setSessionSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [showImportModal, setShowImportModal] = useState(false)
   const [showBulkLoadModal, setShowBulkLoadModal] = useState(false)
@@ -216,6 +217,22 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
   const canBulkLoad = emptySessions.length > 0 && importablePlanSessions.length > 0
 
   // ─── Effects ───────────────────────────────────────────────────────────────
+
+  // Cargar clipboard de sesión (cross-plan)
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('reason_session_clipboard')
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (parsed?.sessionData && parsed?.date) {
+          setCopiedSessionData(parsed.sessionData)
+          setCopiedFromDate(parsed.date)
+          setCopiedFromPlanId(parsed.planId ?? null)
+        }
+      }
+    } catch { /* ignorar */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Cargar pacientes
   useEffect(() => {
@@ -550,8 +567,18 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
 
   const handleCopySession = () => {
     if (!selectedSession?.session_data) return
-    setCopiedSessionData(JSON.parse(JSON.stringify(selectedSession.session_data)))
+    const copy = JSON.parse(JSON.stringify(selectedSession.session_data))
+    setCopiedSessionData(copy)
     setCopiedFromDate(selectedDate)
+    setCopiedFromPlanId(plan.id)
+    try {
+      localStorage.setItem('reason_session_clipboard', JSON.stringify({
+        planId: plan.id,
+        date: selectedDate,
+        sessionData: copy,
+        sessionName: selectedSession.session_name ?? null,
+      }))
+    } catch { /* ignorar */ }
   }
 
   const handlePasteSession = () => {
@@ -995,8 +1022,8 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
                       {copiedFromDate === selectedDate ? 'Copiado' : 'Copiar'}
                     </button>
 
-                    {/* Pegar (solo si hay algo copiado de otro día) */}
-                    {copiedSessionData && copiedFromDate !== selectedDate && (
+                    {/* Pegar (mismo plan, otro día) */}
+                    {copiedSessionData && copiedFromPlanId === plan.id && copiedFromDate !== selectedDate && (
                       <button
                         onClick={handlePasteSession}
                         className="bg-accent/10 border-[0.5px] border-accent/40 text-accent px-3 py-1.5 rounded-lg text-[12px] font-medium hover:bg-accent/20 transition-colors flex items-center gap-1.5"
@@ -1004,6 +1031,17 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
                       >
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
                         Pegar
+                      </button>
+                    )}
+                    {/* Pegar (de otro paciente) */}
+                    {copiedSessionData && copiedFromPlanId !== plan.id && (
+                      <button
+                        onClick={handlePasteSession}
+                        className="bg-accent/10 border-[0.5px] border-accent/40 text-accent px-3 py-1.5 rounded-lg text-[12px] font-medium hover:bg-accent/20 transition-colors flex items-center gap-1.5"
+                        title="Pegar sesión copiada de otro paciente"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
+                        Pegar (de otro paciente)
                       </button>
                     )}
 
