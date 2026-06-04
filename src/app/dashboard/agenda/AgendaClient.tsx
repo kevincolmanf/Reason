@@ -405,6 +405,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                     <>
                       <p className="text-[10px] font-medium leading-tight truncate">{formatTime(start)} {t.patient_name}</p>
                       {height > 4 && <p className="text-[9px] opacity-70 leading-tight truncate">{t.area}</p>}
+                      {height > 4 && !compact && t.professional_name && <p className="text-[9px] opacity-50 leading-tight truncate">{t.professional_name}</p>}
                       {height > 6 && t.notes && <p className="text-[8px] opacity-50 leading-tight">◆ nota</p>}
                     </>
                   )}
