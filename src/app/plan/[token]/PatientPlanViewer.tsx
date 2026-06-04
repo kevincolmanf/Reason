@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import type { DaySession } from './page'
 
 // ─── Legacy types ────────────────────────────────────────────────────────────
@@ -319,6 +319,11 @@ function NewSystemViewer({ daySessions, token }: { daySessions: DaySession[]; to
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [activeVideo, setActiveVideo] = useState<string | null>(null)
   const [logState, setLogState] = useState<LogState | null>(null)
+  const topRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    window.scrollTo({ top: 0 })
+  }, [])
 
   // Build a map for fast date lookup
   const sessionByDate = new Map<string, DaySession>()
@@ -400,7 +405,7 @@ function NewSystemViewer({ daySessions, token }: { daySessions: DaySession[]; to
     <div className="pb-8 space-y-8">
 
       {/* ─── HOY ─────────────────────────────────────────────────────────── */}
-      <section>
+      <section ref={topRef}>
         <div className="flex items-center gap-2 mb-4">
           <h2 className="text-[13px] font-medium text-text-secondary uppercase tracking-[0.06em]">
             Hoy · <span className="capitalize">{formatDateES(today)}</span>
@@ -584,6 +589,21 @@ function NewSystemViewer({ daySessions, token }: { daySessions: DaySession[]; to
           onSubmit={handleLogSubmit}
         />
       )}
+
+      {/* ─── BOTÓN VOLVER ARRIBA ─────────────────────────────────────────── */}
+      <button
+        onClick={() => {
+          setViewWeekStart(currentMonday)
+          setSelectedDate(null)
+          topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }}
+        className="fixed bottom-6 right-6 w-12 h-12 bg-accent text-white rounded-full shadow-lg flex items-center justify-center hover:bg-accent/90 active:scale-95 transition-all z-40"
+        aria-label="Volver a Esta semana"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="18 15 12 9 6 15"></polyline>
+        </svg>
+      </button>
     </div>
   )
 }
