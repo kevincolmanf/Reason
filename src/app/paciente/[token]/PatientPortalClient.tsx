@@ -159,7 +159,10 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
 
   const currentMonday = getMondayOf(todayStr())
   const [selectedWeekMonday, setSelectedWeekMonday] = useState(currentMonday)
-  const [expandedSessionId, setExpandedSessionId] = useState<string | null>(nextUpcomingId)
+  // Si hay sesión hoy, el hero card ya la muestra — no expandir en "Mi semana"
+  const [expandedSessionId, setExpandedSessionId] = useState<string | null>(
+    scheduledSessions.find(s => s.scheduled_date === todayStr()) ? null : nextUpcomingId
+  )
   const topRef = useRef<HTMLDivElement>(null)
 
   // Refs para poder leer el estado actual dentro del effect sin re-suscribir
