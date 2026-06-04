@@ -172,8 +172,19 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
   useEffect(() => {
     if (!form.patient_id) { setPatientDni(''); return }
     supabaseRef.current
-      .from('patients').select('dni').eq('id', form.patient_id).single()
-      .then(({ data }) => setPatientDni(data?.dni ?? ''))
+      .from('patients').select('dni, phone, email, obra_social, age, birth_date').eq('id', form.patient_id).single()
+      .then(({ data }) => {
+        if (!data) return
+        setPatientDni(data.dni ?? '')
+        if (data.birth_date) setPatientBirthDate(data.birth_date)
+        setForm(f => ({
+          ...f,
+          patient_phone:       f.patient_phone       || data.phone       || '',
+          patient_email:       f.patient_email       || data.email       || '',
+          patient_obra_social: f.patient_obra_social || data.obra_social || '',
+          patient_age:         f.patient_age         || (data.age ? data.age.toString() : ''),
+        }))
+      })
   }, [form.patient_id])
 
   // Check for duplicate DNI when typing without a linked patient
