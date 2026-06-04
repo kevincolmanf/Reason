@@ -433,34 +433,7 @@ function NewSystemViewer({ daySessions, token }: { daySessions: DaySession[]; to
               <SessionBlocks session={todaySession} onVideo={setActiveVideo} onLog={openLog} />
             </div>
           </div>
-        ) : (
-          <div className="rounded-2xl border-[0.5px] border-border bg-bg-secondary overflow-hidden">
-            <div className="px-5 py-5">
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-text-secondary mb-3 block">
-                Hoy · <span className="capitalize">{formatDateES(today)}</span>
-              </span>
-              <p className="text-[18px] font-semibold text-text-primary mb-1">Hoy no entrenás</p>
-              {nextSession ? (
-                <div className="mt-4 flex items-center gap-3 p-3 rounded-xl bg-bg-primary border-[0.5px] border-border">
-                  <div className="w-8 h-8 rounded-full bg-accent/10 border-[0.5px] border-accent/30 flex items-center justify-center shrink-0">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-accent">
-                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-[11px] text-text-secondary uppercase tracking-[0.05em]">Próxima sesión</p>
-                    <p className="text-[14px] font-medium text-text-primary capitalize">
-                      {formatDateES(nextSession.scheduled_date)}
-                      {nextSession.session_name && <span className="text-text-secondary font-normal"> · {nextSession.session_name}</span>}
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-[14px] text-text-secondary">No hay más sesiones programadas.</p>
-              )}
-            </div>
-          </div>
-        )}
+        ) : null}
       </section>
 
       {/* ─── STRIP DE LA SEMANA ──────────────────────────────────────────── */}
