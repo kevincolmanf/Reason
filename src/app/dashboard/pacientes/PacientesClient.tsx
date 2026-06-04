@@ -289,7 +289,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
           {limitError && (
             <div className="mb-4 flex items-center justify-between gap-3 bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3">
               <p className="text-[13px] text-red-400">{limitError}</p>
-              <a href="/precios" className="text-[12px] font-medium text-accent underline whitespace-nowrap">Ver planes</a>
+              <a href="/paywall" className="text-[12px] font-medium text-accent underline whitespace-nowrap">Ver planes</a>
             </div>
           )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
