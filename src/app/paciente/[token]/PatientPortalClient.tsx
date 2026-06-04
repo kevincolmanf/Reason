@@ -307,11 +307,6 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
     }
   }
 
-  const nextSession = useMemo(() =>
-    scheduledSessions.filter(s => !s.completed && s.scheduled_date > todayStr())
-      .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date))[0] ?? null,
-  [scheduledSessions])
-
   const scrollToTop = useCallback(() => {
     setSelectedWeekMonday(currentMonday)
     topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })

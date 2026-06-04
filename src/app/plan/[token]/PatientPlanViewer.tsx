@@ -335,7 +335,6 @@ function NewSystemViewer({ daySessions, token }: { daySessions: DaySession[]; to
   const todaySession = sessionByDate.get(today) ?? null
 
   // Next session after today
-  const nextSession = daySessions.find(s => s.scheduled_date > today) ?? null
 
   // Week strip days (Mon–Sun of viewWeekStart)
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(viewWeekStart, i))
