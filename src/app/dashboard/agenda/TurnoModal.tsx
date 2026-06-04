@@ -351,6 +351,18 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
       await supabaseRef.current.from('turnos').insert(payload)
     }
 
+    // Persistir datos del paciente para futuros turnos
+    if (!form.is_blocked && patientId) {
+      const patientUpdate: Record<string, string | null> = {}
+      if (form.patient_phone.trim())       patientUpdate.phone       = form.patient_phone.trim()
+      if (form.patient_email.trim())       patientUpdate.email       = form.patient_email.trim()
+      if (form.patient_obra_social.trim()) patientUpdate.obra_social = form.patient_obra_social.trim()
+      if (patientBirthDate)                patientUpdate.birth_date  = patientBirthDate
+      if (Object.keys(patientUpdate).length > 0) {
+        await supabaseRef.current.from('patients').update(patientUpdate).eq('id', patientId)
+      }
+    }
+
     setSaving(false)
     onSaved()
   }
