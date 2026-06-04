@@ -338,7 +338,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
 
   const GRID_HEIGHT = HOURS.length * 56
 
-  const renderDayColumn = (day: Date, dayTurnos: Turno[], colLayout: Map<string, { col: number; totalCols: number }>) => {
+  const renderDayColumn = (day: Date, dayTurnos: Turno[], colLayout: Map<string, { col: number; totalCols: number }>, compact = false) => {
     const today = new Date()
     const isToday = isSameDay(day, today)
     return (
@@ -411,7 +411,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                     </>
                   )}
                 </button>
-                {!t.is_blocked && (
+                {!t.is_blocked && !compact && (
                   <div className="absolute bottom-0.5 left-0.5 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={e => { e.stopPropagation(); quickStatus(t.id, t.status === 'presente' ? 'programado' : 'presente') }}
@@ -674,7 +674,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                     {weekDays.map((day) => {
                       const dt = visibleTurnos.filter(t => isSameDay(new Date(t.start_time), day))
                       const layout = assignColumns(dt)
-                      return renderDayColumn(day, dt, layout)
+                      return renderDayColumn(day, dt, layout, true)
                     })}
                   </div>
                 </div>
