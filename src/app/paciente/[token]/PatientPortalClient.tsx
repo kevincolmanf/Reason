@@ -102,6 +102,13 @@ function getDayLabel(dateStr: string): string {
   return `${DAY_NAMES_ES_LONG[d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}`
 }
 
+const DEFAULT_SESSION_NAMES = ['nueva sesión', 'nueva sesion', '']
+function getSessionLabel(name: string, index: number): string {
+  return DEFAULT_SESSION_NAMES.includes(name.toLowerCase().trim())
+    ? `Sesión ${index + 1}`
+    : name
+}
+
 interface WeekGroup {
   mondayStr: string
   isCurrentWeek: boolean
@@ -148,6 +155,16 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
 
   // Sesión de hoy y próxima sesión
   const todaySession = useMemo(() => scheduledSessions.find(s => s.scheduled_date === todayStr()) ?? null, [scheduledSessions])
+
+  // Índice de la sesión de hoy dentro de su semana (para mostrar "Sesión N")
+  const todaySessionIndex = useMemo(() => {
+    if (!todaySession) return 0
+    const monday = getMondayOf(todaySession.scheduled_date)
+    const weekSessions = scheduledSessions
+      .filter(s => getMondayOf(s.scheduled_date) === monday)
+      .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date))
+    return weekSessions.findIndex(s => s.id === todaySession.id)
+  }, [todaySession, scheduledSessions])
 
   // Próxima sesión incompleta (hoy o futura) — para highlight y auto-open
   const nextUpcomingId = useMemo(() => {
@@ -330,7 +347,7 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
                 </span>
               </div>
               <h2 className="text-[22px] font-semibold tracking-[-0.02em] text-text-primary leading-tight">
-                {todaySession.session_name || 'Entrenamiento de hoy'}
+                {getSessionLabel(todaySession.session_name || '', todaySessionIndex)}
               </h2>
             </div>
             <div className="p-4">
@@ -476,49 +493,40 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
 
             {/* Días de la semana seleccionada */}
             {activeWeek && (
-              <div className="space-y-3">
-                {activeWeek.days.map(day => (
-                  <div key={day.dateStr}>
-                    <div className="text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1.5 px-1">
-                      {getDayLabel(day.dateStr)}
-                    </div>
-                    <div className="space-y-1.5">
-                      {day.sessions.map(s => (
-                        <div key={s.id}>
-                          <button
-                            onClick={() => setExpandedSessionId(prev => prev === s.id ? null : s.id)}
-                            className={`w-full text-left flex items-center gap-3 rounded-xl px-4 py-3 border-[0.5px] transition-colors ${
-                              s.completed
-                                ? 'border-border bg-bg-secondary opacity-50'
-                                : s.id === nextUpcomingId
-                                ? 'border-accent bg-accent/15 hover:bg-accent/20'
-                                : 'border-border bg-bg-secondary hover:border-accent/40'
-                            }`}
-                          >
-                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                              s.completed ? 'bg-text-secondary'
-                              : s.id === nextUpcomingId ? 'bg-accent'
-                              : 'bg-border'
-                            }`} />
-                            <div className="flex-1 min-w-0">
-                              <div className={`text-[13px] font-medium ${s.completed ? 'line-through text-text-secondary' : 'text-text-primary'}`}>
-                                {s.session_name}
-                              </div>
-                              {s.id === nextUpcomingId && (
-                                <div className="text-[10px] font-medium text-accent mt-0.5 uppercase tracking-[0.06em]">Próxima</div>
-                              )}
-                            </div>
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                              className={`text-text-secondary shrink-0 transition-transform ${expandedSessionId === s.id ? 'rotate-180' : ''}`}>
-                              <polyline points="6 9 12 15 18 9" />
-                            </svg>
-                          </button>
-                          {expandedSessionId === s.id && (
-                            <SessionExercisesInline session={s} portalToken={token} />
-                          )}
+              <div className="space-y-1.5">
+                {activeWeek.days.flatMap(day => day.sessions).map((s, idx) => (
+                  <div key={s.id}>
+                    <button
+                      onClick={() => setExpandedSessionId(prev => prev === s.id ? null : s.id)}
+                      className={`w-full text-left flex items-center gap-3 rounded-xl px-4 py-3 border-[0.5px] transition-colors ${
+                        s.completed
+                          ? 'border-border bg-bg-secondary opacity-50'
+                          : s.id === nextUpcomingId
+                          ? 'border-accent bg-accent/15 hover:bg-accent/20'
+                          : 'border-border bg-bg-secondary hover:border-accent/40'
+                      }`}
+                    >
+                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                        s.completed ? 'bg-text-secondary'
+                        : s.id === nextUpcomingId ? 'bg-accent'
+                        : 'bg-border'
+                      }`} />
+                      <div className="flex-1 min-w-0">
+                        <div className={`text-[13px] font-medium ${s.completed ? 'line-through text-text-secondary' : 'text-text-primary'}`}>
+                          {getSessionLabel(s.session_name || '', idx)}
                         </div>
-                      ))}
-                    </div>
+                        {s.id === nextUpcomingId && (
+                          <div className="text-[10px] font-medium text-accent mt-0.5 uppercase tracking-[0.06em]">Próxima</div>
+                        )}
+                      </div>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                        className={`text-text-secondary shrink-0 transition-transform ${expandedSessionId === s.id ? 'rotate-180' : ''}`}>
+                        <polyline points="6 9 12 15 18 9" />
+                      </svg>
+                    </button>
+                    {expandedSessionId === s.id && (
+                      <SessionExercisesInline session={s} portalToken={token} />
+                    )}
                   </div>
                 ))}
               </div>
