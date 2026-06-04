@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 
@@ -11,6 +11,7 @@ interface ExWeek { week: number; sets: string; reps: string; load: string; rest:
 interface SessionExercise {
   id: string; exercise_id: string; exercise_name: string; youtube_url: string; group?: string
   sets?: string; reps?: string; load?: string; rpe_obj?: string; eav_obj?: string; rest?: string
+  recommendations?: string
   // Formato alternativo: dosificación por semana
   weeks?: ExWeek[]
 }
@@ -145,6 +146,9 @@ function groupSessionsByWeek(sessions: ScheduledItem[], today: string): WeekGrou
 export default function PatientPortalClient({ patient, token, recentSessions, scheduledSessions, planSessions }: Props) {
   const [showHelp, setShowHelp] = useState(false)
 
+  // Sesión de hoy y próxima sesión
+  const todaySession = useMemo(() => scheduledSessions.find(s => s.scheduled_date === todayStr()) ?? null, [scheduledSessions])
+
   // Próxima sesión incompleta (hoy o futura) — para highlight y auto-open
   const nextUpcomingId = useMemo(() => {
     const today = todayStr()
@@ -157,8 +161,10 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
     return scheduledSessions.find(s => s.id === nextUpcomingId)?.scheduled_date ?? todayStr()
   }, [nextUpcomingId, scheduledSessions])
 
-  const [selectedWeekMonday, setSelectedWeekMonday] = useState(() => getMondayOf(nextUpcomingDate))
+  const currentMonday = getMondayOf(todayStr())
+  const [selectedWeekMonday, setSelectedWeekMonday] = useState(currentMonday)
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(nextUpcomingId)
+  const topRef = useRef<HTMLDivElement>(null)
 
   // Refs para poder leer el estado actual dentro del effect sin re-suscribir
   const expandedSessionIdRef = useRef(expandedSessionId)
@@ -168,18 +174,11 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
 
   const router = useRouter()
 
-  // Restaurar posición y estado desde localStorage (persiste a través de bloqueos y salidas de app)
+  // Al entrar siempre mostrar la semana actual desde el inicio
   useEffect(() => {
-    const savedSession = localStorage.getItem('portal_session')
-    const savedWeek = localStorage.getItem('portal_week')
-    const savedScroll = localStorage.getItem('portal_scroll')
-
-    if (savedSession !== null) setExpandedSessionId(savedSession || null)
-    if (savedWeek) setSelectedWeekMonday(savedWeek)
-    if (savedScroll) {
-      requestAnimationFrame(() => window.scrollTo({ top: Number(savedScroll), behavior: 'instant' as ScrollBehavior }))
-    }
-  }, [])
+    window.scrollTo({ top: 0 })
+    localStorage.setItem('portal_week', currentMonday)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Persistir estado continuamente para sobrevivir bloqueos de pantalla y salidas de app
   useEffect(() => { localStorage.setItem('portal_week', selectedWeekMonday) }, [selectedWeekMonday])
@@ -309,8 +308,68 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
     }
   }
 
+  const nextSession = useMemo(() =>
+    scheduledSessions.filter(s => !s.completed && s.scheduled_date > todayStr())
+      .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date))[0] ?? null,
+  [scheduledSessions])
+
+  const scrollToTop = useCallback(() => {
+    setSelectedWeekMonday(currentMonday)
+    topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [currentMonday])
+
   return (
     <div className="space-y-10 pb-12">
+
+      {/* ── HERO: SESIÓN DE HOY / PRÓXIMA SESIÓN ───────────── */}
+      <div ref={topRef}>
+        {todaySession ? (
+          <div className="rounded-2xl border-[0.5px] border-accent/40 bg-accent/5 overflow-hidden">
+            <div className="px-5 pt-5 pb-4 border-b-[0.5px] border-accent/20">
+              <div className="flex items-center justify-between mb-2">
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-accent">
+                  <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse inline-block" />
+                  Tu sesión de hoy
+                </span>
+                <span className="text-[12px] text-text-secondary capitalize">
+                  {getDayLabel(todayStr())}
+                </span>
+              </div>
+              <h2 className="text-[22px] font-semibold tracking-[-0.02em] text-text-primary leading-tight">
+                {todaySession.session_name || 'Entrenamiento de hoy'}
+              </h2>
+            </div>
+            <div className="p-4">
+              <SessionExercisesInline session={todaySession} portalToken={token} />
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-2xl border-[0.5px] border-border bg-bg-secondary overflow-hidden">
+            <div className="px-5 py-5">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-secondary block mb-2">
+                Hoy · <span className="capitalize">{getDayLabel(todayStr())}</span>
+              </span>
+              <p className="text-[18px] font-semibold text-text-primary mb-1">Hoy no entrenás</p>
+              {nextSession && (
+                <div className="mt-4 flex items-center gap-3 p-3 rounded-xl bg-bg-primary border-[0.5px] border-border">
+                  <div className="w-8 h-8 rounded-full bg-accent/10 border-[0.5px] border-accent/30 flex items-center justify-center shrink-0">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-accent">
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-text-secondary uppercase tracking-[0.05em]">Próxima sesión</p>
+                    <p className="text-[14px] font-medium text-text-primary">
+                      {getDayLabel(nextSession.scheduled_date)}
+                      {nextSession.session_name && <span className="text-text-secondary font-normal"> · {nextSession.session_name}</span>}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* ── AYUDA ──────────────────────────────────────────── */}
       <div className="bg-bg-secondary border-[0.5px] border-border rounded-xl overflow-hidden">
@@ -708,6 +767,18 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
         </section>
       )}
 
+      {/* ── BOTÓN VOLVER ARRIBA ───────────────────────────── */}
+      <button
+        onClick={scrollToTop}
+        style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.35)' }}
+        className="fixed bottom-6 right-5 w-14 h-14 bg-accent text-white rounded-full flex items-center justify-center active:scale-95 transition-transform z-50"
+        aria-label="Volver a esta semana"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="18 15 12 9 6 15" />
+        </svg>
+      </button>
+
     </div>
   )
 }
@@ -818,6 +889,14 @@ function SessionExercisesInline({ session, portalToken }: { session: ScheduledIt
                     </div>
                   )
                 })()}
+
+                {/* Recomendaciones */}
+                {ex.recommendations && (
+                  <div className="mt-2.5 px-3 py-2 bg-accent/5 border-[0.5px] border-accent/20 rounded-lg">
+                    <div className="text-[10px] text-accent uppercase tracking-[0.05em] mb-0.5">Recomendaciones</div>
+                    <div className="text-[13px] text-text-primary">{ex.recommendations}</div>
+                  </div>
+                )}
 
                 {/* Log inline */}
                 {expandedLogId !== ex.id && (
