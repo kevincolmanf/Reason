@@ -54,6 +54,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
   const [deleting, setDeleting] = useState(false)
   const [form, setForm] = useState({ name: '', dni: '', birth_date: '', phone: '', email: '', obra_social: '', occupation: '', source: '' })
   const [dniError, setDniError] = useState<string | null>(null)
+  const [limitError, setLimitError] = useState<string | null>(null)
   const [sources, setSources] = useState<PatientSource[]>([])
   const [showSourcesConfig, setShowSourcesConfig] = useState(false)
   const [newSourceLabel, setNewSourceLabel] = useState('')
@@ -143,12 +144,16 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
 
     if (!res.ok) {
       if (res.status === 401) {
-        // Sesión expirada — redirigir al login
         window.location.href = '/login'
         return
       }
-      if (res.status === 409) setDniError(data.error)
-      else setDniError(data.error ?? 'Error al crear el paciente.')
+      if (data.limitReached) {
+        setLimitError(data.error ?? 'Límite de pacientes alcanzado.')
+      } else if (res.status === 409) {
+        setDniError(data.error)
+      } else {
+        setDniError(data.error ?? 'Error al crear el paciente.')
+      }
       setSaving(false)
       return
     }
@@ -167,7 +172,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
     await fetchPatients()
   }
 
-  const closeForm = () => { setShowForm(false); setForm({ name: '', dni: '', birth_date: '', phone: '', email: '', obra_social: '', occupation: '', source: '' }); setDniError(null) }
+  const closeForm = () => { setShowForm(false); setForm({ name: '', dni: '', birth_date: '', phone: '', email: '', obra_social: '', occupation: '', source: '' }); setDniError(null); setLimitError(null) }
 
   const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
   const filtered = search.trim()
@@ -280,6 +285,12 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
             <p className="text-[12px] text-text-secondary mb-4">
               Se agregará como paciente de <strong className="text-text-primary">{orgName || 'el equipo'}</strong>
             </p>
+          )}
+          {limitError && (
+            <div className="mb-4 flex items-center justify-between gap-3 bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3">
+              <p className="text-[13px] text-red-400">{limitError}</p>
+              <a href="/precios" className="text-[12px] font-medium text-accent underline whitespace-nowrap">Ver planes</a>
+            </div>
           )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <div>
