@@ -190,10 +190,9 @@ function assignColumns(turnos: Turno[]): Map<string, { col: number; totalCols: n
 
 function blockColorClass(t: Turno): string {
   if (t.is_blocked) return 'bg-bg-secondary border-border text-text-tertiary opacity-70'
-  if (t.status === 'presente')   return STATUS_COLORS.presente
-  if (t.status === 'ausente')    return STATUS_COLORS.ausente
   if (t.status === 'cancelado')  return STATUS_COLORS.cancelado
   if (t.status === 'sobreturno') return STATUS_COLORS.sobreturno
+  // presente/ausente mantienen el color del tipo — el estado se muestra con un indicador
   return TYPE_COLORS[t.appointment_type ?? 'turno_comun'] ?? STATUS_COLORS.programado
 }
 
@@ -391,6 +390,12 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
               >
                 {remindedIds.has(t.id) && (
                   <span className="absolute top-0.5 left-0.5 w-1.5 h-1.5 rounded-full bg-green-400 z-10" title="Recordatorio enviado" />
+                )}
+                {!t.is_blocked && t.status === 'presente' && (
+                  <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-emerald-400 z-10" title="Presente" />
+                )}
+                {!t.is_blocked && t.status === 'ausente' && (
+                  <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-red-400 z-10" title="Ausente" />
                 )}
                 <button
                   onClick={() => openEdit(t)}
