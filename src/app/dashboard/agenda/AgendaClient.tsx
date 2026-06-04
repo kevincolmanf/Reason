@@ -357,10 +357,14 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
           return (
             <div
               key={i}
-              className="absolute left-0 right-0 cursor-pointer hover:bg-accent/5 transition-colors"
+              className="absolute left-0 right-0 cursor-pointer group/slot hover:bg-accent/5 transition-colors flex items-center justify-center"
               style={{ top: `${topPx}px`, height: `${heightPx}px` }}
               onClick={() => openNew(day, h, m)}
-            />
+            >
+              <span className="opacity-0 group-hover/slot:opacity-100 transition-opacity text-accent text-[11px] font-medium pointer-events-none select-none">
+                + {String(h).padStart(2, '0')}:{String(m).padStart(2, '0')}
+              </span>
+            </div>
           )
         })}
         <div className="absolute inset-0 pointer-events-none">
