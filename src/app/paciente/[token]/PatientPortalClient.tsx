@@ -157,10 +157,6 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
       .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date))[0]?.id ?? null
   }, [scheduledSessions])
 
-  const nextUpcomingDate = useMemo(() => {
-    return scheduledSessions.find(s => s.id === nextUpcomingId)?.scheduled_date ?? todayStr()
-  }, [nextUpcomingId, scheduledSessions])
-
   const currentMonday = getMondayOf(todayStr())
   const [selectedWeekMonday, setSelectedWeekMonday] = useState(currentMonday)
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(nextUpcomingId)
