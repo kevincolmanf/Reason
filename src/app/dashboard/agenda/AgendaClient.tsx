@@ -386,16 +386,14 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
               <div
                 key={t.id}
                 className={`absolute group rounded-lg border-[0.5px] text-left overflow-hidden pointer-events-auto ${colorClass}`}
-                style={{ top: `${top}%`, height: `${height}%`, minHeight: '22px', left: `${leftPct}%`, width: `${widthPct}%` }}
+                style={{
+                  top: `${top}%`, height: `${height}%`, minHeight: '22px', left: `${leftPct}%`, width: `${widthPct}%`,
+                  ...(!t.is_blocked && t.status === 'presente' ? { borderLeftColor: 'rgb(52 211 153)', borderLeftWidth: '3px' } : {}),
+                  ...(!t.is_blocked && t.status === 'ausente'  ? { borderLeftColor: 'rgb(248 113 113)', borderLeftWidth: '3px' } : {}),
+                }}
               >
                 {remindedIds.has(t.id) && (
                   <span className="absolute top-0.5 left-0.5 w-1.5 h-1.5 rounded-full bg-green-400 z-10" title="Recordatorio enviado" />
-                )}
-                {!t.is_blocked && t.status === 'presente' && (
-                  <span className="absolute inset-y-0 left-0 w-[3px] bg-emerald-400 z-10 rounded-l-lg" title="Presente" />
-                )}
-                {!t.is_blocked && t.status === 'ausente' && (
-                  <span className="absolute inset-y-0 left-0 w-[3px] bg-red-400 z-10 rounded-l-lg" title="Ausente" />
                 )}
                 <button
                   onClick={() => openEdit(t)}
