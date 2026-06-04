@@ -57,6 +57,7 @@ interface Props {
   areas: string[]
   turno?: Turno
   defaultStart?: Date
+  defaultStatus?: string
   slotInterval?: number
   onClose: () => void
   onSaved: () => void
@@ -119,7 +120,7 @@ function formatTime(date: Date): string {
   return date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
 }
 
-export default function TurnoModal({ userId, orgId, orgName, professionals, areas, turno, defaultStart, slotInterval, onClose, onSaved, onClone, onReminderSent }: Props) {
+export default function TurnoModal({ userId, orgId, orgName, professionals, areas, turno, defaultStart, defaultStatus, slotInterval, onClose, onSaved, onClone, onReminderSent }: Props) {
   const isEdit = !!turno
   const effectiveAreas = areas.length > 0 ? areas : AREAS
   const defaultDuration = slotInterval ?? 60
@@ -136,7 +137,7 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
     start_time:          turno ? toLocalInputValue(new Date(turno.start_time)) : (defaultStart ? toLocalInputValue(defaultStart) : ''),
     end_time:            turno ? toLocalInputValue(new Date(turno.end_time))   : (defaultEnd   ? toLocalInputValue(defaultEnd)   : ''),
     area:                turno?.area             ?? (effectiveAreas[0] ?? AREAS[0]),
-    status:              turno?.status           ?? 'programado',
+    status:              turno?.status           ?? defaultStatus ?? 'programado',
     notes:               turno?.notes            ?? '',
     appointment_type:    turno?.appointment_type ?? 'turno_comun',
     is_blocked:          turno?.is_blocked       ?? false,

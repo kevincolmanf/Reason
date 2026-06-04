@@ -254,6 +254,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
     turno?: Turno
     defaultStart?: Date
     defaultDay?: Date
+    defaultStatus?: string
   }>({ open: false })
   const [cloneModal, setCloneModal] = useState<Turno | null>(null)
 
@@ -320,11 +321,11 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
     })
   }, [])
 
-  const openNew = (day?: Date, hour?: number, minute?: number) => {
+  const openNew = (day?: Date, hour?: number, minute?: number, defaultStatus?: string) => {
     const defaultDay = day ?? (view === 'day' ? selectedDay : new Date())
     const defaultStart = new Date(defaultDay)
     defaultStart.setHours(hour ?? 9, minute ?? 0, 0, 0)
-    setModal({ open: true, defaultStart, defaultDay })
+    setModal({ open: true, defaultStart, defaultDay, defaultStatus })
   }
 
   const openEdit = (t: Turno) => setModal({ open: true, turno: t })
@@ -420,6 +421,13 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                       className={`text-[9px] leading-none border-[0.5px] rounded px-1 py-0.5 transition-colors ${t.status === 'ausente' ? 'bg-red-500/40 border-red-500/60 text-red-300' : 'bg-red-500/20 hover:bg-red-500/40 border-red-500/40 text-red-400'}`}
                     >
                       ✗
+                    </button>
+                    <button
+                      onClick={e => { e.stopPropagation(); openNew(new Date(t.start_time), new Date(t.start_time).getHours(), new Date(t.start_time).getMinutes(), 'sobreturno') }}
+                      title="Dar sobreturno en este horario"
+                      className="text-[9px] leading-none border-[0.5px] rounded px-1 py-0.5 transition-colors bg-purple-500/20 hover:bg-purple-500/40 border-purple-500/40 text-purple-400"
+                    >
+                      ST
                     </button>
                   </div>
                 )}
@@ -699,6 +707,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
           areas={areas}
           turno={modal.turno}
           defaultStart={modal.defaultStart}
+          defaultStatus={modal.defaultStatus}
           slotInterval={slotInterval}
           onClose={closeModal}
           onSaved={handleSaved}
