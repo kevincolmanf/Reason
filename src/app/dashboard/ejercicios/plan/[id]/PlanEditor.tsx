@@ -20,6 +20,7 @@ interface SessionExercise {
   rpe_obj: string
   eav_obj: string
   rest: string
+  recommendations: string
 }
 
 interface SessionBlock {
@@ -500,7 +501,7 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
             exercise_id: exercise.id,
             exercise_name: exercise.name,
             youtube_url: exercise.youtube_url || '',
-            sets: '', reps: '', load: '', rpe_obj: '', eav_obj: '', rest: '',
+            sets: '', reps: '', load: '', rpe_obj: '', eav_obj: '', rest: '', recommendations: '',
           }],
         }
       }),
@@ -1220,6 +1221,18 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
                                       />
                                     </div>
                                   ))}
+                                </div>
+
+                                {/* Recomendaciones */}
+                                <div className="mt-2">
+                                  <label className="block text-[10px] uppercase tracking-[0.05em] text-text-secondary mb-1">Recomendaciones</label>
+                                  <textarea
+                                    value={ex.recommendations ?? ''}
+                                    onChange={e => updateExerciseField(bIdx, exIdx, 'recommendations', e.target.value)}
+                                    placeholder="ej: realces en los talones para hacer sentadillas"
+                                    rows={2}
+                                    className="w-full bg-bg-primary border-[0.5px] border-border rounded-lg px-2 py-1.5 text-[13px] focus:border-accent outline-none resize-none"
+                                  />
                                 </div>
 
                               </div>

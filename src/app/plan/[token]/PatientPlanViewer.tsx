@@ -98,6 +98,7 @@ interface NewExercise {
   rpe_obj: string
   eav_obj: string
   rest: string
+  recommendations?: string
 }
 
 function ExerciseCard({
@@ -155,6 +156,12 @@ function ExerciseCard({
           <div className="text-[13px] font-medium">{ex.rest || '-'}</div>
         </div>
       </div>
+      {ex.recommendations && (
+        <div className="mt-3 px-3 py-2 bg-accent/5 border-[0.5px] border-accent/20 rounded-lg">
+          <div className="text-[10px] text-accent uppercase tracking-[0.05em] mb-0.5">Recomendaciones</div>
+          <div className="text-[13px] text-text-primary">{ex.recommendations}</div>
+        </div>
+      )}
     </div>
   )
 }
