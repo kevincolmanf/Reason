@@ -426,7 +426,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                       ✗
                     </button>
                     <button
-                      onClick={e => { e.stopPropagation(); openNew(new Date(t.start_time), new Date(t.start_time).getHours(), new Date(t.start_time).getMinutes(), 'sobreturno') }}
+                      onClick={e => { e.stopPropagation(); openNew(new Date(t.start_time), new Date(t.start_time).getHours(), new Date(t.start_time).getMinutes()) }}
                       title="Dar sobreturno en este horario"
                       className="text-[9px] leading-none border-[0.5px] rounded px-1 py-0.5 transition-colors bg-purple-500/20 hover:bg-purple-500/40 border-purple-500/40 text-purple-400"
                     >
