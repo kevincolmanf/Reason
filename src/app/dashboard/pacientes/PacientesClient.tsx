@@ -169,15 +169,16 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
 
   const closeForm = () => { setShowForm(false); setForm({ name: '', dni: '', birth_date: '', phone: '', email: '', obra_social: '', occupation: '', source: '' }); setDniError(null) }
 
+  const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
   const filtered = search.trim()
     ? (() => {
-        const terms = search.trim().toLowerCase().split(/\s+/)
+        const terms = normalize(search.trim()).split(/\s+/)
         const rawDni = search.replace(/\D/g, '')
         return patients.filter(p => {
-          const nameLower = p.name.toLowerCase()
+          const nameLower = normalize(p.name)
           return (
             terms.every(t => nameLower.includes(t)) ||
-            p.occupation?.toLowerCase().includes(search.toLowerCase()) ||
+            normalize(p.occupation ?? '').includes(normalize(search)) ||
             (rawDni && p.dni?.includes(rawDni))
           )
         })
