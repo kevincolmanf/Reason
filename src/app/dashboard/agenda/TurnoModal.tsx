@@ -263,30 +263,42 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
     setHistorialLoaded(false)
     setHistorial([])
 
-    // Use patient's stored phone/email/obra_social; fallback to last turno for phone
-    let phone = p.phone ?? ''
-    if (!phone) {
-      const phoneQuery = supabaseRef.current
+    // Load from patient profile; fallback to last turno for any missing field
+    let phone       = p.phone       || ''
+    let email       = p.email       || ''
+    let obraSocial  = p.obra_social || ''
+    let age         = p.age         ? p.age.toString() : ''
+
+    const needsFallback = !phone || !email || !obraSocial || !age
+    if (needsFallback) {
+      const lastQuery = supabaseRef.current
         .from('turnos')
-        .select('patient_phone')
+        .select('patient_phone, patient_email, patient_obra_social, patient_age')
         .eq('patient_id', p.id)
-        .not('patient_phone', 'is', null)
-        .neq('patient_phone', '')
         .order('start_time', { ascending: false })
-        .limit(1)
-      const { data: lastTurno } = await (orgId ? phoneQuery.eq('org_id', orgId) : phoneQuery.eq('created_by', userId)).maybeSingle()
-      phone = lastTurno?.patient_phone ?? ''
+        .limit(10)
+      const { data: lastTurnos } = await (orgId ? lastQuery.eq('org_id', orgId) : lastQuery.eq('created_by', userId))
+      if (lastTurnos) {
+        for (const t of lastTurnos) {
+          if (!phone      && t.patient_phone)       phone      = t.patient_phone
+          if (!email      && t.patient_email)       email      = t.patient_email
+          if (!obraSocial && t.patient_obra_social) obraSocial = t.patient_obra_social
+          if (!age        && t.patient_age)         age        = t.patient_age.toString()
+          if (phone && email && obraSocial && age) break
+        }
+      }
     }
 
     if (p.birth_date) setPatientBirthDate(p.birth_date)
 
     setForm(f => ({
       ...f,
-      patient_name: p.name,
-      patient_id: p.id,
-      patient_phone: phone,
-      patient_email: p.email ?? f.patient_email,
-      patient_obra_social: p.obra_social ?? f.patient_obra_social,
+      patient_name:        p.name,
+      patient_id:          p.id,
+      patient_phone:       phone,
+      patient_email:       email,
+      patient_obra_social: obraSocial,
+      patient_age:         age,
     }))
   }
 
