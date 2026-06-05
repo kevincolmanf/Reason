@@ -186,7 +186,7 @@ export default function FichaClient({
   const [gonioRegion, setGonioRegion] = useState(GONIO_REGIONS[0].key)
   const [gonioValues, setGonioValues] = useState<Record<string, string>>({})
   const [gonioDate, setGonioDate] = useState(new Date().toISOString().split('T')[0])
-  const [gonioPain, setGonioPain] = useState<number | null>(null)
+
   const [gonioNotes, setGonioNotes] = useState('')
   const [qResults, setQResults] = useState<QuestionnaireResult[]>(questionnaireResults)
   const [dynResults, setDynResults] = useState<DynamoResult[]>(dynamoResults)
