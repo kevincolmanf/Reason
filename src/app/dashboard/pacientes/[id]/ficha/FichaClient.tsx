@@ -35,6 +35,7 @@ interface GonioRecord {
   date: string
   region: string
   values: Record<string, string>
+  pain: number | null
   notes: string
 }
 
@@ -185,6 +186,7 @@ export default function FichaClient({
   const [gonioRegion, setGonioRegion] = useState(GONIO_REGIONS[0].key)
   const [gonioValues, setGonioValues] = useState<Record<string, string>>({})
   const [gonioDate, setGonioDate] = useState(new Date().toISOString().split('T')[0])
+  const [gonioPain, setGonioPain] = useState<number | null>(null)
   const [gonioNotes, setGonioNotes] = useState('')
   const [qResults, setQResults] = useState<QuestionnaireResult[]>(questionnaireResults)
   const [dynResults, setDynResults] = useState<DynamoResult[]>(dynamoResults)
@@ -229,6 +231,7 @@ export default function FichaClient({
       date: gonioDate,
       region: gonioRegion,
       values: gonioValues,
+      pain: gonioPain,
       notes: gonioNotes,
     }
     setFicha(prev => ({ ...prev, goniometria: [record, ...(prev.goniometria ?? [])] }))
@@ -236,6 +239,7 @@ export default function FichaClient({
     setSaveStatus('idle')
     setShowGonioForm(false)
     setGonioValues({})
+    setGonioPain(null)
     setGonioNotes('')
     setGonioDate(new Date().toISOString().split('T')[0])
   }
@@ -616,6 +620,31 @@ export default function FichaClient({
                 </div>
 
                 <div>
+                  <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-2">Dolor al movimiento (EVA 0-10)</label>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {Array.from({ length: 11 }, (_, i) => {
+                      const color = i === 0 ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400' : i <= 3 ? 'bg-yellow-500/20 border-yellow-500/40 text-yellow-400' : i <= 6 ? 'bg-orange-500/20 border-orange-500/40 text-orange-400' : 'bg-red-500/20 border-red-500/40 text-red-400'
+                      const activeColor = i === 0 ? 'bg-emerald-500 border-emerald-500 text-white' : i <= 3 ? 'bg-yellow-500 border-yellow-500 text-white' : i <= 6 ? 'bg-orange-500 border-orange-500 text-white' : 'bg-red-500 border-red-500 text-white'
+                      return (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => setGonioPain(gonioPain === i ? null : i)}
+                          className={`w-8 h-8 rounded-lg text-[12px] font-medium border-[0.5px] transition-colors ${gonioPain === i ? activeColor : color}`}
+                        >
+                          {i}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {gonioPain !== null && (
+                    <p className="text-[11px] text-text-secondary mt-1.5">
+                      {gonioPain === 0 ? 'Sin dolor' : gonioPain <= 3 ? 'Dolor leve' : gonioPain <= 6 ? 'Dolor moderado' : 'Dolor severo'}
+                    </p>
+                  )}
+                </div>
+
+                <div>
                   <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Notas</label>
                   <input
                     type="text"
@@ -663,6 +692,11 @@ export default function FichaClient({
                               )
                             })}
                           </div>
+                        )}
+                        {rec.pain != null && (
+                          <span className={`inline-flex items-center gap-1 text-[11px] font-medium mt-1 px-2 py-0.5 rounded-full border-[0.5px] ${rec.pain === 0 ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : rec.pain <= 3 ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400' : rec.pain <= 6 ? 'bg-orange-500/10 border-orange-500/30 text-orange-400' : 'bg-red-500/10 border-red-500/30 text-red-400'}`}>
+                            Dolor {rec.pain}/10
+                          </span>
                         )}
                         {rec.notes && <div className="text-[12px] text-text-secondary mt-1">{rec.notes}</div>}
                       </div>
