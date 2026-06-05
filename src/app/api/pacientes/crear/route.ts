@@ -68,7 +68,12 @@ export async function POST(request: Request) {
     source: source?.trim() || null,
   }).select('id').single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    if (error.code === '23505') {
+      return NextResponse.json({ error: 'Ya existe un paciente registrado con ese DNI.' }, { status: 409 })
+    }
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
   return NextResponse.json({ ok: true, id: patient.id })
 }
