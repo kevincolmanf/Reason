@@ -159,6 +159,13 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // Portales públicos de paciente — forzar no-cache en todos los browsers
+  if (pathname.startsWith('/paciente/') || pathname.startsWith('/plan/')) {
+    supabaseResponse.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+    supabaseResponse.headers.set('Pragma', 'no-cache')
+    supabaseResponse.headers.set('Expires', '0')
+  }
+
   return supabaseResponse
 }
 
