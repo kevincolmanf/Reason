@@ -202,6 +202,7 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
 
   const supabaseRef = useRef(createClient())
   const planSaveRef = useRef<NodeJS.Timeout | null>(null)
+  const sessionSaveRef = useRef<NodeJS.Timeout | null>(null)
 
   // ─── Derived ───────────────────────────────────────────────────────────────
 
@@ -311,6 +312,27 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
     return () => { if (planSaveRef.current) clearTimeout(planSaveRef.current) }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plan])
+
+  // Autoguardado de sesión
+  useEffect(() => {
+    if (!selectedSession) return
+    if (sessionSaveRef.current) clearTimeout(sessionSaveRef.current)
+    setSessionSaveStatus('saving')
+    sessionSaveRef.current = setTimeout(async () => {
+      const res = await fetch('/api/sessions/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: selectedSession.id,
+          session_name: selectedSession.session_name,
+          session_data: selectedSession.session_data,
+        }),
+      })
+      setSessionSaveStatus(res.ok ? 'saved' : 'error')
+    }, 1500)
+    return () => { if (sessionSaveRef.current) clearTimeout(sessionSaveRef.current) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedSession])
 
   // Reset session save status al cambiar de día
   useEffect(() => {
