@@ -231,7 +231,7 @@ export default function FichaClient({
       date: gonioDate,
       region: gonioRegion,
       values: gonioValues,
-      pain: gonioPain,
+      pain: null,
       notes: gonioNotes,
     }
     setFicha(prev => ({ ...prev, goniometria: [record, ...(prev.goniometria ?? [])] }))
@@ -239,7 +239,6 @@ export default function FichaClient({
     setSaveStatus('idle')
     setShowGonioForm(false)
     setGonioValues({})
-    setGonioPain(null)
     setGonioNotes('')
     setGonioDate(new Date().toISOString().split('T')[0])
   }
@@ -582,66 +581,57 @@ export default function FichaClient({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {selectedRegion.movements.map(mv => (
-                    selectedRegion.bilateral ? (
-                      <div key={mv.key} className="space-y-1">
-                        <div className="text-[11px] text-text-secondary">{mv.label}</div>
-                        <div className="flex gap-1.5">
-                          <input
-                            type="number"
-                            placeholder="Der °"
-                            value={gonioValues[`${mv.key}_der`] ?? ''}
-                            onChange={e => handleGonioValueChange(`${mv.key}_der`, e.target.value)}
-                            className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg px-2 py-1.5 text-[13px] focus:outline-none focus:border-accent"
-                          />
-                          <input
-                            type="number"
-                            placeholder="Izq °"
-                            value={gonioValues[`${mv.key}_izq`] ?? ''}
-                            onChange={e => handleGonioValueChange(`${mv.key}_izq`, e.target.value)}
-                            className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg px-2 py-1.5 text-[13px] focus:outline-none focus:border-accent"
-                          />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {selectedRegion.movements.map(mv => {
+                    const painKey = (side: string) => side ? `${mv.key}_${side}_pain` : `${mv.key}_pain`
+                    const PainSelector = ({ side }: { side: string }) => {
+                      const pk = painKey(side)
+                      const val = gonioValues[pk] !== undefined ? parseInt(gonioValues[pk]) : null
+                      return (
+                        <div className="flex gap-1 mt-1 flex-wrap">
+                          {Array.from({ length: 11 }, (_, i) => {
+                            const active = val === i
+                            const cls = i === 0
+                              ? active ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                              : i <= 3
+                                ? active ? 'bg-yellow-500 text-white border-yellow-500' : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400'
+                                : i <= 6
+                                  ? active ? 'bg-orange-500 text-white border-orange-500' : 'bg-orange-500/10 border-orange-500/30 text-orange-400'
+                                  : active ? 'bg-red-500 text-white border-red-500' : 'bg-red-500/10 border-red-500/30 text-red-400'
+                            return (
+                              <button key={i} type="button"
+                                onClick={() => handleGonioValueChange(pk, active ? '' : i.toString())}
+                                className={`w-6 h-6 rounded text-[10px] font-medium border-[0.5px] transition-colors ${cls}`}
+                              >{i}</button>
+                            )
+                          })}
+                        </div>
+                      )
+                    }
+                    return selectedRegion.bilateral ? (
+                      <div key={mv.key} className="space-y-1.5 bg-bg-primary border-[0.5px] border-border rounded-lg p-3">
+                        <div className="text-[11px] font-medium text-text-secondary uppercase tracking-wide">{mv.label}</div>
+                        <div className="flex gap-2">
+                          <div className="flex-1">
+                            <div className="text-[10px] text-text-secondary mb-1">Der °</div>
+                            <input type="number" placeholder="°" value={gonioValues[`${mv.key}_der`] ?? ''} onChange={e => handleGonioValueChange(`${mv.key}_der`, e.target.value)} className="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded px-2 py-1.5 text-[13px] focus:outline-none focus:border-accent" />
+                            <PainSelector side="der" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="text-[10px] text-text-secondary mb-1">Izq °</div>
+                            <input type="number" placeholder="°" value={gonioValues[`${mv.key}_izq`] ?? ''} onChange={e => handleGonioValueChange(`${mv.key}_izq`, e.target.value)} className="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded px-2 py-1.5 text-[13px] focus:outline-none focus:border-accent" />
+                            <PainSelector side="izq" />
+                          </div>
                         </div>
                       </div>
                     ) : (
-                      <div key={mv.key} className="space-y-1">
-                        <div className="text-[11px] text-text-secondary">{mv.label}</div>
-                        <input
-                          type="number"
-                          placeholder="°"
-                          value={gonioValues[mv.key] ?? ''}
-                          onChange={e => handleGonioValueChange(mv.key, e.target.value)}
-                          className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg px-2 py-1.5 text-[13px] focus:outline-none focus:border-accent"
-                        />
+                      <div key={mv.key} className="space-y-1.5 bg-bg-primary border-[0.5px] border-border rounded-lg p-3">
+                        <div className="text-[11px] font-medium text-text-secondary uppercase tracking-wide">{mv.label}</div>
+                        <input type="number" placeholder="°" value={gonioValues[mv.key] ?? ''} onChange={e => handleGonioValueChange(mv.key, e.target.value)} className="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded px-2 py-1.5 text-[13px] focus:outline-none focus:border-accent" />
+                        <PainSelector side="" />
                       </div>
                     )
-                  ))}
-                </div>
-
-                <div>
-                  <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-2">Dolor al movimiento (EVA 0-10)</label>
-                  <div className="flex gap-1.5 flex-wrap">
-                    {Array.from({ length: 11 }, (_, i) => {
-                      const color = i === 0 ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400' : i <= 3 ? 'bg-yellow-500/20 border-yellow-500/40 text-yellow-400' : i <= 6 ? 'bg-orange-500/20 border-orange-500/40 text-orange-400' : 'bg-red-500/20 border-red-500/40 text-red-400'
-                      const activeColor = i === 0 ? 'bg-emerald-500 border-emerald-500 text-white' : i <= 3 ? 'bg-yellow-500 border-yellow-500 text-white' : i <= 6 ? 'bg-orange-500 border-orange-500 text-white' : 'bg-red-500 border-red-500 text-white'
-                      return (
-                        <button
-                          key={i}
-                          type="button"
-                          onClick={() => setGonioPain(gonioPain === i ? null : i)}
-                          className={`w-8 h-8 rounded-lg text-[12px] font-medium border-[0.5px] transition-colors ${gonioPain === i ? activeColor : color}`}
-                        >
-                          {i}
-                        </button>
-                      )
-                    })}
-                  </div>
-                  {gonioPain !== null && (
-                    <p className="text-[11px] text-text-secondary mt-1.5">
-                      {gonioPain === 0 ? 'Sin dolor' : gonioPain <= 3 ? 'Dolor leve' : gonioPain <= 6 ? 'Dolor moderado' : 'Dolor severo'}
-                    </p>
-                  )}
+                  })}
                 </div>
 
                 <div>
@@ -681,22 +671,20 @@ export default function FichaClient({
                         </div>
                         {filledValues.length > 0 && (
                           <div className="flex flex-wrap gap-2 mt-1">
-                            {filledValues.map(([k, v]) => {
+                            {filledValues.filter(([k]) => !k.endsWith('_pain')).map(([k, v]) => {
                               const mvKey = k.replace(/_der$|_izq$/, '')
                               const mv = region?.movements.find(m => m.key === mvKey)
                               const side = k.endsWith('_der') ? ' D' : k.endsWith('_izq') ? ' I' : ''
+                              const painKey = k + '_pain'
+                              const pain = rec.values[painKey] !== undefined ? parseInt(rec.values[painKey]) : null
+                              const painCls = pain == null ? '' : pain === 0 ? 'text-emerald-400' : pain <= 3 ? 'text-yellow-400' : pain <= 6 ? 'text-orange-400' : 'text-red-400'
                               return (
                                 <span key={k} className="text-[11px] bg-bg-primary border-[0.5px] border-border rounded-full px-2 py-0.5 text-text-secondary">
-                                  {mv?.label ?? k}{side}: {v}°
+                                  {mv?.label ?? k}{side}: {v}°{pain != null && <span className={` font-medium ${painCls}`}> · {pain}/10</span>}
                                 </span>
                               )
                             })}
                           </div>
-                        )}
-                        {rec.pain != null && (
-                          <span className={`inline-flex items-center gap-1 text-[11px] font-medium mt-1 px-2 py-0.5 rounded-full border-[0.5px] ${rec.pain === 0 ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : rec.pain <= 3 ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400' : rec.pain <= 6 ? 'bg-orange-500/10 border-orange-500/30 text-orange-400' : 'bg-red-500/10 border-red-500/30 text-red-400'}`}>
-                            Dolor {rec.pain}/10
-                          </span>
                         )}
                         {rec.notes && <div className="text-[12px] text-text-secondary mt-1">{rec.notes}</div>}
                       </div>
