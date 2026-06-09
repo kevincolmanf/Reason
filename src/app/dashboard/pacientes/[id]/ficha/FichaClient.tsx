@@ -192,6 +192,7 @@ export default function FichaClient({
   const [dynResults, setDynResults] = useState<DynamoResult[]>(dynamoResults)
   const [pdfProfesional, setPdfProfesional] = useState('')
   const [pdfUploadError, setPdfUploadError] = useState('')
+  const [previewPdf, setPreviewPdf] = useState<{ url: string; nombre: string } | null>(null)
 
   const supabaseRef = useRef(createClient())
 
@@ -317,11 +318,20 @@ export default function FichaClient({
     for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i)
     const blob = new Blob([arr], { type: 'application/pdf' })
     const url = URL.createObjectURL(blob)
+    setPreviewPdf({ url, nombre })
+  }
+
+  const closePreview = () => {
+    if (previewPdf) URL.revokeObjectURL(previewPdf.url)
+    setPreviewPdf(null)
+  }
+
+  const downloadPdf = () => {
+    if (!previewPdf) return
     const a = document.createElement('a')
-    a.href = url
-    a.download = nombre
+    a.href = previewPdf.url
+    a.download = previewPdf.nombre
     a.click()
-    URL.revokeObjectURL(url)
   }
 
   // ─── PDF ────────────────────────────────────────────────────────────────────
@@ -382,6 +392,22 @@ export default function FichaClient({
   // ─── Render ─────────────────────────────────────────────────────────────────
 
   return (
+    <>
+    {previewPdf && (
+      <div className="fixed inset-0 z-50 flex flex-col bg-black/80 backdrop-blur-sm" onClick={closePreview}>
+        <div className="flex items-center justify-between px-5 py-3 bg-bg-secondary border-b-[0.5px] border-border shrink-0" onClick={e => e.stopPropagation()}>
+          <span className="text-[14px] font-medium truncate max-w-[60%]">{previewPdf.nombre}</span>
+          <div className="flex items-center gap-3">
+            <button onClick={downloadPdf} className="text-[13px] text-accent font-medium hover:opacity-70">Descargar</button>
+            <button onClick={closePreview} className="text-[13px] text-text-secondary hover:text-text-primary">Cerrar ✕</button>
+          </div>
+        </div>
+        <div className="flex-1 overflow-hidden" onClick={e => e.stopPropagation()}>
+          <iframe src={previewPdf.url} className="w-full h-full border-0" title={previewPdf.nombre} />
+        </div>
+      </div>
+    )}
+    <div>
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-[28px] font-medium tracking-[-0.01em]">Ficha Clínica</h1>
@@ -486,7 +512,7 @@ export default function FichaClient({
                         onClick={() => openPdf(pdf.base64, pdf.nombre)}
                         className="text-accent text-[12px] font-medium hover:opacity-70"
                       >
-                        Descargar
+                        Ver
                       </button>
                       <button
                         onClick={() => handleDeleteRecomendacionPdf(pdf.id)}
@@ -827,5 +853,7 @@ export default function FichaClient({
         </div>
       </div>
     </div>
+    </div>
+    </>
   )
 }
