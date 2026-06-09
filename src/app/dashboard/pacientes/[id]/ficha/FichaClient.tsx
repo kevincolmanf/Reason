@@ -297,6 +297,8 @@ export default function FichaClient({
         base64,
       }
       setFicha(prev => ({ ...prev, recomendacionesPdfs: [record, ...(prev.recomendacionesPdfs ?? [])] }))
+      setHasChanges(true)
+      setSaveStatus('idle')
       setPdfProfesional('')
     }
     reader.readAsDataURL(file)
@@ -305,6 +307,8 @@ export default function FichaClient({
 
   const handleDeleteRecomendacionPdf = (id: string) => {
     setFicha(prev => ({ ...prev, recomendacionesPdfs: (prev.recomendacionesPdfs ?? []).filter(p => p.id !== id) }))
+    setHasChanges(true)
+    setSaveStatus('idle')
   }
 
   const openPdf = (base64: string, nombre: string) => {
