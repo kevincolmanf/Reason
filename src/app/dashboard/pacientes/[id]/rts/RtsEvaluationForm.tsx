@@ -57,6 +57,10 @@ type FormData = {
   slcmj_affected: string
   slcmj_unaffected: string
   drop_jump_quality: string
+  sl_bridge_affected: string
+  sl_bridge_unaffected: string
+  sl_bridge_quality: string
+  slsquat_quality: string
   koos_sport: string
   acl_rsi: string
   grs: string
@@ -93,6 +97,10 @@ const initialForm: FormData = {
   slcmj_affected: '',
   slcmj_unaffected: '',
   drop_jump_quality: '',
+  sl_bridge_affected: '',
+  sl_bridge_unaffected: '',
+  sl_bridge_quality: '',
+  slsquat_quality: '',
   koos_sport: '',
   acl_rsi: '',
   grs: '',
@@ -313,6 +321,10 @@ export default function RtsEvaluationForm({
       slcmj_affected: initialEval.slcmj_affected != null ? String(initialEval.slcmj_affected) : '',
       slcmj_unaffected: initialEval.slcmj_unaffected != null ? String(initialEval.slcmj_unaffected) : '',
       drop_jump_quality: initialEval.drop_jump_quality || '',
+      sl_bridge_affected:   initialEval.sl_bridge_affected   != null ? String(initialEval.sl_bridge_affected)   : '',
+      sl_bridge_unaffected: initialEval.sl_bridge_unaffected != null ? String(initialEval.sl_bridge_unaffected) : '',
+      sl_bridge_quality:    initialEval.sl_bridge_quality    || '',
+      slsquat_quality:      initialEval.slsquat_quality      || '',
       koos_sport: initialEval.koos_sport != null ? String(initialEval.koos_sport) : '',
       acl_rsi: initialEval.acl_rsi != null ? String(initialEval.acl_rsi) : '',
       grs: initialEval.grs != null ? String(initialEval.grs) : '',
@@ -404,7 +416,11 @@ export default function RtsEvaluationForm({
       cmj_bilateral: n(form.cmj_bilateral),
       slcmj_affected: n(form.slcmj_affected),
       slcmj_unaffected: n(form.slcmj_unaffected),
-      drop_jump_quality: form.drop_jump_quality || null,
+      drop_jump_quality:    form.drop_jump_quality    || null,
+      sl_bridge_affected:   n(form.sl_bridge_affected),
+      sl_bridge_unaffected: n(form.sl_bridge_unaffected),
+      sl_bridge_quality:    form.sl_bridge_quality    || null,
+      slsquat_quality:      form.slsquat_quality      || null,
       koos_sport: n(form.koos_sport),
       acl_rsi: n(form.acl_rsi),
       grs: n(form.grs),
@@ -497,6 +513,7 @@ export default function RtsEvaluationForm({
   const crossoverLSI = computeLSI(n(form.crossover_hop_affected), n(form.crossover_hop_unaffected))
   const timedHopLSI = computeTimedHopLSI(n(form.timed_hop_affected), n(form.timed_hop_unaffected))
   const slcmjLSI = computeLSI(n(form.slcmj_affected), n(form.slcmj_unaffected))
+  const slBridgeLSI = computeLSI(n(form.sl_bridge_affected), n(form.sl_bridge_unaffected))
 
   // Normative strength comparison
   const getStrengthNorm = (muscle: 'quad' | 'hamstring', side: 'affected' | 'unaffected') => {
@@ -1003,7 +1020,70 @@ export default function RtsEvaluationForm({
         </div>
       </section>
 
-      {/* ============ SECCIÓN 5: CUESTIONARIOS ============ */}
+      {/* ============ SECCIÓN 5: TESTS FUNCIONALES COMPLEMENTARIOS ============ */}
+      <section>
+        <h2 className="text-[20px] font-medium mb-5">Tests Funcionales Complementarios</h2>
+        <div className="space-y-6">
+
+          {/* SL Bridge */}
+          <div className="bg-bg-secondary border-[0.5px] border-border rounded-xl p-5">
+            <div className="text-[15px] font-medium mb-1">Single Leg Bridge Test</div>
+            <p className="text-[12px] text-text-secondary mb-4">Evalúa control neuromuscular de glúteo y estabilidad pélvica en cadena cerrada.</p>
+            <div className="grid grid-cols-2 gap-4 mb-3">
+              <InputField label={`Reps lado afectado (${form.affected_side === 'left' ? 'Izq' : 'Der'})`} value={form.sl_bridge_affected} onChange={v => set('sl_bridge_affected', v)} unit="reps" placeholder="20" />
+              <InputField label="Reps lado sano" value={form.sl_bridge_unaffected} onChange={v => set('sl_bridge_unaffected', v)} unit="reps" placeholder="25" />
+            </div>
+            {slBridgeLSI !== null && (
+              <div className="mb-4"><LSIDisplay label="LSI SL Bridge" lsi={slBridgeLSI} /></div>
+            )}
+            <label className="block text-[12px] text-text-secondary uppercase tracking-[0.05em] mb-2">Calidad de ejecución</label>
+            <div className="space-y-2">
+              {[
+                { val: 'good',       icon: '✓', label: 'Buena',       desc: 'Pelvis nivelada, sin rotación ni drop contralateral' },
+                { val: 'acceptable', icon: '⚠', label: 'Aceptable',   desc: 'Leve drop pélvico o asimetría compensable' },
+                { val: 'poor',       icon: '✗', label: 'Deficiente',  desc: 'Drop pélvico marcado, rotación o dolor' },
+              ].map(opt => (
+                <button key={opt.val} type="button" onClick={() => set('sl_bridge_quality', opt.val)}
+                  className={`w-full text-left px-4 py-3 rounded-xl border-[0.5px] transition-colors ${
+                    form.sl_bridge_quality === opt.val
+                      ? opt.val === 'good' ? 'bg-[#4ade8020] border-[#4ade80]' : opt.val === 'acceptable' ? 'bg-[#fb923c20] border-[#fb923c]' : 'bg-[#f8717120] border-[#f87171]'
+                      : 'bg-bg-primary border-border hover:border-border-strong'
+                  }`}>
+                  <span className={`text-[13px] font-medium mr-2 ${form.sl_bridge_quality === opt.val ? opt.val === 'good' ? 'text-[#4ade80]' : opt.val === 'acceptable' ? 'text-[#fb923c]' : 'text-[#f87171]' : 'text-text-primary'}`}>{opt.icon} {opt.label}</span>
+                  <span className="text-[12px] text-text-secondary">{opt.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Single Leg Squat */}
+          <div className="bg-bg-secondary border-[0.5px] border-border rounded-xl p-5">
+            <div className="text-[15px] font-medium mb-1">Single Leg Squat (Unipodal)</div>
+            <p className="text-[12px] text-text-secondary mb-4">5 repeticiones a máxima profundidad. Observar valgo dinámico, inclinación de tronco y control pélvico.</p>
+            <label className="block text-[12px] text-text-secondary uppercase tracking-[0.05em] mb-2">Calidad — lado afectado</label>
+            <div className="space-y-2">
+              {[
+                { val: 'good',       icon: '✓', label: 'Buena',       desc: 'Rodilla sobre el pie, tronco erguido, pelvis estable' },
+                { val: 'acceptable', icon: '⚠', label: 'Aceptable',   desc: 'Leve valgo o inclinación de tronco compensables' },
+                { val: 'poor',       icon: '✗', label: 'Deficiente',  desc: 'Valgo marcado, caída pélvica o inclinación excesiva de tronco' },
+              ].map(opt => (
+                <button key={opt.val} type="button" onClick={() => set('slsquat_quality', opt.val)}
+                  className={`w-full text-left px-4 py-3 rounded-xl border-[0.5px] transition-colors ${
+                    form.slsquat_quality === opt.val
+                      ? opt.val === 'good' ? 'bg-[#4ade8020] border-[#4ade80]' : opt.val === 'acceptable' ? 'bg-[#fb923c20] border-[#fb923c]' : 'bg-[#f8717120] border-[#f87171]'
+                      : 'bg-bg-primary border-border hover:border-border-strong'
+                  }`}>
+                  <span className={`text-[13px] font-medium mr-2 ${form.slsquat_quality === opt.val ? opt.val === 'good' ? 'text-[#4ade80]' : opt.val === 'acceptable' ? 'text-[#fb923c]' : 'text-[#f87171]' : 'text-text-primary'}`}>{opt.icon} {opt.label}</span>
+                  <span className="text-[12px] text-text-secondary">{opt.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* ============ SECCIÓN 6: CUESTIONARIOS ============ */}
       <section>
         <h2 className="text-[20px] font-medium mb-5">Cuestionarios Validados</h2>
 

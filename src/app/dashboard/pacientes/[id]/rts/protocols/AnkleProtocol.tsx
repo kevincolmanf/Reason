@@ -23,6 +23,8 @@ const INIT = {
   ybal_pm_affected: '', ybal_pm_unaffected: '',
   ybal_pl_affected: '', ybal_pl_unaffected: '',
   single_hop_affected: '', single_hop_unaffected: '',
+  heel_rise_affected: '', heel_rise_unaffected: '',
+  balance_time_affected: '', balance_time_unaffected: '',
   faam_sport_score: '', cait_score: '', notes: '',
 }
 type FormData = typeof INIT
@@ -35,9 +37,11 @@ export default function AnkleProtocol({ patient, userId, initialData, evalId, on
   const supabase = useRef(createClient())
   const set = (k: keyof FormData, v: string) => setForm(p => ({ ...p, [k]: v }))
 
-  const dfLsi = lsi(n(form.dorsiflexion_affected), n(form.dorsiflexion_unaffected))
-  const evLsi = lsi(n(form.evertor_affected), n(form.evertor_unaffected))
-  const hopLsi = lsi(n(form.single_hop_affected), n(form.single_hop_unaffected))
+  const dfLsi      = lsi(n(form.dorsiflexion_affected),   n(form.dorsiflexion_unaffected))
+  const evLsi      = lsi(n(form.evertor_affected),         n(form.evertor_unaffected))
+  const hopLsi     = lsi(n(form.single_hop_affected),      n(form.single_hop_unaffected))
+  const heelLsi    = lsi(n(form.heel_rise_affected),       n(form.heel_rise_unaffected))
+  const balanceLsi = lsi(n(form.balance_time_affected),    n(form.balance_time_unaffected))
 
   const ybalAff = [n(form.ybal_ant_affected), n(form.ybal_pm_affected), n(form.ybal_pl_affected)]
   const ybalUnaff = [n(form.ybal_ant_unaffected), n(form.ybal_pm_unaffected), n(form.ybal_pl_unaffected)]
@@ -51,6 +55,8 @@ export default function AnkleProtocol({ patient, userId, initialData, evalId, on
     { label: 'LSI dorsiflexión (wall lunge) ≥90%', passed: dfLsi !== null ? dfLsi >= 90 : null, detail: dfLsi !== null ? `LSI ${dfLsi.toFixed(1)}%` : undefined },
     { label: 'LSI fuerza eversores ≥90%', passed: evLsi !== null ? evLsi >= 90 : null, detail: evLsi !== null ? `LSI ${evLsi.toFixed(1)}%` : undefined },
     { label: 'Y-Balance composite LSI ≥90%', passed: ybalLsi !== null ? ybalLsi >= 90 : null, detail: ybalLsi !== null ? `LSI ${ybalLsi.toFixed(1)}%` : undefined },
+    { label: 'Single Leg Heel Rise LSI ≥90%', passed: heelLsi !== null ? heelLsi >= 90 : null, detail: heelLsi !== null ? `LSI ${heelLsi.toFixed(1)}%` : undefined },
+    { label: 'Balance unipodal LSI ≥90% (ojos abiertos)', passed: balanceLsi !== null ? balanceLsi >= 90 : null, detail: balanceLsi !== null ? `LSI ${balanceLsi.toFixed(1)}%` : undefined },
     { label: 'Single hop LSI ≥90%', passed: hopLsi !== null ? hopLsi >= 90 : null, detail: hopLsi !== null ? `LSI ${hopLsi.toFixed(1)}%` : undefined },
     { label: 'FAAM Sport ≥90%', passed: form.faam_sport_score !== '' ? n(form.faam_sport_score)! >= 90 : null, detail: form.faam_sport_score !== '' ? `${form.faam_sport_score}%` : undefined },
     { label: 'CAIT ≥28/30', passed: form.cait_score !== '' ? n(form.cait_score)! >= 28 : null, detail: form.cait_score !== '' ? `${form.cait_score}/30` : undefined },
@@ -80,6 +86,8 @@ export default function AnkleProtocol({ patient, userId, initialData, evalId, on
           <LsiDisplay label="Dorsiflexión" val={dfLsi} />
           <LsiDisplay label="Eversores" val={evLsi} />
           <LsiDisplay label="Y-Balance" val={ybalLsi} />
+          <LsiDisplay label="Heel Rise" val={heelLsi} />
+          <LsiDisplay label="Balance" val={balanceLsi} />
           <LsiDisplay label="Single Hop" val={hopLsi} />
         </div>
         <CriteriaResults criteria={criteria} notes={form.notes} onNewEval={onNewEval} />
@@ -144,6 +152,26 @@ export default function AnkleProtocol({ patient, userId, initialData, evalId, on
           <Field label="Posterolateral — sano"><NumInput value={form.ybal_pl_unaffected} onChange={v => set('ybal_pl_unaffected', v)} /></Field>
         </div>
         {ybalLsi !== null && <div className="mt-3"><LsiDisplay label="Y-Balance Composite LSI" val={ybalLsi} /></div>}
+      </div>
+
+      <div>
+        <SectionTitle>Single Leg Heel Rise (reps)</SectionTitle>
+        <p className="text-[12px] text-text-secondary mb-3">Máximas repeticiones en cada pierna. Ritmo controlado, rango completo.</p>
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Lado afectado"><NumInput value={form.heel_rise_affected} onChange={v => set('heel_rise_affected', v)} min="0" placeholder="ej: 20" /></Field>
+          <Field label="Lado sano"><NumInput value={form.heel_rise_unaffected} onChange={v => set('heel_rise_unaffected', v)} min="0" placeholder="ej: 25" /></Field>
+        </div>
+        {heelLsi !== null && <div className="mt-3"><LsiDisplay label="Heel Rise LSI" val={heelLsi} /></div>}
+      </div>
+
+      <div>
+        <SectionTitle>Balance unipodal (segundos, ojos abiertos)</SectionTitle>
+        <p className="text-[12px] text-text-secondary mb-3">Tiempo en equilibrio sobre cada pierna, máx 60 seg.</p>
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Lado afectado (seg)"><NumInput value={form.balance_time_affected} onChange={v => set('balance_time_affected', v)} min="0" max="60" placeholder="ej: 45" /></Field>
+          <Field label="Lado sano (seg)"><NumInput value={form.balance_time_unaffected} onChange={v => set('balance_time_unaffected', v)} min="0" max="60" placeholder="ej: 55" /></Field>
+        </div>
+        {balanceLsi !== null && <div className="mt-3"><LsiDisplay label="Balance LSI" val={balanceLsi} /></div>}
       </div>
 
       <div>

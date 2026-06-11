@@ -35,6 +35,10 @@ export interface RtsEvaluation {
   acl_rsi: number | null
   grs: number | null
   notes: string | null
+  sl_bridge_affected:   number | null
+  sl_bridge_unaffected: number | null
+  sl_bridge_quality:    string | null
+  slsquat_quality:      string | null
   [key: string]: unknown
 }
 

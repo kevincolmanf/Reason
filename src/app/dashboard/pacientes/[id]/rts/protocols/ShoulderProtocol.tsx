@@ -23,6 +23,8 @@ const INIT = {
   ir_strength_affected: '', ir_strength_unaffected: '',
   strength_unit: 'kg',
   apprehension_negative: '',
+  empty_can_negative: '',
+  belly_press_negative: '',
   ue_ybal_affected: '', ue_ybal_unaffected: '',
   sport_specific_ok: '',
   wosi_score: '', rowe_score: '', dash_score: '',
@@ -57,6 +59,8 @@ export default function ShoulderProtocol({ patient, userId, initialData, evalId,
     { label: 'LSI fuerza rotadores externos ≥90%', passed: erLsi !== null ? erLsi >= 90 : null, detail: erLsi !== null ? `LSI ${erLsi.toFixed(1)}%` : undefined },
     { label: 'Ratio ER/IR ≥0.75', passed: erIrRatio !== null ? erIrRatio >= 0.75 : null, detail: erIrRatio !== null ? `Ratio ${erIrRatio.toFixed(2)}` : undefined },
     { label: 'Test de aprensión negativo', passed: form.apprehension_negative !== '' ? form.apprehension_negative === 'yes' : null },
+    { label: 'Empty Can negativo (Jobe)', passed: form.empty_can_negative !== '' ? form.empty_can_negative === 'yes' : null },
+    { label: 'Belly Press negativo (IR lag sign)', passed: form.belly_press_negative !== '' ? form.belly_press_negative === 'yes' : null },
     { label: 'UE Y-Balance LSI ≥90%', passed: ybalLsi !== null ? ybalLsi >= 90 : null, detail: ybalLsi !== null ? `LSI ${ybalLsi.toFixed(1)}%` : undefined },
     ...(isInstability ? [
       { label: 'WOSI ≥75% (inestabilidad / Bankart)', passed: form.wosi_score !== '' ? n(form.wosi_score)! >= 75 : null, detail: form.wosi_score !== '' ? `${form.wosi_score}%` : undefined } as Criterion,
@@ -178,6 +182,8 @@ export default function ShoulderProtocol({ patient, userId, initialData, evalId,
         {ybalLsi !== null && <div className="mb-4"><LsiDisplay label="UE Y-Balance LSI" val={ybalLsi} /></div>}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Test de aprensión — ¿negativo?"><YesNoInput value={form.apprehension_negative} onChange={v => set('apprehension_negative', v)} /></Field>
+          <Field label="Empty Can (Jobe) — ¿negativo?"><YesNoInput value={form.empty_can_negative} onChange={v => set('empty_can_negative', v)} /></Field>
+          <Field label="Belly Press / IR lag sign — ¿negativo?"><YesNoInput value={form.belly_press_negative} onChange={v => set('belly_press_negative', v)} /></Field>
           <Field label="¿Gesto deportivo específico sin dolor/aprensión?"><YesNoInput value={form.sport_specific_ok} onChange={v => set('sport_specific_ok', v)} /></Field>
         </div>
       </div>

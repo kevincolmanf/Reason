@@ -21,6 +21,8 @@ const INIT = {
   ham_eccentric_affected: '', ham_eccentric_unaffected: '',
   quad_affected: '', quad_unaffected: '',
   single_hop_affected: '', single_hop_unaffected: '',
+  nordic_reps_affected: '', nordic_reps_unaffected: '',
+  h_test_pain_free: '',
   sprint_pain_free: '', agility_pain_free: '',
   bddq_score: '', notes: '',
 }
@@ -36,8 +38,9 @@ export default function HamstringProtocol({ patient, userId, initialData, evalId
 
   const set = (k: keyof FormData, v: string) => setForm(p => ({ ...p, [k]: v }))
 
-  const hamLsi = lsi(n(form.ham_eccentric_affected), n(form.ham_eccentric_unaffected))
-  const hopLsi = lsi(n(form.single_hop_affected), n(form.single_hop_unaffected))
+  const hamLsi    = lsi(n(form.ham_eccentric_affected), n(form.ham_eccentric_unaffected))
+  const nordicLsi = lsi(n(form.nordic_reps_affected), n(form.nordic_reps_unaffected))
+  const hopLsi    = lsi(n(form.single_hop_affected), n(form.single_hop_unaffected))
   const hqRatio = (n(form.ham_eccentric_affected) && n(form.quad_affected) && n(form.quad_affected)! > 0)
     ? n(form.ham_eccentric_affected)! / n(form.quad_affected)! : null
 
@@ -74,6 +77,15 @@ export default function HamstringProtocol({ patient, userId, initialData, evalId
       label: 'Single hop LSI ≥90%',
       passed: hopLsi !== null ? hopLsi >= 90 : null,
       detail: hopLsi !== null ? `LSI ${hopLsi.toFixed(1)}%` : undefined,
+    },
+    {
+      label: 'Nordic hamstring LSI ≥90%',
+      passed: nordicLsi !== null ? nordicLsi >= 90 : null,
+      detail: nordicLsi !== null ? `LSI ${nordicLsi.toFixed(1)}%` : undefined,
+    },
+    {
+      label: 'H-test (Askling) sin dolor',
+      passed: form.h_test_pain_free !== '' ? form.h_test_pain_free === 'yes' : null,
     },
     {
       label: 'Sprint máximo sin dolor',
@@ -121,6 +133,7 @@ export default function HamstringProtocol({ patient, userId, initialData, evalId
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
           <LsiDisplay label="LSI Excéntrico" val={hamLsi} />
+          <LsiDisplay label="Nordic LSI" val={nordicLsi} />
           <LsiDisplay label="Single Hop LSI" val={hopLsi} />
           <div className="bg-bg-primary rounded-lg p-3 border-[0.5px] border-border text-center">
             <div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-1">H/Q Ratio</div>
@@ -237,7 +250,19 @@ export default function HamstringProtocol({ patient, userId, initialData, evalId
           </Field>
         </div>
         {hopLsi !== null && <div className="mb-4"><LsiDisplay label="Single Hop LSI" val={hopLsi} /></div>}
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <Field label="Nordic — reps lado afectado">
+            <NumInput value={form.nordic_reps_affected} onChange={v => set('nordic_reps_affected', v)} min="0" max="30" placeholder="ej: 8" />
+          </Field>
+          <Field label="Nordic — reps lado sano">
+            <NumInput value={form.nordic_reps_unaffected} onChange={v => set('nordic_reps_unaffected', v)} min="0" max="30" placeholder="ej: 10" />
+          </Field>
+        </div>
+        {nordicLsi !== null && <div className="mb-4"><LsiDisplay label="Nordic LSI" val={nordicLsi} /></div>}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label="¿H-test de Askling sin dolor?">
+            <YesNoInput value={form.h_test_pain_free} onChange={v => set('h_test_pain_free', v)} />
+          </Field>
           <Field label="¿Sprint máximo sin dolor?">
             <YesNoInput value={form.sprint_pain_free} onChange={v => set('sprint_pain_free', v)} />
           </Field>

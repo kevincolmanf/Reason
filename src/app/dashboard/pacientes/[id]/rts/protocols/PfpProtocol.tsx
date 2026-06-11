@@ -19,7 +19,9 @@ const INIT = {
   symptom_months: '',
   pain_vas_rest: '', pain_vas_squat: '', pain_vas_stairs: '', pain_vas_running: '',
   step_down_quality: '', step_down_pain: '',
+  lateral_step_down_reps_affected: '', lateral_step_down_reps_unaffected: '',
   squat_full_depth: '', squat_pain: '',
+  slsquat_quality: '',
   quad_affected: '', quad_unaffected: '',
   single_hop_affected: '', single_hop_unaffected: '',
   akps_score: '', notes: '',
@@ -34,8 +36,9 @@ export default function PfpProtocol({ patient, userId, initialData, evalId, onSa
   const supabase = useRef(createClient())
   const set = (k: keyof FormData, v: string) => setForm(p => ({ ...p, [k]: v }))
 
-  const quadLsi = lsi(n(form.quad_affected), n(form.quad_unaffected))
-  const hopLsi = lsi(n(form.single_hop_affected), n(form.single_hop_unaffected))
+  const quadLsi         = lsi(n(form.quad_affected), n(form.quad_unaffected))
+  const hopLsi          = lsi(n(form.single_hop_affected), n(form.single_hop_unaffected))
+  const lateralStepLsi  = lsi(n(form.lateral_step_down_reps_affected), n(form.lateral_step_down_reps_unaffected))
 
   const maxVas = Math.max(
     n(form.pain_vas_rest) ?? 0,
@@ -50,6 +53,8 @@ export default function PfpProtocol({ patient, userId, initialData, evalId, onSa
     { label: 'Step-down sin dolor', passed: form.step_down_pain !== '' ? form.step_down_pain === 'no' : null },
     { label: 'Step-down sin compensación (calidad buena)', passed: form.step_down_quality !== '' ? form.step_down_quality === 'good' : null, detail: form.step_down_quality || undefined },
     { label: 'Squat profundo sin dolor', passed: form.squat_pain !== '' ? form.squat_pain === 'no' : null },
+    { label: 'Single Leg Squat calidad buena', passed: form.slsquat_quality !== '' ? form.slsquat_quality === 'good' : null, detail: form.slsquat_quality || undefined },
+    { label: 'Lateral step-down LSI ≥90%', passed: lateralStepLsi !== null ? lateralStepLsi >= 90 : null, detail: lateralStepLsi !== null ? `LSI ${lateralStepLsi.toFixed(1)}%` : undefined },
     { label: 'LSI fuerza cuádriceps ≥80%', passed: quadLsi !== null ? quadLsi >= 80 : null, detail: quadLsi !== null ? `LSI ${quadLsi.toFixed(1)}%` : undefined },
     { label: 'Single hop LSI ≥85%', passed: hopLsi !== null ? hopLsi >= 85 : null, detail: hopLsi !== null ? `LSI ${hopLsi.toFixed(1)}%` : undefined },
     { label: 'AKPS ≥90/100', passed: form.akps_score !== '' ? n(form.akps_score)! >= 90 : null, detail: form.akps_score !== '' ? `${form.akps_score}/100` : undefined },
@@ -136,6 +141,35 @@ export default function PfpProtocol({ patient, userId, initialData, evalId, onSa
           <Field label="¿Dolor durante squat?">
             <YesNoInput value={form.squat_pain} onChange={v => set('squat_pain', v)} />
           </Field>
+          <Field label="Lateral step-down — reps afectado">
+            <NumInput value={form.lateral_step_down_reps_affected} onChange={v => set('lateral_step_down_reps_affected', v)} min="0" max="30" placeholder="ej: 15" />
+          </Field>
+          <Field label="Lateral step-down — reps sano">
+            <NumInput value={form.lateral_step_down_reps_unaffected} onChange={v => set('lateral_step_down_reps_unaffected', v)} min="0" max="30" placeholder="ej: 20" />
+          </Field>
+        </div>
+        {lateralStepLsi !== null && <div className="mt-3"><LsiDisplay label="Lateral Step-Down LSI" val={lateralStepLsi} /></div>}
+      </div>
+
+      <div>
+        <SectionTitle>Single Leg Squat — Calidad (lado afectado)</SectionTitle>
+        <p className="text-[12px] text-text-secondary mb-3">5 repeticiones observando control de valgus, pelvis y tronco.</p>
+        <div className="space-y-2">
+          {[
+            { val: 'good',       label: 'Buena',       desc: 'Rodilla sobre el pie, tronco erguido, pelvis estable' },
+            { val: 'acceptable', label: 'Aceptable',   desc: 'Leve valgo o inclinación de tronco compensables' },
+            { val: 'poor',       label: 'Deficiente',  desc: 'Valgo marcado, caída pélvica o inclinación excesiva de tronco' },
+          ].map(opt => (
+            <button key={opt.val} type="button" onClick={() => set('slsquat_quality', opt.val)}
+              className={`w-full text-left px-4 py-2.5 rounded-lg border-[0.5px] text-[13px] transition-colors ${
+                form.slsquat_quality === opt.val
+                  ? opt.val === 'good' ? 'bg-[#4ade8020] border-[#4ade80]' : opt.val === 'acceptable' ? 'bg-[#fb923c20] border-[#fb923c]' : 'bg-[#f8717120] border-[#f87171]'
+                  : 'bg-bg-primary border-border hover:border-border-strong'
+              }`}>
+              <span className="font-medium mr-2">{opt.label}</span>
+              <span className="text-text-secondary">{opt.desc}</span>
+            </button>
+          ))}
         </div>
       </div>
 
