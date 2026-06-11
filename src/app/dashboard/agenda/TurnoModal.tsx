@@ -12,6 +12,8 @@ interface Turno {
   patient_email: string | null
   patient_age: number | null
   patient_obra_social: string | null
+  patient_affiliate_number: string | null
+  patient_address: string | null
   professional_id: string | null
   professional_name: string | null
   start_time: string
@@ -46,6 +48,8 @@ interface PatientResult {
   phone?: string | null
   email?: string | null
   obra_social?: string | null
+  affiliate_number?: string | null
+  address?: string | null
   occupation: string | null
 }
 
@@ -129,10 +133,12 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
   const [form, setForm] = useState({
     patient_name:        turno?.patient_name ?? '',
     patient_id:          turno?.patient_id ?? null as string | null,
-    patient_phone:       turno?.patient_phone ?? '',
-    patient_email:       turno?.patient_email ?? '',
-    patient_age:         turno?.patient_age?.toString() ?? '',
-    patient_obra_social: turno?.patient_obra_social ?? '',
+    patient_phone:            turno?.patient_phone ?? '',
+    patient_email:            turno?.patient_email ?? '',
+    patient_age:              turno?.patient_age?.toString() ?? '',
+    patient_obra_social:      turno?.patient_obra_social ?? '',
+    patient_affiliate_number: turno?.patient_affiliate_number ?? '',
+    patient_address:          turno?.patient_address ?? '',
     professional_id:     turno?.professional_id ?? (professionals[0]?.id ?? null) as string | null,
     start_time:          turno ? toLocalInputValue(new Date(turno.start_time)) : (defaultStart ? toLocalInputValue(defaultStart) : ''),
     end_time:            turno ? toLocalInputValue(new Date(turno.end_time))   : (defaultEnd   ? toLocalInputValue(defaultEnd)   : ''),
@@ -172,17 +178,19 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
   useEffect(() => {
     if (!form.patient_id) { setPatientDni(''); return }
     supabaseRef.current
-      .from('patients').select('dni, phone, email, obra_social, age, birth_date').eq('id', form.patient_id).single()
+      .from('patients').select('dni, phone, email, obra_social, affiliate_number, address, age, birth_date').eq('id', form.patient_id).single()
       .then(({ data }) => {
         if (!data) return
         setPatientDni(data.dni ?? '')
         if (data.birth_date) setPatientBirthDate(data.birth_date)
         setForm(f => ({
           ...f,
-          patient_phone:       f.patient_phone       || data.phone       || '',
-          patient_email:       f.patient_email       || data.email       || '',
-          patient_obra_social: f.patient_obra_social || data.obra_social || '',
-          patient_age:         f.patient_age         || (data.age ? data.age.toString() : ''),
+          patient_phone:            f.patient_phone            || data.phone            || '',
+          patient_email:            f.patient_email            || data.email            || '',
+          patient_obra_social:      f.patient_obra_social      || data.obra_social      || '',
+          patient_affiliate_number: f.patient_affiliate_number || data.affiliate_number || '',
+          patient_address:          f.patient_address          || data.address          || '',
+          patient_age:              f.patient_age              || (data.age ? data.age.toString() : ''),
         }))
       })
   }, [form.patient_id])
@@ -209,7 +217,7 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
       const isNumeric = /^\d+$/.test(trimmed)
       let query = supabaseRef.current
         .from('patients')
-        .select('id, name, dni, age, birth_date, phone, email, obra_social, occupation')
+        .select('id, name, dni, age, birth_date, phone, email, obra_social, affiliate_number, address, occupation')
         .limit(6)
       if (isNumeric) {
         query = query.ilike('dni', `%${trimmed}%`)
@@ -275,26 +283,30 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
     setHistorial([])
 
     // Load from patient profile; fallback to last turno for any missing field
-    let phone       = p.phone       || ''
-    let email       = p.email       || ''
-    let obraSocial  = p.obra_social || ''
-    let age         = p.age         ? p.age.toString() : ''
+    let phone           = p.phone            || ''
+    let email           = p.email            || ''
+    let obraSocial      = p.obra_social      || ''
+    let affiliateNumber = p.affiliate_number || ''
+    let address         = p.address          || ''
+    let age             = p.age              ? p.age.toString() : ''
 
     const needsFallback = !phone || !email || !obraSocial || !age
     if (needsFallback) {
       const lastQuery = supabaseRef.current
         .from('turnos')
-        .select('patient_phone, patient_email, patient_obra_social, patient_age')
+        .select('patient_phone, patient_email, patient_obra_social, patient_affiliate_number, patient_address, patient_age')
         .eq('patient_id', p.id)
         .order('start_time', { ascending: false })
         .limit(10)
       const { data: lastTurnos } = await (orgId ? lastQuery.eq('org_id', orgId) : lastQuery.eq('created_by', userId))
       if (lastTurnos) {
         for (const t of lastTurnos) {
-          if (!phone      && t.patient_phone)       phone      = t.patient_phone
-          if (!email      && t.patient_email)       email      = t.patient_email
-          if (!obraSocial && t.patient_obra_social) obraSocial = t.patient_obra_social
-          if (!age        && t.patient_age)         age        = t.patient_age.toString()
+          if (!phone           && t.patient_phone)            phone           = t.patient_phone
+          if (!email           && t.patient_email)            email           = t.patient_email
+          if (!obraSocial      && t.patient_obra_social)      obraSocial      = t.patient_obra_social
+          if (!affiliateNumber && t.patient_affiliate_number) affiliateNumber = t.patient_affiliate_number
+          if (!address         && t.patient_address)          address         = t.patient_address
+          if (!age             && t.patient_age)              age             = t.patient_age.toString()
           if (phone && email && obraSocial && age) break
         }
       }
@@ -304,12 +316,14 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
 
     setForm(f => ({
       ...f,
-      patient_name:        p.name,
-      patient_id:          p.id,
-      patient_phone:       phone,
-      patient_email:       email,
-      patient_obra_social: obraSocial,
-      patient_age:         age,
+      patient_name:             p.name,
+      patient_id:               p.id,
+      patient_phone:            phone,
+      patient_email:            email,
+      patient_obra_social:      obraSocial,
+      patient_affiliate_number: affiliateNumber,
+      patient_address:          address,
+      patient_age:              age,
     }))
   }
 
@@ -355,7 +369,9 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
         }
         return form.patient_age ? parseInt(form.patient_age, 10) : null
       })(),
-      patient_obra_social: form.is_blocked ? null : (form.patient_obra_social.trim() || null),
+      patient_obra_social:      form.is_blocked ? null : (form.patient_obra_social.trim() || null),
+      patient_affiliate_number: form.is_blocked ? null : (form.patient_affiliate_number.trim() || null),
+      patient_address:          form.is_blocked ? null : (form.patient_address.trim() || null),
       professional_id:     form.professional_id,
       professional_name:   professionals.find(p => p.id === form.professional_id)?.full_name ?? null,
       start_time:          new Date(form.start_time).toISOString(),
@@ -605,6 +621,16 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
               <div>
                 <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Obra social</label>
                 <input type="text" value={form.patient_obra_social} onChange={e => setForm(f => ({ ...f, patient_obra_social: e.target.value }))} placeholder="Ej: OSDE, PAMI..." className={inputCls} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">N° de afiliado</label>
+                <input type="text" value={form.patient_affiliate_number} onChange={e => setForm(f => ({ ...f, patient_affiliate_number: e.target.value }))} placeholder="Ej: 123456789" className={inputCls} />
+              </div>
+              <div>
+                <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Dirección</label>
+                <input type="text" value={form.patient_address} onChange={e => setForm(f => ({ ...f, patient_address: e.target.value }))} placeholder="Ej: Av. Corrientes 1234" className={inputCls} />
               </div>
             </div>
 

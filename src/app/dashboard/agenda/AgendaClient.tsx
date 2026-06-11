@@ -14,6 +14,8 @@ interface Turno {
   patient_email: string | null
   patient_age: number | null
   patient_obra_social: string | null
+  patient_affiliate_number: string | null
+  patient_address: string | null
   professional_id: string | null
   professional_name: string | null
   start_time: string
