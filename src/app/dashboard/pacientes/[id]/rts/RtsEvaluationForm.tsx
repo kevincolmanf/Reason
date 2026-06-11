@@ -241,6 +241,40 @@ export default function RtsEvaluationForm({
   const [dynamoMode, setDynamoMode] = useState<'imported' | 'manual'>('imported')
   const [koosMode, setKoosMode] = useState<'imported' | 'manual'>('imported')
   const [aclRsiMode, setAclRsiMode] = useState<'imported' | 'manual'>('imported')
+  const [forceUnit, setForceUnit] = useState<'kg' | 'N'>('kg')
+
+  // Conversion helpers — form state always stores kg internally
+  const N_PER_KG = 9.80665
+  const toDisplay = (kgVal: string): string => {
+    if (forceUnit === 'kg' || kgVal === '') return kgVal
+    const num = parseFloat(kgVal)
+    if (isNaN(num)) return kgVal
+    return (num * N_PER_KG).toFixed(1)
+  }
+  const toKg = (displayVal: string): string => {
+    if (forceUnit === 'kg' || displayVal === '') return displayVal
+    const num = parseFloat(displayVal)
+    if (isNaN(num)) return displayVal
+    return (num / N_PER_KG).toFixed(3)
+  }
+  const switchForceUnit = (newUnit: 'kg' | 'N') => {
+    if (newUnit === forceUnit) return
+    const forceKeys: (keyof FormData)[] = ['quad_affected', 'quad_unaffected', 'hamstring_affected', 'hamstring_unaffected']
+    setForm(prev => {
+      const updated = { ...prev }
+      forceKeys.forEach(key => {
+        const val = prev[key]
+        if (!val) return
+        const num = parseFloat(val)
+        if (isNaN(num)) return
+        updated[key] = newUnit === 'N'
+          ? (num * N_PER_KG).toFixed(1)
+          : (num / N_PER_KG).toFixed(3)
+      })
+      return updated
+    })
+    setForceUnit(newUnit)
+  }
 
   const supabaseRef = useRef(createClient())
 
@@ -257,10 +291,10 @@ export default function RtsEvaluationForm({
       rom_extension: initialEval.rom_extension != null ? String(initialEval.rom_extension) : '',
       rom_flexion: initialEval.rom_flexion != null ? String(initialEval.rom_flexion) : '',
       pain_vas: initialEval.pain_vas != null ? String(initialEval.pain_vas) : '',
-      quad_affected: initialEval.quad_affected != null ? String(initialEval.quad_affected) : '',
-      quad_unaffected: initialEval.quad_unaffected != null ? String(initialEval.quad_unaffected) : '',
-      hamstring_affected: initialEval.hamstring_affected != null ? String(initialEval.hamstring_affected) : '',
-      hamstring_unaffected: initialEval.hamstring_unaffected != null ? String(initialEval.hamstring_unaffected) : '',
+      quad_affected: initialEval.quad_affected != null ? toDisplay(String(initialEval.quad_affected)) : '',
+      quad_unaffected: initialEval.quad_unaffected != null ? toDisplay(String(initialEval.quad_unaffected)) : '',
+      hamstring_affected: initialEval.hamstring_affected != null ? toDisplay(String(initialEval.hamstring_affected)) : '',
+      hamstring_unaffected: initialEval.hamstring_unaffected != null ? toDisplay(String(initialEval.hamstring_unaffected)) : '',
       single_hop_affected: initialEval.single_hop_affected != null ? String(initialEval.single_hop_affected) : '',
       single_hop_unaffected: initialEval.single_hop_unaffected != null ? String(initialEval.single_hop_unaffected) : '',
       triple_hop_affected: initialEval.triple_hop_affected != null ? String(initialEval.triple_hop_affected) : '',
@@ -291,10 +325,23 @@ export default function RtsEvaluationForm({
     if (!lastDynamo) return
     const side = form.affected_side
     const muscles = lastDynamo.muscle_results
-    const quadAff = side === 'right' ? muscles?.quad?.right : muscles?.quad?.left
-    const quadUnaff = side === 'right' ? muscles?.quad?.left : muscles?.quad?.right
-    const hamAff = side === 'right' ? muscles?.hamstring?.right : muscles?.hamstring?.left
-    const hamUnaff = side === 'right' ? muscles?.hamstring?.left : muscles?.hamstring?.right
+    const dynamoUnit = lastDynamo.unit ?? 'kg'
+
+    const convertToFormUnit = (rawStr: string | undefined): string => {
+      if (!rawStr) return ''
+      const raw = parseFloat(rawStr)
+      if (isNaN(raw)) return rawStr
+      // Convert from dynamo unit → kg → form unit
+      const inKg = dynamoUnit === 'N' ? raw / N_PER_KG : raw
+      if (forceUnit === 'N') return (inKg * N_PER_KG).toFixed(1)
+      return inKg.toFixed(3)
+    }
+
+    const quadAff = convertToFormUnit(side === 'right' ? muscles?.quad?.right : muscles?.quad?.left)
+    const quadUnaff = convertToFormUnit(side === 'right' ? muscles?.quad?.left : muscles?.quad?.right)
+    const hamAff = convertToFormUnit(side === 'right' ? muscles?.hamstring?.right : muscles?.hamstring?.left)
+    const hamUnaff = convertToFormUnit(side === 'right' ? muscles?.hamstring?.left : muscles?.hamstring?.right)
+
     setForm(prev => ({
       ...prev,
       quad_affected: quadAff || prev.quad_affected,
@@ -303,7 +350,7 @@ export default function RtsEvaluationForm({
       hamstring_unaffected: hamUnaff || prev.hamstring_unaffected,
     }))
     setDynamoMode('manual')
-  }, [lastDynamo, form.affected_side])
+  }, [lastDynamo, form.affected_side, forceUnit, N_PER_KG])
 
   const importKoosData = useCallback(() => {
     if (!lastKoos?.score) return
@@ -329,10 +376,10 @@ export default function RtsEvaluationForm({
       rom_extension: n(form.rom_extension),
       rom_flexion: n(form.rom_flexion),
       pain_vas: n(form.pain_vas),
-      quad_affected: n(form.quad_affected),
-      quad_unaffected: n(form.quad_unaffected),
-      hamstring_affected: n(form.hamstring_affected),
-      hamstring_unaffected: n(form.hamstring_unaffected),
+      quad_affected: forceUnit === 'N' ? (n(form.quad_affected) != null ? n(form.quad_affected)! / N_PER_KG : null) : n(form.quad_affected),
+      quad_unaffected: forceUnit === 'N' ? (n(form.quad_unaffected) != null ? n(form.quad_unaffected)! / N_PER_KG : null) : n(form.quad_unaffected),
+      hamstring_affected: forceUnit === 'N' ? (n(form.hamstring_affected) != null ? n(form.hamstring_affected)! / N_PER_KG : null) : n(form.hamstring_affected),
+      hamstring_unaffected: forceUnit === 'N' ? (n(form.hamstring_unaffected) != null ? n(form.hamstring_unaffected)! / N_PER_KG : null) : n(form.hamstring_unaffected),
       patient_body_weight: n(form.patient_body_weight),
       patient_age: patient.age,
       patient_sex: form.patient_sex || null,
@@ -418,11 +465,21 @@ export default function RtsEvaluationForm({
     setMode('form')
   }, [onNewEval])
 
-  // Real-time calculations
-  const quadLSI = computeLSI(n(form.quad_affected), n(form.quad_unaffected))
-  const hamstringLSI = computeLSI(n(form.hamstring_affected), n(form.hamstring_unaffected))
-  const hqRatio = (n(form.hamstring_affected) && n(form.quad_affected) && n(form.quad_affected)! > 0)
-    ? n(form.hamstring_affected)! / n(form.quad_affected)!
+  // Real-time calculations — always in kg regardless of display unit
+  const toKgNum = (val: string): number | null => {
+    const raw = n(val)
+    if (raw === null) return null
+    return forceUnit === 'N' ? raw / N_PER_KG : raw
+  }
+  const quadKgAff = toKgNum(form.quad_affected)
+  const quadKgUnaff = toKgNum(form.quad_unaffected)
+  const hamKgAff = toKgNum(form.hamstring_affected)
+  const hamKgUnaff = toKgNum(form.hamstring_unaffected)
+
+  const quadLSI = computeLSI(quadKgAff, quadKgUnaff)
+  const hamstringLSI = computeLSI(hamKgAff, hamKgUnaff)
+  const hqRatio = (hamKgAff && quadKgAff && quadKgAff > 0)
+    ? hamKgAff / quadKgAff
     : null
 
   const singleHopLSI = computeLSI(n(form.single_hop_affected), n(form.single_hop_unaffected))
@@ -441,8 +498,9 @@ export default function RtsEvaluationForm({
     const forceStr = side === 'affected'
       ? muscle === 'quad' ? form.quad_affected : form.hamstring_affected
       : muscle === 'quad' ? form.quad_unaffected : form.hamstring_unaffected
-    const force = n(forceStr)
-    if (force === null) return null
+    const forceRaw = n(forceStr)
+    if (forceRaw === null) return null
+    const force = forceUnit === 'N' ? forceRaw / N_PER_KG : forceRaw
     const norms = muscle === 'quad' ? QUAD_NORMS : HAMSTRING_NORMS
     const sexNorms = norms[sex]
     if (!sexNorms) return null
@@ -651,7 +709,25 @@ export default function RtsEvaluationForm({
 
       {/* ============ SECCIÓN 2: EVALUACIÓN DE FUERZA ============ */}
       <section>
-        <h2 className="text-[20px] font-medium mb-1">Evaluación de Fuerza Muscular</h2>
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="text-[20px] font-medium">Evaluación de Fuerza Muscular</h2>
+          <div className="flex items-center gap-1 bg-bg-secondary border-[0.5px] border-border rounded-lg p-1">
+            <button
+              type="button"
+              onClick={() => switchForceUnit('kg')}
+              className={`px-3 py-1 rounded-md text-[13px] font-medium transition-colors ${forceUnit === 'kg' ? 'bg-accent text-bg-primary' : 'text-text-secondary hover:text-text-primary'}`}
+            >
+              kg
+            </button>
+            <button
+              type="button"
+              onClick={() => switchForceUnit('N')}
+              className={`px-3 py-1 rounded-md text-[13px] font-medium transition-colors ${forceUnit === 'N' ? 'bg-accent text-bg-primary' : 'text-text-secondary hover:text-text-primary'}`}
+            >
+              N
+            </button>
+          </div>
+        </div>
 
         {lastDynamo && dynamoMode === 'imported' && (
           <div className="mb-5 p-4 bg-bg-secondary border-[0.5px] border-border rounded-xl flex items-center justify-between flex-wrap gap-3">
@@ -680,12 +756,12 @@ export default function RtsEvaluationForm({
         )}
 
         <div className="grid grid-cols-2 gap-4 mb-2">
-          <InputField label={`Cuádriceps lado afectado (${form.affected_side === 'left' ? 'Izq' : 'Der'})`} value={form.quad_affected} onChange={v => set('quad_affected', v)} unit="kg" />
-          <InputField label={`Cuádriceps lado sano (${form.affected_side === 'left' ? 'Der' : 'Izq'})`} value={form.quad_unaffected} onChange={v => set('quad_unaffected', v)} unit="kg" />
+          <InputField label={`Cuádriceps lado afectado (${form.affected_side === 'left' ? 'Izq' : 'Der'})`} value={form.quad_affected} onChange={v => set('quad_affected', v)} unit={forceUnit} />
+          <InputField label={`Cuádriceps lado sano (${form.affected_side === 'left' ? 'Der' : 'Izq'})`} value={form.quad_unaffected} onChange={v => set('quad_unaffected', v)} unit={forceUnit} />
         </div>
         <div className="grid grid-cols-2 gap-4 mb-4">
-          <InputField label={`Isquiotibiales lado afectado (${form.affected_side === 'left' ? 'Izq' : 'Der'})`} value={form.hamstring_affected} onChange={v => set('hamstring_affected', v)} unit="kg" />
-          <InputField label={`Isquiotibiales lado sano (${form.affected_side === 'left' ? 'Der' : 'Izq'})`} value={form.hamstring_unaffected} onChange={v => set('hamstring_unaffected', v)} unit="kg" />
+          <InputField label={`Isquiotibiales lado afectado (${form.affected_side === 'left' ? 'Izq' : 'Der'})`} value={form.hamstring_affected} onChange={v => set('hamstring_affected', v)} unit={forceUnit} />
+          <InputField label={`Isquiotibiales lado sano (${form.affected_side === 'left' ? 'Der' : 'Izq'})`} value={form.hamstring_unaffected} onChange={v => set('hamstring_unaffected', v)} unit={forceUnit} />
         </div>
 
         {/* LSI en tiempo real */}
@@ -711,7 +787,7 @@ export default function RtsEvaluationForm({
               {quadAffNorm && (
                 <div className="text-[13px]">
                   <span className="text-text-secondary">Cuád. afectado: </span>
-                  <span className="text-text-primary">{quadAffNorm.ratio} kg/kg peso</span>
+                  <span className="text-text-primary">{quadAffNorm.ratio} kg/kg pc</span>
                   <span className={`ml-2 font-medium ${quadAffNorm.pct >= 90 ? 'text-[#4ade80]' : quadAffNorm.pct >= 75 ? 'text-[#fb923c]' : 'text-[#f87171]'}`}>
                     ({quadAffNorm.pct.toFixed(0)}% del esperado para {form.patient_sex === 'male' ? 'hombre' : 'mujer'}, {patient.age} años)
                   </span>
@@ -720,7 +796,7 @@ export default function RtsEvaluationForm({
               {quadUnaffNorm && (
                 <div className="text-[13px]">
                   <span className="text-text-secondary">Cuád. sano: </span>
-                  <span className="text-text-primary">{quadUnaffNorm.ratio} kg/kg peso</span>
+                  <span className="text-text-primary">{quadUnaffNorm.ratio} kg/kg pc</span>
                   <span className={`ml-2 font-medium ${quadUnaffNorm.pct >= 90 ? 'text-[#4ade80]' : quadUnaffNorm.pct >= 75 ? 'text-[#fb923c]' : 'text-[#f87171]'}`}>
                     ({quadUnaffNorm.pct.toFixed(0)}%)
                   </span>
@@ -729,7 +805,7 @@ export default function RtsEvaluationForm({
               {hamAffNorm && (
                 <div className="text-[13px]">
                   <span className="text-text-secondary">Isquio. afectado: </span>
-                  <span className="text-text-primary">{hamAffNorm.ratio} kg/kg peso</span>
+                  <span className="text-text-primary">{hamAffNorm.ratio} kg/kg pc</span>
                   <span className={`ml-2 font-medium ${hamAffNorm.pct >= 90 ? 'text-[#4ade80]' : hamAffNorm.pct >= 75 ? 'text-[#fb923c]' : 'text-[#f87171]'}`}>
                     ({hamAffNorm.pct.toFixed(0)}%)
                   </span>
@@ -738,7 +814,7 @@ export default function RtsEvaluationForm({
               {hamUnaffNorm && (
                 <div className="text-[13px]">
                   <span className="text-text-secondary">Isquio. sano: </span>
-                  <span className="text-text-primary">{hamUnaffNorm.ratio} kg/kg peso</span>
+                  <span className="text-text-primary">{hamUnaffNorm.ratio} kg/kg pc</span>
                   <span className={`ml-2 font-medium ${hamUnaffNorm.pct >= 90 ? 'text-[#4ade80]' : hamUnaffNorm.pct >= 75 ? 'text-[#fb923c]' : 'text-[#f87171]'}`}>
                     ({hamUnaffNorm.pct.toFixed(0)}%)
                   </span>
