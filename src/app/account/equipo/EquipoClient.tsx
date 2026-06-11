@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createOrganization, addMember, removeMember } from './actions'
+import { createOrganization, addMember, removeMember, updateMemberName } from './actions'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
@@ -63,6 +63,11 @@ export default function EquipoClient({ userId, org: initialOrg, members: initial
   const [removing, setRemoving] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
 
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editLoading, setEditLoading] = useState(false)
+  const [editError, setEditError] = useState('')
+
   const handleCreateOrg = async () => {
     if (!orgName.trim() || orgLoading) return
     setOrgError('')
@@ -105,6 +110,35 @@ export default function EquipoClient({ userId, org: initialOrg, members: initial
       setAddError(`Error inesperado: ${(e as Error).message}`)
     } finally {
       setAddLoading(false)
+    }
+  }
+
+  const handleStartEdit = (m: Member) => {
+    setEditingId(m.id)
+    setEditName(m.users?.full_name || '')
+    setEditError('')
+  }
+
+  const handleSaveEdit = async (memberUserId: string) => {
+    if (!org || !editName.trim() || editLoading) return
+    setEditLoading(true)
+    setEditError('')
+    try {
+      const res = await updateMemberName(org.id, memberUserId, editName)
+      if (res?.error) {
+        setEditError(res.error)
+      } else {
+        setMembers(prev => prev.map(m =>
+          m.user_id === memberUserId
+            ? { ...m, users: { ...m.users, full_name: editName.trim() } }
+            : m
+        ))
+        setEditingId(null)
+      }
+    } catch (e) {
+      setEditError(`Error inesperado: ${(e as Error).message}`)
+    } finally {
+      setEditLoading(false)
     }
   }
 
@@ -365,26 +399,70 @@ Cualquier duda, avisame.`
           <div className="divide-y-[0.5px] divide-border">
             {members.map(m => {
               const isCurrentUser = m.user_id === userId
+              const isEditing = editingId === m.id
               return (
-                <div key={m.id} className="px-6 py-4 flex items-center justify-between">
-                  <div>
-                    <p className="text-[14px] font-medium">{m.users?.full_name || m.users?.email || '(sin nombre)'}</p>
-                    <p className="text-[12px] text-text-secondary">{m.users?.email || '—'}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-[11px] text-text-secondary bg-bg-primary border-[0.5px] border-border rounded-full px-2.5 py-0.5 capitalize">
-                      {isCurrentUser ? 'Vos · Admin' : 'Integrante'}
-                    </span>
-                    {!isCurrentUser && (
+                <div key={m.id} className="px-6 py-4">
+                  {isEditing ? (
+                    <div className="flex items-center gap-3">
+                      <input
+                        autoFocus
+                        type="text"
+                        value={editName}
+                        onChange={e => setEditName(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') handleSaveEdit(m.user_id)
+                          if (e.key === 'Escape') { setEditingId(null); setEditError('') }
+                        }}
+                        className="flex-grow bg-bg-primary border-[0.5px] border-accent rounded-lg px-3 py-2 text-[14px] focus:outline-none"
+                        placeholder="Nombre completo"
+                      />
                       <button
-                        onClick={() => handleRemoveMember(m.id, m.user_id)}
-                        disabled={removing === m.id}
-                        className="text-[12px] text-text-secondary hover:text-red-400 transition-colors disabled:opacity-40"
+                        onClick={() => handleSaveEdit(m.user_id)}
+                        disabled={editLoading || !editName.trim()}
+                        className="bg-accent text-bg-primary px-3 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
                       >
-                        {removing === m.id ? '...' : 'Quitar'}
+                        {editLoading ? '...' : 'Guardar'}
                       </button>
-                    )}
-                  </div>
+                      <button
+                        onClick={() => { setEditingId(null); setEditError('') }}
+                        className="text-[13px] text-text-secondary hover:text-text-primary px-1"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-[14px] font-medium">{m.users?.full_name || m.users?.email || '(sin nombre)'}</p>
+                        <p className="text-[12px] text-text-secondary">{m.users?.email || '—'}</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-[11px] text-text-secondary bg-bg-primary border-[0.5px] border-border rounded-full px-2.5 py-0.5 capitalize">
+                          {isCurrentUser ? 'Vos · Admin' : 'Integrante'}
+                        </span>
+                        {!isCurrentUser && (
+                          <>
+                            <button
+                              onClick={() => handleStartEdit(m)}
+                              className="text-[12px] text-text-secondary hover:text-accent transition-colors"
+                            >
+                              Editar nombre
+                            </button>
+                            <button
+                              onClick={() => handleRemoveMember(m.id, m.user_id)}
+                              disabled={removing === m.id}
+                              className="text-[12px] text-text-secondary hover:text-red-400 transition-colors disabled:opacity-40"
+                            >
+                              {removing === m.id ? '...' : 'Quitar'}
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {isEditing && editError && (
+                    <p className="text-[12px] text-red-400 mt-2">{editError}</p>
+                  )}
                 </div>
               )
             })}

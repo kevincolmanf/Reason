@@ -126,6 +126,30 @@ export async function addMember(orgId: string, formData: FormData): Promise<{ er
   return { tempPassword, email }
 }
 
+export async function updateMemberName(orgId: string, memberUserId: string, newName: string): Promise<{ error?: string }> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const { data: membership } = await supabase
+    .from('organization_members')
+    .select('role')
+    .eq('org_id', orgId)
+    .eq('user_id', user.id)
+    .single()
+
+  if (membership?.role !== 'admin') return { error: 'Solo el administrador puede editar nombres' }
+
+  const adminClient = createAdminClient()
+  const { error } = await adminClient
+    .from('users')
+    .update({ full_name: newName.trim() })
+    .eq('id', memberUserId)
+
+  if (error) return { error: 'Error al actualizar el nombre' }
+  return {}
+}
+
 export async function removeMember(orgId: string, memberId: string) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()

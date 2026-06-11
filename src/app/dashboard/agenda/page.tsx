@@ -1,4 +1,5 @@
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { redirect } from 'next/navigation'
 import Header from '@/components/Header'
 import AgendaClient from './AgendaClient'
@@ -68,7 +69,8 @@ export default async function AgendaPage() {
 
   if (orgId) {
     type MemberRow = { user_id: string; agenda_access: boolean; users: { id: string; full_name: string | null } | null }
-    const { data: memberRows } = await supabase
+    const adminClient = createAdminClient()
+    const { data: memberRows } = await adminClient
       .from('organization_members')
       .select('user_id, agenda_access, users(id, full_name)')
       .eq('org_id', orgId)
