@@ -509,7 +509,7 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
                 <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Profesional</label>
                 <select value={form.professional_id ?? ''} onChange={e => setForm(f => ({ ...f, professional_id: e.target.value || null }))} className={inputCls}>
                   <option value="">Sin asignar</option>
-                  {professionals.filter(p => p.full_name).map(p => <option key={p.id} value={p.id}>{p.full_name}</option>)}
+                  {professionals.map(p => <option key={p.id} value={p.id}>{p.full_name ?? p.id}</option>)}
                 </select>
               </div>
             )}
@@ -688,7 +688,7 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
                 <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Profesional</label>
                 <select value={form.professional_id ?? ''} onChange={e => setForm(f => ({ ...f, professional_id: e.target.value || null }))} className={inputCls}>
                   <option value="">Sin asignar</option>
-                  {professionals.filter(p => p.full_name).map(p => <option key={p.id} value={p.id}>{p.full_name}</option>)}
+                  {professionals.map(p => <option key={p.id} value={p.id}>{p.full_name ?? p.id}</option>)}
                 </select>
               </div>
             )}

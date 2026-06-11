@@ -68,16 +68,16 @@ export default async function AgendaPage() {
   let members: { id: string; full_name: string | null; agendaAccess: boolean }[] = []
 
   if (orgId) {
-    type MemberRow = { user_id: string; agenda_access: boolean; users: { id: string; full_name: string | null } | null }
+    type MemberRow = { user_id: string; agenda_access: boolean; users: { id: string; full_name: string | null; email: string | null } | null }
     const adminClient = createAdminClient()
     const { data: memberRows } = await adminClient
       .from('organization_members')
-      .select('user_id, agenda_access, users(id, full_name)')
+      .select('user_id, agenda_access, users(id, full_name, email)')
       .eq('org_id', orgId)
 
     members = ((memberRows ?? []) as unknown as MemberRow[]).map(m => ({
       id: m.users?.id ?? m.user_id,
-      full_name: m.users?.full_name ?? null,
+      full_name: m.users?.full_name ?? m.users?.email ?? null,
       agendaAccess: m.agenda_access ?? false,
     }))
 
