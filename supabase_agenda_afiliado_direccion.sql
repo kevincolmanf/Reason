@@ -2,7 +2,7 @@
 -- Ejecutar en Supabase SQL Editor
 
 -- 1. Nuevas columnas en la tabla de turnos
-ALTER TABLE appointments
+ALTER TABLE turnos
   ADD COLUMN IF NOT EXISTS patient_affiliate_number TEXT,
   ADD COLUMN IF NOT EXISTS patient_address TEXT;
 
