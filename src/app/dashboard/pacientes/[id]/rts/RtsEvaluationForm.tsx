@@ -34,8 +34,12 @@ type FormData = {
   patient_body_weight: string
   patient_sex: string
   effusion: string
-  rom_extension: string
-  rom_flexion: string
+  rom_extension: string           // legacy
+  rom_flexion: string             // legacy
+  rom_extension_passive: string
+  rom_extension_active: string
+  rom_flexion_passive: string
+  rom_flexion_active: string
   pain_vas: string
   quad_affected: string
   quad_unaffected: string
@@ -68,6 +72,10 @@ const initialForm: FormData = {
   effusion: '',
   rom_extension: '',
   rom_flexion: '',
+  rom_extension_passive: '',
+  rom_extension_active: '',
+  rom_flexion_passive: '',
+  rom_flexion_active: '',
   pain_vas: '',
   quad_affected: '',
   quad_unaffected: '',
@@ -284,6 +292,10 @@ export default function RtsEvaluationForm({
       effusion: initialEval.effusion != null ? String(initialEval.effusion) : '',
       rom_extension: initialEval.rom_extension != null ? String(initialEval.rom_extension) : '',
       rom_flexion: initialEval.rom_flexion != null ? String(initialEval.rom_flexion) : '',
+      rom_extension_passive: initialEval.rom_extension_passive != null ? String(initialEval.rom_extension_passive) : (initialEval.rom_extension != null ? String(initialEval.rom_extension) : ''),
+      rom_extension_active:  initialEval.rom_extension_active  != null ? String(initialEval.rom_extension_active)  : (initialEval.rom_extension != null ? String(initialEval.rom_extension) : ''),
+      rom_flexion_passive:   initialEval.rom_flexion_passive   != null ? String(initialEval.rom_flexion_passive)   : (initialEval.rom_flexion != null ? String(initialEval.rom_flexion) : ''),
+      rom_flexion_active:    initialEval.rom_flexion_active    != null ? String(initialEval.rom_flexion_active)    : (initialEval.rom_flexion != null ? String(initialEval.rom_flexion) : ''),
       pain_vas: initialEval.pain_vas != null ? String(initialEval.pain_vas) : '',
       quad_affected: initialEval.quad_affected != null ? toDisplay(String(initialEval.quad_affected)) : '',
       quad_unaffected: initialEval.quad_unaffected != null ? toDisplay(String(initialEval.quad_unaffected)) : '',
@@ -369,6 +381,10 @@ export default function RtsEvaluationForm({
       effusion: form.effusion !== '' ? parseInt(form.effusion) : null,
       rom_extension: n(form.rom_extension),
       rom_flexion: n(form.rom_flexion),
+      rom_extension_passive: n(form.rom_extension_passive),
+      rom_extension_active:  n(form.rom_extension_active),
+      rom_flexion_passive:   n(form.rom_flexion_passive),
+      rom_flexion_active:    n(form.rom_flexion_active),
       pain_vas: n(form.pain_vas),
       quad_affected: forceUnit === 'N' ? (n(form.quad_affected) != null ? n(form.quad_affected)! / N_PER_KG : null) : n(form.quad_affected),
       quad_unaffected: forceUnit === 'N' ? (n(form.quad_unaffected) != null ? n(form.quad_unaffected)! / N_PER_KG : null) : n(form.quad_unaffected),
@@ -639,41 +655,76 @@ export default function RtsEvaluationForm({
           />
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <InputField
-                label="Déficit de extensión"
-                value={form.rom_extension}
-                onChange={v => set('rom_extension', v)}
-                unit="°"
-                placeholder="0"
-                min="0"
-              />
-              <PhaseStatus
-                value={form.rom_extension}
-                label={n(form.rom_extension) === 0 ? 'Extensión completa ✓' : `Déficit de ${form.rom_extension}° — requiere extensión completa`}
-                check={v => v === 0 ? 'pass' : 'fail'}
-              />
+            {/* Extensión */}
+            <div className="space-y-3">
+              <p className="text-[12px] font-medium text-text-secondary uppercase tracking-[0.05em]">Déficit de extensión</p>
+              <div>
+                <InputField
+                  label="Pasivo"
+                  value={form.rom_extension_passive}
+                  onChange={v => set('rom_extension_passive', v)}
+                  unit="°"
+                  placeholder="0"
+                  min="0"
+                />
+                <PhaseStatus
+                  value={form.rom_extension_passive}
+                  label={n(form.rom_extension_passive) === 0 ? 'Extensión completa ✓' : form.rom_extension_passive ? `Déficit ${form.rom_extension_passive}°` : ''}
+                  check={v => v === 0 ? 'pass' : 'fail'}
+                />
+              </div>
+              <div>
+                <InputField
+                  label="Activo"
+                  value={form.rom_extension_active}
+                  onChange={v => set('rom_extension_active', v)}
+                  unit="°"
+                  placeholder="0"
+                  min="0"
+                />
+                <PhaseStatus
+                  value={form.rom_extension_active}
+                  label={n(form.rom_extension_active) === 0 ? 'Extensión completa ✓' : form.rom_extension_active ? `Déficit ${form.rom_extension_active}°` : ''}
+                  check={v => v === 0 ? 'pass' : 'fail'}
+                />
+              </div>
             </div>
 
-            <div>
-              <InputField
-                label="Flexión alcanzada"
-                value={form.rom_flexion}
-                onChange={v => set('rom_flexion', v)}
-                unit="°"
-                placeholder="130"
-                min="0"
-                max="160"
-              />
-              <PhaseStatus
-                value={form.rom_flexion}
-                label={
-                  n(form.rom_flexion) !== null
-                    ? n(form.rom_flexion)! >= 120 ? '≥ 120° ✓' : n(form.rom_flexion)! >= 100 ? '100-119° — continuar trabajando' : '< 100° — criterio no alcanzado'
-                    : ''
-                }
-                check={v => v >= 120 ? 'pass' : v >= 100 ? 'warn' : 'fail'}
-              />
+            {/* Flexión */}
+            <div className="space-y-3">
+              <p className="text-[12px] font-medium text-text-secondary uppercase tracking-[0.05em]">Flexión alcanzada</p>
+              <div>
+                <InputField
+                  label="Pasivo"
+                  value={form.rom_flexion_passive}
+                  onChange={v => set('rom_flexion_passive', v)}
+                  unit="°"
+                  placeholder="130"
+                  min="0"
+                  max="160"
+                />
+                <PhaseStatus
+                  value={form.rom_flexion_passive}
+                  label={n(form.rom_flexion_passive) !== null ? n(form.rom_flexion_passive)! >= 120 ? '≥ 120° ✓' : n(form.rom_flexion_passive)! >= 100 ? '100-119°' : '< 100°' : ''}
+                  check={v => v >= 120 ? 'pass' : v >= 100 ? 'warn' : 'fail'}
+                />
+              </div>
+              <div>
+                <InputField
+                  label="Activo"
+                  value={form.rom_flexion_active}
+                  onChange={v => set('rom_flexion_active', v)}
+                  unit="°"
+                  placeholder="125"
+                  min="0"
+                  max="160"
+                />
+                <PhaseStatus
+                  value={form.rom_flexion_active}
+                  label={n(form.rom_flexion_active) !== null ? n(form.rom_flexion_active)! >= 120 ? '≥ 120° ✓' : n(form.rom_flexion_active)! >= 100 ? '100-119°' : '< 100°' : ''}
+                  check={v => v >= 120 ? 'pass' : v >= 100 ? 'warn' : 'fail'}
+                />
+              </div>
             </div>
 
             <div>

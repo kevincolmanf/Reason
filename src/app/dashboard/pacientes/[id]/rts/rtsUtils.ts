@@ -5,8 +5,12 @@ export interface RtsEvaluation {
   graft_type: string | null
   affected_side: string
   effusion: number | null
-  rom_extension: number | null
-  rom_flexion: number | null
+  rom_extension: number | null          // legacy
+  rom_flexion: number | null            // legacy
+  rom_extension_passive: number | null
+  rom_extension_active: number | null
+  rom_flexion_passive: number | null
+  rom_flexion_active: number | null
   pain_vas: number | null
   quad_affected: number | null
   quad_unaffected: number | null
@@ -94,8 +98,17 @@ export function computeMetrics(ev: RtsEvaluation): RtsMetrics {
 
   // Phase criteria
   if (ev.effusion !== null && ev.effusion !== undefined) { total++; if (ev.effusion <= 1) passed++ }
-  if (ev.rom_extension !== null && ev.rom_extension !== undefined) { total++; if (ev.rom_extension === 0) passed++ }
-  if (ev.rom_flexion !== null && ev.rom_flexion !== undefined) { total++; if (ev.rom_flexion >= 120) passed++ }
+  // ROM extensión: usar nuevos campos si existen, sino legacy
+  const extPassive = ev.rom_extension_passive ?? ev.rom_extension
+  const extActive  = ev.rom_extension_active  ?? ev.rom_extension
+  if (extPassive !== null && extPassive !== undefined) { total++; if (extPassive === 0) passed++ }
+  if (extActive  !== null && extActive  !== undefined) { total++; if (extActive  === 0) passed++ }
+
+  // ROM flexión: usar nuevos campos si existen, sino legacy
+  const flexPassive = ev.rom_flexion_passive ?? ev.rom_flexion
+  const flexActive  = ev.rom_flexion_active  ?? ev.rom_flexion
+  if (flexPassive !== null && flexPassive !== undefined) { total++; if (flexPassive >= 120) passed++ }
+  if (flexActive  !== null && flexActive  !== undefined) { total++; if (flexActive  >= 120) passed++ }
   if (ev.pain_vas !== null && ev.pain_vas !== undefined) { total++; if (ev.pain_vas <= 2) passed++ }
 
   // Strength
