@@ -251,12 +251,6 @@ export default function RtsEvaluationForm({
     if (isNaN(num)) return kgVal
     return (num * N_PER_KG).toFixed(1)
   }
-  const toKg = (displayVal: string): string => {
-    if (forceUnit === 'kg' || displayVal === '') return displayVal
-    const num = parseFloat(displayVal)
-    if (isNaN(num)) return displayVal
-    return (num / N_PER_KG).toFixed(3)
-  }
   const switchForceUnit = (newUnit: 'kg' | 'N') => {
     if (newUnit === forceUnit) return
     const forceKeys: (keyof FormData)[] = ['quad_affected', 'quad_unaffected', 'hamstring_affected', 'hamstring_unaffected']
@@ -400,7 +394,7 @@ export default function RtsEvaluationForm({
       grs: n(form.grs),
       notes: form.notes || null,
     }
-  }, [form, patient.age])
+  }, [form, patient.age, forceUnit, N_PER_KG])
 
   const handleViewAnalysis = useCallback(async () => {
     const evalData = buildEvalObject()
