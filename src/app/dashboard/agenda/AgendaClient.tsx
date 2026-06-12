@@ -410,6 +410,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                     setQuickMenu({ turno: t, x: rect.left, y: rect.bottom + 4 })
                   }}
                   className="absolute inset-0 px-1.5 py-1 w-full text-left cursor-pointer hover:opacity-80 transition-opacity"
+                  title={t.is_blocked ? (t.notes || 'Bloqueado') : `${t.patient_name} · ${formatTime(start)} - ${formatTime(end)}`}
                 >
                   {t.is_blocked ? (
                     <p className="text-[10px] leading-tight truncate opacity-70">{t.notes || 'Bloqueado'}</p>
