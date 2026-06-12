@@ -245,7 +245,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
   const [turnos, setTurnos]       = useState<Turno[]>([])
   const [loading, setLoading]     = useState(true)
   const [filterProf, setFilterProf] = useState<string>('all')
-  const [filterArea, setFilterArea] = useState<string>('all')
+  const [filterArea, setFilterArea] = useState<string>(() => initialAreas[0] ?? 'all')
   const [areas, setAreas] = useState<string[]>(initialAreas)
   const [slotInterval, setSlotInterval] = useState(initialSlotInterval)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -376,29 +376,6 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
           )
         })}
         <div className="absolute inset-0 pointer-events-none">
-          {compact && (() => {
-            // Show "+N" badges for overflow groups in week view
-            const overflowBySlot = new Map<string, { top: number; count: number }>()
-            dayTurnos.forEach(t => {
-              const layout = colLayout.get(t.id) ?? { col: 0, totalCols: 1 }
-              if (layout.col >= 3) {
-                const slotKey = t.start_time
-                const top = ((minutesFromMidnight(new Date(t.start_time)) - GRID_START) / GRID_TOTAL) * 100
-                const existing = overflowBySlot.get(slotKey)
-                if (existing) existing.count++
-                else overflowBySlot.set(slotKey, { top, count: 1 })
-              }
-            })
-            return Array.from(overflowBySlot.values()).map(({ top, count }, i) => (
-              <div
-                key={i}
-                className="absolute right-0.5 pointer-events-none z-10"
-                style={{ top: `${top}%` }}
-              >
-                <span className="text-[9px] bg-bg-secondary border-[0.5px] border-border rounded px-1 py-0.5 text-text-tertiary">+{count}</span>
-              </div>
-            ))
-          })()}
           {dayTurnos.map(t => {
             const start = new Date(t.start_time)
             const end   = new Date(t.end_time)
@@ -406,9 +383,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
             const height = ((minutesFromMidnight(end) - minutesFromMidnight(start)) / GRID_TOTAL) * 100
             const colorClass = blockColorClass(t)
             const layout = colLayout.get(t.id) ?? { col: 0, totalCols: 1 }
-            if (compact && layout.col >= 3) return null
-            const effectiveCols = compact ? Math.min(layout.totalCols, 3) : layout.totalCols
-            const widthPct = 100 / effectiveCols
+            const widthPct = 100 / layout.totalCols
             const leftPct  = layout.col * widthPct
 
             const waUrl = !t.is_blocked && t.patient_phone
@@ -582,22 +557,22 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
       {/* TABS DE ÁREA — se muestran solo si hay más de 1 área configurada */}
       {areas.length > 1 && (
         <div className="flex gap-1 mb-5 overflow-x-auto pb-1">
-          <button
-            onClick={() => setFilterArea('all')}
-            className={`shrink-0 px-4 py-2 rounded-lg text-[13px] font-medium transition-colors border-[0.5px] ${
-              filterArea === 'all'
-                ? 'bg-accent text-bg-primary border-accent'
-                : 'bg-bg-secondary text-text-secondary border-border hover:text-text-primary'
-            }`}
-          >
-            Todas
-            {(() => {
-              const n = view === 'day'
-                ? turnos.filter(t => isSameDay(new Date(t.start_time), selectedDay) && !t.is_blocked).length
-                : turnos.filter(t => !t.is_blocked).length
-              return n > 0 ? <span className="ml-1.5 text-[11px] opacity-70">{n}</span> : null
-            })()}
-          </button>
+          {view === 'day' && (
+            <button
+              onClick={() => setFilterArea('all')}
+              className={`shrink-0 px-4 py-2 rounded-lg text-[13px] font-medium transition-colors border-[0.5px] ${
+                filterArea === 'all'
+                  ? 'bg-accent text-bg-primary border-accent'
+                  : 'bg-bg-secondary text-text-secondary border-border hover:text-text-primary'
+              }`}
+            >
+              Todas
+              {(() => {
+                const n = turnos.filter(t => isSameDay(new Date(t.start_time), selectedDay) && !t.is_blocked).length
+                return n > 0 ? <span className="ml-1.5 text-[11px] opacity-70">{n}</span> : null
+              })()}
+            </button>
+          )}
           {areas.map(area => {
             const count = view === 'day'
               ? turnos.filter(t => isSameDay(new Date(t.start_time), selectedDay) && !t.is_blocked && t.area === area).length
