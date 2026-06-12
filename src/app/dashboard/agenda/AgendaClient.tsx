@@ -376,6 +376,29 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
           )
         })}
         <div className="absolute inset-0 pointer-events-none">
+          {compact && (() => {
+            // Show "+N" badges for overflow groups in week view
+            const overflowBySlot = new Map<string, { top: number; count: number }>()
+            dayTurnos.forEach(t => {
+              const layout = colLayout.get(t.id) ?? { col: 0, totalCols: 1 }
+              if (layout.col >= 3) {
+                const slotKey = t.start_time
+                const top = ((minutesFromMidnight(new Date(t.start_time)) - GRID_START) / GRID_TOTAL) * 100
+                const existing = overflowBySlot.get(slotKey)
+                if (existing) existing.count++
+                else overflowBySlot.set(slotKey, { top, count: 1 })
+              }
+            })
+            return Array.from(overflowBySlot.values()).map(({ top, count }, i) => (
+              <div
+                key={i}
+                className="absolute right-0.5 pointer-events-none z-10"
+                style={{ top: `${top}%` }}
+              >
+                <span className="text-[9px] bg-bg-secondary border-[0.5px] border-border rounded px-1 py-0.5 text-text-tertiary">+{count}</span>
+              </div>
+            ))
+          })()}
           {dayTurnos.map(t => {
             const start = new Date(t.start_time)
             const end   = new Date(t.end_time)
@@ -383,7 +406,9 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
             const height = ((minutesFromMidnight(end) - minutesFromMidnight(start)) / GRID_TOTAL) * 100
             const colorClass = blockColorClass(t)
             const layout = colLayout.get(t.id) ?? { col: 0, totalCols: 1 }
-            const widthPct = 100 / layout.totalCols
+            if (compact && layout.col >= 3) return null
+            const effectiveCols = compact ? Math.min(layout.totalCols, 3) : layout.totalCols
+            const widthPct = 100 / effectiveCols
             const leftPct  = layout.col * widthPct
 
             const waUrl = !t.is_blocked && t.patient_phone
