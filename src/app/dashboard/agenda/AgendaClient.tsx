@@ -698,8 +698,8 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                   <div className="absolute inset-0 left-[48px] grid" style={{ gridTemplateColumns: 'repeat(7, 1fr)' }}>
                     {weekDays.map((day) => {
                       const dt = visibleTurnos.filter(t => isSameDay(new Date(t.start_time), day))
-                      const fullWidthLayout = new Map(dt.map(t => [t.id, { col: 0, totalCols: 1 }]))
-                      return renderDayColumn(day, dt, fullWidthLayout, true)
+                      const layout = assignColumns(dt)
+                      return renderDayColumn(day, dt, layout, true)
                     })}
                   </div>
                 </div>
