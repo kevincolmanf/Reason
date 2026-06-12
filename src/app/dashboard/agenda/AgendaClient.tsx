@@ -258,6 +258,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
     defaultStatus?: string
   }>({ open: false })
   const [cloneModal, setCloneModal] = useState<Turno | null>(null)
+  const [quickMenu, setQuickMenu] = useState<{ turno: Turno; x: number; y: number } | null>(null)
 
   const supabaseRef = useRef(createClient())
 
@@ -398,14 +399,20 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                   <span className="absolute top-0.5 left-0.5 w-1.5 h-1.5 rounded-full bg-green-400 z-10" title="Recordatorio enviado" />
                 )}
                 <button
-                  onClick={() => openEdit(t)}
+                  onClick={e => {
+                    if (t.is_blocked) { openEdit(t); return }
+                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                    setQuickMenu({ turno: t, x: rect.left, y: rect.bottom + 4 })
+                  }}
                   className="absolute inset-0 px-1.5 py-1 w-full text-left cursor-pointer hover:opacity-80 transition-opacity"
                 >
                   {t.is_blocked ? (
                     <p className="text-[10px] leading-tight truncate opacity-70">{t.notes || 'Bloqueado'}</p>
                   ) : (
                     <>
-                      <p className="text-[10px] font-medium leading-tight truncate">{formatTime(start)} {t.patient_name}</p>
+                      <p className="text-[10px] font-medium leading-tight truncate">
+                        {formatTime(start)} {compact ? t.patient_name.split(' ')[0] : t.patient_name}
+                      </p>
                       {height > 4 && <p className="text-[9px] opacity-70 leading-tight truncate">{t.area}</p>}
                       {height > 4 && !compact && t.professional_name && <p className="text-[9px] opacity-50 leading-tight truncate">{t.professional_name}</p>}
                       {height > 6 && t.notes && <p className="text-[8px] opacity-50 leading-tight">◆ nota</p>}
@@ -702,6 +709,44 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
           ))}
         </div>
       </div>
+
+      {/* QUICK MENU */}
+      {quickMenu && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setQuickMenu(null)} />
+          <div
+            className="fixed z-50 bg-bg-secondary border-[0.5px] border-border rounded-xl shadow-xl py-1 min-w-[160px]"
+            style={{ top: Math.min(quickMenu.y, window.innerHeight - 130), left: Math.min(quickMenu.x, window.innerWidth - 180) }}
+          >
+            <p className="px-3 py-1.5 text-[11px] text-text-tertiary truncate border-b-[0.5px] border-border">{quickMenu.turno.patient_name}</p>
+            <button
+              onClick={() => { setQuickMenu(null); openEdit(quickMenu.turno) }}
+              className="w-full text-left px-3 py-2 text-[13px] hover:bg-bg-primary transition-colors"
+            >
+              Editar turno
+            </button>
+            {quickMenu.turno.patient_id && (
+              <a
+                href={`/dashboard/pacientes/${quickMenu.turno.patient_id}`}
+                onClick={() => setQuickMenu(null)}
+                className="block px-3 py-2 text-[13px] hover:bg-bg-primary transition-colors"
+              >
+                Ver paciente
+              </a>
+            )}
+            <button
+              onClick={() => {
+                const t = quickMenu.turno
+                setQuickMenu(null)
+                openNew(new Date(t.start_time), new Date(t.start_time).getHours(), new Date(t.start_time).getMinutes(), 'sobreturno')
+              }}
+              className="w-full text-left px-3 py-2 text-[13px] text-purple-400 hover:bg-bg-primary transition-colors"
+            >
+              Dar sobreturno
+            </button>
+          </div>
+        </>
+      )}
 
       {/* TURNO MODAL */}
       {modal.open && (

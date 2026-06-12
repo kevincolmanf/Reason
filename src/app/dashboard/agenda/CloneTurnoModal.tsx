@@ -87,6 +87,7 @@ export default function CloneTurnoModal({ turno, userId, orgId, onClose, onSaved
   const [appointmentType, setAppointmentType] = useState(turno.appointment_type ?? 'turno_comun')
   const [asSobreturno, setAsSobreturno]       = useState(false)
   const [saving, setSaving]                   = useState(false)
+  const [removedIndices, setRemovedIndices]   = useState<Set<number>>(new Set())
 
   const supabaseRef = useRef(createClient())
 
@@ -94,6 +95,7 @@ export default function CloneTurnoModal({ turno, userId, orgId, onClose, onSaved
     setSelectedDays(prev =>
       prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
     )
+    setRemovedIndices(new Set())
   }
 
   const previewDates = useMemo(
@@ -101,12 +103,17 @@ export default function CloneTurnoModal({ turno, userId, orgId, onClose, onSaved
     [selectedDays, count, weeklyRepeat]
   )
 
+  const activeDates = useMemo(
+    () => previewDates.filter((_, i) => !removedIndices.has(i)),
+    [previewDates, removedIndices]
+  )
+
   const handleCreate = async () => {
-    if (previewDates.length === 0) return
+    if (activeDates.length === 0) return
     setSaving(true)
 
     const [hh, mm] = startTime.split(':').map(Number)
-    const inserts = previewDates.map(date => {
+    const inserts = activeDates.map(date => {
       const start = new Date(date)
       start.setHours(hh, mm, 0, 0)
       const end = new Date(start.getTime() + durationMinutes * 60000)
@@ -129,6 +136,10 @@ export default function CloneTurnoModal({ turno, userId, orgId, onClose, onSaved
     await supabaseRef.current.from('turnos').insert(inserts)
     setSaving(false)
     onSaved()
+  }
+
+  const removeDate = (i: number) => {
+    setRemovedIndices(prev => { const s = new Set(prev); s.add(i); return s })
   }
 
   return (
@@ -227,17 +238,23 @@ export default function CloneTurnoModal({ turno, userId, orgId, onClose, onSaved
           {previewDates.length > 0 && (
             <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-3">
               <p className="text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-2">
-                Se crearán {previewDates.length} turno{previewDates.length !== 1 ? 's' : ''}
+                Se crearán {activeDates.length} turno{activeDates.length !== 1 ? 's' : ''}
               </p>
               <div className="flex flex-wrap gap-1.5">
-                {previewDates.slice(0, 12).map((d, i) => (
-                  <span key={i} className="text-[11px] bg-bg-secondary border-[0.5px] border-border rounded-md px-2 py-1 text-text-secondary">
-                    {formatDatePreview(d)}
-                  </span>
+                {previewDates.map((d, i) => (
+                  removedIndices.has(i) ? null : (
+                    <span key={i} className="flex items-center gap-1 text-[11px] bg-bg-secondary border-[0.5px] border-border rounded-md px-2 py-1 text-text-secondary">
+                      {formatDatePreview(d)}
+                      <button
+                        onClick={() => removeDate(i)}
+                        className="text-text-tertiary hover:text-red-400 transition-colors leading-none"
+                        title="Eliminar este turno"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  )
                 ))}
-                {previewDates.length > 12 && (
-                  <span className="text-[11px] text-text-tertiary px-2 py-1">+{previewDates.length - 12} más</span>
-                )}
               </div>
             </div>
           )}
@@ -250,10 +267,10 @@ export default function CloneTurnoModal({ turno, userId, orgId, onClose, onSaved
         <div className="flex gap-3 mt-6">
           <button
             onClick={handleCreate}
-            disabled={saving || previewDates.length === 0}
+            disabled={saving || activeDates.length === 0}
             className="bg-accent text-bg-primary px-5 py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
           >
-            {saving ? 'Creando...' : `Crear ${previewDates.length > 0 ? previewDates.length : ''} turno${previewDates.length !== 1 ? 's' : ''}`}
+            {saving ? 'Creando...' : `Crear ${activeDates.length > 0 ? activeDates.length : ''} turno${activeDates.length !== 1 ? 's' : ''}`}
           </button>
           <button onClick={onClose} className="text-text-secondary px-4 py-2.5 text-[13px] hover:text-text-primary">Cancelar</button>
         </div>
