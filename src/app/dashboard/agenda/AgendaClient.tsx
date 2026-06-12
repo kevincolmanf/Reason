@@ -238,6 +238,10 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()))
   const [selectedDay, setSelectedDay] = useState<Date>(() => new Date())
   const [view, setView] = useState<'week' | 'day'>('day')
+  const [showWeekend, setShowWeekend] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false
+    return localStorage.getItem('agenda_show_weekend') === 'true'
+  })
   const [turnos, setTurnos]       = useState<Turno[]>([])
   const [loading, setLoading]     = useState(true)
   const [filterProf, setFilterProf] = useState<string>('all')
@@ -262,7 +266,8 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
 
   const supabaseRef = useRef(createClient())
 
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
+  const allWeekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
+  const weekDays = showWeekend ? allWeekDays : allWeekDays.slice(0, 5)
   const weekEnd  = addDays(weekStart, 6)
 
   const fetchTurnos = useCallback(async () => {
@@ -503,6 +508,18 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
             <button onClick={() => setView('day')} className={`px-3 py-2 text-[13px] transition-colors ${view === 'day' ? 'bg-accent text-bg-primary' : 'text-text-secondary hover:text-text-primary'}`}>Día</button>
             <button onClick={() => setView('week')} className={`px-3 py-2 text-[13px] transition-colors ${view === 'week' ? 'bg-accent text-bg-primary' : 'text-text-secondary hover:text-text-primary'}`}>Semana</button>
           </div>
+          {view === 'week' && (
+            <button
+              onClick={() => setShowWeekend(v => {
+                const next = !v
+                localStorage.setItem('agenda_show_weekend', String(next))
+                return next
+              })}
+              className={`px-3 py-2 text-[13px] border-[0.5px] rounded-lg transition-colors ${showWeekend ? 'border-accent text-accent bg-accent/10' : 'border-border text-text-secondary hover:text-text-primary'}`}
+            >
+              Fin de semana
+            </button>
+          )}
 
           {professionals.length > 0 && (
             <select
@@ -632,7 +649,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
           </>
         ) : (
           <>
-            <div className="grid border-b-[0.5px] border-border" style={{ gridTemplateColumns: '48px repeat(7, 1fr)' }}>
+            <div className="grid border-b-[0.5px] border-border" style={{ gridTemplateColumns: `48px repeat(${weekDays.length}, 1fr)` }}>
               <div className="border-r-[0.5px] border-border" />
               {weekDays.map((day, i) => {
                 const isToday = isSameDay(day, today)
@@ -657,8 +674,8 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                   <span className="text-[13px] text-text-secondary">Cargando...</span>
                 </div>
               )}
-              <div className="grid" style={{ gridTemplateColumns: '48px repeat(7, 1fr)' }}>
-                <div className="col-span-8 relative" style={{ height: `${HOURS.length * 56}px` }}>
+              <div className="grid" style={{ gridTemplateColumns: `48px repeat(${weekDays.length}, 1fr)` }}>
+                <div className="relative" style={{ gridColumn: `1 / span ${weekDays.length + 1}`, height: `${HOURS.length * 56}px` }}>
                   {HOURS.map((h, i) => (
                     <div key={h} className="absolute left-0 right-0 border-t-[0.5px] border-border flex" style={{ top: `${i * 56}px`, height: '56px' }}>
                       <div className="w-[48px] shrink-0 pr-2 flex items-start justify-end pt-1">
@@ -681,8 +698,8 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                   <div className="absolute inset-0 left-[48px] grid" style={{ gridTemplateColumns: 'repeat(7, 1fr)' }}>
                     {weekDays.map((day) => {
                       const dt = visibleTurnos.filter(t => isSameDay(new Date(t.start_time), day))
-                      const layout = assignColumns(dt)
-                      return renderDayColumn(day, dt, layout, true)
+                      const fullWidthLayout = new Map(dt.map(t => [t.id, { col: 0, totalCols: 1 }]))
+                      return renderDayColumn(day, dt, fullWidthLayout, true)
                     })}
                   </div>
                 </div>
