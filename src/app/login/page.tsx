@@ -73,7 +73,7 @@ export default function LoginPage({
 
         <div className="text-center mt-8 text-[14px] text-text-secondary">
           ¿No tenés cuenta?{' '}
-          <Link href="/signup" className="text-text-primary font-medium hover:text-accent transition-colors">
+          <Link href={searchParams?.returnUrl ? `/signup?returnUrl=${encodeURIComponent(searchParams.returnUrl)}` : '/signup'} className="text-text-primary font-medium hover:text-accent transition-colors">
             Suscribirse
           </Link>
         </div>

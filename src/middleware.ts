@@ -95,6 +95,7 @@ export async function middleware(request: NextRequest) {
   if ((isAuthRoute || isAdminRoute) && !user) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
+    url.searchParams.set('returnUrl', pathname)
     return NextResponse.redirect(url)
   }
 
