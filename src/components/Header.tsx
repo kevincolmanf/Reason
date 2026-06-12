@@ -15,6 +15,7 @@ export default async function Header() {
   let ctx: ActiveContext = { type: 'personal', orgId: null }
   let hasAgendaAccess = false
   let agendaBlockedReason: 'plan' | 'member' = 'plan'
+  let isProOrAdmin = false
 
   if (user) {
     const [activeCtx, ownedOrgsResult, memberOrgsResult, userDataResult] = await Promise.all([
@@ -27,6 +28,7 @@ export default async function Header() {
     ctx = activeCtx
     const role = userDataResult.data?.role
     const isOwner = role === 'admin' || role === 'pro'
+    isProOrAdmin = isOwner
     const isOrgCtx = ctx.type === 'org' && !!ctx.orgId
 
     type MemberRow = { org_id: string; agenda_access: boolean | null; organizations: { id: string; name: string } | null }
@@ -99,7 +101,14 @@ export default async function Header() {
           )}
 
           {user ? (
-            <HeaderClient userMetadata={user.user_metadata} />
+            <HeaderClient
+              userMetadata={user.user_metadata}
+              hasAgendaAccess={hasAgendaAccess}
+              isProOrAdmin={isProOrAdmin}
+              ctx={ctx}
+              currentLabel={currentLabel}
+              available={available}
+            />
           ) : (
             <Link href="/login" className="text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
               Iniciar sesión
