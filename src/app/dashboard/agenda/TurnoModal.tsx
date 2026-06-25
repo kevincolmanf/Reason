@@ -168,6 +168,7 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
   const [historialLoaded, setHistorialLoaded] = useState(false)
   const [loadingHistorial, setLoadingHistorial] = useState(false)
   const [doubleBooking, setDoubleBooking]     = useState(false)
+  const [cancelingIds, setCancelingIds]       = useState<Set<string>>(new Set())
 
   const supabaseRef    = useRef(createClient())
   const searchTimeout  = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -413,6 +414,14 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
     await supabaseRef.current.from('turnos').delete().eq('id', turno!.id)
     setDeleting(false)
     onSaved()
+  }
+
+  const handleCancelHistorialTurno = async (id: string) => {
+    if (!confirm('¿Cancelar este turno?')) return
+    setCancelingIds(prev => new Set(prev).add(id))
+    await supabaseRef.current.from('turnos').update({ status: 'cancelado' }).eq('id', id)
+    setHistorial(prev => prev.map(t => t.id === id ? { ...t, status: 'cancelado' } : t))
+    setCancelingIds(prev => { const s = new Set(prev); s.delete(id); return s })
   }
 
   const valid = form.is_blocked
@@ -781,7 +790,17 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
                           <span className="text-text-secondary w-[96px] shrink-0 tabular-nums">{formatDateShort(new Date(h.start_time))}</span>
                           <span className="text-text-tertiary tabular-nums">{formatTime(new Date(h.start_time))}</span>
                           <span className="flex-1 truncate text-text-secondary">{h.area}</span>
-                          <span className="text-[10px] text-text-tertiary">{STATUS_LABEL[h.status] ?? h.status}</span>
+                          {h.status === 'cancelado' ? (
+                            <span className="text-[10px] text-text-tertiary">Cancelado</span>
+                          ) : (
+                            <button
+                              onClick={() => handleCancelHistorialTurno(h.id)}
+                              disabled={cancelingIds.has(h.id)}
+                              className="text-[10px] text-text-tertiary hover:text-red-400 transition-colors disabled:opacity-40 shrink-0"
+                            >
+                              {cancelingIds.has(h.id) ? 'Cancelando...' : 'Cancelar'}
+                            </button>
+                          )}
                         </div>
                       ))}
                     </div>
