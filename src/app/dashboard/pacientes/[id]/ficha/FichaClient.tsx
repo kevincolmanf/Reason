@@ -15,6 +15,12 @@ interface RecomendacionPdf {
   base64: string
 }
 
+interface Actualizacion {
+  id: string
+  fecha: string
+  texto: string
+}
+
 interface FichaData {
   fecha: string
   motivoConsulta: string
@@ -28,6 +34,7 @@ interface FichaData {
   recomendacionesTexto: string
   recomendacionesPdfs: RecomendacionPdf[]
   goniometria: GonioRecord[]
+  actualizaciones: Actualizacion[]
 }
 
 interface GonioRecord {
@@ -156,6 +163,7 @@ const emptyFicha: FichaData = {
   recomendacionesTexto: '',
   recomendacionesPdfs: [],
   goniometria: [],
+  actualizaciones: [],
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -193,6 +201,8 @@ export default function FichaClient({
   const [pdfProfesional, setPdfProfesional] = useState('')
   const [pdfUploadError, setPdfUploadError] = useState('')
   const [previewPdf, setPreviewPdf] = useState<{ url: string; nombre: string } | null>(null)
+  const [nuevaActFecha, setNuevaActFecha] = useState(new Date().toISOString().split('T')[0])
+  const [nuevaActTexto, setNuevaActTexto] = useState('')
 
   const supabaseRef = useRef(createClient())
 
@@ -213,6 +223,28 @@ export default function FichaClient({
 
   const handleChange = (field: keyof FichaData, value: string) => {
     setFicha(prev => ({ ...prev, [field]: value }))
+    setHasChanges(true)
+    setSaveStatus('idle')
+  }
+
+  // ─── Actualizaciones ───────────────────────────────────────────────────────
+
+  const handleAddActualizacion = () => {
+    if (!nuevaActTexto.trim()) return
+    const nueva: Actualizacion = {
+      id: crypto.randomUUID(),
+      fecha: nuevaActFecha,
+      texto: nuevaActTexto.trim(),
+    }
+    setFicha(prev => ({ ...prev, actualizaciones: [nueva, ...(prev.actualizaciones ?? [])] }))
+    setNuevaActTexto('')
+    setNuevaActFecha(new Date().toISOString().split('T')[0])
+    setHasChanges(true)
+    setSaveStatus('idle')
+  }
+
+  const handleDeleteActualizacion = (id: string) => {
+    setFicha(prev => ({ ...prev, actualizaciones: (prev.actualizaciones ?? []).filter(a => a.id !== id) }))
     setHasChanges(true)
     setSaveStatus('idle')
   }
@@ -545,6 +577,64 @@ export default function FichaClient({
             </div>
             {pdfUploadError && <p className="text-[12px] text-warning">{pdfUploadError}</p>}
           </div>
+        </div>
+      </div>
+
+      {/* ── ACTUALIZACIONES ────────────────────────────────────────────────── */}
+      <div className="mb-6">
+        <h2 className="text-[14px] uppercase tracking-[0.05em] text-text-secondary mb-3">Actualizaciones</h2>
+        <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 space-y-5">
+
+          {/* Formulario nueva actualización */}
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-end gap-3">
+              <div>
+                <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Fecha</label>
+                <input
+                  type="date"
+                  value={nuevaActFecha}
+                  onChange={e => setNuevaActFecha(e.target.value)}
+                  className="bg-bg-secondary border-[0.5px] border-border-strong rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:border-accent"
+                />
+              </div>
+            </div>
+            <textarea
+              rows={3}
+              value={nuevaActTexto}
+              onChange={e => setNuevaActTexto(e.target.value)}
+              placeholder="Ej: Paciente refiere mejoría del 60% en dolor lumbar. Incorpora extensiones en decúbito..."
+              className="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y"
+            />
+            <button
+              onClick={handleAddActualizacion}
+              disabled={!nuevaActTexto.trim()}
+              className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
+            >
+              + Agregar actualización
+            </button>
+          </div>
+
+          {/* Lista de actualizaciones */}
+          {(ficha.actualizaciones ?? []).length > 0 ? (
+            <div className="space-y-3 pt-2 border-t-[0.5px] border-border">
+              {(ficha.actualizaciones ?? []).map(act => (
+                <div key={act.id} className="group flex gap-4 py-3 border-b-[0.5px] border-border last:border-0">
+                  <div className="text-[12px] text-text-secondary tabular-nums shrink-0 pt-0.5 w-[80px]">
+                    {new Date(act.fecha + 'T12:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                  </div>
+                  <div className="flex-1 text-[14px] text-text-primary whitespace-pre-wrap">{act.texto}</div>
+                  <button
+                    onClick={() => handleDeleteActualizacion(act.id)}
+                    className="text-[11px] text-text-tertiary hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 pt-0.5"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-[13px] text-text-secondary pt-2 border-t-[0.5px] border-border">Sin actualizaciones todavía.</p>
+          )}
         </div>
       </div>
 
