@@ -575,12 +575,13 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
 
           {/* Bienestar */}
           <div>
-            <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-3">Cómo llegás hoy</label>
+            <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Cómo llegás hoy</label>
+            <p className="text-[11px] text-text-secondary mb-3">Del 1 al 10 según cómo te sentís. En las tres, <span className="text-text-primary font-medium">10 = mejor</span>.</p>
             <div className="space-y-4">
               {([
-                { label: 'Sueño', low: 'Dormí muy mal', high: 'Dormí muy bien', value: sleepQuality, set: setSleepQuality },
-                { label: 'Energía', low: 'Sin energía', high: 'Muy energético', value: energy, set: setEnergy },
-                { label: 'Estrés', low: 'Muy estresado', high: 'Sin estrés', value: stress, set: setStress },
+                { label: 'Sueño', low: '1 · Dormí muy mal', high: 'Dormí muy bien · 10', value: sleepQuality, set: setSleepQuality },
+                { label: 'Energía', low: '1 · Sin energía', high: 'Muy energético · 10', value: energy, set: setEnergy },
+                { label: 'Estrés', low: '1 · Muy estresado', high: 'Nada estresado · 10', value: stress, set: setStress },
               ] as const).map(({ label, low, high, value, set }) => (
                 <div key={label}>
                   <div className="flex justify-between items-center mb-1.5">

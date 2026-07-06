@@ -871,10 +871,11 @@ export default function LoadMonitorClient({
                       </button>
                     </div>
                     {(s.sleep_quality !== null || s.energy !== null || s.stress !== null) && (
-                      <div className="flex gap-x-4 mt-1 text-[11px] text-text-secondary">
+                      <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1 text-[11px] text-text-secondary items-center">
                         {s.sleep_quality !== null && <span>😴 Sueño <span className="font-medium text-text-primary">{s.sleep_quality}/10</span></span>}
                         {s.energy !== null && <span>⚡ Energía <span className="font-medium text-text-primary">{s.energy}/10</span></span>}
                         {s.stress !== null && <span>🧠 Estrés <span className="font-medium text-text-primary">{s.stress}/10</span></span>}
+                        <span className="text-[10px] opacity-60">(10 = mejor)</span>
                       </div>
                     )}
                     {exLogs.length > 0 && (
