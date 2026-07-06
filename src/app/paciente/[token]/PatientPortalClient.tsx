@@ -344,10 +344,31 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
   }, [currentMonday])
 
   return (
-    <div className="space-y-10 pb-12">
+    <div className="space-y-8 pb-12">
 
-      {/* ── HERO: SESIÓN DE HOY / PRÓXIMA SESIÓN ───────────── */}
-      <div ref={topRef}>
+      {/* ── ÍNDICE / NAVEGACIÓN RÁPIDA ─────────────────────── */}
+      <nav className="sticky top-2 z-20">
+        <div className="flex gap-1.5 p-1.5 bg-bg-secondary/95 backdrop-blur border-[0.5px] border-border rounded-full overflow-x-auto">
+          {([
+            { href: '#hoy', label: 'Hoy', icon: <path d="M22 12h-4l-3 9L9 3l-3 9H2" /> },
+            { href: '#semana', label: 'Semana', icon: <><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></> },
+            { href: '#registrar', label: 'Registrar', icon: <><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></> },
+            { href: '#historial', label: 'Historial', icon: <><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></> },
+          ] as const).map(({ href, label, icon }) => (
+            <a
+              key={href}
+              href={href}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium text-text-secondary hover:text-text-primary hover:bg-bg-primary whitespace-nowrap transition-colors"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{icon}</svg>
+              {label}
+            </a>
+          ))}
+        </div>
+      </nav>
+
+      {/* ── ZONA 1 · HERO: SESIÓN DE HOY / PRÓXIMA SESIÓN ──── */}
+      <div ref={topRef} id="hoy" className="scroll-mt-16">
         {todaySession ? (
           <div className="rounded-2xl border-[0.5px] border-accent/40 bg-accent/5 overflow-hidden">
             <div className="px-5 pt-5 pb-4 border-b-[0.5px] border-accent/20">
@@ -483,8 +504,11 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
         const weekGroups = groupSessionsByWeek(scheduledSessions, todayStr())
         const activeWeek = weekGroups.find(w => w.mondayStr === selectedWeekMonday) ?? weekGroups[0] ?? null
         return (
-          <section>
-            <h2 className="text-[20px] font-medium tracking-[-0.01em] mb-3">Mi semana</h2>
+          <section id="semana" className="scroll-mt-16">
+            <h2 className="flex items-center gap-2 text-[20px] font-medium tracking-[-0.01em] mb-3">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-accent"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+              Mi semana
+            </h2>
 
             {/* Chips de semana */}
             <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1 mb-4">
@@ -581,8 +605,11 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
       )}
 
       {/* ── REGISTRAR SESIÓN ───────────────────────────────── */}
-      <section>
-        <h2 className="text-[20px] font-medium tracking-[-0.01em] mb-1">Registrar sesión</h2>
+      <section id="registrar" className="scroll-mt-16">
+        <h2 className="flex items-center gap-2 text-[20px] font-medium tracking-[-0.01em] mb-1">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-accent"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+          Registrar sesión
+        </h2>
         <p className="text-[13px] text-text-secondary mb-5">Completá después de cada entrenamiento.</p>
 
         <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-5 space-y-6">
@@ -739,8 +766,11 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
 
       {/* ── ÚLTIMAS SESIONES ──────────────────────────────── */}
       {localSessions.length > 0 && (
-        <section>
-          <h2 className="text-[20px] font-medium tracking-[-0.01em] mb-3">Mis últimas sesiones</h2>
+        <section id="historial" className="scroll-mt-16">
+          <h2 className="flex items-center gap-2 text-[20px] font-medium tracking-[-0.01em] mb-3">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-accent"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
+            Mis últimas sesiones
+          </h2>
           <div className="bg-bg-primary border-[0.5px] border-border rounded-xl divide-y-[0.5px] divide-border overflow-hidden">
             {localSessions.slice(0, 5).map((s, idx) => (
               <div key={idx} className="px-4 py-3">
