@@ -57,6 +57,15 @@ function vasDotColor(value: number): string {
   return 'bg-red-500'
 }
 
+// Bienestar (sueño/energía/estrés) en escala 1–10 donde 10 = mejor:
+// verde arriba (bien), rojo abajo (mal). Inverso al VAS de dolor.
+function wellnessColor(value: number): string {
+  if (value >= 8) return 'text-green-500'
+  if (value >= 6) return 'text-yellow-500'
+  if (value >= 4) return 'text-orange-500'
+  return 'text-red-500'
+}
+
 /** Returns the ISO string of the Monday of the week containing the given date string (YYYY-MM-DD) */
 function getMondayOfWeek(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00')
@@ -826,9 +835,9 @@ export default function LoadMonitorClient({
                     </div>
                     {(s.sleep_quality !== null || s.energy !== null || s.stress !== null) && (
                       <div className="flex gap-x-3 mt-0.5 text-[11px] text-text-secondary">
-                        {s.sleep_quality !== null && <span>😴 <span className="font-medium text-text-primary">{s.sleep_quality}</span></span>}
-                        {s.energy !== null && <span>⚡ <span className="font-medium text-text-primary">{s.energy}</span></span>}
-                        {s.stress !== null && <span>🧠 <span className="font-medium text-text-primary">{s.stress}</span></span>}
+                        {s.sleep_quality !== null && <span>😴 <span className={`font-medium ${wellnessColor(s.sleep_quality)}`}>{s.sleep_quality}</span></span>}
+                        {s.energy !== null && <span>⚡ <span className={`font-medium ${wellnessColor(s.energy)}`}>{s.energy}</span></span>}
+                        {s.stress !== null && <span>🧠 <span className={`font-medium ${wellnessColor(s.stress)}`}>{s.stress}</span></span>}
                       </div>
                     )}
                     {exLogs.length > 0 && (
@@ -872,9 +881,9 @@ export default function LoadMonitorClient({
                     </div>
                     {(s.sleep_quality !== null || s.energy !== null || s.stress !== null) && (
                       <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1 text-[11px] text-text-secondary items-center">
-                        {s.sleep_quality !== null && <span>😴 Sueño <span className="font-medium text-text-primary">{s.sleep_quality}/10</span></span>}
-                        {s.energy !== null && <span>⚡ Energía <span className="font-medium text-text-primary">{s.energy}/10</span></span>}
-                        {s.stress !== null && <span>🧠 Estrés <span className="font-medium text-text-primary">{s.stress}/10</span></span>}
+                        {s.sleep_quality !== null && <span>😴 Sueño <span className={`font-medium ${wellnessColor(s.sleep_quality)}`}>{s.sleep_quality}/10</span></span>}
+                        {s.energy !== null && <span>⚡ Energía <span className={`font-medium ${wellnessColor(s.energy)}`}>{s.energy}/10</span></span>}
+                        {s.stress !== null && <span>🧠 Estrés <span className={`font-medium ${wellnessColor(s.stress)}`}>{s.stress}/10</span></span>}
                         <span className="text-[10px] opacity-60">(10 = mejor)</span>
                       </div>
                     )}

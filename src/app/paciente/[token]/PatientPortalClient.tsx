@@ -55,6 +55,20 @@ function vasColor(v: number) {
   return 'text-red-500'
 }
 
+// Bienestar 1–10 donde 10 = mejor: verde arriba, rojo abajo.
+function wellnessText(v: number) {
+  if (v >= 8) return 'text-green-500'
+  if (v >= 6) return 'text-yellow-500'
+  if (v >= 4) return 'text-orange-500'
+  return 'text-red-500'
+}
+function wellnessBg(v: number) {
+  if (v >= 8) return 'bg-green-500'
+  if (v >= 6) return 'bg-yellow-500'
+  if (v >= 4) return 'bg-orange-500'
+  return 'bg-red-500'
+}
+
 function VasSlider({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
   return (
     <div>
@@ -586,7 +600,7 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
                 <div key={label}>
                   <div className="flex justify-between items-center mb-1.5">
                     <span className="text-[13px] text-text-primary">{label}</span>
-                    {value !== null && <span className="text-[13px] font-medium text-accent">{value}</span>}
+                    {value !== null && <span className={`text-[13px] font-medium ${wellnessText(value)}`}>{value}</span>}
                   </div>
                   <div className="flex gap-1">
                     {[1,2,3,4,5,6,7,8,9,10].map(n => (
@@ -595,7 +609,7 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
                         onClick={() => set(n === value ? null : n)}
                         className={`flex-1 py-1.5 rounded text-[12px] font-medium transition-all ${
                           value === n
-                            ? 'bg-accent text-bg-primary'
+                            ? `${wellnessBg(n)} text-white`
                             : 'bg-bg-secondary text-text-secondary hover:text-text-primary border-[0.5px] border-border'
                         }`}
                       >
