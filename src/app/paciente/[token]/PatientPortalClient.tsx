@@ -695,15 +695,7 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
             />
           </div>
 
-          {/* Dolor PRE */}
-          <VasSlider label="Dolor antes de empezar (0–100)" value={vasPre} onChange={setVasPre} />
-
-          {/* Dolor DURANTE — solo para deporte/combinado */}
-          {showSportSection && (
-            <VasSlider label="Dolor durante la práctica (0–100)" value={vasDuring} onChange={setVasDuring} />
-          )}
-
-          {/* RPE */}
+          {/* RPE — junto a la duración, forman la carga (RPE × min) */}
           <div>
             <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-2">
               Esfuerzo general de la sesión (0–10)
@@ -726,8 +718,15 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
             {calculatedLoad !== null && calculatedLoad > 0 && <p className="text-[12px] text-accent mt-1">Carga calculada: {calculatedLoad} UA</p>}
           </div>
 
-          {/* Dolor POST */}
-          <VasSlider label="Dolor después de entrenar (0–100)" value={vasPost} onChange={setVasPost} />
+          {/* Dolor (agrupado): antes · durante · después de la sesión */}
+          <div className="space-y-4">
+            <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary">Dolor durante la sesión (0–100)</label>
+            <VasSlider label="Antes de empezar" value={vasPre} onChange={setVasPre} />
+            {showSportSection && (
+              <VasSlider label="Durante la práctica" value={vasDuring} onChange={setVasDuring} />
+            )}
+            <VasSlider label="Después de entrenar" value={vasPost} onChange={setVasPost} />
+          </div>
 
           {/* Confirmación al guardar sin datos */}
           {showConfirmEmpty && (
