@@ -220,21 +220,37 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
 
   // ─── Effects ───────────────────────────────────────────────────────────────
 
-  // Cargar clipboard de sesión (cross-plan)
+  // Cargar clipboard de sesión (cross-plan).
+  // Se re-lee al cambiar de plan, ante cambios de localStorage en otras
+  // pestañas y al recuperar el foco de la ventana, para que "Pegar de otro
+  // paciente" siempre use la última copia y no una vieja "colgada".
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem('reason_session_clipboard')
-      if (raw) {
+    const loadClipboard = () => {
+      try {
+        const raw = localStorage.getItem('reason_session_clipboard')
+        if (!raw) return
         const parsed = JSON.parse(raw)
         if (parsed?.sessionData && parsed?.date) {
           setCopiedSessionData(parsed.sessionData)
           setCopiedFromDate(parsed.date)
           setCopiedFromPlanId(parsed.planId ?? null)
         }
-      }
-    } catch { /* ignorar */ }
+      } catch { /* ignorar */ }
+    }
+
+    loadClipboard()
+
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'reason_session_clipboard') loadClipboard()
+    }
+    window.addEventListener('storage', onStorage)
+    window.addEventListener('focus', loadClipboard)
+    return () => {
+      window.removeEventListener('storage', onStorage)
+      window.removeEventListener('focus', loadClipboard)
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [plan.id])
 
   // Cargar pacientes
   useEffect(() => {
