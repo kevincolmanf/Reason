@@ -138,6 +138,29 @@ function VasSlider({
   )
 }
 
+// Trayectoria de dolor pre → durante → post (0–100). Solo se muestra cuando hay
+// al menos el dato pre, para ver cómo evoluciona el dolor dentro de la sesión.
+function PainTrajectory({ pre, during, post }: { pre: number | null; during: number | null; post: number | null }) {
+  if (pre === null && during === null) return null
+  const parts: Array<{ label: string; value: number }> = []
+  if (pre !== null) parts.push({ label: 'pre', value: pre })
+  if (during !== null) parts.push({ label: 'dur', value: during })
+  if (post !== null) parts.push({ label: 'post', value: post })
+  if (parts.length < 2) return null
+  return (
+    <span className="inline-flex items-center gap-1 text-[11px] text-text-secondary">
+      <span className="opacity-70">Dolor</span>
+      {parts.map((p, i) => (
+        <span key={p.label} className="inline-flex items-center gap-1">
+          {i > 0 && <span className="opacity-50">→</span>}
+          <span className={`font-medium ${vasColor(p.value)}`}>{p.value}</span>
+          <span className="opacity-60">{p.label}</span>
+        </span>
+      ))}
+    </span>
+  )
+}
+
 function SourceBadge({ source }: { source: string }) {
   if (source === 'patient') {
     return (
@@ -254,6 +277,50 @@ export default function LoadMonitorClient({
     return { acute, acwr: ewmaAcwr, validAcwr: sessions.length > 0, ewmaPreliminary, sessionsThisWeek: sessionsThisWeek.length, avgVasPost, monotony, strain }
   }, [sessions, today])
 
+  // ─── Disposición / readiness (bienestar individualizado) ────────────────────
+  // Evidencia (Saw 2016, Buchheit 2014): el bienestar subjetivo se interpreta
+  // contra la PROPIA línea base del paciente (z-score), no con umbrales fijos.
+  // Un mismo "7" significa cosas distintas según cada persona. Requiere historial
+  // mínimo para ser confiable; hasta entonces solo se muestran valores crudos.
+  const READINESS_MIN = 7
+  const readiness = useMemo(() => {
+    const items = ['sleep_quality', 'energy', 'stress'] as const
+    const withWellness = sessions.filter(
+      s => s.sleep_quality !== null || s.energy !== null || s.stress !== null
+    )
+    if (withWellness.length < READINESS_MIN) {
+      return { status: 'insufficient' as const, n: withWellness.length }
+    }
+
+    // Sesión más reciente con bienestar; el resto es la línea base individual.
+    const sorted = [...withWellness].sort((a, b) => b.session_date.localeCompare(a.session_date))
+    const latest = sorted[0]
+    const baseline = sorted.slice(1)
+
+    const zScores: number[] = []
+    for (const key of items) {
+      const todayVal = latest[key]
+      if (todayVal === null) continue
+      const vals = baseline.map(s => s[key]).filter((v): v is number => v !== null)
+      if (vals.length < READINESS_MIN - 1) continue
+      const mean = vals.reduce((a, b) => a + b, 0) / vals.length
+      const sd = Math.sqrt(vals.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / vals.length)
+      if (sd === 0) continue
+      zScores.push((todayVal - mean) / sd)
+    }
+
+    if (zScores.length === 0) return { status: 'insufficient' as const, n: withWellness.length }
+
+    const z = zScores.reduce((a, b) => a + b, 0) / zScores.length
+    let level: 'low' | 'below' | 'normal' | 'high'
+    if (z <= -1) level = 'low'
+    else if (z <= -0.5) level = 'below'
+    else if (z >= 1) level = 'high'
+    else level = 'normal'
+
+    return { status: 'ok' as const, z, level, date: latest.session_date }
+  }, [sessions])
+
   // ─── Consejo de carga ──────────────────────────────────────────────────────
 
   const advice = useMemo(() => {
@@ -266,6 +333,15 @@ export default function LoadMonitorClient({
       ? vasLast5.reduce((sum, s) => sum + (s.vas_post ?? 0), 0) / vasLast5.length
       : null
     const avgRpe5 = last5.reduce((sum, s) => sum + s.rpe, 0) / last5.length
+
+    // Trayectoria de dolor: cuánto sube el dolor de antes (pre) a después (post)
+    // dentro de la misma sesión, promediado en las últimas 5 con ambos datos.
+    const painDeltas = last5
+      .filter(s => s.vas_pre !== null && s.vas_post !== null)
+      .map(s => (s.vas_post as number) - (s.vas_pre as number))
+    const avgPainDelta = painDeltas.length > 0
+      ? painDeltas.reduce((a, b) => a + b, 0) / painDeltas.length
+      : null
 
     // Consecutive high-pain sessions (VAS post > 50)
     let consecutiveHighPain = 0
@@ -335,8 +411,33 @@ export default function LoadMonitorClient({
       alerts.push(`${consecutiveHighPain} sesiones consecutivas con dolor post > 50/100.`)
     }
 
+    // Dolor que sube dentro de la sesión (pre → post)
+    if (avgPainDelta !== null && avgPainDelta >= 20) {
+      if (action === 'subir') action = 'mantener'
+      alerts.push(`El dolor sube en promedio ${avgPainDelta.toFixed(0)} puntos de antes a después de la sesión (últimas 5). Revisar selección de ejercicios o intensidad.`)
+    }
+
+    // Concordancia bienestar ↔ carga: aquí el bienestar tiene impacto real.
+    // Señales que apuntan al mismo lado (baja disposición + esfuerzo alto o dolor
+    // en aumento) dan una recomendación de alta confianza; señales discordantes
+    // se dejan como contexto, sin sobre-reaccionar (evidencia: monitoreo
+    // multi-marcador por concordancia, no una fórmula compuesta única).
+    if (readiness.status === 'ok') {
+      if (readiness.level === 'low') {
+        const concurrent = avgRpe5 > 7 || (avgPainDelta !== null && avgPainDelta >= 20)
+        if (concurrent) {
+          if (action === 'subir') action = 'mantener'
+          alerts.push(`Disposición por debajo de lo habitual del paciente (sueño/energía/estrés) junto con ${avgRpe5 > 7 ? 'esfuerzo alto' : 'dolor que sube en sesión'}: señales concordantes. Priorizar recuperación antes de progresar.`)
+        } else {
+          reasons.push('Disposición por debajo de lo habitual del paciente. Sin otras señales de riesgo — vigilar en las próximas sesiones.')
+        }
+      } else if (readiness.level === 'high' && action === 'subir') {
+        reasons.push('Buena disposición (bienestar por encima de lo habitual). Respalda la progresión.')
+      }
+    }
+
     return { action, reasons, alerts }
-  }, [sessions, metrics])
+  }, [sessions, metrics, readiness])
 
   // ─── Weekly chart data — last 8 weeks ──────────────────────────────────────
 
@@ -480,6 +581,13 @@ export default function LoadMonitorClient({
     subir: { label: 'Progresar carga', sub: 'Aumentar gradualmente', bg: 'bg-green-500/10', border: 'border-green-500/30', text: 'text-green-400', icon: '↑' },
   }
 
+  const readinessConfig = {
+    low: { label: 'Disposición baja', sub: 'Sueño/energía/estrés por debajo de lo habitual del paciente', bg: 'bg-red-500/10', border: 'border-red-500/30', text: 'text-red-400' },
+    below: { label: 'Algo por debajo', sub: 'Ligeramente por debajo de su promedio', bg: 'bg-orange-500/10', border: 'border-orange-500/30', text: 'text-orange-400' },
+    normal: { label: 'Disposición normal', sub: 'En línea con el promedio del paciente', bg: 'bg-bg-secondary', border: 'border-border', text: 'text-text-primary' },
+    high: { label: 'Buena disposición', sub: 'Por encima de lo habitual del paciente', bg: 'bg-green-500/10', border: 'border-green-500/30', text: 'text-green-400' },
+  }
+
   return (
     <div className="space-y-10">
 
@@ -509,7 +617,7 @@ export default function LoadMonitorClient({
               ))}
             </div>
           )}
-          <p className="text-[11px] text-text-secondary">Basado en ACWR (EWMA), dolor y RPE de las últimas 5 sesiones. Siempre aplicar criterio clínico.{metrics.ewmaPreliminary ? ' Historial < 2 semanas — estimación preliminar.' : ''}</p>
+          <p className="text-[11px] text-text-secondary">Basado en ACWR (EWMA), dolor (incluida la trayectoria pre→post), RPE y disposición del paciente en las últimas 5 sesiones. El bienestar se pondera por concordancia con las demás señales, no como fórmula aislada. Siempre aplicar criterio clínico.{metrics.ewmaPreliminary ? ' Historial < 2 semanas — estimación preliminar.' : ''}</p>
         </div>
       ) : sessions.length > 0 ? (
         <div className="bg-bg-secondary border-[0.5px] border-border rounded-xl p-5 text-[13px] text-text-secondary">
@@ -559,6 +667,28 @@ export default function LoadMonitorClient({
           }
         />
       </div>
+
+      {/* ── 1b. Disposición / readiness ────────────────────────────────────── */}
+      {readiness.status === 'ok' ? (
+        <div className={`border-[0.5px] rounded-xl p-4 flex items-center justify-between gap-4 ${readinessConfig[readiness.level].bg} ${readinessConfig[readiness.level].border}`}>
+          <div>
+            <p className={`text-[14px] font-medium ${readinessConfig[readiness.level].text}`}>
+              Disposición · {readinessConfig[readiness.level].label}
+            </p>
+            <p className="text-[12px] text-text-secondary">
+              {readinessConfig[readiness.level].sub} · última sesión con datos: {readiness.date}
+            </p>
+          </div>
+          <span className={`text-[20px] font-medium shrink-0 ${readinessConfig[readiness.level].text}`}>
+            {readiness.z > 0 ? '+' : ''}{readiness.z.toFixed(1)}
+            <span className="text-[11px] text-text-secondary ml-1">z</span>
+          </span>
+        </div>
+      ) : (
+        <p className="text-[12px] text-text-secondary">
+          Disposición (bienestar): se necesitan al menos {READINESS_MIN} sesiones con datos de bienestar para individualizar contra la línea base del paciente. Registradas hasta ahora: {readiness.n}.
+        </p>
+      )}
 
       {/* ── 2. Formulario ──────────────────────────────────────────────────── */}
       <div className="bg-bg-primary border-[0.5px] border-border rounded-xl overflow-hidden">
@@ -840,6 +970,7 @@ export default function LoadMonitorClient({
                         {s.stress !== null && <span>🧠 <span className={`font-medium ${wellnessColor(s.stress)}`}>{s.stress}</span></span>}
                       </div>
                     )}
+                    <div className="mt-0.5"><PainTrajectory pre={s.vas_pre} during={s.vas_during} post={s.vas_post} /></div>
                     {exLogs.length > 0 && (
                       <div className="mt-2 pt-2 border-t-[0.5px] border-border">
                         <button onClick={() => toggleSession(s.id)} className="text-[11px] text-accent font-medium">
@@ -887,6 +1018,7 @@ export default function LoadMonitorClient({
                         <span className="text-[10px] opacity-60">(10 = mejor)</span>
                       </div>
                     )}
+                    <div className="mt-1"><PainTrajectory pre={s.vas_pre} during={s.vas_during} post={s.vas_post} /></div>
                     {exLogs.length > 0 && (
                       <div className="mt-2 pt-2 border-t-[0.5px] border-border">
                         <button onClick={() => toggleSession(s.id)} className="text-[11px] text-accent font-medium hover:opacity-80 transition-opacity">
