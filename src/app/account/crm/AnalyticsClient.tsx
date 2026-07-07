@@ -167,8 +167,39 @@ function monthLabel(key: string) {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
+// Etiqueta completa: "Julio 2026"
+function monthLabelLong(key: string) {
+  const [y, m] = key.split('-').map(Number)
+  const d = new Date(y, m - 1, 1)
+  const s = d.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
+  return s.charAt(0).toUpperCase() + s.slice(1)
+}
+
+// Clave del mes anterior a partir de una clave "YYYY-MM"
+function prevKey(key: string) {
+  const [y, m] = key.split('-').map(Number)
+  const d = new Date(y, m - 2, 1)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
 export default function AnalyticsClient({ analytics }: { analytics: Analytics }) {
-  const { rawTurnos, upcoming, thisMonthLabel, lastMonthLabel, thisMonthKey, lastMonthKey, totalPatients, activePatients, sourceDist } = analytics
+  const { rawTurnos, upcoming, thisMonthKey, totalPatients, activePatients, sourceDist } = analytics
+
+  // Mes seleccionado para ver analíticas (por defecto, el mes actual)
+  const [selectedMonthKey, setSelectedMonthKey] = useState<string>(thisMonthKey)
+
+  // Meses disponibles según los turnos cargados, incluyendo siempre el mes actual, descendente
+  const availableMonths = useMemo(() => {
+    const set = new Set<string>()
+    rawTurnos.forEach(t => set.add(t.start_time.slice(0, 7)))
+    set.add(thisMonthKey)
+    return Array.from(set).sort().reverse()
+  }, [rawTurnos, thisMonthKey])
+
+  const isCurrentMonth = selectedMonthKey === thisMonthKey
+  const prevMonthKey = prevKey(selectedMonthKey)
+  const selMonthLabel = monthLabelLong(selectedMonthKey)
+  const prevMonthLabel = monthLabelLong(prevMonthKey)
 
   // Derive available areas
   const areas = useMemo(() => {
@@ -186,22 +217,22 @@ export default function AnalyticsClient({ analytics }: { analytics: Analytics })
   )
 
   const filteredThis = useMemo(() =>
-    filtered.filter(t => t.start_time.startsWith(thisMonthKey)),
-    [filtered, thisMonthKey]
+    filtered.filter(t => t.start_time.startsWith(selectedMonthKey)),
+    [filtered, selectedMonthKey]
   )
   const filteredLast = useMemo(() =>
-    filtered.filter(t => t.start_time.startsWith(lastMonthKey)),
-    [filtered, lastMonthKey]
+    filtered.filter(t => t.start_time.startsWith(prevMonthKey)),
+    [filtered, prevMonthKey]
   )
 
-  // Last 5 month keys in chronological order
+  // 5 meses terminando en el mes seleccionado, orden cronológico
   const monthKeys = useMemo(() => {
-    const [y, m] = thisMonthKey.split('-').map(Number)
+    const [y, m] = selectedMonthKey.split('-').map(Number)
     return Array.from({ length: 5 }, (_, i) => {
       const d = new Date(y, m - 1 - (4 - i), 1)
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
     })
-  }, [thisMonthKey])
+  }, [selectedMonthKey])
 
   const t = useMemo(() => computeStats(filteredThis), [filteredThis])
   const l = useMemo(() => computeStats(filteredLast), [filteredLast])
@@ -236,6 +267,30 @@ export default function AnalyticsClient({ analytics }: { analytics: Analytics })
   return (
     <div className="space-y-10">
 
+      {/* Selector de mes */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <span className="text-[13px] text-text-secondary">Mes:</span>
+        <select
+          value={selectedMonthKey}
+          onChange={e => setSelectedMonthKey(e.target.value)}
+          className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-1.5 text-[13px] text-text-primary focus:outline-none focus:border-accent capitalize"
+        >
+          {availableMonths.map(mk => (
+            <option key={mk} value={mk}>
+              {monthLabelLong(mk)}{mk === thisMonthKey ? ' (actual)' : ''}
+            </option>
+          ))}
+        </select>
+        {!isCurrentMonth && (
+          <button
+            onClick={() => setSelectedMonthKey(thisMonthKey)}
+            className="text-[13px] text-text-secondary hover:text-text-primary transition-colors underline underline-offset-2"
+          >
+            Volver al mes actual
+          </button>
+        )}
+      </div>
+
       {/* Area filter */}
       {areas.length > 0 && (
         <div className="flex items-center gap-3 flex-wrap">
@@ -260,18 +315,20 @@ export default function AnalyticsClient({ analytics }: { analytics: Analytics })
 
       {/* KPI Cards */}
       <div>
-        <h2 className="text-[16px] font-medium mb-4">{thisMonthLabel}{selectedArea !== 'all' ? ` — ${selectedArea}` : ''}</h2>
+        <h2 className="text-[16px] font-medium mb-4">{selMonthLabel}{selectedArea !== 'all' ? ` — ${selectedArea}` : ''}</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          <KPICard label="Turnos totales" value={t.total} prev={l.total} prevLabel={lastMonthLabel} />
-          <KPICard label="Cargados" value={cargadosThis} prev={cargadosLast} prevLabel={lastMonthLabel} />
-          <KPICard label="Presentes" value={t.presentes} prev={l.presentes} prevLabel={lastMonthLabel} />
-          <KPICard label="Ausentes" value={t.ausentes} prev={l.ausentes} prevLabel={lastMonthLabel} higherIsBetter={false} />
-          <KPICard label="Cancelados" value={t.cancelados} prev={l.cancelados} prevLabel={lastMonthLabel} higherIsBetter={false} />
-          <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">
-            <div className="text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em] mb-3">Pendientes del mes</div>
-            <div className="font-mono text-[32px] font-medium text-accent tracking-[-0.02em]">{upcoming}</div>
-            <div className="text-[12px] mt-2 text-text-tertiary">turnos agendados restantes</div>
-          </div>
+          <KPICard label="Turnos totales" value={t.total} prev={l.total} prevLabel={prevMonthLabel} />
+          <KPICard label="Cargados" value={cargadosThis} prev={cargadosLast} prevLabel={prevMonthLabel} />
+          <KPICard label="Presentes" value={t.presentes} prev={l.presentes} prevLabel={prevMonthLabel} />
+          <KPICard label="Ausentes" value={t.ausentes} prev={l.ausentes} prevLabel={prevMonthLabel} higherIsBetter={false} />
+          <KPICard label="Cancelados" value={t.cancelados} prev={l.cancelados} prevLabel={prevMonthLabel} higherIsBetter={false} />
+          {isCurrentMonth && (
+            <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">
+              <div className="text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em] mb-3">Pendientes del mes</div>
+              <div className="font-mono text-[32px] font-medium text-accent tracking-[-0.02em]">{upcoming}</div>
+              <div className="text-[12px] mt-2 text-text-tertiary">turnos agendados restantes</div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -293,7 +350,7 @@ export default function AnalyticsClient({ analytics }: { analytics: Analytics })
             <div className="text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em] mb-3">% Ausencia del mes</div>
             <div className={`font-mono text-[32px] font-medium tracking-[-0.02em] ${ausenteRate > 20 ? 'text-red-400' : 'text-text-primary'}`}>{ausenteRate}%</div>
             <div className={`text-[12px] mt-2 ${ausenteRate > prevAusenteRate ? 'text-red-400' : 'text-emerald-400'}`}>
-              {delta(ausenteRate, prevAusenteRate)} <span className="text-text-tertiary">vs {lastMonthLabel}</span>
+              {delta(ausenteRate, prevAusenteRate)} <span className="text-text-tertiary">vs {prevMonthLabel}</span>
             </div>
           </div>
         </div>
@@ -306,7 +363,7 @@ export default function AnalyticsClient({ analytics }: { analytics: Analytics })
             <div className="text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em] mb-3">% Ausencia del mes</div>
             <div className={`font-mono text-[32px] font-medium tracking-[-0.02em] ${ausenteRate > 20 ? 'text-red-400' : 'text-text-primary'}`}>{ausenteRate}%</div>
             <div className={`text-[12px] mt-2 ${ausenteRate > prevAusenteRate ? 'text-red-400' : 'text-emerald-400'}`}>
-              {delta(ausenteRate, prevAusenteRate)} <span className="text-text-tertiary">vs {lastMonthLabel}</span>
+              {delta(ausenteRate, prevAusenteRate)} <span className="text-text-tertiary">vs {prevMonthLabel}</span>
             </div>
           </div>
         </div>
@@ -371,7 +428,7 @@ export default function AnalyticsClient({ analytics }: { analytics: Analytics })
       {byProfessional.length > 0 && (
         <div>
           <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-            <h2 className="text-[16px] font-medium">Por profesional — {thisMonthLabel}{selectedArea !== 'all' ? ` — ${selectedArea}` : ''}</h2>
+            <h2 className="text-[16px] font-medium">Por profesional — {selMonthLabel}{selectedArea !== 'all' ? ` — ${selectedArea}` : ''}</h2>
             <div className="flex items-center gap-2">
               <span className="text-[12px] text-text-secondary">Alerta turnos/hora ≥</span>
               <input
@@ -495,7 +552,7 @@ export default function AnalyticsClient({ analytics }: { analytics: Analytics })
       {byDayOfWeek.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">
-            <div className="text-[12px] text-text-secondary mb-4">Carga por día de la semana — {thisMonthLabel}{selectedArea !== 'all' ? ` — ${selectedArea}` : ''}</div>
+            <div className="text-[12px] text-text-secondary mb-4">Carga por día de la semana — {selMonthLabel}{selectedArea !== 'all' ? ` — ${selectedArea}` : ''}</div>
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={byDayOfWeek} margin={{ left: -20 }}>
                 <CartesianGrid vertical={false} stroke={GRID_CLR} />
@@ -515,7 +572,7 @@ export default function AnalyticsClient({ analytics }: { analytics: Analytics })
           {/* Estado de turnos — pie */}
           {t.total > 0 && (
             <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">
-              <div className="text-[12px] text-text-secondary mb-4">Distribución de estados — {thisMonthLabel}{selectedArea !== 'all' ? ` — ${selectedArea}` : ''}</div>
+              <div className="text-[12px] text-text-secondary mb-4">Distribución de estados — {selMonthLabel}{selectedArea !== 'all' ? ` — ${selectedArea}` : ''}</div>
               <ResponsiveContainer width="100%" height={200}>
                 <PieChart>
                   <Pie data={breakdownData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={75} label={({ name, percent }: { name?: string; percent?: number }) => `${name ?? ''} ${Math.round((percent ?? 0) * 100)}%`} labelLine={false}>
@@ -532,7 +589,7 @@ export default function AnalyticsClient({ analytics }: { analytics: Analytics })
       {/* Horas pico */}
       {t.total > 0 && (
         <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">
-          <div className="text-[12px] text-text-secondary mb-4">Horas pico — {thisMonthLabel}{selectedArea !== 'all' ? ` — ${selectedArea}` : ''}</div>
+          <div className="text-[12px] text-text-secondary mb-4">Horas pico — {selMonthLabel}{selectedArea !== 'all' ? ` — ${selectedArea}` : ''}</div>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={byHour} margin={{ left: -24 }}>
               <CartesianGrid vertical={false} stroke={GRID_CLR} />
@@ -552,7 +609,7 @@ export default function AnalyticsClient({ analytics }: { analytics: Analytics })
 
       {t.total === 0 && (
         <div className="bg-bg-secondary border-[0.5px] border-border rounded-xl p-12 text-center">
-          <p className="text-[14px] text-text-secondary">No hay turnos registrados en {thisMonthLabel}{selectedArea !== 'all' ? ` para ${selectedArea}` : ''}.</p>
+          <p className="text-[14px] text-text-secondary">No hay turnos registrados en {selMonthLabel}{selectedArea !== 'all' ? ` para ${selectedArea}` : ''}.</p>
         </div>
       )}
     </div>

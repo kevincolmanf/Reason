@@ -41,7 +41,8 @@ export default async function CRMPage() {
   const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1)
   const sixtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
 
-  const fiveMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 4, 1)
+  // Ventana amplia para poder consultar analíticas de meses pasados
+  const twelveMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 11, 1)
 
   const [
     { data: patientsRaw },
@@ -54,7 +55,7 @@ export default async function CRMPage() {
       .select('professional_name, start_time, end_time, area, status, appointment_type')
       .eq('org_id', orgRow.id)
       .not('is_blocked', 'is', true)
-      .gte('start_time', fiveMonthsAgo.toISOString())
+      .gte('start_time', twelveMonthsAgo.toISOString())
       .lt('start_time', nextMonthStart.toISOString()),
     admin.from('turnos')
       .select('id')
