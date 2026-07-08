@@ -27,11 +27,19 @@ interface FichaData {
   historiaEnfermedad: string
   factoresAgravantes: string
   factoresAtenuantes: string
+  dolorEva: string
+  dolorRitmo: string
+  dolorMomento: string
+  dolorTipo: string
+  dolorIrradiacion: string
   antecedentes: string
   examenInspeccion: string
   examenFuerza: string
   examenTest: string
   diagnostico: string
+  objetivosPaciente: string
+  objetivosCortoPlazo: string
+  objetivosLargoPlazo: string
   planTratamiento: string
   recomendacionesTexto: string
   recomendacionesPdfs: RecomendacionPdf[]
@@ -158,11 +166,19 @@ const emptyFicha: FichaData = {
   historiaEnfermedad: '',
   factoresAgravantes: '',
   factoresAtenuantes: '',
+  dolorEva: '',
+  dolorRitmo: '',
+  dolorMomento: '',
+  dolorTipo: '',
+  dolorIrradiacion: '',
   antecedentes: '',
   examenInspeccion: '',
   examenFuerza: '',
   examenTest: '',
   diagnostico: '',
+  objetivosPaciente: '',
+  objetivosCortoPlazo: '',
+  objetivosLargoPlazo: '',
   planTratamiento: '',
   recomendacionesTexto: '',
   recomendacionesPdfs: [],
@@ -229,6 +245,13 @@ export default function FichaClient({
     setFicha(prev => ({ ...prev, [field]: value }))
     setHasChanges(true)
     setSaveStatus('idle')
+  }
+
+  // Toggle de opciones múltiples guardadas como CSV (ej: momento del dolor)
+  const toggleCsv = (field: keyof FichaData, opt: string) => {
+    const current = String(ficha[field] ?? '').split(', ').filter(Boolean)
+    const next = current.includes(opt) ? current.filter(o => o !== opt) : [...current, opt]
+    handleChange(field, next.join(', '))
   }
 
   // ─── Actualizaciones ───────────────────────────────────────────────────────
@@ -404,11 +427,21 @@ export default function FichaClient({
     addSection('2. HISTORIA DE LA ENFERMEDAD ACTUAL', ficha.historiaEnfermedad)
     addSection('Factores agravantes', ficha.factoresAgravantes)
     addSection('Factores atenuantes', ficha.factoresAtenuantes)
+    addSection('Caracterización del dolor', [
+      ficha.dolorEva && `EVA: ${ficha.dolorEva}/10`,
+      ficha.dolorRitmo && `Ritmo: ${ficha.dolorRitmo}`,
+      ficha.dolorMomento && `Momento: ${ficha.dolorMomento}`,
+      ficha.dolorTipo && `Tipo: ${ficha.dolorTipo}`,
+      ficha.dolorIrradiacion && `Irradiación: ${ficha.dolorIrradiacion}`,
+    ].filter(Boolean).join('  |  '))
     addSection('3. ANTECEDENTES', ficha.antecedentes)
     addSection('4. EXAMEN FÍSICO — Inspección y Palpación', ficha.examenInspeccion)
     addSection('Fuerza', ficha.examenFuerza)
     addSection('Test Especiales', ficha.examenTest)
     addSection('5. DIAGNÓSTICO KINÉSICO', ficha.diagnostico)
+    addSection('Objetivos y expectativas del paciente', ficha.objetivosPaciente)
+    addSection('Objetivos a corto plazo', ficha.objetivosCortoPlazo)
+    addSection('Objetivos a largo plazo', ficha.objetivosLargoPlazo)
     addSection('6. PLAN DE TRATAMIENTO', ficha.planTratamiento)
 
     const textoRec = ficha.recomendacionesTexto || ''
@@ -496,6 +529,64 @@ export default function FichaClient({
           </div>
         </div>
 
+        {/* Caracterización del dolor */}
+        <div className="bg-bg-secondary p-6 rounded-lg border-[0.5px] border-border space-y-5">
+          <h3 className="text-[14px] uppercase tracking-[0.05em] text-text-primary font-medium border-b-[0.5px] border-border pb-2">Caracterización del dolor</h3>
+
+          <div>
+            <label className="block text-[12px] text-text-secondary mb-2">Intensidad (EVA 0–10)</label>
+            <div className="flex flex-wrap gap-1.5">
+              {[0,1,2,3,4,5,6,7,8,9,10].map(n => {
+                const sel = ficha.dolorEva === String(n)
+                return (
+                  <button key={n} onClick={() => handleChange('dolorEva', sel ? '' : String(n))}
+                    className={`w-9 h-9 rounded-lg text-[13px] font-medium border-[0.5px] transition-colors ${sel ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-primary border-border-strong text-text-primary hover:border-accent'}`}
+                  >{n}</button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[12px] text-text-secondary mb-2">Ritmo</label>
+            <div className="flex flex-wrap gap-2">
+              {['Mecánico', 'Inflamatorio', 'Mixto'].map(opt => {
+                const sel = ficha.dolorRitmo === opt
+                return (
+                  <button key={opt} onClick={() => handleChange('dolorRitmo', sel ? '' : opt)}
+                    className={`px-3 py-1.5 rounded-lg text-[13px] border-[0.5px] transition-colors ${sel ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-primary border-border-strong text-text-secondary hover:text-text-primary'}`}
+                  >{opt}</button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[12px] text-text-secondary mb-2">Momento de aparición <span className="text-text-tertiary normal-case">(podés marcar varios)</span></label>
+            <div className="flex flex-wrap gap-2">
+              {['Reposo', 'Actividad', 'Nocturno', 'Matinal'].map(opt => {
+                const sel = String(ficha.dolorMomento ?? '').split(', ').filter(Boolean).includes(opt)
+                return (
+                  <button key={opt} onClick={() => toggleCsv('dolorMomento', opt)}
+                    className={`px-3 py-1.5 rounded-lg text-[13px] border-[0.5px] transition-colors ${sel ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-primary border-border-strong text-text-secondary hover:text-text-primary'}`}
+                  >{opt}</button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[12px] text-text-secondary mb-1">Tipo / carácter</label>
+              <input type="text" value={ficha.dolorTipo} onChange={e => handleChange('dolorTipo', e.target.value)} placeholder="Punzante, quemante, opresivo, eléctrico..." className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent" />
+            </div>
+            <div>
+              <label className="block text-[12px] text-text-secondary mb-1">Irradiación</label>
+              <input type="text" value={ficha.dolorIrradiacion} onChange={e => handleChange('dolorIrradiacion', e.target.value)} placeholder="Ej: irradia a cara posterior de muslo hasta rodilla..." className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent" />
+            </div>
+          </div>
+        </div>
+
         <div>
           <label className="block text-[12px] uppercase tracking-[0.05em] text-accent mb-2 font-medium">3. Antecedentes</label>
           <textarea rows={3} value={ficha.antecedentes} onChange={e => handleChange('antecedentes', e.target.value)} placeholder="Médicos, quirúrgicos, medicación actual..." className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y" />
@@ -522,9 +613,28 @@ export default function FichaClient({
           <textarea rows={3} value={ficha.diagnostico} onChange={e => handleChange('diagnostico', e.target.value)} placeholder="Conclusión de los hallazgos y diagnóstico de movimiento..." className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y" />
         </div>
 
+        {/* Objetivos */}
+        <div className="bg-bg-secondary p-6 rounded-lg border-[0.5px] border-border space-y-5">
+          <h3 className="text-[14px] uppercase tracking-[0.05em] text-text-primary font-medium border-b-[0.5px] border-border pb-2">Objetivos</h3>
+          <div>
+            <label className="block text-[12px] text-text-secondary mb-1">Objetivos y expectativas del paciente</label>
+            <textarea rows={2} value={ficha.objetivosPaciente} onChange={e => handleChange('objetivosPaciente', e.target.value)} placeholder="Qué espera lograr el paciente. Ej: volver a correr, dormir sin dolor, cargar a su hijo..." className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y" />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[12px] text-text-secondary mb-1">Objetivos a corto plazo</label>
+              <textarea rows={3} value={ficha.objetivosCortoPlazo} onChange={e => handleChange('objetivosCortoPlazo', e.target.value)} placeholder="Ej: reducir dolor a EVA ≤ 3, mejorar flexión de rodilla a 110° (2–4 semanas)..." className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y" />
+            </div>
+            <div>
+              <label className="block text-[12px] text-text-secondary mb-1">Objetivos a largo plazo</label>
+              <textarea rows={3} value={ficha.objetivosLargoPlazo} onChange={e => handleChange('objetivosLargoPlazo', e.target.value)} placeholder="Ej: retorno deportivo completo, marcha sin claudicación (8–12 semanas)..." className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y" />
+            </div>
+          </div>
+        </div>
+
         <div>
           <label className="block text-[12px] uppercase tracking-[0.05em] text-accent mb-2 font-medium">6. Plan de Tratamiento</label>
-          <textarea rows={4} value={ficha.planTratamiento} onChange={e => handleChange('planTratamiento', e.target.value)} placeholder="Objetivos, intervenciones, pautas de ejercicio..." className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y" />
+          <textarea rows={4} value={ficha.planTratamiento} onChange={e => handleChange('planTratamiento', e.target.value)} placeholder="Intervenciones, técnicas, frecuencia, pautas de ejercicio..." className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y" />
         </div>
 
         {/* 7. RECOMENDACIONES DE OTROS PROFESIONALES */}
