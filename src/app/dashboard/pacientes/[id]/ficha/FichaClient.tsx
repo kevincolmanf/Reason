@@ -25,6 +25,8 @@ interface FichaData {
   fecha: string
   motivoConsulta: string
   historiaEnfermedad: string
+  factoresAgravantes: string
+  factoresAtenuantes: string
   antecedentes: string
   examenInspeccion: string
   examenFuerza: string
@@ -154,6 +156,8 @@ const emptyFicha: FichaData = {
   fecha: new Date().toISOString().split('T')[0],
   motivoConsulta: '',
   historiaEnfermedad: '',
+  factoresAgravantes: '',
+  factoresAtenuantes: '',
   antecedentes: '',
   examenInspeccion: '',
   examenFuerza: '',
@@ -398,6 +402,8 @@ export default function FichaClient({
 
     addSection('1. MOTIVO DE CONSULTA', ficha.motivoConsulta)
     addSection('2. HISTORIA DE LA ENFERMEDAD ACTUAL', ficha.historiaEnfermedad)
+    addSection('Factores agravantes', ficha.factoresAgravantes)
+    addSection('Factores atenuantes', ficha.factoresAtenuantes)
     addSection('3. ANTECEDENTES', ficha.antecedentes)
     addSection('4. EXAMEN FÍSICO — Inspección y Palpación', ficha.examenInspeccion)
     addSection('Fuerza', ficha.examenFuerza)
@@ -477,7 +483,17 @@ export default function FichaClient({
 
         <div>
           <label className="block text-[12px] uppercase tracking-[0.05em] text-accent mb-2 font-medium">2. Historia de la Enfermedad Actual</label>
-          <textarea rows={4} value={ficha.historiaEnfermedad} onChange={e => handleChange('historiaEnfermedad', e.target.value)} placeholder="Cómo inició, evolución, irradiación, factores que agravan o alivian..." className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y" />
+          <textarea rows={4} value={ficha.historiaEnfermedad} onChange={e => handleChange('historiaEnfermedad', e.target.value)} placeholder="Cómo inició, evolución, irradiación..." className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+            <div>
+              <label className="block text-[12px] text-text-secondary mb-1">Factores agravantes <span className="text-text-tertiary normal-case">(qué empeora el dolor)</span></label>
+              <textarea rows={3} value={ficha.factoresAgravantes} onChange={e => handleChange('factoresAgravantes', e.target.value)} placeholder="Ej: flexión de tronco, estar sentado, cargar peso, tos..." className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y" />
+            </div>
+            <div>
+              <label className="block text-[12px] text-text-secondary mb-1">Factores atenuantes <span className="text-text-tertiary normal-case">(qué lo alivia)</span></label>
+              <textarea rows={3} value={ficha.factoresAtenuantes} onChange={e => handleChange('factoresAtenuantes', e.target.value)} placeholder="Ej: reposo, calor, cambiar de posición, analgésicos..." className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y" />
+            </div>
+          </div>
         </div>
 
         <div>
