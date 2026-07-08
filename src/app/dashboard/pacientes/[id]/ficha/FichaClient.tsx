@@ -36,6 +36,8 @@ interface FichaData {
   examenInspeccion: string
   examenFuerza: string
   examenTest: string
+  movimientos: MovimientoRecord[]
+  preferenciaDireccional: string
   diagnostico: string
   objetivosPaciente: string
   objetivosCortoPlazo: string
@@ -54,6 +56,14 @@ interface GonioRecord {
   values: Record<string, string>
   pain: number | null
   notes: string
+}
+
+// Respuesta sintomática a un movimiento, sin necesidad de goniometrar grados.
+interface MovimientoRecord {
+  id: string
+  movimiento: string
+  respuesta: string
+  nota: string
 }
 
 interface QuestionnaireResult {
@@ -175,6 +185,8 @@ const emptyFicha: FichaData = {
   examenInspeccion: '',
   examenFuerza: '',
   examenTest: '',
+  movimientos: [],
+  preferenciaDireccional: '',
   diagnostico: '',
   objetivosPaciente: '',
   objetivosCortoPlazo: '',
@@ -206,6 +218,7 @@ export default function FichaClient({
     ...initialFicha.ficha_data,
     fecha: initialFicha.fecha || emptyFicha.fecha,
     goniometria: (initialFicha.ficha_data?.goniometria as GonioRecord[]) ?? [],
+    movimientos: (initialFicha.ficha_data?.movimientos as MovimientoRecord[]) ?? [],
   })
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [hasChanges, setHasChanges] = useState(false)
@@ -305,6 +318,23 @@ export default function FichaClient({
 
   const handleDeleteGonio = (id: string) => {
     setFicha(prev => ({ ...prev, goniometria: (prev.goniometria ?? []).filter(r => r.id !== id) }))
+    setHasChanges(true)
+    setSaveStatus('idle')
+  }
+
+  // ─── Respuesta al movimiento (lista rápida, sin goniometría) ─────────────────
+  const addMovimiento = () => {
+    setFicha(prev => ({ ...prev, movimientos: [...(prev.movimientos ?? []), { id: crypto.randomUUID(), movimiento: '', respuesta: '', nota: '' }] }))
+    setHasChanges(true)
+    setSaveStatus('idle')
+  }
+  const updateMovimiento = (id: string, field: keyof MovimientoRecord, value: string) => {
+    setFicha(prev => ({ ...prev, movimientos: (prev.movimientos ?? []).map(m => m.id === id ? { ...m, [field]: value } : m) }))
+    setHasChanges(true)
+    setSaveStatus('idle')
+  }
+  const removeMovimiento = (id: string) => {
+    setFicha(prev => ({ ...prev, movimientos: (prev.movimientos ?? []).filter(m => m.id !== id) }))
     setHasChanges(true)
     setSaveStatus('idle')
   }
@@ -438,6 +468,11 @@ export default function FichaClient({
     addSection('4. EXAMEN FÍSICO — Inspección y Palpación', ficha.examenInspeccion)
     addSection('Fuerza', ficha.examenFuerza)
     addSection('Test Especiales', ficha.examenTest)
+    addSection('Respuesta al movimiento', (ficha.movimientos ?? [])
+      .filter(m => m.movimiento || m.respuesta)
+      .map(m => `${m.movimiento || '—'}: ${m.respuesta || '—'}${m.nota ? ` (${m.nota})` : ''}`)
+      .join('\n'))
+    addSection('Preferencia direccional', ficha.preferenciaDireccional)
     addSection('5. DIAGNÓSTICO KINÉSICO', ficha.diagnostico)
     addSection('Objetivos y expectativas del paciente', ficha.objetivosPaciente)
     addSection('Objetivos a corto plazo', ficha.objetivosCortoPlazo)
@@ -605,6 +640,47 @@ export default function FichaClient({
           <div>
             <label className="block text-[12px] text-text-secondary mb-1">Test Especiales</label>
             <textarea rows={2} value={ficha.examenTest} onChange={e => handleChange('examenTest', e.target.value)} placeholder="Ej: Lasègue positivo a 45° pierna derecha..." className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y" />
+          </div>
+
+          {/* Respuesta al movimiento — lista rápida, sin goniometrar */}
+          <div>
+            <div className="flex items-center justify-between mb-2 gap-2">
+              <label className="block text-[12px] text-text-secondary">Respuesta al movimiento <span className="text-text-tertiary normal-case">(qué genera dolor, alivia o centraliza — sin medir grados)</span></label>
+              <button onClick={addMovimiento} className="text-[12px] text-accent font-medium hover:opacity-80 transition-opacity shrink-0">+ Agregar</button>
+            </div>
+            {(ficha.movimientos?.length ?? 0) === 0 ? (
+              <p className="text-[12px] text-text-tertiary">Sin registros. Tocá “Agregar” para anotar un movimiento y su respuesta.</p>
+            ) : (
+              <div className="space-y-2">
+                <datalist id="mov-suggestions">
+                  {['Flexión', 'Extensión', 'Rotación derecha', 'Rotación izquierda', 'Inclinación derecha', 'Inclinación izquierda', 'Abducción', 'Aducción', 'Flexión lumbar', 'Extensión lumbar'].map(o => <option key={o} value={o} />)}
+                </datalist>
+                {(ficha.movimientos ?? []).map(m => (
+                  <div key={m.id} className="bg-bg-primary border-[0.5px] border-border rounded-lg p-3 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <input list="mov-suggestions" value={m.movimiento} onChange={e => updateMovimiento(m.id, 'movimiento', e.target.value)} placeholder="Movimiento (ej: Extensión lumbar)" className="flex-1 bg-bg-secondary border-[0.5px] border-border-strong rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:border-accent" />
+                      <button onClick={() => removeMovimiento(m.id)} aria-label="Eliminar movimiento" className="text-text-tertiary hover:text-warning text-[18px] leading-none shrink-0 w-6 h-6 flex items-center justify-center">×</button>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[{ key: 'Dolor', tone: 'bad' }, { key: 'Alivia', tone: 'good' }, { key: 'Centraliza', tone: 'good' }, { key: 'Periferaliza', tone: 'bad' }, { key: 'Limita ROM', tone: 'bad' }, { key: 'Sin cambios', tone: 'neutral' }].map(({ key, tone }) => {
+                        const sel = m.respuesta === key
+                        const selCls = tone === 'bad' ? 'bg-red-500 text-white border-red-500' : tone === 'good' ? 'bg-green-500 text-white border-green-500' : 'bg-accent text-bg-primary border-accent'
+                        return (
+                          <button key={key} onClick={() => updateMovimiento(m.id, 'respuesta', sel ? '' : key)} className={`px-2.5 py-1 rounded-md text-[12px] border-[0.5px] transition-colors ${sel ? selCls : 'bg-bg-secondary border-border-strong text-text-secondary hover:text-text-primary'}`}>{key}</button>
+                        )
+                      })}
+                    </div>
+                    <input value={m.nota} onChange={e => updateMovimiento(m.id, 'nota', e.target.value)} placeholder="Nota (opcional)" className="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded-lg px-3 py-2 text-[12px] focus:outline-none focus:border-accent" />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Preferencia direccional (McKenzie/MDT) */}
+          <div>
+            <label className="block text-[12px] text-text-secondary mb-1">Preferencia direccional / movimiento preferente <span className="text-text-tertiary normal-case">(dirección que alivia o centraliza)</span></label>
+            <input type="text" value={ficha.preferenciaDireccional} onChange={e => handleChange('preferenciaDireccional', e.target.value)} placeholder="Ej: extensión lumbar (centraliza y reduce el dolor)" className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent" />
           </div>
         </div>
 
