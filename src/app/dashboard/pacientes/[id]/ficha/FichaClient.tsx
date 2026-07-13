@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { jsPDF } from 'jspdf'
+import { getFlaggedItems } from '@/lib/questionnaires'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -230,6 +231,7 @@ export default function FichaClient({
 
   const [gonioNotes, setGonioNotes] = useState('')
   const [qResults, setQResults] = useState<QuestionnaireResult[]>(questionnaireResults)
+  const [expandedQ, setExpandedQ] = useState<string | null>(null)
   const [dynResults, setDynResults] = useState<DynamoResult[]>(dynamoResults)
   const [pdfProfesional, setPdfProfesional] = useState('')
   const [pdfUploadError, setPdfUploadError] = useState('')
@@ -1041,23 +1043,53 @@ export default function FichaClient({
               <div className="space-y-3">
                 {qResults.map(result => {
                   const meta = QUESTIONNAIRE_NAMES[result.questionnaire_type] ?? { label: result.questionnaire_type, unit: '' }
+                  const flagged = getFlaggedItems(result.questionnaire_type, result.result_data)
+                  const isExpanded = expandedQ === result.id
                   return (
-                    <div key={result.id} className="flex items-center justify-between bg-bg-secondary border-[0.5px] border-border rounded-xl px-5 py-4 group">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 flex-wrap">
-                          <span className="text-[14px] font-medium">{meta.label}</span>
-                          <span className="text-[14px] text-text-secondary">{formatScore(result)} <span className="text-[12px] opacity-70">{meta.unit}</span></span>
-                          {result.interpretation && (
-                            <span className="text-[12px] bg-bg-primary border-[0.5px] border-border rounded-full px-2.5 py-0.5 text-text-secondary">{result.interpretation}</span>
-                          )}
+                    <div key={result.id} className="bg-bg-secondary border-[0.5px] border-border rounded-xl px-5 py-4 group">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <span className="text-[14px] font-medium">{meta.label}</span>
+                            <span className="text-[14px] text-text-secondary">{formatScore(result)} <span className="text-[12px] opacity-70">{meta.unit}</span></span>
+                            {result.interpretation && (
+                              <span className="text-[12px] bg-bg-primary border-[0.5px] border-border rounded-full px-2.5 py-0.5 text-text-secondary">{result.interpretation}</span>
+                            )}
+                          </div>
+                          <div className="text-[12px] text-text-secondary mt-1">
+                            {new Date(result.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                          </div>
                         </div>
-                        <div className="text-[12px] text-text-secondary mt-1">
-                          {new Date(result.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })}
-                        </div>
+                        <button onClick={() => handleDeleteQ(result.id)} className="text-text-secondary hover:text-warning text-[12px] opacity-0 group-hover:opacity-100 transition-opacity ml-4 shrink-0">
+                          Eliminar
+                        </button>
                       </div>
-                      <button onClick={() => handleDeleteQ(result.id)} className="text-text-secondary hover:text-warning text-[12px] opacity-0 group-hover:opacity-100 transition-opacity ml-4 shrink-0">
-                        Eliminar
-                      </button>
+                      {flagged.length > 0 && (
+                        <button
+                          onClick={() => setExpandedQ(isExpanded ? null : result.id)}
+                          className="mt-2 text-[12px] text-accent font-medium hover:opacity-80"
+                        >
+                          {isExpanded ? 'Ocultar ítems' : `Ver ítems a trabajar (${flagged.length})`}
+                        </button>
+                      )}
+                      {isExpanded && flagged.length > 0 && (
+                        <ul className="mt-3 pt-3 border-t-[0.5px] border-border space-y-2">
+                          {flagged.map((item, i) => (
+                            <li key={i} className="flex items-start gap-2 text-[13px]">
+                              <span className="text-accent mt-0.5 shrink-0">•</span>
+                              <div className="min-w-0">
+                                <span className="text-text-primary">{item.text}</span>
+                                {item.tag && (
+                                  <span className="ml-2 text-[10px] uppercase tracking-[0.05em] text-[#9333ea] font-medium">{item.tag}</span>
+                                )}
+                                {item.detail && (
+                                  <span className="block text-[12px] text-text-secondary mt-0.5">{item.detail}</span>
+                                )}
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
                   )
                 })}
