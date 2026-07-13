@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { jsPDF } from 'jspdf'
+import { getResponseItems } from '@/lib/questionnaires'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -230,6 +231,7 @@ export default function FichaClient({
 
   const [gonioNotes, setGonioNotes] = useState('')
   const [qResults, setQResults] = useState<QuestionnaireResult[]>(questionnaireResults)
+  const [openQ, setOpenQ] = useState<QuestionnaireResult | null>(null)
   const [dynResults, setDynResults] = useState<DynamoResult[]>(dynamoResults)
   const [pdfProfesional, setPdfProfesional] = useState('')
   const [pdfUploadError, setPdfUploadError] = useState('')
@@ -499,6 +501,68 @@ export default function FichaClient({
 
   return (
     <>
+    {openQ && (() => {
+      const meta = QUESTIONNAIRE_NAMES[openQ.questionnaire_type] ?? { label: openQ.questionnaire_type, unit: '' }
+      const responses = getResponseItems(openQ.questionnaire_type, openQ.result_data)
+      const flaggedCount = responses.filter(r => r.relevant).length
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4" onClick={() => setOpenQ(null)}>
+          <div className="bg-bg-secondary border-[0.5px] border-border rounded-2xl w-full max-w-[640px] max-h-[85vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-start justify-between px-6 py-4 border-b-[0.5px] border-border shrink-0">
+              <div className="min-w-0">
+                <h3 className="text-[18px] font-medium">{meta.label}</h3>
+                <div className="flex items-center gap-2 flex-wrap mt-1">
+                  <span className="text-[13px] text-text-secondary">{formatScore(openQ)} <span className="opacity-70">{meta.unit}</span></span>
+                  {openQ.interpretation && (
+                    <span className="text-[12px] bg-bg-primary border-[0.5px] border-border rounded-full px-2.5 py-0.5 text-text-secondary">{openQ.interpretation}</span>
+                  )}
+                </div>
+                <div className="text-[12px] text-text-secondary mt-1">
+                  {new Date(openQ.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                </div>
+              </div>
+              <button onClick={() => setOpenQ(null)} className="text-[13px] text-text-secondary hover:text-text-primary shrink-0 ml-4">Cerrar ✕</button>
+            </div>
+            {/* Body */}
+            <div className="overflow-y-auto px-6 py-4">
+              {responses.length === 0 ? (
+                <p className="text-[13px] text-text-secondary">No hay detalle de respuestas disponible para este cuestionario.</p>
+              ) : (
+                <>
+                  {flaggedCount > 0 && (
+                    <p className="text-[12px] text-text-secondary mb-4">
+                      <span className="text-accent font-medium">{flaggedCount} {flaggedCount === 1 ? 'ítem marcado' : 'ítems marcados'}</span> como clínicamente relevante{flaggedCount === 1 ? '' : 's'} (a trabajar).
+                    </p>
+                  )}
+                  <ol className="space-y-3">
+                    {responses.map((item, i) => (
+                      <li key={i} className={`flex items-start gap-3 p-3 rounded-xl border-[0.5px] ${item.relevant ? 'border-accent/40 bg-accent/5' : 'border-border bg-bg-primary'}`}>
+                        <span className="text-[12px] text-text-secondary shrink-0 mt-0.5 w-5 text-right">{i + 1}.</span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start gap-2 flex-wrap">
+                            <span className="text-[13px] text-text-primary">{item.text}</span>
+                            {item.tag && (
+                              <span className="text-[10px] uppercase tracking-[0.05em] text-[#9333ea] font-medium mt-0.5">{item.tag}</span>
+                            )}
+                            {item.relevant && (
+                              <span className="text-[10px] uppercase tracking-[0.05em] text-accent font-medium mt-0.5">A trabajar</span>
+                            )}
+                          </div>
+                          {item.detail && (
+                            <div className={`text-[13px] mt-1 ${item.relevant ? 'text-text-primary font-medium' : 'text-text-secondary'}`}>{item.detail}</div>
+                          )}
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )
+    })()}
     {previewPdf && (
       <div className="fixed inset-0 z-50 flex flex-col bg-black/80 backdrop-blur-sm" onClick={closePreview}>
         <div className="flex items-center justify-between px-5 py-3 bg-bg-secondary border-b-[0.5px] border-border shrink-0" onClick={e => e.stopPropagation()}>
@@ -1041,20 +1105,24 @@ export default function FichaClient({
               <div className="space-y-3">
                 {qResults.map(result => {
                   const meta = QUESTIONNAIRE_NAMES[result.questionnaire_type] ?? { label: result.questionnaire_type, unit: '' }
+                  const flaggedCount = getResponseItems(result.questionnaire_type, result.result_data).filter(r => r.relevant).length
                   return (
-                    <div key={result.id} className="flex items-center justify-between bg-bg-secondary border-[0.5px] border-border rounded-xl px-5 py-4 group">
-                      <div className="flex-1 min-w-0">
+                    <div key={result.id} className="flex items-center justify-between bg-bg-secondary border-[0.5px] border-border rounded-xl px-5 py-4 group hover:border-accent/40 transition-colors">
+                      <button onClick={() => setOpenQ(result)} className="flex-1 min-w-0 text-left">
                         <div className="flex items-center gap-3 flex-wrap">
                           <span className="text-[14px] font-medium">{meta.label}</span>
                           <span className="text-[14px] text-text-secondary">{formatScore(result)} <span className="text-[12px] opacity-70">{meta.unit}</span></span>
                           {result.interpretation && (
                             <span className="text-[12px] bg-bg-primary border-[0.5px] border-border rounded-full px-2.5 py-0.5 text-text-secondary">{result.interpretation}</span>
                           )}
+                          {flaggedCount > 0 && (
+                            <span className="text-[11px] text-accent font-medium">{flaggedCount} {flaggedCount === 1 ? 'ítem' : 'ítems'} a trabajar</span>
+                          )}
                         </div>
                         <div className="text-[12px] text-text-secondary mt-1">
-                          {new Date(result.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                          {new Date(result.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })} · <span className="text-accent">Abrir cuestionario →</span>
                         </div>
-                      </div>
+                      </button>
                       <button onClick={() => handleDeleteQ(result.id)} className="text-text-secondary hover:text-warning text-[12px] opacity-0 group-hover:opacity-100 transition-opacity ml-4 shrink-0">
                         Eliminar
                       </button>
