@@ -4,7 +4,7 @@ import { useState, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { jsPDF } from 'jspdf'
-import { getFlaggedItems } from '@/lib/questionnaires'
+import { getResponseItems } from '@/lib/questionnaires'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -1043,7 +1043,8 @@ export default function FichaClient({
               <div className="space-y-3">
                 {qResults.map(result => {
                   const meta = QUESTIONNAIRE_NAMES[result.questionnaire_type] ?? { label: result.questionnaire_type, unit: '' }
-                  const flagged = getFlaggedItems(result.questionnaire_type, result.result_data)
+                  const responses = getResponseItems(result.questionnaire_type, result.result_data)
+                  const flaggedCount = responses.filter(r => r.relevant).length
                   const isExpanded = expandedQ === result.id
                   return (
                     <div key={result.id} className="bg-bg-secondary border-[0.5px] border-border rounded-xl px-5 py-4 group">
@@ -1064,26 +1065,33 @@ export default function FichaClient({
                           Eliminar
                         </button>
                       </div>
-                      {flagged.length > 0 && (
+                      {responses.length > 0 && (
                         <button
                           onClick={() => setExpandedQ(isExpanded ? null : result.id)}
                           className="mt-2 text-[12px] text-accent font-medium hover:opacity-80"
                         >
-                          {isExpanded ? 'Ocultar ítems' : `Ver ítems a trabajar (${flagged.length})`}
+                          {isExpanded
+                            ? 'Ocultar respuestas'
+                            : flaggedCount > 0
+                              ? `Ver respuestas · ${flaggedCount} ${flaggedCount === 1 ? 'ítem' : 'ítems'} a trabajar`
+                              : 'Ver respuestas'}
                         </button>
                       )}
-                      {isExpanded && flagged.length > 0 && (
+                      {isExpanded && responses.length > 0 && (
                         <ul className="mt-3 pt-3 border-t-[0.5px] border-border space-y-2">
-                          {flagged.map((item, i) => (
+                          {responses.map((item, i) => (
                             <li key={i} className="flex items-start gap-2 text-[13px]">
-                              <span className="text-accent mt-0.5 shrink-0">•</span>
+                              <span className={`mt-0.5 shrink-0 ${item.relevant ? 'text-accent' : 'text-text-secondary opacity-40'}`}>•</span>
                               <div className="min-w-0">
-                                <span className="text-text-primary">{item.text}</span>
+                                <span className={item.relevant ? 'text-text-primary' : 'text-text-secondary'}>{item.text}</span>
                                 {item.tag && (
                                   <span className="ml-2 text-[10px] uppercase tracking-[0.05em] text-[#9333ea] font-medium">{item.tag}</span>
                                 )}
+                                {item.relevant && (
+                                  <span className="ml-2 text-[10px] uppercase tracking-[0.05em] text-accent font-medium">A trabajar</span>
+                                )}
                                 {item.detail && (
-                                  <span className="block text-[12px] text-text-secondary mt-0.5">{item.detail}</span>
+                                  <span className={`block text-[12px] mt-0.5 ${item.relevant ? 'text-text-primary' : 'text-text-secondary'}`}>{item.detail}</span>
                                 )}
                               </div>
                             </li>

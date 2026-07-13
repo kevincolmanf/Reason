@@ -433,40 +433,41 @@ export const FABQ_ITEMS = [
   { text: 'No creo que alguna vez sea capaz de volver a mi trabajo habitual.', subscale: null },
 ]
 
-// ─── Ítems marcados (para mostrar en la ficha del paciente) ─────────────────
+// ─── Respuestas del paciente (para mostrar en la ficha) ─────────────────────
 
-export interface FlaggedItem {
+export interface ResponseItem {
   text: string
   detail?: string // opción elegida o puntaje del ítem
   tag?: string // etiqueta (Psicosocial, AF, Trabajo, Dolor, etc.)
+  relevant: boolean // true si es un ítem clínicamente relevante (a trabajar)
 }
 
-// Devuelve los ítems clínicamente relevantes de un resultado guardado,
-// es decir, los que hay que trabajar según lo que respondió el paciente.
+// Devuelve TODAS las respuestas del paciente de un resultado guardado, marcando
+// con `relevant` las que superan el umbral clínico (los ítems a trabajar).
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function getFlaggedItems(type: string, data: any): FlaggedItem[] {
+export function getResponseItems(type: string, data: any): ResponseItem[] {
   if (!data) return []
-  const items: FlaggedItem[] = []
+  const items: ResponseItem[] = []
 
   switch (type) {
     case 'spadi': {
       ;(data.pain_items ?? []).forEach((v: number, i: number) => {
-        if (v >= 4) items.push({ text: SPADI_PAIN[i], detail: `${v}/10`, tag: 'Dolor' })
+        if (SPADI_PAIN[i]) items.push({ text: SPADI_PAIN[i], detail: `${v}/10`, tag: 'Dolor', relevant: v >= 4 })
       })
       ;(data.disability_items ?? []).forEach((v: number, i: number) => {
-        if (v >= 4) items.push({ text: SPADI_DISABILITY[i], detail: `${v}/10`, tag: 'Discapacidad' })
+        if (SPADI_DISABILITY[i]) items.push({ text: SPADI_DISABILITY[i], detail: `${v}/10`, tag: 'Discapacidad', relevant: v >= 4 })
       })
       break
     }
     case 'ndi': {
       ;(data.answers ?? []).forEach((v: number, i: number) => {
-        if (v >= 2 && NDI_ITEMS[i]) items.push({ text: NDI_ITEMS[i].label, detail: NDI_ITEMS[i].options[v] })
+        if (NDI_ITEMS[i]) items.push({ text: NDI_ITEMS[i].label, detail: NDI_ITEMS[i].options[v], relevant: v >= 2 })
       })
       break
     }
     case 'roland_morris': {
       ;(data.answers ?? []).forEach((v: boolean, i: number) => {
-        if (v && ROLAND_MORRIS_ITEMS[i]) items.push({ text: ROLAND_MORRIS_ITEMS[i] })
+        if (ROLAND_MORRIS_ITEMS[i]) items.push({ text: ROLAND_MORRIS_ITEMS[i], detail: v ? 'Sí' : 'No', relevant: !!v })
       })
       break
     }
@@ -474,66 +475,70 @@ export function getFlaggedItems(type: string, data: any): FlaggedItem[] {
       const answers = data.answers ?? []
       // Ítems 1-8 (booleanos): positivo = "Sí"
       answers.forEach((v: boolean, i: number) => {
-        if (i < 8 && v && START_BACK_ITEMS[i]) {
-          items.push({ text: START_BACK_ITEMS[i].text, tag: START_BACK_ITEMS[i].psychosocial ? 'Psicosocial' : undefined })
+        if (i < 8 && START_BACK_ITEMS[i]) {
+          items.push({
+            text: START_BACK_ITEMS[i].text,
+            detail: v ? 'Sí' : 'No',
+            tag: START_BACK_ITEMS[i].psychosocial ? 'Psicosocial' : undefined,
+            relevant: !!v,
+          })
         }
       })
       // Ítem 9 (molestia): registros nuevos guardan `bother` (0-4); los viejos, un booleano en answers[8]
       const bother = data.bother
-      const item9Positive = bother !== undefined && bother !== null ? bother >= START_BACK_BOTHER_POSITIVE : !!answers[8]
-      if (item9Positive) {
-        items.push({
-          text: START_BACK_ITEMS[8].text,
-          detail: bother !== undefined && bother !== null ? START_BACK_BOTHER[bother] : undefined,
-          tag: 'Psicosocial',
-        })
-      }
+      const hasBother = bother !== undefined && bother !== null
+      const item9Positive = hasBother ? bother >= START_BACK_BOTHER_POSITIVE : !!answers[8]
+      items.push({
+        text: START_BACK_ITEMS[8].text,
+        detail: hasBother ? START_BACK_BOTHER[bother] : answers[8] ? 'Sí' : 'No',
+        tag: 'Psicosocial',
+        relevant: item9Positive,
+      })
       break
     }
     case 'tampa': {
       ;(data.answers ?? []).forEach((v: number, i: number) => {
         if (!TAMPA_ITEMS[i]) return
         const adjusted = TAMPA_ITEMS[i].reverse ? 5 - v : v
-        if (adjusted >= 3) items.push({ text: TAMPA_ITEMS[i].text })
+        items.push({ text: TAMPA_ITEMS[i].text, detail: `${v}/4`, relevant: adjusted >= 3 })
       })
       break
     }
     case 'catastrofismo': {
       ;(data.answers ?? []).forEach((v: number, i: number) => {
-        if (v >= 2 && PCS_ITEMS[i]) items.push({ text: PCS_ITEMS[i].text, detail: PCS_LABELS[v] })
+        if (PCS_ITEMS[i]) items.push({ text: PCS_ITEMS[i].text, detail: PCS_LABELS[v], relevant: v >= 2 })
       })
       break
     }
     case 'oswestry': {
       ;(data.answers ?? []).forEach((v: number, i: number) => {
-        if (v >= 2 && OSWESTRY_SECTIONS[i]) items.push({ text: OSWESTRY_SECTIONS[i].label, detail: OSWESTRY_SECTIONS[i].options[v] })
+        if (OSWESTRY_SECTIONS[i]) items.push({ text: OSWESTRY_SECTIONS[i].label, detail: OSWESTRY_SECTIONS[i].options[v], relevant: v >= 2 })
       })
       break
     }
     case 'dash': {
       ;(data.answers ?? []).forEach((v: number, i: number) => {
-        if (v >= 3 && DASH_ITEMS[i]) items.push({ text: DASH_ITEMS[i], detail: `${v}/5` })
+        if (DASH_ITEMS[i]) items.push({ text: DASH_ITEMS[i], detail: `${v}/5`, relevant: v >= 3 })
       })
       break
     }
     case 'lefs': {
       ;(data.answers ?? []).forEach((v: number, i: number) => {
-        if (v <= 2 && LEFS_ITEMS[i]) items.push({ text: LEFS_ITEMS[i], detail: LEFS_OPTIONS[v] })
+        if (LEFS_ITEMS[i]) items.push({ text: LEFS_ITEMS[i], detail: LEFS_OPTIONS[v], relevant: v <= 2 })
       })
       break
     }
     case 'psfs': {
       ;(data.activities ?? []).forEach((a: { name: string; score: number }) => {
-        if (a.name?.trim()) items.push({ text: a.name, detail: `${a.score}/10` })
+        if (a.name?.trim()) items.push({ text: a.name, detail: `${a.score}/10`, relevant: a.score < 7 })
       })
       break
     }
     case 'fabq': {
       ;(data.answers ?? []).forEach((v: number, i: number) => {
-        if (v >= 4 && FABQ_ITEMS[i]) {
-          const sub = FABQ_ITEMS[i].subscale
-          items.push({ text: FABQ_ITEMS[i].text, detail: `${v}/6`, tag: sub === 'pa' ? 'AF' : sub === 'work' ? 'Trabajo' : undefined })
-        }
+        if (!FABQ_ITEMS[i]) return
+        const sub = FABQ_ITEMS[i].subscale
+        items.push({ text: FABQ_ITEMS[i].text, detail: `${v}/6`, tag: sub === 'pa' ? 'AF' : sub === 'work' ? 'Trabajo' : undefined, relevant: v >= 4 })
       })
       break
     }
