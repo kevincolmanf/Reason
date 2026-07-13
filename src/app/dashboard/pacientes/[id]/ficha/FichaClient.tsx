@@ -527,7 +527,10 @@ export default function FichaClient({
             {/* Body */}
             <div className="overflow-y-auto px-6 py-4">
               {responses.length === 0 ? (
-                <p className="text-[13px] text-text-secondary">No hay detalle de respuestas disponible para este cuestionario.</p>
+                <div className="text-[13px] text-text-secondary space-y-2">
+                  <p>Este resultado se guardó en una versión anterior que solo registró el puntaje, sin las respuestas por ítem.</p>
+                  <p>Los cuestionarios que completes a partir de ahora sí guardan el detalle de cada ítem.</p>
+                </div>
               ) : (
                 <>
                   {flaggedCount > 0 && (
