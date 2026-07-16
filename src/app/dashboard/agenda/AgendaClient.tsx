@@ -202,34 +202,29 @@ function exportDay(turnos: Turno[], date: Date) {
   const sorted = [...turnos].filter(t => !t.is_blocked).sort((a, b) =>
     new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
   )
-  const dateStr = formatDateLong(date)
-  const lines = [
-    `AGENDA DEL DÍA — ${dateStr.toUpperCase()}`,
-    '='.repeat(60),
-    '',
-    ...sorted.map(t => {
-      const start = formatTime(new Date(t.start_time))
-      const end   = formatTime(new Date(t.end_time))
-      const parts = [
-        `${start} – ${end}  ${t.patient_name}`,
-        t.area ? `  Área: ${t.area}` : '',
-        t.patient_phone ? `  Tel: ${t.patient_phone}` : '',
-        t.patient_email ? `  Email: ${t.patient_email}` : '',
-        t.patient_age ? `  Edad: ${t.patient_age} años` : '',
-        t.patient_obra_social ? `  Obra social: ${t.patient_obra_social}` : '',
-        t.professional_name ? `  Profesional: ${t.professional_name}` : '',
-        t.status !== 'programado' ? `  Estado: ${t.status}` : '',
-        t.notes ? `  Notas: ${t.notes}` : '',
-        '',
-      ]
-      return parts.filter(Boolean).join('\n')
-    }),
-  ]
-  const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' })
+  const headers = ['Hora inicio', 'Hora fin', 'Paciente', 'Área', 'Teléfono', 'Email', 'Edad', 'Obra social', 'Profesional', 'Estado', 'Notas']
+  const rows = sorted.map(t => [
+    formatTime(new Date(t.start_time)),
+    formatTime(new Date(t.end_time)),
+    t.patient_name ?? '',
+    t.area ?? '',
+    t.patient_phone ?? '',
+    t.patient_email ?? '',
+    t.patient_age ?? '',
+    t.patient_obra_social ?? '',
+    t.professional_name ?? '',
+    t.status ?? '',
+    t.notes ?? '',
+  ])
+  const csv = [headers, ...rows]
+    .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    .join('\n')
+  // BOM inicial para que Excel abra los acentos correctamente
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `agenda-${date.toISOString().slice(0, 10)}.txt`
+  a.download = `agenda-${date.toISOString().slice(0, 10)}.csv`
   a.click()
   URL.revokeObjectURL(url)
 }
