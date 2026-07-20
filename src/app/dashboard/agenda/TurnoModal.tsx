@@ -67,6 +67,7 @@ interface Props {
   onSaved: () => void
   onClone?: (turno: Turno) => void
   onReminderSent?: (id: string) => void
+  onHistorialChanged?: () => void
 }
 
 const AREAS = [
@@ -128,7 +129,7 @@ function formatTime(date: Date): string {
   return date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
 }
 
-export default function TurnoModal({ userId, orgId, orgName, professionals, areas, turno, defaultStart, defaultStatus, slotInterval, onClose, onSaved, onClone, onReminderSent }: Props) {
+export default function TurnoModal({ userId, orgId, orgName, professionals, areas, turno, defaultStart, defaultStatus, slotInterval, onClose, onSaved, onClone, onReminderSent, onHistorialChanged }: Props) {
   const isEdit = !!turno
   const effectiveAreas = areas.length > 0 ? areas : AREAS
   const defaultDuration = slotInterval ?? 60
@@ -420,12 +421,13 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
     onSaved()
   }
 
-  const handleCancelHistorialTurno = async (id: string) => {
-    if (!confirm('¿Cancelar este turno?')) return
+  const handleDeleteHistorialTurno = async (id: string) => {
+    if (!confirm('¿Eliminar este turno? Se borra de la agenda y no se puede deshacer.')) return
     setCancelingIds(prev => new Set(prev).add(id))
-    await supabaseRef.current.from('turnos').update({ status: 'cancelado' }).eq('id', id)
-    setHistorial(prev => prev.map(t => t.id === id ? { ...t, status: 'cancelado' } : t))
+    await supabaseRef.current.from('turnos').delete().eq('id', id)
+    setHistorial(prev => prev.filter(t => t.id !== id))
     setCancelingIds(prev => { const s = new Set(prev); s.delete(id); return s })
+    onHistorialChanged?.()
   }
 
   const valid = form.is_blocked
@@ -793,18 +795,17 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
                         <div key={h.id} className="flex items-center gap-2 text-[12px]">
                           <span className="text-text-secondary w-[96px] shrink-0 tabular-nums">{formatDateShort(new Date(h.start_time))}</span>
                           <span className="text-text-tertiary tabular-nums">{formatTime(new Date(h.start_time))}</span>
-                          <span className="flex-1 truncate text-text-secondary">{h.area}</span>
-                          {h.status === 'cancelado' ? (
-                            <span className="text-[10px] text-text-tertiary">Cancelado</span>
-                          ) : (
-                            <button
-                              onClick={() => handleCancelHistorialTurno(h.id)}
-                              disabled={cancelingIds.has(h.id)}
-                              className="text-[10px] text-text-tertiary hover:text-red-400 transition-colors disabled:opacity-40 shrink-0"
-                            >
-                              {cancelingIds.has(h.id) ? 'Cancelando...' : 'Cancelar'}
-                            </button>
-                          )}
+                          <span className="flex-1 truncate text-text-secondary">
+                            {h.area}
+                            {h.status === 'cancelado' && <span className="text-text-tertiary ml-1">· cancelado</span>}
+                          </span>
+                          <button
+                            onClick={() => handleDeleteHistorialTurno(h.id)}
+                            disabled={cancelingIds.has(h.id)}
+                            className="text-[10px] text-text-tertiary hover:text-red-400 transition-colors disabled:opacity-40 shrink-0"
+                          >
+                            {cancelingIds.has(h.id) ? 'Eliminando...' : 'Eliminar'}
+                          </button>
                         </div>
                       ))}
                     </div>

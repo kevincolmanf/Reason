@@ -809,6 +809,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
           onSaved={handleSaved}
           onClone={handleClone}
           onReminderSent={markReminded}
+          onHistorialChanged={fetchTurnos}
         />
       )}
 
