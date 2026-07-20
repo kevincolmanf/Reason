@@ -129,6 +129,39 @@ function formatTime(date: Date): string {
   return date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
 }
 
+// Fecha de nacimiento: acepta pegar o tipear DD/MM/AAAA (o ISO) y devuelve YYYY-MM-DD
+function parseBirthDateInput(str: string): string | null {
+  const s = str.trim()
+  if (!s) return null
+  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/) // ISO
+  if (m) return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`
+  m = s.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})$/) // DD/MM/AAAA
+  if (m) {
+    let y = m[3]
+    if (y.length === 2) y = (Number(y) > 30 ? '19' : '20') + y
+    const d = Number(m[1]), mo = Number(m[2])
+    if (d < 1 || d > 31 || mo < 1 || mo > 12) return null
+    return `${y}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`
+  }
+  return null
+}
+
+function ageFromISODate(iso: string): number | null {
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!m) return null
+  const dob = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+  if (isNaN(dob.getTime())) return null
+  const today = new Date()
+  let a = today.getFullYear() - dob.getFullYear()
+  if (today.getMonth() < dob.getMonth() || (today.getMonth() === dob.getMonth() && today.getDate() < dob.getDate())) a--
+  return a >= 0 && a <= 130 ? a : null
+}
+
+function formatISOToDMY(iso: string): string {
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : ''
+}
+
 export default function TurnoModal({ userId, orgId, orgName, professionals, areas, turno, defaultStart, defaultStatus, slotInterval, onClose, onSaved, onClone, onReminderSent, onHistorialChanged }: Props) {
   const isEdit = !!turno
   const effectiveAreas = areas.length > 0 ? areas : AREAS
@@ -162,6 +195,7 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
   const [patientSearch, setPatientSearch]     = useState(turno?.patient_name ?? '')
   const [patientResults, setPatientResults]   = useState<PatientResult[]>([])
   const [patientBirthDate, setPatientBirthDate] = useState('')
+  const [birthDateText, setBirthDateText]       = useState('')
   const [patientDni, setPatientDni]           = useState('')
   const [dniDupWarning, setDniDupWarning]     = useState<PatientResult | null>(null)
   const [searchOpen, setSearchOpen]           = useState(false)
@@ -180,6 +214,23 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
   const overlapTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   const dniTimeout     = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // Setea la fecha de nacimiento desde un ISO (lookup de paciente) y calcula la edad
+  const applyBirthISO = (iso: string) => {
+    setPatientBirthDate(iso)
+    setBirthDateText(formatISOToDMY(iso))
+    const a = ageFromISODate(iso)
+    if (a != null) setForm(f => ({ ...f, patient_age: String(a) }))
+  }
+
+  // Maneja lo que se tipea o pega en el campo de fecha de nacimiento
+  const handleBirthTextChange = (text: string) => {
+    setBirthDateText(text)
+    const iso = parseBirthDateInput(text)
+    setPatientBirthDate(iso ?? '')
+    const a = iso ? ageFromISODate(iso) : null
+    setForm(f => ({ ...f, patient_age: a != null ? String(a) : '' }))
+  }
+
   // Fetch DNI when a patient is linked (covers edit mode + search selection)
   useEffect(() => {
     if (!form.patient_id) { setPatientDni(''); return }
@@ -188,7 +239,7 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
       .then(({ data }) => {
         if (!data) return
         setPatientDni(data.dni ?? '')
-        if (data.birth_date) setPatientBirthDate(data.birth_date)
+        if (data.birth_date) applyBirthISO(data.birth_date)
         setForm(f => ({
           ...f,
           patient_phone:            f.patient_phone            || data.phone            || '',
@@ -318,7 +369,7 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
       }
     }
 
-    if (p.birth_date) setPatientBirthDate(p.birth_date)
+    if (p.birth_date) applyBirthISO(p.birth_date)
 
     setForm(f => ({
       ...f,
@@ -338,6 +389,7 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
     setPatientSearch('')
     setPatientDni('')
     setPatientBirthDate('')
+    setBirthDateText('')
     setDniDupWarning(null)
     setPatientResults([])
     setHistorialLoaded(false)
@@ -631,7 +683,17 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Fecha de nacimiento</label>
-                <input type="date" value={patientBirthDate} onChange={e => setPatientBirthDate(e.target.value)} className={inputCls} />
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="DD/MM/AAAA"
+                  value={birthDateText}
+                  onChange={e => handleBirthTextChange(e.target.value)}
+                  className={inputCls}
+                />
+                {ageFromISODate(patientBirthDate) != null && (
+                  <p className="text-[11px] text-text-tertiary mt-1">{ageFromISODate(patientBirthDate)} años</p>
+                )}
               </div>
               <div>
                 <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Obra social</label>
@@ -699,20 +761,22 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
               </div>
             </div>
 
-            {/* Tipo de turno + Estado */}
-            <div className="grid grid-cols-2 gap-3">
+            {/* Tipo de turno + Estado (el estado solo al editar; en un turno nuevo es innecesario) */}
+            <div className={`grid ${isEdit ? 'grid-cols-2' : 'grid-cols-1'} gap-3`}>
               <div>
                 <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Tipo de turno</label>
                 <select value={form.appointment_type} onChange={e => setForm(f => ({ ...f, appointment_type: e.target.value }))} className={inputCls}>
                   {APPOINTMENT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                 </select>
               </div>
-              <div>
-                <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Estado</label>
-                <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} className={`${inputCls} capitalize`}>
-                  {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </div>
+              {isEdit && (
+                <div>
+                  <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Estado</label>
+                  <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} className={`${inputCls} capitalize`}>
+                    {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+              )}
             </div>
 
             {/* Area */}
