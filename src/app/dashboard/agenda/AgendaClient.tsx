@@ -483,26 +483,31 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                     >
                       ✗
                     </button>
+                  </div>
+                )}
+                {/* Sobreturno + recordatorio: disponibles en día y semana */}
+                {!t.is_blocked && (
+                  <div className="absolute bottom-0.5 right-0.5 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
-                      onClick={e => { e.stopPropagation(); openNew(new Date(t.start_time), new Date(t.start_time).getHours(), new Date(t.start_time).getMinutes()) }}
+                      onClick={e => { e.stopPropagation(); openNew(new Date(t.start_time), new Date(t.start_time).getHours(), new Date(t.start_time).getMinutes(), 'sobreturno') }}
                       title="Dar sobreturno en este horario"
                       className="text-[9px] leading-none border-[0.5px] rounded px-1 py-0.5 transition-colors bg-purple-500/20 hover:bg-purple-500/40 border-purple-500/40 text-purple-400"
                     >
                       ST
                     </button>
+                    {waUrl && (
+                      <a
+                        href={waUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={e => { e.stopPropagation(); markReminded(t.id) }}
+                        title="Enviar recordatorio por WhatsApp"
+                        className="text-[9px] leading-none bg-green-500/20 hover:bg-green-500/40 border-[0.5px] border-green-500/40 rounded px-1 py-0.5 text-green-400"
+                      >
+                        WA
+                      </a>
+                    )}
                   </div>
-                )}
-                {waUrl && (
-                  <a
-                    href={waUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={e => { e.stopPropagation(); markReminded(t.id) }}
-                    title="Enviar recordatorio por WhatsApp"
-                    className="absolute bottom-0.5 right-0.5 opacity-0 group-hover:opacity-100 transition-opacity text-[9px] leading-none bg-green-500/20 hover:bg-green-500/40 border-[0.5px] border-green-500/40 rounded px-1 py-0.5 text-green-400"
-                  >
-                    WA
-                  </a>
                 )}
               </div>
             )
