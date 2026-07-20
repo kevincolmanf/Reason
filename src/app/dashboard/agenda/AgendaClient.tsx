@@ -752,6 +752,23 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                 Ver paciente
               </a>
             )}
+            {!quickMenu.turno.is_blocked && quickMenu.turno.patient_phone && (
+              <a
+                href={buildWhatsAppUrl(
+                  quickMenu.turno.patient_phone,
+                  quickMenu.turno.patient_name,
+                  new Date(quickMenu.turno.start_time),
+                  quickMenu.turno.area,
+                  orgName,
+                )}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => { markReminded(quickMenu.turno.id); setQuickMenu(null) }}
+                className="block px-3 py-2 text-[13px] text-green-400 hover:bg-bg-primary transition-colors"
+              >
+                Enviar recordatorio por WhatsApp
+              </a>
+            )}
             <button
               onClick={() => {
                 const t = quickMenu.turno
