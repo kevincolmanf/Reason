@@ -652,7 +652,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                     {HOURS.map((h, i) => (
                       <div key={h} className="absolute left-0 right-0 border-t-[0.5px] border-border" style={{ top: `${i * 56}px`, height: '56px' }} />
                     ))}
-                    {effectiveInterval < 60 && Array.from({ length: Math.ceil(GRID_TOTAL / effectiveInterval) }, (_, i) => {
+                    {effectiveInterval < 60 && 60 % effectiveInterval === 0 && Array.from({ length: Math.ceil(GRID_TOTAL / effectiveInterval) }, (_, i) => {
                       const minuteOffset = i * effectiveInterval
                       if (minuteOffset % 60 === 0) return null
                       if (GRID_START + minuteOffset >= GRID_END) return null
@@ -706,7 +706,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                       </div>
                     </div>
                   ))}
-                  {effectiveInterval < 60 && Array.from({ length: Math.ceil(GRID_TOTAL / effectiveInterval) }, (_, i) => {
+                  {effectiveInterval < 60 && 60 % effectiveInterval === 0 && Array.from({ length: Math.ceil(GRID_TOTAL / effectiveInterval) }, (_, i) => {
                     const minuteOffset = i * effectiveInterval
                     if (minuteOffset % 60 === 0) return null
                     if (GRID_START + minuteOffset >= GRID_END) return null
