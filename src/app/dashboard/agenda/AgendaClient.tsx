@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, type MouseEvent as ReactMouseEvent } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import TurnoModal from './TurnoModal'
 import CloneTurnoModal from './CloneTurnoModal'
@@ -148,6 +148,42 @@ function buildWhatsAppUrl(phone: string, name: string, start: Date, area: string
 const GRID_START = 7 * 60
 const GRID_END   = 21 * 60
 const GRID_TOTAL = GRID_END - GRID_START
+const SLOT_SNAP  = 5 // minutos: precisión al clickear en la grilla para crear un turno
+
+// Capa clickeable de la columna: crea un turno en el horario exacto donde se hace
+// click (redondeado a 5 min), sin quedar atado a los slots del intervalo del área.
+function SlotOverlay({ gridHeight, onPick }: { gridHeight: number; onPick: (h: number, m: number) => void }) {
+  const [hoverMin, setHoverMin] = useState<number | null>(null)
+
+  const minuteFromEvent = (e: ReactMouseEvent<HTMLDivElement>): number => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    const y = Math.max(0, Math.min(e.clientY - rect.top, rect.height))
+    const raw = GRID_START + (y / rect.height) * GRID_TOTAL
+    const snapped = Math.round(raw / SLOT_SNAP) * SLOT_SNAP
+    return Math.max(GRID_START, Math.min(snapped, GRID_END - SLOT_SNAP))
+  }
+
+  return (
+    <div
+      className="absolute inset-0 cursor-pointer"
+      onMouseMove={e => setHoverMin(minuteFromEvent(e))}
+      onMouseLeave={() => setHoverMin(null)}
+      onClick={e => { const abs = minuteFromEvent(e); onPick(Math.floor(abs / 60), abs % 60) }}
+    >
+      {hoverMin != null && (
+        <div
+          className="absolute left-0 right-0 pointer-events-none flex items-center gap-1 -translate-y-1/2"
+          style={{ top: `${((hoverMin - GRID_START) / GRID_TOTAL) * gridHeight}px` }}
+        >
+          <span className="text-accent text-[10px] font-medium bg-bg-primary/90 rounded px-1 leading-tight whitespace-nowrap">
+            + {String(Math.floor(hoverMin / 60)).padStart(2, '0')}:{String(hoverMin % 60).padStart(2, '0')}
+          </span>
+          <div className="flex-1 border-t border-accent/40" />
+        </div>
+      )}
+    </div>
+  )
+}
 
 function assignColumns(turnos: Turno[]): Map<string, { col: number; totalCols: number }> {
   const result = new Map<string, { col: number; totalCols: number }>()
@@ -360,27 +396,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
         className={`relative border-r-[0.5px] border-border last:border-r-0 ${isToday ? 'bg-accent/[0.02]' : ''}`}
         style={{ height: `${GRID_HEIGHT}px` }}
       >
-        {Array.from({ length: Math.ceil(GRID_TOTAL / effectiveInterval) }, (_, i) => {
-          const minuteOffset = i * effectiveInterval
-          const absMin = GRID_START + minuteOffset
-          if (absMin >= GRID_END) return null
-          const topPx = (minuteOffset / GRID_TOTAL) * GRID_HEIGHT
-          const heightPx = Math.min((effectiveInterval / GRID_TOTAL) * GRID_HEIGHT, GRID_HEIGHT - topPx)
-          const h = Math.floor(absMin / 60)
-          const m = absMin % 60
-          return (
-            <div
-              key={i}
-              className="absolute left-0 right-0 cursor-pointer group/slot hover:bg-accent/5 transition-colors flex items-center justify-center"
-              style={{ top: `${topPx}px`, height: `${heightPx}px` }}
-              onClick={() => openNew(day, h, m)}
-            >
-              <span className="opacity-0 group-hover/slot:opacity-100 transition-opacity text-accent text-[11px] font-medium pointer-events-none select-none">
-                + {String(h).padStart(2, '0')}:{String(m).padStart(2, '0')}
-              </span>
-            </div>
-          )
-        })}
+        <SlotOverlay gridHeight={GRID_HEIGHT} onPick={(h, m) => openNew(day, h, m)} />
         <div className="absolute inset-0 pointer-events-none">
           {dayTurnos.map(t => {
             const start = new Date(t.start_time)
