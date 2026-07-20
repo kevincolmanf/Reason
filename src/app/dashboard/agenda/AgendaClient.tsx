@@ -129,13 +129,18 @@ function formatArgentinePhone(phone: string): string {
   return `54${n}`
 }
 
-function buildWhatsAppUrl(phone: string, name: string, start: Date, end: Date, area: string, org: string | null): string {
+function buildWhatsAppUrl(phone: string, name: string, start: Date, area: string, org: string | null): string {
   const clean = formatArgentinePhone(phone)
-  const day = start.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })
-  const t1  = start.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
-  const t2  = end.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
+  const fecha = start.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  const hora  = start.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
   const lugar = org ?? 'el centro'
-  const msg = `Hola ${name}! Te recordamos tu turno en ${lugar}:\n- ${day}\n- ${t1} - ${t2}\n- ${area}\n\n¡Te esperamos!`
+  const msg =
+    `Hola ${name} 👋\n\n` +
+    `Te recordamos tu próximo turno en ${lugar}:\n\n` +
+    `📆 Fecha: ${fecha}\n` +
+    `⏰ Hora: ${hora}\n` +
+    `👉 ${area}\n\n` +
+    `Para confirmar o cancelar, respondé este mensaje. ¡Te esperamos! 💪`
   return `https://wa.me/${clean}?text=${encodeURIComponent(msg)}`
 }
 
@@ -382,7 +387,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
             const leftPct  = layout.col * widthPct
 
             const waUrl = !t.is_blocked && t.patient_phone
-              ? buildWhatsAppUrl(t.patient_phone, t.patient_name, start, end, t.area, orgName)
+              ? buildWhatsAppUrl(t.patient_phone, t.patient_name, start, t.area, orgName)
               : null
 
             return (

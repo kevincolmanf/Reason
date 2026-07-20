@@ -99,15 +99,19 @@ function formatArgentinePhone(phone: string): string {
   return `54${n}`
 }
 
-function buildWhatsAppUrl(phone: string, name: string, startISO: string, endISO: string, area: string, org: string | null | undefined): string {
+function buildWhatsAppUrl(phone: string, name: string, startISO: string, area: string, org: string | null | undefined): string {
   const clean = formatArgentinePhone(phone)
   const start = new Date(startISO)
-  const end   = new Date(endISO)
-  const day = start.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })
-  const t1  = start.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
-  const t2  = end.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
+  const fecha = start.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  const hora  = start.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
   const lugar = org ?? 'el centro'
-  const msg = `Hola ${name}! Te recordamos tu turno en ${lugar}:\n- ${day}\n- ${t1} - ${t2}\n- ${area}\n\nConfirmá respondiendo este mensaje o avisanos si no podés venir. ¡Te esperamos!`
+  const msg =
+    `Hola ${name} 👋\n\n` +
+    `Te recordamos tu próximo turno en ${lugar}:\n\n` +
+    `📆 Fecha: ${fecha}\n` +
+    `⏰ Hora: ${hora}\n` +
+    `👉 ${area}\n\n` +
+    `Para confirmar o cancelar, respondé este mensaje. ¡Te esperamos! 💪`
   return `https://wa.me/${clean}?text=${encodeURIComponent(msg)}`
 }
 
@@ -818,7 +822,7 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
         {!form.is_blocked && form.start_time && form.end_time && (
           form.patient_phone.trim() ? (
             <a
-              href={buildWhatsAppUrl(form.patient_phone, form.patient_name, form.start_time, form.end_time, form.area, orgName)}
+              href={buildWhatsAppUrl(form.patient_phone, form.patient_name, form.start_time, form.area, orgName)}
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => { if (turno?.id) onReminderSent?.(turno.id) }}
