@@ -49,6 +49,7 @@ interface Props {
   shareToken: string | null
   shareEnabled: boolean
   slotInterval: number
+  areaDurations: Record<string, number>
 }
 
 // Status-based colors (lighter palette for readability)
@@ -234,7 +235,7 @@ function exportDay(turnos: Turno[], date: Date) {
   URL.revokeObjectURL(url)
 }
 
-export default function AgendaClient({ userId, orgId, orgName, professionals, members, areas: initialAreas, isOwner, shareToken, shareEnabled, slotInterval: initialSlotInterval }: Props) {
+export default function AgendaClient({ userId, orgId, orgName, professionals, members, areas: initialAreas, isOwner, shareToken, shareEnabled, slotInterval: initialSlotInterval, areaDurations: initialAreaDurations }: Props) {
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()))
   const [selectedDay, setSelectedDay] = useState<Date>(() => new Date())
   const [view, setView] = useState<'week' | 'day'>('day')
@@ -248,6 +249,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
   const [filterArea, setFilterArea] = useState<string>(() => initialAreas[0] ?? 'all')
   const [areas, setAreas] = useState<string[]>(initialAreas)
   const [slotInterval, setSlotInterval] = useState(initialSlotInterval)
+  const [areaDurations, setAreaDurations] = useState<Record<string, number>>(initialAreaDurations)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [remindedIds, setRemindedIds] = useState<Set<string>>(() => {
     if (typeof window === 'undefined') return new Set()
@@ -265,6 +267,10 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
   const [quickMenu, setQuickMenu] = useState<{ turno: Turno; x: number; y: number } | null>(null)
 
   const supabaseRef = useRef(createClient())
+
+  // Duración efectiva de los slots: la del área seleccionada, o el intervalo
+  // global cuando está en "Todas las agendas" o el área no tiene una propia.
+  const effectiveInterval = (filterArea !== 'all' && areaDurations[filterArea]) || slotInterval
 
   const allWeekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
   const weekDays = showWeekend ? allWeekDays : allWeekDays.slice(0, 5)
@@ -354,12 +360,12 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
         className={`relative border-r-[0.5px] border-border last:border-r-0 ${isToday ? 'bg-accent/[0.02]' : ''}`}
         style={{ height: `${GRID_HEIGHT}px` }}
       >
-        {Array.from({ length: Math.ceil(GRID_TOTAL / slotInterval) }, (_, i) => {
-          const minuteOffset = i * slotInterval
+        {Array.from({ length: Math.ceil(GRID_TOTAL / effectiveInterval) }, (_, i) => {
+          const minuteOffset = i * effectiveInterval
           const absMin = GRID_START + minuteOffset
           if (absMin >= GRID_END) return null
           const topPx = (minuteOffset / GRID_TOTAL) * GRID_HEIGHT
-          const heightPx = Math.min((slotInterval / GRID_TOTAL) * GRID_HEIGHT, GRID_HEIGHT - topPx)
+          const heightPx = Math.min((effectiveInterval / GRID_TOTAL) * GRID_HEIGHT, GRID_HEIGHT - topPx)
           const h = Math.floor(absMin / 60)
           const m = absMin % 60
           return (
@@ -630,8 +636,8 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                     {HOURS.map((h, i) => (
                       <div key={h} className="absolute left-0 right-0 border-t-[0.5px] border-border" style={{ top: `${i * 56}px`, height: '56px' }} />
                     ))}
-                    {slotInterval < 60 && Array.from({ length: Math.ceil(GRID_TOTAL / slotInterval) }, (_, i) => {
-                      const minuteOffset = i * slotInterval
+                    {effectiveInterval < 60 && Array.from({ length: Math.ceil(GRID_TOTAL / effectiveInterval) }, (_, i) => {
+                      const minuteOffset = i * effectiveInterval
                       if (minuteOffset % 60 === 0) return null
                       if (GRID_START + minuteOffset >= GRID_END) return null
                       return (
@@ -684,8 +690,8 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                       </div>
                     </div>
                   ))}
-                  {slotInterval < 60 && Array.from({ length: Math.ceil(GRID_TOTAL / slotInterval) }, (_, i) => {
-                    const minuteOffset = i * slotInterval
+                  {effectiveInterval < 60 && Array.from({ length: Math.ceil(GRID_TOTAL / effectiveInterval) }, (_, i) => {
+                    const minuteOffset = i * effectiveInterval
                     if (minuteOffset % 60 === 0) return null
                     if (GRID_START + minuteOffset >= GRID_END) return null
                     return (
@@ -804,7 +810,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
           turno={modal.turno}
           defaultStart={modal.defaultStart}
           defaultStatus={modal.defaultStatus}
-          slotInterval={slotInterval}
+          slotInterval={effectiveInterval}
           onClose={closeModal}
           onSaved={handleSaved}
           onClone={handleClone}
@@ -831,11 +837,12 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
           isOwner={isOwner}
           initialAreas={areas}
           initialSlotInterval={slotInterval}
+          initialAreaDurations={areaDurations}
           members={members}
           shareToken={shareToken}
           shareEnabled={shareEnabled}
           onClose={() => setSettingsOpen(false)}
-          onSaved={(newAreas, newSlotInterval) => { setAreas(newAreas); setSlotInterval(newSlotInterval); setSettingsOpen(false) }}
+          onSaved={(newAreas, newSlotInterval, newAreaDurations) => { setAreas(newAreas); setSlotInterval(newSlotInterval); setAreaDurations(newAreaDurations); setSettingsOpen(false) }}
         />
       )}
     </div>

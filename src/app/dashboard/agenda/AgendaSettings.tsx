@@ -27,12 +27,15 @@ interface Props {
   isOwner: boolean
   initialAreas: string[]
   initialSlotInterval: number
+  initialAreaDurations: Record<string, number>
   members: Member[]
   shareToken: string | null
   shareEnabled: boolean
   onClose: () => void
-  onSaved: (areas: string[], slotInterval: number) => void
+  onSaved: (areas: string[], slotInterval: number, areaDurations: Record<string, number>) => void
 }
+
+const DURATION_OPTIONS = [15, 20, 30, 40, 45, 60]
 
 export default function AgendaSettings({
   orgId,
@@ -40,6 +43,7 @@ export default function AgendaSettings({
   isOwner,
   initialAreas,
   initialSlotInterval,
+  initialAreaDurations,
   members,
   shareToken,
   shareEnabled: initialShareEnabled,
@@ -48,6 +52,7 @@ export default function AgendaSettings({
 }: Props) {
   const [areas, setAreas] = useState<string[]>(initialAreas)
   const [slotInterval, setSlotInterval] = useState(initialSlotInterval)
+  const [areaDurations, setAreaDurations] = useState<Record<string, number>>(initialAreaDurations)
   const [newArea, setNewArea] = useState('')
   const [shareEnabled, setShareEnabled] = useState(initialShareEnabled)
   const [memberAccess, setMemberAccess] = useState<Record<string, boolean>>(
@@ -74,9 +79,23 @@ export default function AgendaSettings({
 
   const removeArea = (area: string) => {
     setAreas(a => a.filter(x => x !== area))
+    setAreaDurations(d => {
+      const next = { ...d }
+      delete next[area]
+      return next
+    })
   }
 
-  const resetAreas = () => setAreas(DEFAULT_AREAS)
+  const setAreaDuration = (area: string, minutes: number | null) => {
+    setAreaDurations(d => {
+      const next = { ...d }
+      if (minutes == null) delete next[area]
+      else next[area] = minutes
+      return next
+    })
+  }
+
+  const resetAreas = () => { setAreas(DEFAULT_AREAS); setAreaDurations({}) }
 
   const copyLink = () => {
     if (!shareUrl) return
@@ -101,14 +120,19 @@ export default function AgendaSettings({
   const handleSave = async () => {
     setSaving(true)
 
+    // Solo guardar duraciones de áreas que todavía existen
+    const cleanDurations = Object.fromEntries(
+      Object.entries(areaDurations).filter(([area]) => areas.includes(area))
+    )
+
     if (orgId && isOwner) {
-      await supabase.from('organizations').update({ agenda_areas: areas, agenda_slot_interval: slotInterval, agenda_share_enabled: shareEnabled }).eq('id', orgId)
+      await supabase.from('organizations').update({ agenda_areas: areas, agenda_slot_interval: slotInterval, agenda_area_durations: cleanDurations, agenda_share_enabled: shareEnabled }).eq('id', orgId)
     } else {
-      await supabase.from('users').update({ agenda_areas: areas, agenda_slot_interval: slotInterval }).eq('id', userId)
+      await supabase.from('users').update({ agenda_areas: areas, agenda_slot_interval: slotInterval, agenda_area_durations: cleanDurations }).eq('id', userId)
     }
 
     setSaving(false)
-    onSaved(areas, slotInterval)
+    onSaved(areas, slotInterval, cleanDurations)
   }
 
   return (
@@ -126,15 +150,28 @@ export default function AgendaSettings({
             <button onClick={resetAreas} className="text-[11px] text-text-secondary hover:text-text-primary underline">Restablecer</button>
           </div>
 
-          <div className="flex flex-wrap gap-2 mb-3">
+          <p className="text-[12px] text-text-secondary mb-3">Elegí la duración de turno de cada área. Las que queden en &quot;Por defecto&quot; usan el intervalo general de abajo.</p>
+
+          <div className="flex flex-col gap-1.5 mb-3">
             {areas.map(area => (
-              <span key={area} className="flex items-center gap-1 bg-bg-primary border-[0.5px] border-border rounded-md px-2 py-1 text-[12px]">
-                {area}
+              <div key={area} className="flex items-center gap-2 bg-bg-primary border-[0.5px] border-border rounded-lg px-3 py-1.5">
+                <span className="flex-1 text-[13px] truncate">{area}</span>
+                <select
+                  value={areaDurations[area] ?? ''}
+                  onChange={e => setAreaDuration(area, e.target.value === '' ? null : Number(e.target.value))}
+                  className="bg-bg-secondary border-[0.5px] border-border rounded-md px-2 py-1 text-[12px] text-text-primary focus:outline-none focus:border-accent"
+                >
+                  <option value="">Por defecto</option>
+                  {DURATION_OPTIONS.map(min => (
+                    <option key={min} value={min}>{min} min</option>
+                  ))}
+                </select>
                 <button
                   onClick={() => removeArea(area)}
-                  className="text-text-tertiary hover:text-red-400 leading-none ml-0.5"
+                  className="text-text-tertiary hover:text-red-400 leading-none text-[16px] shrink-0"
+                  title="Quitar área"
                 >×</button>
-              </span>
+              </div>
             ))}
           </div>
 
@@ -158,8 +195,8 @@ export default function AgendaSettings({
 
         {/* Slot interval */}
         <div className="mb-6 border-t-[0.5px] border-border pt-5">
-          <label className="text-[11px] uppercase tracking-[0.05em] text-text-secondary block mb-3">Intervalo de turnos</label>
-          <p className="text-[12px] text-text-secondary mb-3">Cada cuántos minutos se muestran los slots en la agenda y la duración por defecto de cada turno.</p>
+          <label className="text-[11px] uppercase tracking-[0.05em] text-text-secondary block mb-3">Intervalo por defecto</label>
+          <p className="text-[12px] text-text-secondary mb-3">Se usa en &quot;Todas las agendas&quot; y en las áreas que no tengan una duración propia arriba.</p>
           <div className="flex gap-2 flex-wrap">
             {[15, 20, 30, 40, 45, 60].map(interval => (
               <button
