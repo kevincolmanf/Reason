@@ -106,12 +106,12 @@ function buildWhatsAppUrl(phone: string, name: string, startISO: string, area: s
   const hora  = start.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
   const lugar = org ?? 'el centro'
   const msg =
-    `Hola ${name} 👋\n\n` +
+    `Hola ${name},\n\n` +
     `Te recordamos tu próximo turno en ${lugar}:\n\n` +
-    `📆 Fecha: ${fecha}\n` +
-    `⏰ Hora: ${hora}\n` +
-    `👉 ${area}\n\n` +
-    `Para confirmar o cancelar, respondé este mensaje. ¡Te esperamos! 💪`
+    `Fecha: ${fecha}\n` +
+    `Hora: ${hora}\n` +
+    `Área: ${area}\n\n` +
+    `Para confirmar o cancelar, respondé este mensaje. ¡Te esperamos!`
   return `https://wa.me/${clean}?text=${encodeURIComponent(msg)}`
 }
 
