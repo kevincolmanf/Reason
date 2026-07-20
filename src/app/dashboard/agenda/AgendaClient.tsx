@@ -149,6 +149,7 @@ const GRID_START = 7 * 60
 const GRID_END   = 21 * 60
 const GRID_TOTAL = GRID_END - GRID_START
 const SLOT_SNAP  = 5 // minutos: precisión al clickear en la grilla para crear un turno
+const HOUR_HEIGHT = 80 // px por hora en la grilla (más alto = más cómodo de leer)
 
 // Capa clickeable de la columna: crea un turno en el horario exacto donde se hace
 // click (redondeado a 5 min), sin quedar atado a los slots del intervalo del área.
@@ -386,7 +387,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
     setCloneModal(turno)
   }
 
-  const GRID_HEIGHT = HOURS.length * 56
+  const GRID_HEIGHT = HOURS.length * HOUR_HEIGHT
 
   const renderDayColumn = (day: Date, dayTurnos: Turno[], colLayout: Map<string, { col: number; totalCols: number }>, compact = false) => {
     const today = new Date()
@@ -639,7 +640,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
               <div className="flex" style={{ height: `${GRID_HEIGHT}px` }}>
                 <div className="relative shrink-0 w-[48px]" style={{ height: `${GRID_HEIGHT}px` }}>
                   {HOURS.map((h, i) => (
-                    <div key={h} className="absolute left-0 right-0 border-t-[0.5px] border-border" style={{ top: `${i * 56}px`, height: '56px' }}>
+                    <div key={h} className="absolute left-0 right-0 border-t-[0.5px] border-border" style={{ top: `${i * HOUR_HEIGHT}px`, height: `${HOUR_HEIGHT}px` }}>
                       <div className="pr-2 flex items-start justify-end pt-1">
                         <span className="text-[10px] text-text-tertiary tabular-nums">{String(h).padStart(2, '0')}:00</span>
                       </div>
@@ -650,7 +651,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                 <div className="flex-1 overflow-x-auto" style={{ height: `${GRID_HEIGHT}px` }}>
                   <div className="relative" style={{ minWidth: `${maxSimultaneousCols * MIN_COL_WIDTH}px`, height: `${GRID_HEIGHT}px` }}>
                     {HOURS.map((h, i) => (
-                      <div key={h} className="absolute left-0 right-0 border-t-[0.5px] border-border" style={{ top: `${i * 56}px`, height: '56px' }} />
+                      <div key={h} className="absolute left-0 right-0 border-t-[0.5px] border-border" style={{ top: `${i * HOUR_HEIGHT}px`, height: `${HOUR_HEIGHT}px` }} />
                     ))}
                     {effectiveInterval < 60 && 60 % effectiveInterval === 0 && Array.from({ length: Math.ceil(GRID_TOTAL / effectiveInterval) }, (_, i) => {
                       const minuteOffset = i * effectiveInterval
@@ -698,9 +699,9 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                 </div>
               )}
               <div className="grid" style={{ gridTemplateColumns: `48px repeat(${weekDays.length}, 1fr)` }}>
-                <div className="relative" style={{ gridColumn: `1 / span ${weekDays.length + 1}`, height: `${HOURS.length * 56}px` }}>
+                <div className="relative" style={{ gridColumn: `1 / span ${weekDays.length + 1}`, height: `${HOURS.length * HOUR_HEIGHT}px` }}>
                   {HOURS.map((h, i) => (
-                    <div key={h} className="absolute left-0 right-0 border-t-[0.5px] border-border flex" style={{ top: `${i * 56}px`, height: '56px' }}>
+                    <div key={h} className="absolute left-0 right-0 border-t-[0.5px] border-border flex" style={{ top: `${i * HOUR_HEIGHT}px`, height: `${HOUR_HEIGHT}px` }}>
                       <div className="w-[48px] shrink-0 pr-2 flex items-start justify-end pt-1">
                         <span className="text-[10px] text-text-tertiary tabular-nums">{String(h).padStart(2, '0')}:00</span>
                       </div>
