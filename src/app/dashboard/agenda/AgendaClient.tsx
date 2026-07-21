@@ -25,6 +25,7 @@ interface Turno {
   notes: string | null
   appointment_type: string | null
   is_blocked: boolean | null
+  confirm_token: string | null
 }
 
 interface Professional {
@@ -129,18 +130,21 @@ function formatArgentinePhone(phone: string): string {
   return `54${n}`
 }
 
-function buildWhatsAppUrl(phone: string, name: string, start: Date, area: string, org: string | null): string {
+function buildWhatsAppUrl(phone: string, name: string, start: Date, area: string, org: string | null, confirmUrl: string | null): string {
   const clean = formatArgentinePhone(phone)
   const fecha = start.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })
   const hora  = start.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
   const lugar = org ?? 'el centro'
+  const cierre = confirmUrl
+    ? `Confirmá o cancelá tu turno con un toque acá:\n${confirmUrl}\n\n¡Te esperamos!`
+    : `Para confirmar o cancelar, respondé este mensaje. ¡Te esperamos!`
   const msg =
     `Hola ${name},\n\n` +
     `Te recordamos tu próximo turno en ${lugar}:\n\n` +
     `Fecha: ${fecha}\n` +
     `Hora: ${hora}\n` +
     `Área: ${area}\n\n` +
-    `Para confirmar o cancelar, respondé este mensaje. ¡Te esperamos!`
+    cierre
   return `https://wa.me/${clean}?text=${encodeURIComponent(msg)}`
 }
 
@@ -428,8 +432,11 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
             const widthPct = 100 / layout.totalCols
             const leftPct  = layout.col * widthPct
 
+            const confirmUrl = t.confirm_token && typeof window !== 'undefined'
+              ? `${window.location.origin}/turno/${t.confirm_token}`
+              : null
             const waUrl = !t.is_blocked && t.patient_phone
-              ? buildWhatsAppUrl(t.patient_phone, t.patient_name, start, t.area, orgName)
+              ? buildWhatsAppUrl(t.patient_phone, t.patient_name, start, t.area, orgName, confirmUrl)
               : null
 
             return (
@@ -784,6 +791,9 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                     new Date(quickMenu.turno.start_time),
                     quickMenu.turno.area,
                     orgName,
+                    quickMenu.turno.confirm_token && typeof window !== 'undefined'
+                      ? `${window.location.origin}/turno/${quickMenu.turno.confirm_token}`
+                      : null,
                   )}
                   target="_blank"
                   rel="noopener noreferrer"
