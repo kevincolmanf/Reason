@@ -92,7 +92,7 @@ export default function ConfirmTurnoClient({
       <div className="mt-6">
         {status === 'confirmado' ? (
           <div className="rounded-2xl border-[0.5px] border-emerald-500/40 bg-emerald-500/10 p-5 text-center">
-            <p className="text-[15px] font-medium text-emerald-300">✓ Turno confirmado</p>
+            <p className="text-[15px] font-medium text-emerald-300">✓ Confirmaste que vas a asistir</p>
             <p className="text-[13px] text-text-secondary mt-1">¡Te esperamos! Nos vemos pronto.</p>
             {!alreadyAttended && (
               <button
@@ -100,21 +100,21 @@ export default function ConfirmTurnoClient({
                 disabled={loading !== null}
                 className="mt-4 text-[13px] text-text-tertiary underline underline-offset-2 hover:text-text-secondary disabled:opacity-50"
               >
-                {loading === 'cancelar' ? 'Cancelando…' : 'No voy a poder asistir'}
+                {loading === 'cancelar' ? 'Guardando…' : 'En realidad no voy a asistir'}
               </button>
             )}
           </div>
         ) : status === 'cancelado' ? (
           <div className="rounded-2xl border-[0.5px] border-red-500/40 bg-red-500/10 p-5 text-center">
-            <p className="text-[15px] font-medium text-red-300">Turno cancelado</p>
-            <p className="text-[13px] text-text-secondary mt-1">Avisaste que no vas a poder asistir.</p>
+            <p className="text-[15px] font-medium text-red-300">Avisaste que no vas a asistir</p>
+            <p className="text-[13px] text-text-secondary mt-1">Gracias por avisar con tiempo.</p>
             {!alreadyAttended && (
               <button
                 onClick={() => submit('confirmar')}
                 disabled={loading !== null}
                 className="mt-4 text-[13px] text-text-tertiary underline underline-offset-2 hover:text-text-secondary disabled:opacity-50"
               >
-                {loading === 'confirmar' ? 'Confirmando…' : 'Sí voy a poder asistir'}
+                {loading === 'confirmar' ? 'Guardando…' : 'En realidad sí voy a asistir'}
               </button>
             )}
           </div>
@@ -129,14 +129,14 @@ export default function ConfirmTurnoClient({
               disabled={loading !== null}
               className="w-full rounded-xl bg-accent text-white text-[15px] font-medium py-3.5 transition-opacity hover:opacity-90 disabled:opacity-50"
             >
-              {loading === 'confirmar' ? 'Confirmando…' : 'Confirmar asistencia'}
+              {loading === 'confirmar' ? 'Guardando…' : 'Asistiré'}
             </button>
             <button
               onClick={() => submit('cancelar')}
               disabled={loading !== null}
               className="w-full rounded-xl border-[0.5px] border-border bg-transparent text-text-secondary text-[15px] py-3.5 transition-colors hover:bg-bg-secondary/60 disabled:opacity-50"
             >
-              {loading === 'cancelar' ? 'Avisando…' : 'No podré asistir'}
+              {loading === 'cancelar' ? 'Guardando…' : 'No asistiré'}
             </button>
           </div>
         )}

@@ -60,7 +60,6 @@ const STATUS_COLORS: Record<string, string> = {
   presente:   'bg-emerald-500/15 border-emerald-500/40 text-emerald-300',
   ausente:    'bg-red-500/10 border-red-500/25 text-red-300',
   cancelado:  'bg-bg-secondary border-border text-text-tertiary line-through',
-  sobreturno: 'bg-purple-500/10 border-purple-500/25 text-purple-300',
 }
 
 // Appointment-type colors (primary visual identifier)
@@ -136,7 +135,7 @@ function buildWhatsAppUrl(phone: string, name: string, start: Date, area: string
   const hora  = start.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
   const lugar = org ?? 'el centro'
   const cierre = confirmUrl
-    ? `Confirmá o cancelá tu turno con un toque acá:\n${confirmUrl}\n\n¡Te esperamos!`
+    ? `Avisanos si vas a asistir con un toque acá:\n${confirmUrl}\n\n¡Te esperamos!`
     : `Para confirmar o cancelar, respondé este mensaje. ¡Te esperamos!`
   const msg =
     `Hola ${name},\n\n` +
@@ -245,7 +244,7 @@ function assignColumns(turnos: Turno[]): Map<string, { col: number; totalCols: n
 function blockColorClass(t: Turno): string {
   if (t.is_blocked) return 'bg-bg-secondary border-border text-text-tertiary opacity-70'
   if (t.status === 'cancelado')  return STATUS_COLORS.cancelado
-  if (t.status === 'sobreturno') return STATUS_COLORS.sobreturno
+  // sobreturno queda neutro, con el mismo color que el resto según su tipo
   // presente/ausente mantienen el color del tipo — el estado se muestra con un indicador
   return TYPE_COLORS[t.appointment_type ?? 'turno_comun'] ?? STATUS_COLORS.programado
 }
@@ -474,31 +473,32 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                     </>
                   )}
                 </button>
-                {!t.is_blocked && !compact && (
-                  <div className="absolute bottom-0.5 left-0.5 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={e => { e.stopPropagation(); quickStatus(t.id, t.status === 'presente' ? 'programado' : 'presente') }}
-                      title={t.status === 'presente' ? 'Desmarcar presente' : 'Marcar presente'}
-                      className={`text-[9px] leading-none border-[0.5px] rounded px-1 py-0.5 transition-colors ${t.status === 'presente' ? 'bg-emerald-500/40 border-emerald-500/60 text-emerald-300' : 'bg-emerald-500/20 hover:bg-emerald-500/40 border-emerald-500/40 text-emerald-400'}`}
-                    >
-                      ✓
-                    </button>
-                    <button
-                      onClick={e => { e.stopPropagation(); quickStatus(t.id, t.status === 'ausente' ? 'programado' : 'ausente') }}
-                      title={t.status === 'ausente' ? 'Desmarcar ausente' : 'Marcar ausente'}
-                      className={`text-[9px] leading-none border-[0.5px] rounded px-1 py-0.5 transition-colors ${t.status === 'ausente' ? 'bg-red-500/40 border-red-500/60 text-red-300' : 'bg-red-500/20 hover:bg-red-500/40 border-red-500/40 text-red-400'}`}
-                    >
-                      ✗
-                    </button>
-                  </div>
-                )}
-                {/* Sobreturno + recordatorio: disponibles en día y semana */}
+                {/* Barra de acciones al hover, alineada a la derecha con fondo propio
+                    para no tapar el nombre (que se lee desde la izquierda) */}
                 {!t.is_blocked && (
-                  <div className="absolute bottom-0.5 right-0.5 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute bottom-0.5 right-0.5 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity rounded bg-bg-primary/70 backdrop-blur-[2px] p-0.5">
+                    {!compact && (
+                      <>
+                        <button
+                          onClick={e => { e.stopPropagation(); quickStatus(t.id, t.status === 'presente' ? 'programado' : 'presente') }}
+                          title={t.status === 'presente' ? 'Desmarcar presente' : 'Marcar presente'}
+                          className={`text-[9px] leading-none border-[0.5px] rounded px-1 py-0.5 transition-colors ${t.status === 'presente' ? 'bg-emerald-500/40 border-emerald-500/60 text-emerald-300' : 'bg-emerald-500/20 hover:bg-emerald-500/40 border-emerald-500/40 text-emerald-400'}`}
+                        >
+                          ✓
+                        </button>
+                        <button
+                          onClick={e => { e.stopPropagation(); quickStatus(t.id, t.status === 'ausente' ? 'programado' : 'ausente') }}
+                          title={t.status === 'ausente' ? 'Desmarcar ausente' : 'Marcar ausente'}
+                          className={`text-[9px] leading-none border-[0.5px] rounded px-1 py-0.5 transition-colors ${t.status === 'ausente' ? 'bg-red-500/40 border-red-500/60 text-red-300' : 'bg-red-500/20 hover:bg-red-500/40 border-red-500/40 text-red-400'}`}
+                        >
+                          ✗
+                        </button>
+                      </>
+                    )}
                     <button
                       onClick={e => { e.stopPropagation(); openNew(new Date(t.start_time), new Date(t.start_time).getHours(), new Date(t.start_time).getMinutes(), 'sobreturno') }}
                       title="Dar sobreturno en este horario"
-                      className="text-[9px] leading-none border-[0.5px] rounded px-1 py-0.5 transition-colors bg-purple-500/20 hover:bg-purple-500/40 border-purple-500/40 text-purple-400"
+                      className="text-[9px] leading-none border-[0.5px] rounded px-1 py-0.5 transition-colors bg-bg-secondary hover:bg-bg-tertiary border-border text-text-secondary"
                     >
                       ST
                     </button>
@@ -750,7 +750,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
           ))}
         </div>
         <div className="flex flex-wrap gap-2">
-          {(['ausente', 'cancelado', 'sobreturno'] as const).map(status => (
+          {(['ausente', 'cancelado'] as const).map(status => (
             <span key={status} className={`text-[11px] px-2 py-1 rounded-md border-[0.5px] capitalize ${STATUS_COLORS[status]}`}>
               {status}
             </span>
@@ -818,7 +818,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                 setQuickMenu(null)
                 openNew(new Date(t.start_time), new Date(t.start_time).getHours(), new Date(t.start_time).getMinutes(), 'sobreturno')
               }}
-              className="w-full text-left px-3 py-2 text-[13px] text-purple-400 hover:bg-bg-primary transition-colors"
+              className="w-full text-left px-3 py-2 text-[13px] hover:bg-bg-primary transition-colors"
             >
               Dar sobreturno
             </button>
