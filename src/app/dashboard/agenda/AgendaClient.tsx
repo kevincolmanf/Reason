@@ -51,6 +51,8 @@ interface Props {
   shareEnabled: boolean
   slotInterval: number
   areaDurations: Record<string, number>
+  dayStart: number
+  dayEnd: number
 }
 
 // Status-based colors (lighter palette for readability)
@@ -156,8 +158,8 @@ function buildWhatsAppUrl(phone: string, name: string, start: Date, area: string
   return `https://wa.me/${clean}?text=${encodeURIComponent(msg)}`
 }
 
-const GRID_START = 7 * 60
-const GRID_END   = 21 * 60
+const GRID_START_DEFAULT = 7 * 60
+const GRID_END_DEFAULT    = 21 * 60
 const SLOT_ROW_HEIGHT = 56 // px por celda de la grilla (cada celda = un turno del intervalo del área)
 
 function minLabel(min: number): string {
@@ -289,7 +291,7 @@ function exportDay(turnos: Turno[], date: Date) {
   URL.revokeObjectURL(url)
 }
 
-export default function AgendaClient({ userId, orgId, orgName, professionals, members, areas: initialAreas, isOwner, shareToken, shareEnabled, slotInterval: initialSlotInterval, areaDurations: initialAreaDurations }: Props) {
+export default function AgendaClient({ userId, orgId, orgName, professionals, members, areas: initialAreas, isOwner, shareToken, shareEnabled, slotInterval: initialSlotInterval, areaDurations: initialAreaDurations, dayStart: initialDayStart, dayEnd: initialDayEnd }: Props) {
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()))
   const [selectedDay, setSelectedDay] = useState<Date>(() => new Date())
   const [view, setView] = useState<'week' | 'day'>('day')
@@ -304,6 +306,8 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
   const [areas, setAreas] = useState<string[]>(initialAreas)
   const [slotInterval, setSlotInterval] = useState(initialSlotInterval)
   const [areaDurations, setAreaDurations] = useState<Record<string, number>>(initialAreaDurations)
+  const [dayStart, setDayStart] = useState(initialDayStart)
+  const [dayEnd, setDayEnd] = useState(initialDayEnd)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [remindedIds, setRemindedIds] = useState<Set<string>>(() => {
     if (typeof window === 'undefined') return new Set()
@@ -353,8 +357,31 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
 
     if (filterProf !== 'all') query = query.eq('professional_id', filterProf)
 
-    const { data } = await query
-    setTurnos(data ?? [])
+    const { data, error } = await query
+    // Si la consulta falla, NO vaciamos la agenda: dejamos lo que ya estaba.
+    if (error) { setLoading(false); return }
+    const list: Turno[] = data ?? []
+
+    // Respaldo de teléfono para el recordatorio WA: para los turnos que no tienen
+    // teléfono copiado, buscamos el de la ficha del paciente en una consulta aparte.
+    // Es aditivo y no bloqueante: si falla, la agenda igual se muestra completa.
+    const missingIds = Array.from(new Set(
+      list.filter(t => t.patient_id && !t.patient_phone).map(t => t.patient_id as string),
+    ))
+    if (missingIds.length > 0) {
+      const { data: pts } = await supabaseRef.current
+        .from('patients')
+        .select('id, phone')
+        .in('id', missingIds)
+      if (pts && pts.length > 0) {
+        const phoneById = new Map(pts.map(p => [p.id as string, (p.phone as string | null) ?? null]))
+        for (const t of list) {
+          if (t.patient_id && !t.patient_phone) t.patient_phone = phoneById.get(t.patient_id) ?? null
+        }
+      }
+    }
+
+    setTurnos(list)
     setLoading(false)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weekStart, selectedDay, view, orgId, userId, filterProf])
@@ -409,8 +436,11 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
   // slot. Los bordes se anclan al intervalo (ej. con 40': ...8:00, 8:40, ...16:00)
   // para que los turnos calcen con las celdas. Los turnos se posicionan por su
   // horario real (proporcional).
-  const gridStart = Math.floor(GRID_START / effectiveInterval) * effectiveInterval
-  const gridEnd   = Math.ceil(GRID_END / effectiveInterval) * effectiveInterval
+  // Horario visible configurable por agenda (con fallback a 7–21 si viene vacío).
+  const dayStartMin = dayStart ?? GRID_START_DEFAULT
+  const dayEndMin   = dayEnd   ?? GRID_END_DEFAULT
+  const gridStart = Math.floor(dayStartMin / effectiveInterval) * effectiveInterval
+  const gridEnd   = Math.ceil(dayEndMin / effectiveInterval) * effectiveInterval
   const gridTotal = gridEnd - gridStart
   const pxPerMinute = SLOT_ROW_HEIGHT / effectiveInterval
   const GRID_HEIGHT = gridTotal * pxPerMinute
@@ -493,7 +523,10 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                     para no tapar el nombre (que se lee desde la izquierda).
                     En semana con muchas columnas apiladas no entra: ahí las acciones
                     quedan en el menú (click en el turno) para no romper el layout. */}
-                {!t.is_blocked && !(compact && layout.totalCols >= 4) && (
+                {/* Barra de acciones. Cuando hay muchos turnos apilados (sobreturnos
+                    en semana) no entran todos los botones: en ese caso ocultamos los
+                    extras pero SIEMPRE mantenemos el WA, que es el más importante. */}
+                {!t.is_blocked && (
                   <div className="absolute bottom-0.5 right-0.5 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity rounded bg-bg-primary/70 backdrop-blur-[2px] p-0.5">
                     {!compact && (
                       <>
@@ -513,13 +546,15 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                         </button>
                       </>
                     )}
-                    <button
-                      onClick={e => { e.stopPropagation(); openNew(new Date(t.start_time), new Date(t.start_time).getHours(), new Date(t.start_time).getMinutes(), 'sobreturno') }}
-                      title="Dar sobreturno en este horario"
-                      className="text-[9px] leading-none border-[0.5px] rounded px-1 py-0.5 transition-colors bg-bg-secondary hover:bg-bg-tertiary border-border text-text-secondary"
-                    >
-                      ST
-                    </button>
+                    {!(compact && layout.totalCols >= 4) && (
+                      <button
+                        onClick={e => { e.stopPropagation(); openNew(new Date(t.start_time), new Date(t.start_time).getHours(), new Date(t.start_time).getMinutes(), 'sobreturno') }}
+                        title="Dar sobreturno en este horario"
+                        className="text-[9px] leading-none border-[0.5px] rounded px-1 py-0.5 transition-colors bg-bg-secondary hover:bg-bg-tertiary border-border text-text-secondary"
+                      >
+                        ST
+                      </button>
+                    )}
                     {waUrl && (
                       <a
                         href={waUrl}
@@ -870,6 +905,8 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
           defaultStart={modal.defaultStart}
           defaultStatus={modal.defaultStatus}
           slotInterval={effectiveInterval}
+          dayStart={dayStartMin}
+          dayEnd={dayEndMin}
           onClose={closeModal}
           onSaved={handleSaved}
           onClone={handleClone}
@@ -898,11 +935,13 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
           initialAreas={areas}
           initialSlotInterval={slotInterval}
           initialAreaDurations={areaDurations}
+          initialDayStart={dayStart}
+          initialDayEnd={dayEnd}
           members={members}
           shareToken={shareToken}
           shareEnabled={shareEnabled}
           onClose={() => setSettingsOpen(false)}
-          onSaved={(newAreas, newSlotInterval, newAreaDurations) => { setAreas(newAreas); setSlotInterval(newSlotInterval); setAreaDurations(newAreaDurations); setSettingsOpen(false) }}
+          onSaved={(newAreas, newSlotInterval, newAreaDurations, newDayStart, newDayEnd) => { setAreas(newAreas); setSlotInterval(newSlotInterval); setAreaDurations(newAreaDurations); setDayStart(newDayStart); setDayEnd(newDayEnd); setSettingsOpen(false) }}
         />
       )}
     </div>

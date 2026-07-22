@@ -28,11 +28,13 @@ interface Props {
   initialAreas: string[]
   initialSlotInterval: number
   initialAreaDurations: Record<string, number>
+  initialDayStart: number
+  initialDayEnd: number
   members: Member[]
   shareToken: string | null
   shareEnabled: boolean
   onClose: () => void
-  onSaved: (areas: string[], slotInterval: number, areaDurations: Record<string, number>) => void
+  onSaved: (areas: string[], slotInterval: number, areaDurations: Record<string, number>, dayStart: number, dayEnd: number) => void
 }
 
 const DURATION_OPTIONS = [15, 20, 30, 40, 45, 60]
@@ -44,6 +46,8 @@ export default function AgendaSettings({
   initialAreas,
   initialSlotInterval,
   initialAreaDurations,
+  initialDayStart,
+  initialDayEnd,
   members,
   shareToken,
   shareEnabled: initialShareEnabled,
@@ -53,6 +57,8 @@ export default function AgendaSettings({
   const [areas, setAreas] = useState<string[]>(initialAreas)
   const [slotInterval, setSlotInterval] = useState(initialSlotInterval)
   const [areaDurations, setAreaDurations] = useState<Record<string, number>>(initialAreaDurations)
+  const [dayStart, setDayStart] = useState(initialDayStart)
+  const [dayEnd, setDayEnd] = useState(initialDayEnd)
   const [newArea, setNewArea] = useState('')
   const [shareEnabled, setShareEnabled] = useState(initialShareEnabled)
   const [memberAccess, setMemberAccess] = useState<Record<string, boolean>>(
@@ -125,14 +131,28 @@ export default function AgendaSettings({
       Object.entries(areaDurations).filter(([area]) => areas.includes(area))
     )
 
+    // Guardamos el horario visible normalizado: apertura < cierre.
+    const safeStart = Math.min(dayStart, dayEnd - 60)
+    const safeEnd   = Math.max(dayEnd, dayStart + 60)
+
+    const table = orgId && isOwner ? 'organizations' : 'users'
+    const rowId = orgId && isOwner ? orgId : userId
+
+    // Guardado principal (áreas, intervalo, etc.). No incluye el horario visible
+    // para que, si la migración de esas columnas no corrió, esto igual persista.
     if (orgId && isOwner) {
       await supabase.from('organizations').update({ agenda_areas: areas, agenda_slot_interval: slotInterval, agenda_area_durations: cleanDurations, agenda_share_enabled: shareEnabled }).eq('id', orgId)
     } else {
       await supabase.from('users').update({ agenda_areas: areas, agenda_slot_interval: slotInterval, agenda_area_durations: cleanDurations }).eq('id', userId)
     }
 
+    // Guardado del horario visible por separado (best-effort): si las columnas
+    // todavía no existen, falla solo esto y el resto de la config igual se guarda.
+    const { error: hoursErr } = await supabase.from(table).update({ agenda_day_start: safeStart, agenda_day_end: safeEnd }).eq('id', rowId)
+
     setSaving(false)
-    onSaved(areas, slotInterval, cleanDurations)
+    // Si no se pudo guardar el horario (migración pendiente), no lo reflejamos en la UI.
+    onSaved(areas, slotInterval, cleanDurations, hoursErr ? initialDayStart : safeStart, hoursErr ? initialDayEnd : safeEnd)
   }
 
   return (
@@ -212,6 +232,39 @@ export default function AgendaSettings({
                 {interval} min
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* Horario visible de la agenda */}
+        <div className="mb-6 border-t-[0.5px] border-border pt-5">
+          <label className="text-[11px] uppercase tracking-[0.05em] text-text-secondary block mb-3">Horario visible</label>
+          <p className="text-[12px] text-text-secondary mb-3">De qué hora a qué hora se muestra la grilla (ej: de 8 a 20, o de 7 a 21).</p>
+          <div className="flex items-center gap-2">
+            <div className="flex-1">
+              <label className="block text-[11px] text-text-secondary mb-1">Abre</label>
+              <select
+                value={dayStart}
+                onChange={e => setDayStart(Number(e.target.value))}
+                className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg px-3 py-2 text-[13px] text-text-primary focus:outline-none focus:border-accent"
+              >
+                {Array.from({ length: 14 }, (_, i) => 5 + i).map(h => (
+                  <option key={h} value={h * 60} disabled={h * 60 >= dayEnd}>{String(h).padStart(2, '0')}:00</option>
+                ))}
+              </select>
+            </div>
+            <span className="text-text-tertiary pt-5">—</span>
+            <div className="flex-1">
+              <label className="block text-[11px] text-text-secondary mb-1">Cierra</label>
+              <select
+                value={dayEnd}
+                onChange={e => setDayEnd(Number(e.target.value))}
+                className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg px-3 py-2 text-[13px] text-text-primary focus:outline-none focus:border-accent"
+              >
+                {Array.from({ length: 15 }, (_, i) => 9 + i).map(h => (
+                  <option key={h} value={h * 60} disabled={h * 60 <= dayStart}>{String(h).padStart(2, '0')}:00</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 

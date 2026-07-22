@@ -43,6 +43,10 @@ export default async function AgendaPage() {
   let areas: string[] = userData?.agenda_areas ?? DEFAULT_AREAS
   let slotInterval: number = userData?.agenda_slot_interval ?? 60
   let areaDurations: Record<string, number> = (userData?.agenda_area_durations as Record<string, number> | null) ?? {}
+  // Horario visible: default 7–21. Se leen aparte más abajo para que la agenda
+  // funcione aunque la migración de estas columnas todavía no se haya corrido.
+  let dayStart = 420
+  let dayEnd = 1260
   let shareToken: string | null = null
   let shareEnabled = false
 
@@ -62,6 +66,22 @@ export default async function AgendaPage() {
       areaDurations = org.agenda_area_durations ?? {}
       shareToken = org.agenda_share_token
       shareEnabled = org.agenda_share_enabled ?? false
+    }
+  }
+
+  // Lectura defensiva del horario visible (columnas nuevas). Si la migración no
+  // corrió aún, la consulta devuelve error y quedan los defaults 7–21.
+  {
+    const hoursTable = orgId ? 'organizations' : 'users'
+    const hoursId    = orgId ?? user.id
+    const { data: hrs, error: hrsErr } = await supabase
+      .from(hoursTable)
+      .select('agenda_day_start, agenda_day_end')
+      .eq('id', hoursId)
+      .single()
+    if (!hrsErr && hrs) {
+      if (typeof hrs.agenda_day_start === 'number') dayStart = hrs.agenda_day_start
+      if (typeof hrs.agenda_day_end === 'number')   dayEnd   = hrs.agenda_day_end
     }
   }
 
@@ -112,6 +132,8 @@ export default async function AgendaPage() {
           shareEnabled={shareEnabled}
           slotInterval={slotInterval}
           areaDurations={areaDurations}
+          dayStart={dayStart}
+          dayEnd={dayEnd}
         />
       </main>
     </div>
