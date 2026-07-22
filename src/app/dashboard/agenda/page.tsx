@@ -26,7 +26,7 @@ export default async function AgendaPage() {
   if (!user) redirect('/login')
 
   const [{ data: userData }, ctx] = await Promise.all([
-    supabase.from('users').select('role, full_name, agenda_areas, agenda_slot_interval, agenda_area_durations, agenda_day_start, agenda_day_end').eq('id', user.id).single(),
+    supabase.from('users').select('role, full_name, agenda_areas, agenda_slot_interval, agenda_area_durations').eq('id', user.id).single(),
     getActiveContext(user.id, supabase),
   ])
 
@@ -43,16 +43,18 @@ export default async function AgendaPage() {
   let areas: string[] = userData?.agenda_areas ?? DEFAULT_AREAS
   let slotInterval: number = userData?.agenda_slot_interval ?? 60
   let areaDurations: Record<string, number> = (userData?.agenda_area_durations as Record<string, number> | null) ?? {}
-  let dayStart: number = userData?.agenda_day_start ?? 420
-  let dayEnd: number = userData?.agenda_day_end ?? 1260
+  // Horario visible: default 7–21. Se leen aparte más abajo para que la agenda
+  // funcione aunque la migración de estas columnas todavía no se haya corrido.
+  let dayStart = 420
+  let dayEnd = 1260
   let shareToken: string | null = null
   let shareEnabled = false
 
   if (isOrgContext && ctx.orgId) {
-    type OrgData = { id: string; name: string; agenda_areas: string[] | null; agenda_slot_interval: number | null; agenda_area_durations: Record<string, number> | null; agenda_day_start: number | null; agenda_day_end: number | null; agenda_share_token: string | null; agenda_share_enabled: boolean; owner_id: string }
+    type OrgData = { id: string; name: string; agenda_areas: string[] | null; agenda_slot_interval: number | null; agenda_area_durations: Record<string, number> | null; agenda_share_token: string | null; agenda_share_enabled: boolean; owner_id: string }
     const { data: orgData } = await supabase
       .from('organizations')
-      .select('id, name, agenda_areas, agenda_slot_interval, agenda_area_durations, agenda_day_start, agenda_day_end, agenda_share_token, agenda_share_enabled, owner_id')
+      .select('id, name, agenda_areas, agenda_slot_interval, agenda_area_durations, agenda_share_token, agenda_share_enabled, owner_id')
       .eq('id', ctx.orgId)
       .single()
     const org = orgData as unknown as OrgData | null
@@ -62,10 +64,24 @@ export default async function AgendaPage() {
       areas = org.agenda_areas ?? DEFAULT_AREAS
       slotInterval = org.agenda_slot_interval ?? 60
       areaDurations = org.agenda_area_durations ?? {}
-      dayStart = org.agenda_day_start ?? 420
-      dayEnd = org.agenda_day_end ?? 1260
       shareToken = org.agenda_share_token
       shareEnabled = org.agenda_share_enabled ?? false
+    }
+  }
+
+  // Lectura defensiva del horario visible (columnas nuevas). Si la migración no
+  // corrió aún, la consulta devuelve error y quedan los defaults 7–21.
+  {
+    const hoursTable = orgId ? 'organizations' : 'users'
+    const hoursId    = orgId ?? user.id
+    const { data: hrs, error: hrsErr } = await supabase
+      .from(hoursTable)
+      .select('agenda_day_start, agenda_day_end')
+      .eq('id', hoursId)
+      .single()
+    if (!hrsErr && hrs) {
+      if (typeof hrs.agenda_day_start === 'number') dayStart = hrs.agenda_day_start
+      if (typeof hrs.agenda_day_end === 'number')   dayEnd   = hrs.agenda_day_end
     }
   }
 

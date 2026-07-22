@@ -135,14 +135,24 @@ export default function AgendaSettings({
     const safeStart = Math.min(dayStart, dayEnd - 60)
     const safeEnd   = Math.max(dayEnd, dayStart + 60)
 
+    const table = orgId && isOwner ? 'organizations' : 'users'
+    const rowId = orgId && isOwner ? orgId : userId
+
+    // Guardado principal (áreas, intervalo, etc.). No incluye el horario visible
+    // para que, si la migración de esas columnas no corrió, esto igual persista.
     if (orgId && isOwner) {
-      await supabase.from('organizations').update({ agenda_areas: areas, agenda_slot_interval: slotInterval, agenda_area_durations: cleanDurations, agenda_day_start: safeStart, agenda_day_end: safeEnd, agenda_share_enabled: shareEnabled }).eq('id', orgId)
+      await supabase.from('organizations').update({ agenda_areas: areas, agenda_slot_interval: slotInterval, agenda_area_durations: cleanDurations, agenda_share_enabled: shareEnabled }).eq('id', orgId)
     } else {
-      await supabase.from('users').update({ agenda_areas: areas, agenda_slot_interval: slotInterval, agenda_area_durations: cleanDurations, agenda_day_start: safeStart, agenda_day_end: safeEnd }).eq('id', userId)
+      await supabase.from('users').update({ agenda_areas: areas, agenda_slot_interval: slotInterval, agenda_area_durations: cleanDurations }).eq('id', userId)
     }
 
+    // Guardado del horario visible por separado (best-effort): si las columnas
+    // todavía no existen, falla solo esto y el resto de la config igual se guarda.
+    const { error: hoursErr } = await supabase.from(table).update({ agenda_day_start: safeStart, agenda_day_end: safeEnd }).eq('id', rowId)
+
     setSaving(false)
-    onSaved(areas, slotInterval, cleanDurations, safeStart, safeEnd)
+    // Si no se pudo guardar el horario (migración pendiente), no lo reflejamos en la UI.
+    onSaved(areas, slotInterval, cleanDurations, hoursErr ? initialDayStart : safeStart, hoursErr ? initialDayEnd : safeEnd)
   }
 
   return (
