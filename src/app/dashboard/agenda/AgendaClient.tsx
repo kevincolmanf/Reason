@@ -345,13 +345,9 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
       to   = addDays(weekEnd, 1).toISOString()
     }
 
-    // Traemos también el teléfono del perfil del paciente (patients.phone) como
-    // respaldo: el turno guarda una copia (patient_phone) al crearse, pero si ese
-    // turno se creó sin teléfono igual queremos poder mandar el recordatorio WA
-    // usando el número que hoy tiene el paciente en su ficha.
     let query = supabaseRef.current
       .from('turnos')
-      .select('*, patients(phone)')
+      .select('*')
       .gte('start_time', from)
       .lt('start_time', to)
       .order('start_time')
@@ -361,11 +357,31 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
 
     if (filterProf !== 'all') query = query.eq('professional_id', filterProf)
 
-    const { data } = await query
-    setTurnos((data ?? []).map((t: Turno & { patients?: { phone: string | null } | null }) => ({
-      ...t,
-      patient_phone: t.patient_phone || t.patients?.phone || null,
-    })))
+    const { data, error } = await query
+    // Si la consulta falla, NO vaciamos la agenda: dejamos lo que ya estaba.
+    if (error) { setLoading(false); return }
+    const list: Turno[] = data ?? []
+
+    // Respaldo de teléfono para el recordatorio WA: para los turnos que no tienen
+    // teléfono copiado, buscamos el de la ficha del paciente en una consulta aparte.
+    // Es aditivo y no bloqueante: si falla, la agenda igual se muestra completa.
+    const missingIds = Array.from(new Set(
+      list.filter(t => t.patient_id && !t.patient_phone).map(t => t.patient_id as string),
+    ))
+    if (missingIds.length > 0) {
+      const { data: pts } = await supabaseRef.current
+        .from('patients')
+        .select('id, phone')
+        .in('id', missingIds)
+      if (pts && pts.length > 0) {
+        const phoneById = new Map(pts.map(p => [p.id as string, (p.phone as string | null) ?? null]))
+        for (const t of list) {
+          if (t.patient_id && !t.patient_phone) t.patient_phone = phoneById.get(t.patient_id) ?? null
+        }
+      }
+    }
+
+    setTurnos(list)
     setLoading(false)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weekStart, selectedDay, view, orgId, userId, filterProf])
