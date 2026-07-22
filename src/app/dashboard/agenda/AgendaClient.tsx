@@ -889,6 +889,8 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
           defaultStart={modal.defaultStart}
           defaultStatus={modal.defaultStatus}
           slotInterval={effectiveInterval}
+          dayStart={dayStartMin}
+          dayEnd={dayEndMin}
           onClose={closeModal}
           onSaved={handleSaved}
           onClone={handleClone}

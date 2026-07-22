@@ -64,6 +64,8 @@ interface Props {
   defaultStart?: Date
   defaultStatus?: string
   slotInterval?: number
+  dayStart?: number
+  dayEnd?: number
   onClose: () => void
   onSaved: () => void
   onClone?: (turno: Turno) => void
@@ -126,6 +128,34 @@ function formatDateShort(date: Date): string {
   return date.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' })
 }
 
+// Genera las ocurrencias de un bloqueo recurrente conservando la hora de inicio/fin.
+// 'weekly' = el mismo día de semana cada semana; 'weekdays' = de lunes a viernes.
+function expandBlockDates(baseStart: Date, baseEnd: Date, mode: 'weekly' | 'weekdays', weeks: number): { start: Date; end: Date }[] {
+  const out: { start: Date; end: Date }[] = []
+  const durationMs = baseEnd.getTime() - baseStart.getTime()
+  const withTime = (day: Date) => {
+    const s = new Date(day)
+    s.setHours(baseStart.getHours(), baseStart.getMinutes(), 0, 0)
+    return { start: s, end: new Date(s.getTime() + durationMs) }
+  }
+  if (mode === 'weekly') {
+    for (let i = 0; i < weeks; i++) {
+      const d = new Date(baseStart)
+      d.setDate(d.getDate() + i * 7)
+      out.push(withTime(d))
+    }
+  } else {
+    const totalDays = weeks * 7
+    for (let i = 0; i < totalDays; i++) {
+      const d = new Date(baseStart)
+      d.setDate(d.getDate() + i)
+      const dow = d.getDay() // 0 dom … 6 sáb
+      if (dow >= 1 && dow <= 5) out.push(withTime(d))
+    }
+  }
+  return out
+}
+
 function formatTime(date: Date): string {
   return date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
 }
@@ -163,10 +193,12 @@ function formatISOToDMY(iso: string): string {
   return m ? `${m[3]}/${m[2]}/${m[1]}` : ''
 }
 
-export default function TurnoModal({ userId, orgId, orgName, professionals, areas, turno, defaultStart, defaultStatus, slotInterval, onClose, onSaved, onClone, onReminderSent, onHistorialChanged }: Props) {
+export default function TurnoModal({ userId, orgId, orgName, professionals, areas, turno, defaultStart, defaultStatus, slotInterval, dayStart, dayEnd, onClose, onSaved, onClone, onReminderSent, onHistorialChanged }: Props) {
   const isEdit = !!turno
   const effectiveAreas = areas.length > 0 ? areas : AREAS
   const defaultDuration = slotInterval ?? 60
+  const openMin  = dayStart ?? 7 * 60
+  const closeMin = dayEnd ?? 21 * 60
   const defaultEnd = defaultStart ? new Date(defaultStart.getTime() + defaultDuration * 60 * 1000) : null
 
   const [form, setForm] = useState({
@@ -208,6 +240,8 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
   const [historialLoaded, setHistorialLoaded] = useState(false)
   const [loadingHistorial, setLoadingHistorial] = useState(false)
   const [doubleBooking, setDoubleBooking]     = useState(false)
+  const [blockRepeat, setBlockRepeat]         = useState<'none' | 'weekly' | 'weekdays'>('none')
+  const [blockRepeatWeeks, setBlockRepeatWeeks] = useState(4)
   const [sameDayTurnos, setSameDayTurnos]     = useState<{ hora: string; area: string }[]>([])
   const [cancelingIds, setCancelingIds]       = useState<Set<string>>(new Set())
 
@@ -480,6 +514,11 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
 
     if (isEdit) {
       await supabaseRef.current.from('turnos').update(payload).eq('id', turno!.id)
+    } else if (form.is_blocked && blockRepeat !== 'none') {
+      // Bloqueo recurrente: insertamos una fila por cada ocurrencia de la serie.
+      const occurrences = expandBlockDates(new Date(form.start_time), new Date(form.end_time), blockRepeat, blockRepeatWeeks)
+      const rows = occurrences.map(o => ({ ...payload, start_time: o.start.toISOString(), end_time: o.end.toISOString() }))
+      await supabaseRef.current.from('turnos').insert(rows)
     } else {
       await supabaseRef.current.from('turnos').insert(payload)
     }
@@ -607,6 +646,18 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
                 <input type="datetime-local" value={form.end_time} onChange={e => setForm(f => ({ ...f, end_time: e.target.value }))} className={inputCls} />
               </div>
             </div>
+            <button
+              type="button"
+              onClick={() => {
+                const base = form.start_time ? new Date(form.start_time) : new Date()
+                const s = new Date(base); s.setHours(Math.floor(openMin / 60), openMin % 60, 0, 0)
+                const e = new Date(base); e.setHours(Math.floor(closeMin / 60), closeMin % 60, 0, 0)
+                setForm(f => ({ ...f, start_time: toLocalInputValue(s), end_time: toLocalInputValue(e) }))
+              }}
+              className="text-[12px] px-3 py-1.5 rounded-lg border-[0.5px] border-border text-text-secondary hover:text-text-primary transition-colors"
+            >
+              Todo el día ({String(Math.floor(openMin / 60)).padStart(2, '0')}:{String(openMin % 60).padStart(2, '0')}–{String(Math.floor(closeMin / 60)).padStart(2, '0')}:{String(closeMin % 60).padStart(2, '0')})
+            </button>
             <div>
               <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-2">Duración</label>
               <div className="flex gap-1.5 flex-wrap">
@@ -643,6 +694,42 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
               <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Motivo (opcional)</label>
               <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Ej: Reunión, feriado, descanso..." rows={2} className={`${inputCls} resize-none`} />
             </div>
+
+            {/* Repetir (solo al crear un bloqueo nuevo) */}
+            {!isEdit && (
+              <div>
+                <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-2">Repetir</label>
+                <div className="flex gap-1.5 flex-wrap">
+                  {([['none', 'No repetir'], ['weekly', 'Cada semana'], ['weekdays', 'Lun a Vie']] as const).map(([val, label]) => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => setBlockRepeat(val)}
+                      className={`px-2.5 py-1 rounded-lg text-[12px] border-[0.5px] transition-colors ${
+                        blockRepeat === val ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-primary border-border text-text-secondary hover:text-text-primary'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                {blockRepeat !== 'none' && (
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-[12px] text-text-secondary">Durante</span>
+                    <select
+                      value={blockRepeatWeeks}
+                      onChange={e => setBlockRepeatWeeks(Number(e.target.value))}
+                      className="bg-bg-primary border-[0.5px] border-border-strong rounded-lg px-2 py-1 text-[12px] text-text-primary focus:outline-none focus:border-accent"
+                    >
+                      {[2, 4, 8, 12].map(w => <option key={w} value={w}>{w} semanas</option>)}
+                    </select>
+                    <span className="text-[11px] text-text-tertiary">
+                      ({blockRepeat === 'weekly' ? `${blockRepeatWeeks} bloqueos` : `${blockRepeatWeeks * 5} bloqueos`})
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         ) : (
           /* Normal appointment form */
