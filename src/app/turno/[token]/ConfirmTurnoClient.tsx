@@ -59,12 +59,10 @@ export default function ConfirmTurnoClient({
     }
   }
 
-  const firstName = patientName.split(' ')[0]
-
   return (
     <div>
       <h1 className="text-[22px] font-medium tracking-[-0.01em] text-text-primary">
-        Hola {firstName} 👋
+        Hola {patientName} 👋
       </h1>
       <p className="text-[14px] text-text-secondary mt-1">
         {orgName ? `Este es tu turno en ${orgName}.` : 'Este es tu turno.'}

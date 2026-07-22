@@ -455,9 +455,6 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                   ...(!t.is_blocked && t.status === 'ausente'  ? { borderLeftColor: 'rgb(248 113 113)', borderLeftWidth: '3px' } : {}),
                 }}
               >
-                {remindedIds.has(t.id) && (
-                  <span className="absolute top-1 left-1 w-1.5 h-1.5 rounded-full bg-green-400 z-10" title="Recordatorio enviado" />
-                )}
                 {/* Respuesta del paciente: C verde (confirmó) / A roja (avisó que no asiste) */}
                 {!t.is_blocked && (t.status === 'confirmado' || t.status === 'ausente') && (
                   <span
@@ -480,8 +477,11 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                     <p className="text-[11px] leading-tight truncate text-text-secondary">{t.notes || 'Bloqueado'}</p>
                   ) : (
                     <>
-                      <p className={`text-[11.5px] font-semibold leading-tight truncate ${t.status === 'cancelado' ? '' : 'text-text-primary'}`}>
-                        {compact ? t.patient_name : `${formatTime(start)} ${t.patient_name}`}
+                      <p className={`text-[11.5px] font-semibold leading-tight flex items-center gap-1 ${t.status === 'cancelado' ? '' : 'text-text-primary'}`}>
+                        {remindedIds.has(t.id) && (
+                          <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-green-400" title="Recordatorio enviado" />
+                        )}
+                        <span className="truncate">{compact ? t.patient_name : `${formatTime(start)} ${t.patient_name}`}</span>
                       </p>
                       {heightPx > 32 && <p className="text-[10px] text-text-secondary leading-tight truncate">{t.area}</p>}
                       {heightPx > 44 && !compact && t.professional_name && <p className="text-[10px] text-text-tertiary leading-tight truncate">{t.professional_name}</p>}
