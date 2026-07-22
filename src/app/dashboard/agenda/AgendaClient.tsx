@@ -297,11 +297,12 @@ function escapeHtml(str: string): string {
   ))
 }
 
-// Exporta el día a un PDF pensado para imprimir y entregarle a cada profesional.
-// Diseño para gastar poca tinta: fondo blanco, texto negro, líneas finas y sin
-// bloques de color. Una sección por profesional con salto de página, así se le
-// puede dar a cada uno su hoja. Se abre el diálogo de impresión del navegador
-// (Guardar como PDF) sobre un iframe oculto para evitar bloqueos de pop-ups.
+// Exporta el día a un PDF pensado para imprimir y entregarle a los profesionales.
+// Diseño para gastar poca tinta y entrar todo en una A4: fondo blanco, texto
+// negro, líneas finas, sin bloques de color, y el listado a 2 columnas.
+// Columnas: hora, paciente y área. Agrupado por profesional (sin salto de página).
+// Se abre el diálogo de impresión del navegador (Guardar como PDF) sobre un
+// iframe oculto para evitar bloqueos de pop-ups.
 function exportDayPdf(turnos: Turno[], date: Date, orgName: string | null, filterArea: string) {
   const sorted = [...turnos]
     .filter(t => !t.is_blocked && t.status !== 'cancelado')
@@ -314,64 +315,54 @@ function exportDayPdf(turnos: Turno[], date: Date, orgName: string | null, filte
     if (!groups.has(key)) groups.set(key, [])
     groups.get(key)!.push(t)
   }
-  if (groups.size === 0) groups.set('Sin profesional asignado', [])
 
   const fechaLarga = date.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
   const areaLabel = filterArea !== 'all' ? ` · ${escapeHtml(filterArea)}` : ''
+  const totalPacientes = sorted.length
 
-  const sections = Array.from(groups.entries()).map(([prof, ts], i) => {
-    const rows = ts.map(t => {
-      const cancel = t.status === 'cancelado'
-      const conf = t.status === 'confirmado' ? '✓' : ''
-      return `<tr${cancel ? ' class="cx"' : ''}>
+  const groupsHtml = Array.from(groups.entries()).map(([prof, ts]) => {
+    const rows = ts.map(t => `<tr>
         <td class="hr">${formatTime(new Date(t.start_time))}</td>
         <td class="nm">${escapeHtml(t.patient_name ?? '')}</td>
-        <td>${escapeHtml(t.area ?? '')}</td>
-        <td class="tel">${escapeHtml(t.patient_phone ?? '')}</td>
-        <td class="ok">${conf}</td>
-        <td class="nt">${escapeHtml(t.notes ?? '')}</td>
-      </tr>`
-    }).join('')
-
-    return `<section class="prof"${i > 0 ? ' style="page-break-before:always"' : ''}>
-      <div class="head">
-        <div class="org">${escapeHtml(orgName ?? 'Agenda')}</div>
-        <div class="meta"><strong>${escapeHtml(prof)}</strong> · <span class="cap">${escapeHtml(fechaLarga)}</span>${areaLabel}</div>
-      </div>
-      <table>
-        <thead>
-          <tr><th class="hr">Hora</th><th>Paciente</th><th>Área</th><th class="tel">Teléfono</th><th class="ok">Conf.</th><th class="nt">Notas</th></tr>
-        </thead>
-        <tbody>${rows || '<tr><td colspan="6" class="empty">Sin turnos</td></tr>'}</tbody>
-      </table>
-      <div class="foot">${ts.length} turno${ts.length !== 1 ? 's' : ''}</div>
-    </section>`
+        <td class="ar">${escapeHtml(t.area ?? '')}</td>
+      </tr>`).join('')
+    return `<div class="grp">
+      <div class="gh">${escapeHtml(prof)} <span class="cnt">${ts.length}</span></div>
+      <table><tbody>${rows}</tbody></table>
+    </div>`
   }).join('')
+
+  const body = totalPacientes === 0
+    ? '<p class="empty">No hay turnos para este día.</p>'
+    : `<div class="cols">${groupsHtml}</div>`
 
   const html = `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>Agenda ${escapeHtml(fechaLarga)}</title>
   <style>
-    @page { size: A4 portrait; margin: 12mm 12mm 10mm; }
+    @page { size: A4 portrait; margin: 10mm; }
     * { box-sizing: border-box; }
     body { font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; color: #000; margin: 0; }
-    .prof { }
-    .head { border-bottom: 1.5px solid #000; padding-bottom: 6px; margin-bottom: 8px; }
+    .head { border-bottom: 1.5px solid #000; padding-bottom: 5px; margin-bottom: 8px; }
     .org { font-size: 15px; font-weight: 700; }
-    .meta { font-size: 12px; color: #222; margin-top: 2px; }
+    .meta { font-size: 11px; color: #222; margin-top: 2px; }
     .cap { text-transform: capitalize; }
-    table { width: 100%; border-collapse: collapse; font-size: 11px; }
-    thead th { text-align: left; font-weight: 700; border-bottom: 1px solid #000; padding: 4px 6px; font-size: 10px; text-transform: uppercase; letter-spacing: .03em; }
-    tbody td { padding: 4px 6px; border-bottom: 1px solid #ccc; vertical-align: top; }
-    tbody tr:nth-child(even) td { background: #f6f6f6; }
-    .hr { width: 46px; white-space: nowrap; font-variant-numeric: tabular-nums; font-weight: 600; }
+    .cols { column-count: 2; column-gap: 12mm; }
+    .grp { break-inside: avoid; -webkit-column-break-inside: avoid; page-break-inside: avoid; margin-bottom: 9px; }
+    .gh { font-size: 11px; font-weight: 700; border-bottom: 1px solid #000; padding-bottom: 2px; margin-bottom: 3px; }
+    .gh .cnt { font-weight: 400; color: #666; }
+    table { width: 100%; border-collapse: collapse; font-size: 10.5px; }
+    td { padding: 2px 4px; border-bottom: 0.5px solid #ddd; vertical-align: top; }
+    .hr { width: 38px; white-space: nowrap; font-weight: 600; font-variant-numeric: tabular-nums; }
     .nm { font-weight: 600; }
-    .tel { width: 110px; white-space: nowrap; }
-    .ok { width: 34px; text-align: center; }
-    .nt { color: #333; }
-    .cx td { text-decoration: line-through; color: #999; }
-    .empty { text-align: center; color: #888; font-style: italic; }
-    .foot { margin-top: 6px; font-size: 10px; color: #666; }
+    .ar { color: #333; }
+    .empty { text-align: center; color: #888; font-style: italic; margin-top: 40px; }
     @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
-  </style></head><body>${sections}</body></html>`
+  </style></head><body>
+    <div class="head">
+      <div class="org">${escapeHtml(orgName ?? 'Agenda')}</div>
+      <div class="meta"><span class="cap">${escapeHtml(fechaLarga)}</span>${areaLabel} · ${totalPacientes} paciente${totalPacientes !== 1 ? 's' : ''}</div>
+    </div>
+    ${body}
+  </body></html>`
 
   const iframe = document.createElement('iframe')
   iframe.style.position = 'fixed'
@@ -756,7 +747,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
               <button onClick={() => exportDay(dayTurnos, selectedDay)} className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors" title={filterArea !== 'all' ? `Exportar ${filterArea} en CSV` : 'Exportar día en CSV'}>
                 CSV
               </button>
-              <button onClick={() => exportDayPdf(dayTurnos, selectedDay, orgName, filterArea)} className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors" title="Exportar día en PDF para imprimir y entregar a los profesionales">
+              <button onClick={() => exportDayPdf(dayTurnos, selectedDay, orgName, filterArea)} className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors" title="Exportar día en PDF (nombre y área por profesional) para imprimir y entregar">
                 PDF
               </button>
             </>
