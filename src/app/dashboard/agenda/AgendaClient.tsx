@@ -51,6 +51,8 @@ interface Props {
   shareEnabled: boolean
   slotInterval: number
   areaDurations: Record<string, number>
+  dayStart: number
+  dayEnd: number
 }
 
 // Status-based colors (lighter palette for readability)
@@ -156,8 +158,8 @@ function buildWhatsAppUrl(phone: string, name: string, start: Date, area: string
   return `https://wa.me/${clean}?text=${encodeURIComponent(msg)}`
 }
 
-const GRID_START = 7 * 60
-const GRID_END   = 21 * 60
+const GRID_START_DEFAULT = 7 * 60
+const GRID_END_DEFAULT    = 21 * 60
 const SLOT_ROW_HEIGHT = 56 // px por celda de la grilla (cada celda = un turno del intervalo del área)
 
 function minLabel(min: number): string {
@@ -289,7 +291,7 @@ function exportDay(turnos: Turno[], date: Date) {
   URL.revokeObjectURL(url)
 }
 
-export default function AgendaClient({ userId, orgId, orgName, professionals, members, areas: initialAreas, isOwner, shareToken, shareEnabled, slotInterval: initialSlotInterval, areaDurations: initialAreaDurations }: Props) {
+export default function AgendaClient({ userId, orgId, orgName, professionals, members, areas: initialAreas, isOwner, shareToken, shareEnabled, slotInterval: initialSlotInterval, areaDurations: initialAreaDurations, dayStart: initialDayStart, dayEnd: initialDayEnd }: Props) {
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()))
   const [selectedDay, setSelectedDay] = useState<Date>(() => new Date())
   const [view, setView] = useState<'week' | 'day'>('day')
@@ -304,6 +306,8 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
   const [areas, setAreas] = useState<string[]>(initialAreas)
   const [slotInterval, setSlotInterval] = useState(initialSlotInterval)
   const [areaDurations, setAreaDurations] = useState<Record<string, number>>(initialAreaDurations)
+  const [dayStart, setDayStart] = useState(initialDayStart)
+  const [dayEnd, setDayEnd] = useState(initialDayEnd)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [remindedIds, setRemindedIds] = useState<Set<string>>(() => {
     if (typeof window === 'undefined') return new Set()
@@ -416,8 +420,11 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
   // slot. Los bordes se anclan al intervalo (ej. con 40': ...8:00, 8:40, ...16:00)
   // para que los turnos calcen con las celdas. Los turnos se posicionan por su
   // horario real (proporcional).
-  const gridStart = Math.floor(GRID_START / effectiveInterval) * effectiveInterval
-  const gridEnd   = Math.ceil(GRID_END / effectiveInterval) * effectiveInterval
+  // Horario visible configurable por agenda (con fallback a 7–21 si viene vacío).
+  const dayStartMin = dayStart ?? GRID_START_DEFAULT
+  const dayEndMin   = dayEnd   ?? GRID_END_DEFAULT
+  const gridStart = Math.floor(dayStartMin / effectiveInterval) * effectiveInterval
+  const gridEnd   = Math.ceil(dayEndMin / effectiveInterval) * effectiveInterval
   const gridTotal = gridEnd - gridStart
   const pxPerMinute = SLOT_ROW_HEIGHT / effectiveInterval
   const GRID_HEIGHT = gridTotal * pxPerMinute
@@ -910,11 +917,13 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
           initialAreas={areas}
           initialSlotInterval={slotInterval}
           initialAreaDurations={areaDurations}
+          initialDayStart={dayStart}
+          initialDayEnd={dayEnd}
           members={members}
           shareToken={shareToken}
           shareEnabled={shareEnabled}
           onClose={() => setSettingsOpen(false)}
-          onSaved={(newAreas, newSlotInterval, newAreaDurations) => { setAreas(newAreas); setSlotInterval(newSlotInterval); setAreaDurations(newAreaDurations); setSettingsOpen(false) }}
+          onSaved={(newAreas, newSlotInterval, newAreaDurations, newDayStart, newDayEnd) => { setAreas(newAreas); setSlotInterval(newSlotInterval); setAreaDurations(newAreaDurations); setDayStart(newDayStart); setDayEnd(newDayEnd); setSettingsOpen(false) }}
         />
       )}
     </div>
