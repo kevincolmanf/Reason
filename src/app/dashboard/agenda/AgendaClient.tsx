@@ -341,9 +341,13 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
       to   = addDays(weekEnd, 1).toISOString()
     }
 
+    // Traemos también el teléfono del perfil del paciente (patients.phone) como
+    // respaldo: el turno guarda una copia (patient_phone) al crearse, pero si ese
+    // turno se creó sin teléfono igual queremos poder mandar el recordatorio WA
+    // usando el número que hoy tiene el paciente en su ficha.
     let query = supabaseRef.current
       .from('turnos')
-      .select('*')
+      .select('*, patients(phone)')
       .gte('start_time', from)
       .lt('start_time', to)
       .order('start_time')
@@ -354,7 +358,10 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
     if (filterProf !== 'all') query = query.eq('professional_id', filterProf)
 
     const { data } = await query
-    setTurnos(data ?? [])
+    setTurnos((data ?? []).map((t: Turno & { patients?: { phone: string | null } | null }) => ({
+      ...t,
+      patient_phone: t.patient_phone || t.patients?.phone || null,
+    })))
     setLoading(false)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weekStart, selectedDay, view, orgId, userId, filterProf])
@@ -493,7 +500,10 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                     para no tapar el nombre (que se lee desde la izquierda).
                     En semana con muchas columnas apiladas no entra: ahí las acciones
                     quedan en el menú (click en el turno) para no romper el layout. */}
-                {!t.is_blocked && !(compact && layout.totalCols >= 4) && (
+                {/* Barra de acciones. Cuando hay muchos turnos apilados (sobreturnos
+                    en semana) no entran todos los botones: en ese caso ocultamos los
+                    extras pero SIEMPRE mantenemos el WA, que es el más importante. */}
+                {!t.is_blocked && (
                   <div className="absolute bottom-0.5 right-0.5 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity rounded bg-bg-primary/70 backdrop-blur-[2px] p-0.5">
                     {!compact && (
                       <>
@@ -513,13 +523,15 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                         </button>
                       </>
                     )}
-                    <button
-                      onClick={e => { e.stopPropagation(); openNew(new Date(t.start_time), new Date(t.start_time).getHours(), new Date(t.start_time).getMinutes(), 'sobreturno') }}
-                      title="Dar sobreturno en este horario"
-                      className="text-[9px] leading-none border-[0.5px] rounded px-1 py-0.5 transition-colors bg-bg-secondary hover:bg-bg-tertiary border-border text-text-secondary"
-                    >
-                      ST
-                    </button>
+                    {!(compact && layout.totalCols >= 4) && (
+                      <button
+                        onClick={e => { e.stopPropagation(); openNew(new Date(t.start_time), new Date(t.start_time).getHours(), new Date(t.start_time).getMinutes(), 'sobreturno') }}
+                        title="Dar sobreturno en este horario"
+                        className="text-[9px] leading-none border-[0.5px] rounded px-1 py-0.5 transition-colors bg-bg-secondary hover:bg-bg-tertiary border-border text-text-secondary"
+                      >
+                        ST
+                      </button>
+                    )}
                     {waUrl && (
                       <a
                         href={waUrl}

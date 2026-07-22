@@ -208,11 +208,13 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
   const [historialLoaded, setHistorialLoaded] = useState(false)
   const [loadingHistorial, setLoadingHistorial] = useState(false)
   const [doubleBooking, setDoubleBooking]     = useState(false)
+  const [sameDayTurnos, setSameDayTurnos]     = useState<{ hora: string; area: string }[]>([])
   const [cancelingIds, setCancelingIds]       = useState<Set<string>>(new Set())
 
   const supabaseRef    = useRef(createClient())
   const searchTimeout  = useRef<ReturnType<typeof setTimeout> | null>(null)
   const overlapTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const sameDayTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   const dniTimeout     = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Setea la fecha de nacimiento desde un ISO (lookup de paciente) y calcula la edad
@@ -312,6 +314,38 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
       setDoubleBooking((data ?? []).length > 0)
     }, 400)
   }, [form.start_time, form.end_time, form.professional_id, form.is_blocked, orgId, userId, isEdit, turno])
+
+  // Aviso "ya tiene turno ese día": si el paciente ya tiene otro turno el mismo
+  // día con el mismo profesional (aunque sea a otra hora), lo avisamos para no
+  // agendar doble sin querer. No bloquea: solo advierte.
+  useEffect(() => {
+    if (!form.patient_id || !form.start_time || form.is_blocked) { setSameDayTurnos([]); return }
+    if (sameDayTimeout.current) clearTimeout(sameDayTimeout.current)
+    sameDayTimeout.current = setTimeout(async () => {
+      const d = new Date(form.start_time)
+      const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString()
+      const dayEnd   = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).toISOString()
+      let query = supabaseRef.current
+        .from('turnos')
+        .select('start_time, area')
+        .eq('patient_id', form.patient_id)
+        .gte('start_time', dayStart)
+        .lt('start_time', dayEnd)
+        .neq('status', 'cancelado')
+        .eq('is_blocked', false)
+      if (orgId) query = query.eq('org_id', orgId)
+      else       query = query.eq('created_by', userId)
+      if (form.professional_id) query = query.eq('professional_id', form.professional_id)
+      if (isEdit) query = query.neq('id', turno!.id)
+      const { data } = await query
+      setSameDayTurnos(
+        (data ?? []).map(t => ({
+          hora: new Date(t.start_time).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
+          area: t.area,
+        })),
+      )
+    }, 400)
+  }, [form.patient_id, form.start_time, form.professional_id, form.is_blocked, orgId, userId, isEdit, turno])
 
   const loadHistorial = useCallback(async () => {
     if (!form.patient_id) return
@@ -537,6 +571,14 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
         {doubleBooking && (
           <div className="mb-4 bg-amber-500/10 border-[0.5px] border-amber-500/30 rounded-lg px-3 py-2 text-[12px] text-amber-400">
             Ya existe un turno en este horario para este profesional.
+          </div>
+        )}
+
+        {/* Aviso: el paciente ya tiene turno ese día con este profesional */}
+        {!form.is_blocked && sameDayTurnos.length > 0 && (
+          <div className="mb-4 bg-amber-500/10 border-[0.5px] border-amber-500/30 rounded-lg px-3 py-2 text-[12px] text-amber-400">
+            <strong>Ojo:</strong> este paciente ya tiene {sameDayTurnos.length === 1 ? 'un turno' : `${sameDayTurnos.length} turnos`} ese día con este profesional
+            {' '}({sameDayTurnos.map(t => `${t.hora} ${t.area}`).join(', ')}). ¿Estás por agendar doble?
           </div>
         )}
 
