@@ -129,6 +129,15 @@ function formatArgentinePhone(phone: string): string {
   return `54${n}`
 }
 
+// Link de confirmación del paciente: usa el dominio de producción configurado
+// para que nunca le llegue una URL de preview (*.vercel.app). Si no está seteado,
+// cae al origen actual.
+function buildConfirmUrl(token: string | null): string | null {
+  if (!token) return null
+  const base = process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== 'undefined' ? window.location.origin : '')
+  return base ? `${base}/turno/${token}` : null
+}
+
 function buildWhatsAppUrl(phone: string, name: string, start: Date, area: string, org: string | null, confirmUrl: string | null): string {
   const clean = formatArgentinePhone(phone)
   const fecha = start.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -431,9 +440,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
             const widthPct = 100 / layout.totalCols
             const leftPct  = layout.col * widthPct
 
-            const confirmUrl = t.confirm_token && typeof window !== 'undefined'
-              ? `${window.location.origin}/turno/${t.confirm_token}`
-              : null
+            const confirmUrl = buildConfirmUrl(t.confirm_token)
             const waUrl = !t.is_blocked && t.patient_phone
               ? buildWhatsAppUrl(t.patient_phone, t.patient_name, start, t.area, orgName, confirmUrl)
               : null
@@ -791,9 +798,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                     new Date(quickMenu.turno.start_time),
                     quickMenu.turno.area,
                     orgName,
-                    quickMenu.turno.confirm_token && typeof window !== 'undefined'
-                      ? `${window.location.origin}/turno/${quickMenu.turno.confirm_token}`
-                      : null,
+                    buildConfirmUrl(quickMenu.turno.confirm_token),
                   )}
                   target="_blank"
                   rel="noopener noreferrer"
