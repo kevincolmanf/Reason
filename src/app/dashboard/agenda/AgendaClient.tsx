@@ -291,6 +291,102 @@ function exportDay(turnos: Turno[], date: Date) {
   URL.revokeObjectURL(url)
 }
 
+function escapeHtml(str: string): string {
+  return str.replace(/[&<>"']/g, c => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string
+  ))
+}
+
+// Exporta el día a un PDF pensado para imprimir y entregarle a los profesionales.
+// Diseño para gastar poca tinta y entrar todo en una A4: fondo blanco, texto
+// negro, líneas finas, sin bloques de color, y el listado a 2 columnas.
+// Columnas: hora, paciente y área. Agrupado por profesional (sin salto de página).
+// Se abre el diálogo de impresión del navegador (Guardar como PDF) sobre un
+// iframe oculto para evitar bloqueos de pop-ups.
+function exportDayPdf(turnos: Turno[], date: Date, orgName: string | null, filterArea: string) {
+  const sorted = [...turnos]
+    .filter(t => !t.is_blocked && t.status !== 'cancelado')
+    .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+
+  // Agrupar por profesional (los sin asignar van juntos al final)
+  const groups = new Map<string, Turno[]>()
+  for (const t of sorted) {
+    const key = t.professional_name?.trim() || 'Sin profesional asignado'
+    if (!groups.has(key)) groups.set(key, [])
+    groups.get(key)!.push(t)
+  }
+
+  const fechaLarga = date.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const areaLabel = filterArea !== 'all' ? ` · ${escapeHtml(filterArea)}` : ''
+  const totalPacientes = sorted.length
+
+  const groupsHtml = Array.from(groups.entries()).map(([prof, ts]) => {
+    const rows = ts.map(t => `<tr>
+        <td class="hr">${formatTime(new Date(t.start_time))}</td>
+        <td class="nm">${escapeHtml(t.patient_name ?? '')}</td>
+        <td class="ar">${escapeHtml(t.area ?? '')}</td>
+      </tr>`).join('')
+    return `<div class="grp">
+      <div class="gh">${escapeHtml(prof)} <span class="cnt">${ts.length}</span></div>
+      <table><tbody>${rows}</tbody></table>
+    </div>`
+  }).join('')
+
+  const body = totalPacientes === 0
+    ? '<p class="empty">No hay turnos para este día.</p>'
+    : `<div class="cols">${groupsHtml}</div>`
+
+  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>Agenda ${escapeHtml(fechaLarga)}</title>
+  <style>
+    @page { size: A4 portrait; margin: 10mm; }
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; color: #000; margin: 0; }
+    .head { border-bottom: 1.5px solid #000; padding-bottom: 5px; margin-bottom: 8px; }
+    .org { font-size: 15px; font-weight: 700; }
+    .meta { font-size: 11px; color: #222; margin-top: 2px; }
+    .cap { text-transform: capitalize; }
+    .cols { column-count: 2; column-gap: 12mm; }
+    .grp { break-inside: avoid; -webkit-column-break-inside: avoid; page-break-inside: avoid; margin-bottom: 9px; }
+    .gh { font-size: 11px; font-weight: 700; border-bottom: 1px solid #000; padding-bottom: 2px; margin-bottom: 3px; }
+    .gh .cnt { font-weight: 400; color: #666; }
+    table { width: 100%; border-collapse: collapse; font-size: 10.5px; }
+    td { padding: 2px 4px; border-bottom: 0.5px solid #ddd; vertical-align: top; }
+    .hr { width: 38px; white-space: nowrap; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .nm { font-weight: 600; }
+    .ar { color: #333; }
+    .empty { text-align: center; color: #888; font-style: italic; margin-top: 40px; }
+    @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+  </style></head><body>
+    <div class="head">
+      <div class="org">${escapeHtml(orgName ?? 'Agenda')}</div>
+      <div class="meta"><span class="cap">${escapeHtml(fechaLarga)}</span>${areaLabel} · ${totalPacientes} paciente${totalPacientes !== 1 ? 's' : ''}</div>
+    </div>
+    ${body}
+  </body></html>`
+
+  const iframe = document.createElement('iframe')
+  iframe.style.position = 'fixed'
+  iframe.style.right = '0'
+  iframe.style.bottom = '0'
+  iframe.style.width = '0'
+  iframe.style.height = '0'
+  iframe.style.border = '0'
+  document.body.appendChild(iframe)
+  const doc = iframe.contentWindow?.document
+  if (!doc) { document.body.removeChild(iframe); return }
+  doc.open()
+  doc.write(html)
+  doc.close()
+  const cleanup = () => { setTimeout(() => { try { document.body.removeChild(iframe) } catch {} }, 1000) }
+  iframe.contentWindow!.onafterprint = cleanup
+  // Damos un tick para que renderice antes de abrir el diálogo de impresión
+  setTimeout(() => {
+    iframe.contentWindow!.focus()
+    iframe.contentWindow!.print()
+    cleanup()
+  }, 250)
+}
+
 export default function AgendaClient({ userId, orgId, orgName, professionals, members, areas: initialAreas, isOwner, shareToken, shareEnabled, slotInterval: initialSlotInterval, areaDurations: initialAreaDurations, dayStart: initialDayStart, dayEnd: initialDayEnd }: Props) {
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()))
   const [selectedDay, setSelectedDay] = useState<Date>(() => new Date())
@@ -647,9 +743,14 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
           <button onClick={nextPeriod} className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors">→</button>
 
           {view === 'day' && (
-            <button onClick={() => exportDay(dayTurnos, selectedDay)} className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors" title={filterArea !== 'all' ? `Exportar ${filterArea}` : 'Exportar día'}>
-              Exportar
-            </button>
+            <>
+              <button onClick={() => exportDay(dayTurnos, selectedDay)} className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors" title={filterArea !== 'all' ? `Exportar ${filterArea} en CSV` : 'Exportar día en CSV'}>
+                CSV
+              </button>
+              <button onClick={() => exportDayPdf(dayTurnos, selectedDay, orgName, filterArea)} className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors" title="Exportar día en PDF (nombre y área por profesional) para imprimir y entregar">
+                PDF
+              </button>
+            </>
           )}
 
           <button onClick={() => setSettingsOpen(true)} className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors" title="Configurar agenda">
