@@ -23,6 +23,7 @@ interface Turno {
   notes: string | null
   appointment_type: string | null
   is_blocked: boolean | null
+  confirm_token: string | null
 }
 
 interface HistorialTurno {

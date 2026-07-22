@@ -25,6 +25,7 @@ interface Turno {
   notes: string | null
   appointment_type: string | null
   is_blocked: boolean | null
+  confirm_token: string | null
 }
 
 interface Professional {
@@ -59,7 +60,6 @@ const STATUS_COLORS: Record<string, string> = {
   presente:   'bg-emerald-500/15 border-emerald-500/40 text-emerald-300',
   ausente:    'bg-red-500/10 border-red-500/25 text-red-300',
   cancelado:  'bg-bg-secondary border-border text-text-tertiary line-through',
-  sobreturno: 'bg-purple-500/10 border-purple-500/25 text-purple-300',
 }
 
 // Appointment-type colors (primary visual identifier)
@@ -129,18 +129,30 @@ function formatArgentinePhone(phone: string): string {
   return `54${n}`
 }
 
-function buildWhatsAppUrl(phone: string, name: string, start: Date, area: string, org: string | null): string {
+// Link de confirmación del paciente: usa el dominio de producción configurado
+// para que nunca le llegue una URL de preview (*.vercel.app). Si no está seteado,
+// cae al origen actual.
+function buildConfirmUrl(token: string | null): string | null {
+  if (!token) return null
+  const base = process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== 'undefined' ? window.location.origin : '')
+  return base ? `${base}/turno/${token}` : null
+}
+
+function buildWhatsAppUrl(phone: string, name: string, start: Date, area: string, org: string | null, confirmUrl: string | null): string {
   const clean = formatArgentinePhone(phone)
   const fecha = start.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })
   const hora  = start.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
   const lugar = org ?? 'el centro'
+  const cierre = confirmUrl
+    ? `Avisanos si vas a asistir con un toque acá:\n${confirmUrl}\n\n¡Te esperamos!`
+    : `Para confirmar o cancelar, respondé este mensaje. ¡Te esperamos!`
   const msg =
     `Hola ${name},\n\n` +
     `Te recordamos tu próximo turno en ${lugar}:\n\n` +
     `Fecha: ${fecha}\n` +
     `Hora: ${hora}\n` +
     `Área: ${area}\n\n` +
-    `Para confirmar o cancelar, respondé este mensaje. ¡Te esperamos!`
+    cierre
   return `https://wa.me/${clean}?text=${encodeURIComponent(msg)}`
 }
 
@@ -241,7 +253,7 @@ function assignColumns(turnos: Turno[]): Map<string, { col: number; totalCols: n
 function blockColorClass(t: Turno): string {
   if (t.is_blocked) return 'bg-bg-secondary border-border text-text-tertiary opacity-70'
   if (t.status === 'cancelado')  return STATUS_COLORS.cancelado
-  if (t.status === 'sobreturno') return STATUS_COLORS.sobreturno
+  // sobreturno queda neutro, con el mismo color que el resto según su tipo
   // presente/ausente mantienen el color del tipo — el estado se muestra con un indicador
   return TYPE_COLORS[t.appointment_type ?? 'turno_comun'] ?? STATUS_COLORS.programado
 }
@@ -428,8 +440,9 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
             const widthPct = 100 / layout.totalCols
             const leftPct  = layout.col * widthPct
 
+            const confirmUrl = buildConfirmUrl(t.confirm_token)
             const waUrl = !t.is_blocked && t.patient_phone
-              ? buildWhatsAppUrl(t.patient_phone, t.patient_name, start, t.area, orgName)
+              ? buildWhatsAppUrl(t.patient_phone, t.patient_name, start, t.area, orgName, confirmUrl)
               : null
 
             return (
@@ -443,7 +456,16 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                 }}
               >
                 {remindedIds.has(t.id) && (
-                  <span className="absolute top-0.5 left-0.5 w-1.5 h-1.5 rounded-full bg-green-400 z-10" title="Recordatorio enviado" />
+                  <span className="absolute top-1 left-1 w-1.5 h-1.5 rounded-full bg-green-400 z-10" title="Recordatorio enviado" />
+                )}
+                {/* Respuesta del paciente: C verde (confirmó) / A roja (avisó que no asiste) */}
+                {!t.is_blocked && (t.status === 'confirmado' || t.status === 'ausente') && (
+                  <span
+                    className={`absolute top-0.5 right-0.5 z-10 text-[11px] font-bold leading-none rounded px-1 py-0.5 border-[0.5px] ${t.status === 'confirmado' ? 'bg-emerald-500/30 text-emerald-200 border-emerald-400/50' : 'bg-red-500/30 text-red-200 border-red-400/50'}`}
+                    title={t.status === 'confirmado' ? 'El paciente confirmó que asiste' : 'El paciente avisó que no asiste'}
+                  >
+                    {t.status === 'confirmado' ? 'C' : 'A'}
+                  </span>
                 )}
                 <button
                   onClick={e => {
@@ -455,43 +477,46 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                   title={t.is_blocked ? (t.notes || 'Bloqueado') : `${t.patient_name} · ${formatTime(start)} - ${formatTime(end)}`}
                 >
                   {t.is_blocked ? (
-                    <p className="text-[10px] leading-tight truncate opacity-70">{t.notes || 'Bloqueado'}</p>
+                    <p className="text-[11px] leading-tight truncate text-text-secondary">{t.notes || 'Bloqueado'}</p>
                   ) : (
                     <>
-                      <p className="text-[10px] font-medium leading-tight truncate">
+                      <p className={`text-[11.5px] font-semibold leading-tight truncate ${t.status === 'cancelado' ? '' : 'text-text-primary'}`}>
                         {compact ? t.patient_name : `${formatTime(start)} ${t.patient_name}`}
                       </p>
-                      {heightPx > 32 && <p className="text-[9px] opacity-70 leading-tight truncate">{t.area}</p>}
-                      {heightPx > 44 && !compact && t.professional_name && <p className="text-[9px] opacity-50 leading-tight truncate">{t.professional_name}</p>}
-                      {heightPx > 60 && t.notes && <p className="text-[8px] opacity-50 leading-tight">◆ nota</p>}
+                      {heightPx > 32 && <p className="text-[10px] text-text-secondary leading-tight truncate">{t.area}</p>}
+                      {heightPx > 44 && !compact && t.professional_name && <p className="text-[10px] text-text-tertiary leading-tight truncate">{t.professional_name}</p>}
+                      {heightPx > 60 && t.notes && <p className="text-[9px] text-text-tertiary leading-tight">◆ nota</p>}
                     </>
                   )}
                 </button>
-                {!t.is_blocked && !compact && (
-                  <div className="absolute bottom-0.5 left-0.5 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={e => { e.stopPropagation(); quickStatus(t.id, t.status === 'presente' ? 'programado' : 'presente') }}
-                      title={t.status === 'presente' ? 'Desmarcar presente' : 'Marcar presente'}
-                      className={`text-[9px] leading-none border-[0.5px] rounded px-1 py-0.5 transition-colors ${t.status === 'presente' ? 'bg-emerald-500/40 border-emerald-500/60 text-emerald-300' : 'bg-emerald-500/20 hover:bg-emerald-500/40 border-emerald-500/40 text-emerald-400'}`}
-                    >
-                      ✓
-                    </button>
-                    <button
-                      onClick={e => { e.stopPropagation(); quickStatus(t.id, t.status === 'ausente' ? 'programado' : 'ausente') }}
-                      title={t.status === 'ausente' ? 'Desmarcar ausente' : 'Marcar ausente'}
-                      className={`text-[9px] leading-none border-[0.5px] rounded px-1 py-0.5 transition-colors ${t.status === 'ausente' ? 'bg-red-500/40 border-red-500/60 text-red-300' : 'bg-red-500/20 hover:bg-red-500/40 border-red-500/40 text-red-400'}`}
-                    >
-                      ✗
-                    </button>
-                  </div>
-                )}
-                {/* Sobreturno + recordatorio: disponibles en día y semana */}
-                {!t.is_blocked && (
-                  <div className="absolute bottom-0.5 right-0.5 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                {/* Barra de acciones al hover, alineada a la derecha con fondo propio
+                    para no tapar el nombre (que se lee desde la izquierda).
+                    En semana con muchas columnas apiladas no entra: ahí las acciones
+                    quedan en el menú (click en el turno) para no romper el layout. */}
+                {!t.is_blocked && !(compact && layout.totalCols >= 4) && (
+                  <div className="absolute bottom-0.5 right-0.5 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity rounded bg-bg-primary/70 backdrop-blur-[2px] p-0.5">
+                    {!compact && (
+                      <>
+                        <button
+                          onClick={e => { e.stopPropagation(); quickStatus(t.id, t.status === 'presente' ? 'programado' : 'presente') }}
+                          title={t.status === 'presente' ? 'Desmarcar presente' : 'Marcar presente'}
+                          className={`text-[9px] leading-none border-[0.5px] rounded px-1 py-0.5 transition-colors ${t.status === 'presente' ? 'bg-emerald-500/40 border-emerald-500/60 text-emerald-300' : 'bg-emerald-500/20 hover:bg-emerald-500/40 border-emerald-500/40 text-emerald-400'}`}
+                        >
+                          ✓
+                        </button>
+                        <button
+                          onClick={e => { e.stopPropagation(); quickStatus(t.id, t.status === 'ausente' ? 'programado' : 'ausente') }}
+                          title={t.status === 'ausente' ? 'Desmarcar ausente' : 'Marcar ausente'}
+                          className={`text-[9px] leading-none border-[0.5px] rounded px-1 py-0.5 transition-colors ${t.status === 'ausente' ? 'bg-red-500/40 border-red-500/60 text-red-300' : 'bg-red-500/20 hover:bg-red-500/40 border-red-500/40 text-red-400'}`}
+                        >
+                          ✗
+                        </button>
+                      </>
+                    )}
                     <button
                       onClick={e => { e.stopPropagation(); openNew(new Date(t.start_time), new Date(t.start_time).getHours(), new Date(t.start_time).getMinutes(), 'sobreturno') }}
                       title="Dar sobreturno en este horario"
-                      className="text-[9px] leading-none border-[0.5px] rounded px-1 py-0.5 transition-colors bg-purple-500/20 hover:bg-purple-500/40 border-purple-500/40 text-purple-400"
+                      className="text-[9px] leading-none border-[0.5px] rounded px-1 py-0.5 transition-colors bg-bg-secondary hover:bg-bg-tertiary border-border text-text-secondary"
                     >
                       ST
                     </button>
@@ -743,7 +768,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
           ))}
         </div>
         <div className="flex flex-wrap gap-2">
-          {(['ausente', 'cancelado', 'sobreturno'] as const).map(status => (
+          {(['ausente', 'cancelado'] as const).map(status => (
             <span key={status} className={`text-[11px] px-2 py-1 rounded-md border-[0.5px] capitalize ${STATUS_COLORS[status]}`}>
               {status}
             </span>
@@ -776,6 +801,22 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
               </a>
             )}
             {!quickMenu.turno.is_blocked && (
+              <div className="flex border-y-[0.5px] border-border">
+                <button
+                  onClick={() => { const t = quickMenu.turno; setQuickMenu(null); quickStatus(t.id, t.status === 'presente' ? 'programado' : 'presente') }}
+                  className={`flex-1 px-3 py-2 text-[13px] transition-colors ${quickMenu.turno.status === 'presente' ? 'text-emerald-300 bg-emerald-500/10' : 'text-emerald-400 hover:bg-bg-primary'}`}
+                >
+                  {quickMenu.turno.status === 'presente' ? '✓ Presente' : 'Presente'}
+                </button>
+                <button
+                  onClick={() => { const t = quickMenu.turno; setQuickMenu(null); quickStatus(t.id, t.status === 'ausente' ? 'programado' : 'ausente') }}
+                  className={`flex-1 px-3 py-2 text-[13px] border-l-[0.5px] border-border transition-colors ${quickMenu.turno.status === 'ausente' ? 'text-red-300 bg-red-500/10' : 'text-red-400 hover:bg-bg-primary'}`}
+                >
+                  {quickMenu.turno.status === 'ausente' ? '✗ Ausente' : 'Ausente'}
+                </button>
+              </div>
+            )}
+            {!quickMenu.turno.is_blocked && (
               quickMenu.turno.patient_phone ? (
                 <a
                   href={buildWhatsAppUrl(
@@ -784,6 +825,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                     new Date(quickMenu.turno.start_time),
                     quickMenu.turno.area,
                     orgName,
+                    buildConfirmUrl(quickMenu.turno.confirm_token),
                   )}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -808,7 +850,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                 setQuickMenu(null)
                 openNew(new Date(t.start_time), new Date(t.start_time).getHours(), new Date(t.start_time).getMinutes(), 'sobreturno')
               }}
-              className="w-full text-left px-3 py-2 text-[13px] text-purple-400 hover:bg-bg-primary transition-colors"
+              className="w-full text-left px-3 py-2 text-[13px] hover:bg-bg-primary transition-colors"
             >
               Dar sobreturno
             </button>
