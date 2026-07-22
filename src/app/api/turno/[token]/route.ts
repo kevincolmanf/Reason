@@ -27,12 +27,13 @@ export async function POST(request: Request, { params }: { params: { token: stri
       return NextResponse.json({ error: 'Turno no válido' }, { status: 400 })
     }
 
-    // Si el turno ya fue atendido, no permitir que el paciente lo modifique.
-    if (turno.status === 'presente' || turno.status === 'ausente') {
+    // Si la secretaría ya marcó que el paciente asistió, no dejar que lo cambie.
+    if (turno.status === 'presente') {
       return NextResponse.json({ error: 'Este turno ya no se puede modificar' }, { status: 409 })
     }
 
-    const newStatus = action === 'confirmar' ? 'confirmado' : 'cancelado'
+    // Asistiré → confirmado (C verde) · No asistiré → ausente (A roja)
+    const newStatus = action === 'confirmar' ? 'confirmado' : 'ausente'
 
     const { error: updateError } = await supabase
       .from('turnos')

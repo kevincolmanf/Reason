@@ -35,7 +35,7 @@ export default function ConfirmTurnoClient({
   const [loading, setLoading] = useState<'confirmar' | 'cancelar' | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const alreadyAttended = status === 'presente' || status === 'ausente'
+  const alreadyAttended = status === 'presente'
 
   async function submit(action: 'confirmar' | 'cancelar') {
     setLoading(action)
@@ -104,7 +104,7 @@ export default function ConfirmTurnoClient({
               </button>
             )}
           </div>
-        ) : status === 'cancelado' ? (
+        ) : status === 'ausente' ? (
           <div className="rounded-2xl border-[0.5px] border-red-500/40 bg-red-500/10 p-5 text-center">
             <p className="text-[15px] font-medium text-red-300">Avisaste que no vas a asistir</p>
             <p className="text-[13px] text-text-secondary mt-1">Gracias por avisar con tiempo.</p>
