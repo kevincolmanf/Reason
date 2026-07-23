@@ -21,6 +21,7 @@ const INIT = {
   step_down_quality: '', step_down_pain: '',
   lateral_step_down_reps_affected: '', lateral_step_down_reps_unaffected: '',
   squat_full_depth: '', squat_pain: '',
+  slsquat_reps_affected: '', slsquat_reps_unaffected: '',
   slsquat_quality: '',
   quad_affected: '', quad_unaffected: '',
   single_hop_affected: '', single_hop_unaffected: '',
@@ -39,6 +40,7 @@ export default function PfpProtocol({ patient, userId, initialData, evalId, onSa
   const quadLsi         = lsi(n(form.quad_affected), n(form.quad_unaffected))
   const hopLsi          = lsi(n(form.single_hop_affected), n(form.single_hop_unaffected))
   const lateralStepLsi  = lsi(n(form.lateral_step_down_reps_affected), n(form.lateral_step_down_reps_unaffected))
+  const slSquatLsi      = lsi(n(form.slsquat_reps_affected), n(form.slsquat_reps_unaffected))
 
   const maxVas = Math.max(
     n(form.pain_vas_rest) ?? 0,
@@ -54,6 +56,7 @@ export default function PfpProtocol({ patient, userId, initialData, evalId, onSa
     { label: 'Step-down sin compensación (calidad buena)', passed: form.step_down_quality !== '' ? form.step_down_quality === 'good' : null, detail: form.step_down_quality || undefined },
     { label: 'Squat profundo sin dolor', passed: form.squat_pain !== '' ? form.squat_pain === 'no' : null },
     { label: 'Single Leg Squat calidad buena', passed: form.slsquat_quality !== '' ? form.slsquat_quality === 'good' : null, detail: form.slsquat_quality || undefined },
+    { label: 'Single Leg Squat LSI reps ≥90%', passed: slSquatLsi !== null ? slSquatLsi >= 90 : null, detail: slSquatLsi !== null ? `LSI ${slSquatLsi.toFixed(1)}%` : undefined },
     { label: 'Lateral step-down LSI ≥90%', passed: lateralStepLsi !== null ? lateralStepLsi >= 90 : null, detail: lateralStepLsi !== null ? `LSI ${lateralStepLsi.toFixed(1)}%` : undefined },
     { label: 'LSI fuerza cuádriceps ≥80%', passed: quadLsi !== null ? quadLsi >= 80 : null, detail: quadLsi !== null ? `LSI ${quadLsi.toFixed(1)}%` : undefined },
     { label: 'Single hop LSI ≥85%', passed: hopLsi !== null ? hopLsi >= 85 : null, detail: hopLsi !== null ? `LSI ${hopLsi.toFixed(1)}%` : undefined },
@@ -64,7 +67,7 @@ export default function PfpProtocol({ patient, userId, initialData, evalId, onSa
     setSaving(true)
     const payload = { user_id: userId, patient_id: patient.id, protocol_type: 'pfp', affected_side: form.affected_side, notes: form.notes || null, form_data: form }
     let id = savedId
-    if (savedId) { await supabase.current.from('rts_evaluations').update(payload).eq('id', savedId) }
+    if (savedId) { await supabase.current.from('rts_evaluations').update(payload).eq('id', savedId); onSaved(savedId) }
     else {
       const { data } = await supabase.current.from('rts_evaluations').insert(payload).select('id').single()
       if (data?.id) { id = data.id; setSavedId(data.id); onSaved(data.id) }
@@ -87,6 +90,7 @@ export default function PfpProtocol({ patient, userId, initialData, evalId, onSa
           </div>
           <LsiDisplay label="LSI Cuádriceps" val={quadLsi} />
           <LsiDisplay label="Single Hop LSI" val={hopLsi} />
+          <LsiDisplay label="Single Leg Squat LSI" val={slSquatLsi} />
           <div className="bg-bg-primary rounded-lg p-3 border-[0.5px] border-border text-center">
             <div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-1">AKPS</div>
             <div className={`text-[18px] font-medium ${form.akps_score === '' ? 'text-text-secondary' : n(form.akps_score)! >= 90 ? 'text-[#4ade80]' : 'text-[#fb923c]'}`}>{form.akps_score || '—'}/100</div>
@@ -153,7 +157,12 @@ export default function PfpProtocol({ patient, userId, initialData, evalId, onSa
 
       <div>
         <SectionTitle>Single Leg Squat — Calidad (lado afectado)</SectionTitle>
-        <p className="text-[12px] text-text-secondary mb-3">5 repeticiones observando control de valgus, pelvis y tronco.</p>
+        <p className="text-[12px] text-text-secondary mb-3">Máximas repeticiones a profundidad controlada en cada pierna, observando control de valgus, pelvis y tronco.</p>
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <Field label="Reps lado afectado"><NumInput value={form.slsquat_reps_affected} onChange={v => set('slsquat_reps_affected', v)} min="0" max="50" placeholder="ej: 5" /></Field>
+          <Field label="Reps lado sano"><NumInput value={form.slsquat_reps_unaffected} onChange={v => set('slsquat_reps_unaffected', v)} min="0" max="50" placeholder="ej: 8" /></Field>
+        </div>
+        {slSquatLsi !== null && <div className="mb-4"><LsiDisplay label="Single Leg Squat LSI" val={slSquatLsi} /></div>}
         <div className="space-y-2">
           {[
             { val: 'good',       label: 'Buena',       desc: 'Rodilla sobre el pie, tronco erguido, pelvis estable' },

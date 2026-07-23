@@ -60,6 +60,8 @@ type FormData = {
   sl_bridge_affected: string
   sl_bridge_unaffected: string
   sl_bridge_quality: string
+  slsquat_reps_affected: string
+  slsquat_reps_unaffected: string
   slsquat_quality: string
   koos_sport: string
   acl_rsi: string
@@ -100,6 +102,8 @@ const initialForm: FormData = {
   sl_bridge_affected: '',
   sl_bridge_unaffected: '',
   sl_bridge_quality: '',
+  slsquat_reps_affected: '',
+  slsquat_reps_unaffected: '',
   slsquat_quality: '',
   koos_sport: '',
   acl_rsi: '',
@@ -324,6 +328,8 @@ export default function RtsEvaluationForm({
       sl_bridge_affected:   initialEval.sl_bridge_affected   != null ? String(initialEval.sl_bridge_affected)   : '',
       sl_bridge_unaffected: initialEval.sl_bridge_unaffected != null ? String(initialEval.sl_bridge_unaffected) : '',
       sl_bridge_quality:    initialEval.sl_bridge_quality    || '',
+      slsquat_reps_affected:   initialEval.slsquat_reps_affected   != null ? String(initialEval.slsquat_reps_affected)   : '',
+      slsquat_reps_unaffected: initialEval.slsquat_reps_unaffected != null ? String(initialEval.slsquat_reps_unaffected) : '',
       slsquat_quality:      initialEval.slsquat_quality      || '',
       koos_sport: initialEval.koos_sport != null ? String(initialEval.koos_sport) : '',
       acl_rsi: initialEval.acl_rsi != null ? String(initialEval.acl_rsi) : '',
@@ -420,6 +426,8 @@ export default function RtsEvaluationForm({
       sl_bridge_affected:   n(form.sl_bridge_affected),
       sl_bridge_unaffected: n(form.sl_bridge_unaffected),
       sl_bridge_quality:    form.sl_bridge_quality    || null,
+      slsquat_reps_affected:   n(form.slsquat_reps_affected),
+      slsquat_reps_unaffected: n(form.slsquat_reps_unaffected),
       slsquat_quality:      form.slsquat_quality      || null,
       koos_sport: n(form.koos_sport),
       acl_rsi: n(form.acl_rsi),
@@ -442,6 +450,7 @@ export default function RtsEvaluationForm({
         .select()
         .single()
       result = data as RtsEvaluation
+      if (result?.id) onSaved?.(result.id)
     } else {
       const { data } = await supabaseRef.current
         .from('rts_evaluations')
@@ -514,6 +523,7 @@ export default function RtsEvaluationForm({
   const timedHopLSI = computeTimedHopLSI(n(form.timed_hop_affected), n(form.timed_hop_unaffected))
   const slcmjLSI = computeLSI(n(form.slcmj_affected), n(form.slcmj_unaffected))
   const slBridgeLSI = computeLSI(n(form.sl_bridge_affected), n(form.sl_bridge_unaffected))
+  const slSquatLSI  = computeLSI(n(form.slsquat_reps_affected), n(form.slsquat_reps_unaffected))
 
   // Normative strength comparison
   const getStrengthNorm = (muscle: 'quad' | 'hamstring', side: 'affected' | 'unaffected') => {
@@ -1059,7 +1069,14 @@ export default function RtsEvaluationForm({
           {/* Single Leg Squat */}
           <div className="bg-bg-secondary border-[0.5px] border-border rounded-xl p-5">
             <div className="text-[15px] font-medium mb-1">Single Leg Squat (Unipodal)</div>
-            <p className="text-[12px] text-text-secondary mb-4">5 repeticiones a máxima profundidad. Observar valgo dinámico, inclinación de tronco y control pélvico.</p>
+            <p className="text-[12px] text-text-secondary mb-4">Máximas repeticiones a profundidad controlada en cada pierna. Observar valgo dinámico, inclinación de tronco y control pélvico.</p>
+            <div className="grid grid-cols-2 gap-4 mb-3">
+              <InputField label={`Reps lado afectado (${form.affected_side === 'left' ? 'Izq' : 'Der'})`} value={form.slsquat_reps_affected} onChange={v => set('slsquat_reps_affected', v)} unit="reps" placeholder="5" />
+              <InputField label="Reps lado sano" value={form.slsquat_reps_unaffected} onChange={v => set('slsquat_reps_unaffected', v)} unit="reps" placeholder="5" />
+            </div>
+            {slSquatLSI !== null && (
+              <div className="mb-4"><LSIDisplay label="LSI Single Leg Squat" lsi={slSquatLSI} /></div>
+            )}
             <label className="block text-[12px] text-text-secondary uppercase tracking-[0.05em] mb-2">Calidad — lado afectado</label>
             <div className="space-y-2">
               {[

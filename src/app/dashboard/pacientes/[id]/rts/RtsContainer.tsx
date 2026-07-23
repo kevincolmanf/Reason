@@ -44,10 +44,24 @@ export default function RtsContainer({ patient, userId, lastDynamo, lastKoos, la
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const supabase = useRef(createClient())
 
-  const handleSaved = (id: string, protocol: string) => {
+  // Al guardar traemos la fila completa: si solo agregáramos el id, la entrada
+  // del historial quedaría sin form_data y al recargarla el formulario abría vacío.
+  const handleSaved = async (id: string, protocol: string) => {
+    const { data } = await supabase.current
+      .from('rts_evaluations')
+      .select('*')
+      .eq('id', id)
+      .single()
+    const row: SavedEval = (data as SavedEval | null) ?? {
+      id, created_at: new Date().toISOString(), protocol_type: protocol,
+      affected_side: '', notes: null, form_data: null,
+    }
     setEvalsList(prev => {
-      if (prev.find(e => e.id === id)) return prev
-      return [{ id, created_at: new Date().toISOString(), protocol_type: protocol, affected_side: '', notes: null, form_data: null }, ...prev]
+      const idx = prev.findIndex(e => e.id === id)
+      if (idx === -1) return [row, ...prev]
+      const next = [...prev]
+      next[idx] = row
+      return next
     })
   }
 
@@ -198,6 +212,7 @@ export default function RtsContainer({ patient, userId, lastDynamo, lastKoos, la
         <ProtocolHeader />
         <ProtocolHistory />
         <RtsEvaluationForm
+          key={loadedEval?.id ?? 'nueva'}
           patient={patient}
           userId={userId}
           lastDynamo={lastDynamo}
@@ -212,12 +227,17 @@ export default function RtsContainer({ patient, userId, lastDynamo, lastKoos, la
     )
   }
 
-  if (activeProtocol === 'hamstring') return <div><ProtocolHeader /><ProtocolHistory /><HamstringProtocol {...commonProps} /></div>
-  if (activeProtocol === 'ankle') return <div><ProtocolHeader /><ProtocolHistory /><AnkleProtocol {...commonProps} /></div>
-  if (activeProtocol === 'pfp') return <div><ProtocolHeader /><ProtocolHistory /><PfpProtocol {...commonProps} /></div>
-  if (activeProtocol === 'tendinopathy') return <div><ProtocolHeader /><ProtocolHistory /><TendinopathyProtocol {...commonProps} /></div>
-  if (activeProtocol === 'groin') return <div><ProtocolHeader /><ProtocolHistory /><GroinProtocol {...commonProps} /></div>
-  if (activeProtocol === 'shoulder') return <div><ProtocolHeader /><ProtocolHistory /><ShoulderProtocol {...commonProps} /></div>
+  // key = id de la evaluación cargada: fuerza el remonte del formulario al pasar
+  // de una evaluación guardada a otra dentro del mismo protocolo (initialData solo
+  // se lee al montar).
+  const formKey = loadedEval?.id ?? 'nueva'
+
+  if (activeProtocol === 'hamstring') return <div><ProtocolHeader /><ProtocolHistory /><HamstringProtocol key={formKey} {...commonProps} /></div>
+  if (activeProtocol === 'ankle') return <div><ProtocolHeader /><ProtocolHistory /><AnkleProtocol key={formKey} {...commonProps} /></div>
+  if (activeProtocol === 'pfp') return <div><ProtocolHeader /><ProtocolHistory /><PfpProtocol key={formKey} {...commonProps} /></div>
+  if (activeProtocol === 'tendinopathy') return <div><ProtocolHeader /><ProtocolHistory /><TendinopathyProtocol key={formKey} {...commonProps} /></div>
+  if (activeProtocol === 'groin') return <div><ProtocolHeader /><ProtocolHistory /><GroinProtocol key={formKey} {...commonProps} /></div>
+  if (activeProtocol === 'shoulder') return <div><ProtocolHeader /><ProtocolHistory /><ShoulderProtocol key={formKey} {...commonProps} /></div>
 
   return null
 }

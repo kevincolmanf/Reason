@@ -66,7 +66,7 @@ export default function AnkleProtocol({ patient, userId, initialData, evalId, on
     setSaving(true)
     const payload = { user_id: userId, patient_id: patient.id, protocol_type: 'ankle', affected_side: form.affected_side, notes: form.notes || null, form_data: form }
     let id = savedId
-    if (savedId) { await supabase.current.from('rts_evaluations').update(payload).eq('id', savedId) }
+    if (savedId) { await supabase.current.from('rts_evaluations').update(payload).eq('id', savedId); onSaved(savedId) }
     else {
       const { data } = await supabase.current.from('rts_evaluations').insert(payload).select('id').single()
       if (data?.id) { id = data.id; setSavedId(data.id); onSaved(data.id) }
