@@ -1040,6 +1040,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
           turno={modal.turno}
           defaultStart={modal.defaultStart}
           defaultStatus={modal.defaultStatus}
+          defaultArea={filterArea !== 'all' ? filterArea : undefined}
           slotInterval={effectiveInterval}
           dayStart={dayStartMin}
           dayEnd={dayEndMin}
