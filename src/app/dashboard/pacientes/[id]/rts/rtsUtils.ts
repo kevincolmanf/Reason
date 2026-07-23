@@ -38,6 +38,8 @@ export interface RtsEvaluation {
   sl_bridge_affected:   number | null
   sl_bridge_unaffected: number | null
   sl_bridge_quality:    string | null
+  slsquat_reps_affected:   number | null
+  slsquat_reps_unaffected: number | null
   slsquat_quality:      string | null
   [key: string]: unknown
 }
@@ -52,6 +54,8 @@ export interface RtsMetrics {
   crossoverLSI: number | null
   timedHopLSI: number | null
   slcmjLSI: number | null
+  slBridgeLSI: number | null
+  slSquatLSI: number | null
   passedCriteria: number
   totalCriteria: number
 }
@@ -89,6 +93,8 @@ export function computeMetrics(ev: RtsEvaluation): RtsMetrics {
   const crossoverLSI = computeLSI(ev.crossover_hop_affected, ev.crossover_hop_unaffected)
   const timedHopLSI = computeTimedHopLSI(ev.timed_hop_affected, ev.timed_hop_unaffected)
   const slcmjLSI = computeLSI(ev.slcmj_affected, ev.slcmj_unaffected)
+  const slBridgeLSI = computeLSI(ev.sl_bridge_affected, ev.sl_bridge_unaffected)
+  const slSquatLSI  = computeLSI(ev.slsquat_reps_affected, ev.slsquat_reps_unaffected)
 
   // Count criteria
   let passed = 0
@@ -130,6 +136,12 @@ export function computeMetrics(ev: RtsEvaluation): RtsMetrics {
   if (slcmjLSI !== null) { total++; if (slcmjLSI >= 90) passed++ }
   if (ev.drop_jump_quality) { total++; if (ev.drop_jump_quality === 'good') passed++ }
 
+  // Tests funcionales complementarios
+  if (slBridgeLSI !== null) { total++; if (slBridgeLSI >= 90) passed++ }
+  if (ev.sl_bridge_quality) { total++; if (ev.sl_bridge_quality === 'good') passed++ }
+  if (slSquatLSI !== null) { total++; if (slSquatLSI >= 90) passed++ }
+  if (ev.slsquat_quality) { total++; if (ev.slsquat_quality === 'good') passed++ }
+
   // Questionnaires
   if (ev.koos_sport !== null && ev.koos_sport !== undefined) { total++; if (ev.koos_sport >= 89) passed++ }
   if (ev.acl_rsi !== null && ev.acl_rsi !== undefined) { total++; if (ev.acl_rsi >= 65) passed++ }
@@ -145,6 +157,8 @@ export function computeMetrics(ev: RtsEvaluation): RtsMetrics {
     crossoverLSI,
     timedHopLSI,
     slcmjLSI,
+    slBridgeLSI,
+    slSquatLSI,
     passedCriteria: passed,
     totalCriteria: total,
   }

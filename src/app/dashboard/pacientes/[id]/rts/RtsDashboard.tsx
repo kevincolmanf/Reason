@@ -58,24 +58,25 @@ export default function RtsDashboard({ evaluation, previousEvals, onNewEvaluatio
       source: 'Criterios clásicos',
     })
   }
-  if (evaluation.rom_extension !== null && evaluation.rom_extension !== undefined) {
+  // ROM: se usan los campos pasivo/activo y se cae a los legacy solo si la
+  // evaluación es vieja (mismo criterio que computeMetrics).
+  const romRows: Array<{ label: string; value: number | null | undefined; kind: 'ext' | 'flex' }> = [
+    { label: 'Déficit extensión (pasiva)', value: evaluation.rom_extension_passive ?? evaluation.rom_extension, kind: 'ext' },
+    { label: 'Déficit extensión (activa)', value: evaluation.rom_extension_active, kind: 'ext' },
+    { label: 'Flexión alcanzada (pasiva)', value: evaluation.rom_flexion_passive ?? evaluation.rom_flexion, kind: 'flex' },
+    { label: 'Flexión alcanzada (activa)', value: evaluation.rom_flexion_active, kind: 'flex' },
+  ]
+  for (const r of romRows) {
+    if (r.value === null || r.value === undefined) continue
     rows.push({
       section: 'Fase Previa',
-      label: 'Déficit extensión',
-      value: `${evaluation.rom_extension}°`,
-      cutoff: '0°',
-      status: evaluation.rom_extension === 0 ? 'pass' : 'fail',
-      source: 'Grindem 2016',
-    })
-  }
-  if (evaluation.rom_flexion !== null && evaluation.rom_flexion !== undefined) {
-    rows.push({
-      section: 'Fase Previa',
-      label: 'Flexión alcanzada',
-      value: `${evaluation.rom_flexion}°`,
-      cutoff: '≥ 120°',
-      status: evaluation.rom_flexion >= 120 ? 'pass' : evaluation.rom_flexion >= 100 ? 'warn' : 'fail',
-      source: 'Criterios clásicos',
+      label: r.label,
+      value: `${r.value}°`,
+      cutoff: r.kind === 'ext' ? '0°' : '≥ 120°',
+      status: r.kind === 'ext'
+        ? (r.value === 0 ? 'pass' : 'fail')
+        : (r.value >= 120 ? 'pass' : r.value >= 100 ? 'warn' : 'fail'),
+      source: r.kind === 'ext' ? 'Grindem 2016' : 'Criterios clásicos',
     })
   }
   if (evaluation.pain_vas !== null && evaluation.pain_vas !== undefined) {
@@ -164,6 +165,50 @@ export default function RtsDashboard({ evaluation, previousEvals, onNewEvaluatio
     })
   }
 
+  const qualityLabel = (q: string) => q === 'good' ? 'Buena' : q === 'acceptable' ? 'Aceptable' : 'Deficiente'
+  const qualityStatus = (q: string): CriteriaRow['status'] => q === 'good' ? 'pass' : q === 'acceptable' ? 'warn' : 'fail'
+
+  if (metrics.slBridgeLSI !== null) {
+    rows.push({
+      section: 'Tests Complementarios',
+      label: 'SL Bridge — LSI reps',
+      value: `${metrics.slBridgeLSI.toFixed(1)}%`,
+      cutoff: '≥ 90%',
+      status: metrics.slBridgeLSI >= 90 ? 'pass' : metrics.slBridgeLSI >= 80 ? 'warn' : 'fail',
+      source: 'Freckleton 2014',
+    })
+  }
+  if (evaluation.sl_bridge_quality) {
+    rows.push({
+      section: 'Tests Complementarios',
+      label: 'SL Bridge — Calidad',
+      value: qualityLabel(evaluation.sl_bridge_quality),
+      cutoff: 'Buena calidad',
+      status: qualityStatus(evaluation.sl_bridge_quality),
+      source: 'Freckleton 2014',
+    })
+  }
+  if (metrics.slSquatLSI !== null) {
+    rows.push({
+      section: 'Tests Complementarios',
+      label: 'Single Leg Squat — LSI reps',
+      value: `${metrics.slSquatLSI.toFixed(1)}%`,
+      cutoff: '≥ 90%',
+      status: metrics.slSquatLSI >= 90 ? 'pass' : metrics.slSquatLSI >= 80 ? 'warn' : 'fail',
+      source: 'Crossley 2011',
+    })
+  }
+  if (evaluation.slsquat_quality) {
+    rows.push({
+      section: 'Tests Complementarios',
+      label: 'Single Leg Squat — Calidad',
+      value: qualityLabel(evaluation.slsquat_quality),
+      cutoff: 'Buena calidad',
+      status: qualityStatus(evaluation.slsquat_quality),
+      source: 'Crossley 2011',
+    })
+  }
+
   // --- CUESTIONARIOS ---
   if (evaluation.koos_sport !== null && evaluation.koos_sport !== undefined) {
     rows.push({
@@ -196,7 +241,7 @@ export default function RtsDashboard({ evaluation, previousEvals, onNewEvaluatio
     })
   }
 
-  const sections = ['Fase Previa', 'Fuerza', 'Saltos Horizontales', 'Saltos Verticales', 'Cuestionarios']
+  const sections = ['Fase Previa', 'Fuerza', 'Saltos Horizontales', 'Saltos Verticales', 'Tests Complementarios', 'Cuestionarios']
 
   const statusColor = (s: CriteriaRow['status']) => {
     if (s === 'pass') return 'text-[#4ade80]'

@@ -115,6 +115,7 @@ export default function HamstringProtocol({ patient, userId, initialData, evalId
     let id = savedId
     if (savedId) {
       await supabase.current.from('rts_evaluations').update(payload).eq('id', savedId)
+      onSaved(savedId)
     } else {
       const { data } = await supabase.current.from('rts_evaluations').insert(payload).select('id').single()
       if (data?.id) { id = data.id; setSavedId(data.id); onSaved(data.id) }
