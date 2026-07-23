@@ -63,6 +63,7 @@ interface Props {
   turno?: Turno
   defaultStart?: Date
   defaultStatus?: string
+  defaultArea?: string
   slotInterval?: number
   dayStart?: number
   dayEnd?: number
@@ -193,7 +194,7 @@ function formatISOToDMY(iso: string): string {
   return m ? `${m[3]}/${m[2]}/${m[1]}` : ''
 }
 
-export default function TurnoModal({ userId, orgId, orgName, professionals, areas, turno, defaultStart, defaultStatus, slotInterval, dayStart, dayEnd, onClose, onSaved, onClone, onReminderSent, onHistorialChanged }: Props) {
+export default function TurnoModal({ userId, orgId, orgName, professionals, areas, turno, defaultStart, defaultStatus, defaultArea, slotInterval, dayStart, dayEnd, onClose, onSaved, onClone, onReminderSent, onHistorialChanged }: Props) {
   const isEdit = !!turno
   const effectiveAreas = areas.length > 0 ? areas : AREAS
   const defaultDuration = slotInterval ?? 60
@@ -213,7 +214,7 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
     professional_id:     turno?.professional_id ?? (professionals[0]?.id ?? null) as string | null,
     start_time:          turno ? toLocalInputValue(new Date(turno.start_time)) : (defaultStart ? toLocalInputValue(defaultStart) : ''),
     end_time:            turno ? toLocalInputValue(new Date(turno.end_time))   : (defaultEnd   ? toLocalInputValue(defaultEnd)   : ''),
-    area:                turno?.area             ?? (effectiveAreas[0] ?? AREAS[0]),
+    area:                turno?.area             ?? defaultArea ?? (effectiveAreas[0] ?? AREAS[0]),
     status:              turno?.status           ?? defaultStatus ?? 'programado',
     notes:               turno?.notes            ?? '',
     appointment_type:    turno?.appointment_type ?? 'turno_comun',
@@ -242,6 +243,14 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
   const [doubleBooking, setDoubleBooking]     = useState(false)
   const [blockRepeat, setBlockRepeat]         = useState<'none' | 'weekly' | 'weekdays'>('none')
   const [blockRepeatWeeks, setBlockRepeatWeeks] = useState(4)
+  // Áreas alcanzadas por el bloqueo. Un bloqueo se guarda como una fila de turnos
+  // por área, así aparece en la agenda de cada área elegida (antes se guardaba
+  // siempre con el área por defecto y solo se veía en la primera, Kinesiología).
+  const [blockAreas, setBlockAreas] = useState<string[]>(() => {
+    if (turno?.area) return [turno.area]
+    if (defaultArea) return [defaultArea]
+    return [...effectiveAreas]
+  })
   const [sameDayTurnos, setSameDayTurnos]     = useState<{ hora: string; area: string }[]>([])
   const [cancelingIds, setCancelingIds]       = useState<Set<string>>(new Set())
 
@@ -513,11 +522,22 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
     }
 
     if (isEdit) {
-      await supabaseRef.current.from('turnos').update(payload).eq('id', turno!.id)
-    } else if (form.is_blocked && blockRepeat !== 'none') {
-      // Bloqueo recurrente: insertamos una fila por cada ocurrencia de la serie.
-      const occurrences = expandBlockDates(new Date(form.start_time), new Date(form.end_time), blockRepeat, blockRepeatWeeks)
-      const rows = occurrences.map(o => ({ ...payload, start_time: o.start.toISOString(), end_time: o.end.toISOString() }))
+      // Al editar un bloqueo se mantiene una única fila: solo se reasigna su área.
+      const editPayload = form.is_blocked ? { ...payload, area: blockAreas[0] ?? form.area } : payload
+      await supabaseRef.current.from('turnos').update(editPayload).eq('id', turno!.id)
+    } else if (form.is_blocked) {
+      // Un bloqueo se guarda como una fila por área elegida (y por ocurrencia si
+      // se repite), de modo que aparezca en la agenda de cada área bloqueada.
+      const targetAreas = blockAreas.length > 0 ? blockAreas : [form.area]
+      const occurrences = blockRepeat !== 'none'
+        ? expandBlockDates(new Date(form.start_time), new Date(form.end_time), blockRepeat, blockRepeatWeeks)
+        : [{ start: new Date(form.start_time), end: new Date(form.end_time) }]
+      const rows = occurrences.flatMap(o => targetAreas.map(a => ({
+        ...payload,
+        area: a,
+        start_time: o.start.toISOString(),
+        end_time: o.end.toISOString(),
+      })))
       await supabaseRef.current.from('turnos').insert(rows)
     } else {
       await supabaseRef.current.from('turnos').insert(payload)
@@ -557,7 +577,7 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
   }
 
   const valid = form.is_blocked
-    ? !!(form.start_time && form.end_time)
+    ? !!(form.start_time && form.end_time && blockAreas.length > 0)
     : !!(form.patient_name.trim() && form.start_time && form.end_time)
 
   const now = new Date().toISOString()
@@ -681,6 +701,55 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
                 ))}
               </div>
             </div>
+            {/* Áreas a bloquear: por defecto todas, para que el bloqueo no quede
+                escondido en una sola agenda. Al editar se elige una sola. */}
+            <div>
+              <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-2">
+                {isEdit ? 'Área del bloqueo' : 'Agendas a bloquear'}
+              </label>
+              {!isEdit && (
+                <div className="flex gap-1.5 mb-2">
+                  <button
+                    type="button"
+                    onClick={() => setBlockAreas([...effectiveAreas])}
+                    className={`px-2.5 py-1 rounded-lg text-[12px] border-[0.5px] transition-colors ${
+                      blockAreas.length === effectiveAreas.length ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-primary border-border text-text-secondary hover:text-text-primary'
+                    }`}
+                  >
+                    Todas las áreas
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBlockAreas([])}
+                    className="px-2.5 py-1 rounded-lg text-[12px] border-[0.5px] bg-bg-primary border-border text-text-secondary hover:text-text-primary transition-colors"
+                  >
+                    Ninguna
+                  </button>
+                </div>
+              )}
+              <div className="flex gap-1.5 flex-wrap">
+                {effectiveAreas.map(a => {
+                  const selected = blockAreas.includes(a)
+                  return (
+                    <button
+                      key={a}
+                      type="button"
+                      onClick={() => setBlockAreas(prev =>
+                        isEdit ? [a] : (prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a])
+                      )}
+                      className={`px-2.5 py-1 rounded-lg text-[12px] border-[0.5px] transition-colors ${
+                        selected ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-primary border-border text-text-secondary hover:text-text-primary'
+                      }`}
+                    >
+                      {a}
+                    </button>
+                  )
+                })}
+              </div>
+              {!isEdit && blockAreas.length === 0 && (
+                <p className="text-[11px] text-warning mt-1.5">Elegí al menos un área para bloquear.</p>
+              )}
+            </div>
             {professionals.length > 0 && (
               <div>
                 <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Profesional</label>
@@ -724,7 +793,7 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
                       {[2, 4, 8, 12].map(w => <option key={w} value={w}>{w} semanas</option>)}
                     </select>
                     <span className="text-[11px] text-text-tertiary">
-                      ({blockRepeat === 'weekly' ? `${blockRepeatWeeks} bloqueos` : `${blockRepeatWeeks * 5} bloqueos`})
+                      ({(blockRepeat === 'weekly' ? blockRepeatWeeks : blockRepeatWeeks * 5) * Math.max(1, blockAreas.length)} bloqueos)
                     </span>
                   </div>
                 )}
