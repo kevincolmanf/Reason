@@ -458,20 +458,37 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
   const loadHistorial = useCallback(async () => {
     if (!form.patient_id) return
     setLoadingHistorial(true)
-    let query = supabaseRef.current
-      .from('turnos')
-      .select('id, start_time, end_time, area, status, appointment_type')
+    const cols = 'id, start_time, end_time, area, status, appointment_type'
+
+    // Turnos vinculados por ficha (patient_id).
+    let byIdQ = supabaseRef.current
+      .from('turnos').select(cols)
       .eq('patient_id', form.patient_id)
-      .order('start_time', { ascending: false })
-      .limit(50)
-    if (orgId) query = query.eq('org_id', orgId)
-    else       query = query.eq('created_by', userId)
-    if (isEdit) query = query.neq('id', turno!.id)
-    const { data } = await query
-    setHistorial((data ?? []) as HistorialTurno[])
+      .order('start_time', { ascending: false }).limit(100)
+    byIdQ = orgId ? byIdQ.eq('org_id', orgId) : byIdQ.eq('created_by', userId)
+
+    // Turnos cargados a mano con el nombre del paciente, sin ficha vinculada.
+    // Sin esto no aparecían en el historial (solo se buscaba por patient_id).
+    const name = form.patient_name.trim()
+    let byNameQ = name
+      ? supabaseRef.current
+          .from('turnos').select(cols)
+          .is('patient_id', null).ilike('patient_name', name)
+          .order('start_time', { ascending: false }).limit(100)
+      : null
+    if (byNameQ) byNameQ = orgId ? byNameQ.eq('org_id', orgId) : byNameQ.eq('created_by', userId)
+
+    const [byIdRes, byNameRes] = await Promise.all([byIdQ, byNameQ])
+    const merged = [...(byIdRes.data ?? []), ...(byNameRes?.data ?? [])] as HistorialTurno[]
+    // Dedup por id y excluir el turno que se está editando.
+    const seen = new Set<string>()
+    const rows = merged
+      .filter(t => t.id !== (isEdit ? turno!.id : '') && !seen.has(t.id) && seen.add(t.id))
+      .sort((a, b) => b.start_time.localeCompare(a.start_time))
+    setHistorial(rows)
     setHistorialLoaded(true)
     setLoadingHistorial(false)
-  }, [form.patient_id, orgId, userId, isEdit, turno])
+  }, [form.patient_id, form.patient_name, orgId, userId, isEdit, turno])
 
   const selectPatient = async (p: PatientResult) => {
     setPatientSearch(p.name)
@@ -1173,7 +1190,7 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
                       {ausentismoCount > 0 && <span className="text-red-400 ml-1">· {ausentismoCount} ausencia{ausentismoCount !== 1 ? 's' : ''}</span>}
                     </p>
                     <div className="space-y-1">
-                      {pastTurnos.slice(0, 20).map(h => (
+                      {pastTurnos.slice(0, 50).map(h => (
                         <div key={h.id} className="flex items-center gap-2 text-[12px]">
                           <span className="text-text-secondary w-[96px] shrink-0 tabular-nums">{formatDateShort(new Date(h.start_time))}</span>
                           <span className="text-text-tertiary tabular-nums">{formatTime(new Date(h.start_time))}</span>
@@ -1194,7 +1211,7 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
                   <div>
                     <p className="text-[11px] text-text-tertiary mb-2">Próximos — {futureTurnos.length} turno{futureTurnos.length !== 1 ? 's' : ''}</p>
                     <div className="space-y-1">
-                      {futureTurnos.slice(0, 10).map(h => (
+                      {futureTurnos.slice(0, 25).map(h => (
                         <div key={h.id} className="flex items-center gap-2 text-[12px]">
                           <span className="text-text-secondary w-[96px] shrink-0 tabular-nums">{formatDateShort(new Date(h.start_time))}</span>
                           <span className="text-text-tertiary tabular-nums">{formatTime(new Date(h.start_time))}</span>
