@@ -453,7 +453,11 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
     if (orgId) query = query.eq('org_id', orgId)
     else       query = query.eq('created_by', userId)
 
-    if (filterProf !== 'all') query = query.eq('professional_id', filterProf)
+    // Al filtrar por profesional seguimos mostrando los bloqueos sin profesional
+    // asignado: son bloqueos del centro (feriado, refacción) y aplican a todos.
+    if (filterProf !== 'all') {
+      query = query.or(`professional_id.eq.${filterProf},and(is_blocked.is.true,professional_id.is.null)`)
+    }
 
     const { data, error } = await query
     // Si la consulta falla, NO vaciamos la agenda: dejamos lo que ya estaba.

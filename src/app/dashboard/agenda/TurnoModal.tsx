@@ -79,6 +79,10 @@ const AREAS = [
   'RPG', 'Pilates', 'Yoga', 'Nutrición', 'Traumatología', 'Análisis de la marcha',
 ]
 
+// Tope de filas que puede generar un bloqueo de una sola vez, para que un rango
+// mal tipeado no dispare miles de inserts.
+const BLOCK_ROW_CAP = 500
+
 const STATUSES = ['programado', 'confirmado', 'presente', 'ausente', 'cancelado', 'sobreturno']
 
 export const APPOINTMENT_TYPES: { value: string; label: string }[] = [
@@ -129,32 +133,74 @@ function formatDateShort(date: Date): string {
   return date.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' })
 }
 
-// Genera las ocurrencias de un bloqueo recurrente conservando la hora de inicio/fin.
-// 'weekly' = el mismo día de semana cada semana; 'weekdays' = de lunes a viernes.
-function expandBlockDates(baseStart: Date, baseEnd: Date, mode: 'weekly' | 'weekdays', weeks: number): { start: Date; end: Date }[] {
-  const out: { start: Date; end: Date }[] = []
-  const durationMs = baseEnd.getTime() - baseStart.getTime()
-  const withTime = (day: Date) => {
-    const s = new Date(day)
-    s.setHours(baseStart.getHours(), baseStart.getMinutes(), 0, 0)
-    return { start: s, end: new Date(s.getTime() + durationMs) }
-  }
-  if (mode === 'weekly') {
-    for (let i = 0; i < weeks; i++) {
-      const d = new Date(baseStart)
-      d.setDate(d.getDate() + i * 7)
-      out.push(withTime(d))
-    }
-  } else {
-    const totalDays = weeks * 7
-    for (let i = 0; i < totalDays; i++) {
-      const d = new Date(baseStart)
-      d.setDate(d.getDate() + i)
-      const dow = d.getDay() // 0 dom … 6 sáb
-      if (dow >= 1 && dow <= 5) out.push(withTime(d))
-    }
+function hhmmToMin(v: string): number | null {
+  const m = v.match(/^(\d{1,2}):(\d{2})$/)
+  if (!m) return null
+  const h = Number(m[1]), mi = Number(m[2])
+  if (h > 23 || mi > 59) return null
+  return h * 60 + mi
+}
+
+function minToHHMM(min: number): string {
+  return `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`
+}
+
+// Días de un rango, inclusive. El tope evita que un rango mal tipeado
+// (ej. año 2099) genere una cantidad absurda de días.
+function eachDay(fromISO: string, toISO: string): Date[] {
+  const out: Date[] = []
+  const [fy, fm, fd] = fromISO.split('-').map(Number)
+  const [ty, tm, td] = toISO.split('-').map(Number)
+  if (!fy || !ty) return out
+  const cur = new Date(fy, fm - 1, fd)
+  const end = new Date(ty, tm - 1, td)
+  while (cur.getTime() <= end.getTime() && out.length < 400) {
+    out.push(new Date(cur))
+    cur.setDate(cur.getDate() + 1)
   }
   return out
+}
+
+// Ocurrencias de un bloqueo, ya con hora de inicio y fin aplicada a cada día.
+// El rango de fechas y la repetición son excluyentes: un rango ya es explícito.
+function buildBlockOccurrences(opts: {
+  span: 'single' | 'range'
+  dateFrom: string
+  dateTo: string
+  startMin: number
+  endMin: number
+  repeat: 'none' | 'weekly' | 'weekdays'
+  weeks: number
+}): { start: Date; end: Date }[] {
+  const { span, dateFrom, dateTo, startMin, endMin, repeat, weeks } = opts
+  if (!dateFrom || endMin <= startMin) return []
+  const at = (day: Date, min: number) => {
+    const d = new Date(day)
+    d.setHours(Math.floor(min / 60), min % 60, 0, 0)
+    return d
+  }
+  const [y, m, d] = dateFrom.split('-').map(Number)
+  let days: Date[]
+  if (span === 'range') {
+    days = eachDay(dateFrom, dateTo || dateFrom)
+  } else if (repeat === 'weekly') {
+    days = Array.from({ length: weeks }, (_, i) => {
+      const x = new Date(y, m - 1, d)
+      x.setDate(x.getDate() + i * 7)
+      return x
+    })
+  } else if (repeat === 'weekdays') {
+    days = []
+    for (let i = 0; i < weeks * 7; i++) {
+      const x = new Date(y, m - 1, d)
+      x.setDate(x.getDate() + i)
+      const dow = x.getDay() // 0 dom … 6 sáb
+      if (dow >= 1 && dow <= 5) days.push(x)
+    }
+  } else {
+    days = [new Date(y, m - 1, d)]
+  }
+  return days.map(day => ({ start: at(day, startMin), end: at(day, endMin) }))
 }
 
 function formatTime(date: Date): string {
@@ -243,6 +289,25 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
   const [doubleBooking, setDoubleBooking]     = useState(false)
   const [blockRepeat, setBlockRepeat]         = useState<'none' | 'weekly' | 'weekdays'>('none')
   const [blockRepeatWeeks, setBlockRepeatWeeks] = useState(4)
+
+  // Controles del bloqueo: día/rango de días y franja horaria/día completo.
+  // Son la fuente de verdad del bloqueo (form.start_time/end_time se usa para turnos).
+  const blockBase     = turno ? new Date(turno.start_time) : (defaultStart ?? new Date())
+  const blockBaseIso  = toLocalInputValue(blockBase)
+  const turnoStartMin = turno ? new Date(turno.start_time).getHours() * 60 + new Date(turno.start_time).getMinutes() : null
+  const turnoEndMin   = turno ? new Date(turno.end_time).getHours() * 60 + new Date(turno.end_time).getMinutes() : null
+
+  const [blockKind, setBlockKind] = useState<'hours' | 'fullday'>(
+    turnoStartMin === openMin && turnoEndMin === closeMin ? 'fullday' : 'hours'
+  )
+  const [blockSpan, setBlockSpan] = useState<'single' | 'range'>('single')
+  const [blockDateFrom, setBlockDateFrom] = useState(blockBaseIso.slice(0, 10))
+  const [blockDateTo,   setBlockDateTo]   = useState(blockBaseIso.slice(0, 10))
+  const [blockTimeFrom, setBlockTimeFrom] = useState(blockBaseIso.slice(11, 16))
+  const [blockTimeTo,   setBlockTimeTo]   = useState(
+    turno ? toLocalInputValue(new Date(turno.end_time)).slice(11, 16)
+          : minToHHMM(Math.min((hhmmToMin(blockBaseIso.slice(11, 16)) ?? openMin) + defaultDuration, closeMin))
+  )
   // Áreas alcanzadas por el bloqueo. Un bloqueo se guarda como una fila de turnos
   // por área, así aparece en la agenda de cada área elegida (antes se guardaba
   // siempre con el área por defecto y solo se veía en la primera, Kinesiología).
@@ -476,7 +541,7 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
 
   const handleSave = async () => {
     if (form.is_blocked) {
-      if (!form.start_time || !form.end_time) return
+      if (blockOccurrences.length === 0 || blockRowCount > BLOCK_ROW_CAP) return
     } else {
       if (!form.patient_name.trim() || !form.start_time || !form.end_time) return
     }
@@ -510,8 +575,8 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
       patient_address:          form.is_blocked ? null : (form.patient_address.trim() || null),
       professional_id:     form.professional_id,
       professional_name:   professionals.find(p => p.id === form.professional_id)?.full_name ?? null,
-      start_time:          new Date(form.start_time).toISOString(),
-      end_time:            new Date(form.end_time).toISOString(),
+      start_time:          form.is_blocked ? blockOccurrences[0].start.toISOString() : new Date(form.start_time).toISOString(),
+      end_time:            form.is_blocked ? blockOccurrences[0].end.toISOString()   : new Date(form.end_time).toISOString(),
       area:                form.area,
       status:              form.is_blocked ? 'cancelado' : form.status,
       notes:               form.notes.trim() || null,
@@ -529,10 +594,7 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
       // Un bloqueo se guarda como una fila por área elegida (y por ocurrencia si
       // se repite), de modo que aparezca en la agenda de cada área bloqueada.
       const targetAreas = blockAreas.length > 0 ? blockAreas : [form.area]
-      const occurrences = blockRepeat !== 'none'
-        ? expandBlockDates(new Date(form.start_time), new Date(form.end_time), blockRepeat, blockRepeatWeeks)
-        : [{ start: new Date(form.start_time), end: new Date(form.end_time) }]
-      const rows = occurrences.flatMap(o => targetAreas.map(a => ({
+      const rows = blockOccurrences.flatMap(o => targetAreas.map(a => ({
         ...payload,
         area: a,
         start_time: o.start.toISOString(),
@@ -576,8 +638,25 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
     onHistorialChanged?.()
   }
 
+  // Ocurrencias del bloqueo: alimentan tanto el guardado como el contador que ve
+  // el usuario antes de confirmar.
+  const blockStartMin = blockKind === 'fullday' ? openMin  : (hhmmToMin(blockTimeFrom) ?? -1)
+  const blockEndMin   = blockKind === 'fullday' ? closeMin : (hhmmToMin(blockTimeTo)   ?? -1)
+  const blockOccurrences = form.is_blocked
+    ? buildBlockOccurrences({
+        span:     isEdit ? 'single' : blockSpan,
+        dateFrom: blockDateFrom,
+        dateTo:   blockDateTo,
+        startMin: blockStartMin,
+        endMin:   blockEndMin,
+        repeat:   (isEdit || blockSpan === 'range') ? 'none' : blockRepeat,
+        weeks:    blockRepeatWeeks,
+      })
+    : []
+  const blockRowCount = blockOccurrences.length * Math.max(1, blockAreas.length)
+
   const valid = form.is_blocked
-    ? !!(form.start_time && form.end_time && blockAreas.length > 0)
+    ? blockAreas.length > 0 && blockOccurrences.length > 0 && blockRowCount <= BLOCK_ROW_CAP
     : !!(form.patient_name.trim() && form.start_time && form.end_time)
 
   const now = new Date().toISOString()
@@ -616,7 +695,11 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setForm(f => ({ ...f, is_blocked: !f.is_blocked }))}
+              onClick={() => setForm(f => {
+                const next = !f.is_blocked
+                // Un bloqueo nuevo arranca sin profesional: aplica a todo el centro.
+                return { ...f, is_blocked: next, professional_id: next && !isEdit ? null : f.professional_id }
+              })}
               title={form.is_blocked ? 'Cancelar bloqueo' : 'Bloquear este horario'}
               className={`text-[11px] px-2 py-1 rounded-md border-[0.5px] transition-colors ${form.is_blocked ? 'bg-red-500/15 border-red-500/35 text-red-400' : 'border-border text-text-secondary hover:text-text-primary'}`}
             >
@@ -644,63 +727,107 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
         {form.is_blocked ? (
           /* Simplified blocked-slot form */
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Inicio *</label>
-                <input
-                  type="datetime-local"
-                  value={form.start_time}
-                  onChange={e => {
-                    const newStart = e.target.value
-                    setForm(f => ({
-                      ...f,
-                      start_time: newStart,
-                      end_time: newStart ? toLocalInputValue(new Date(new Date(newStart).getTime() + duration * 60 * 1000)) : f.end_time,
-                    }))
-                  }}
-                  className={inputCls}
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Fin *</label>
-                <input type="datetime-local" value={form.end_time} onChange={e => setForm(f => ({ ...f, end_time: e.target.value }))} className={inputCls} />
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                const base = form.start_time ? new Date(form.start_time) : new Date()
-                const s = new Date(base); s.setHours(Math.floor(openMin / 60), openMin % 60, 0, 0)
-                const e = new Date(base); e.setHours(Math.floor(closeMin / 60), closeMin % 60, 0, 0)
-                setForm(f => ({ ...f, start_time: toLocalInputValue(s), end_time: toLocalInputValue(e) }))
-              }}
-              className="text-[12px] px-3 py-1.5 rounded-lg border-[0.5px] border-border text-text-secondary hover:text-text-primary transition-colors"
-            >
-              Todo el día ({String(Math.floor(openMin / 60)).padStart(2, '0')}:{String(openMin % 60).padStart(2, '0')}–{String(Math.floor(closeMin / 60)).padStart(2, '0')}:{String(closeMin % 60).padStart(2, '0')})
-            </button>
+            {/* Qué se bloquea: una franja horaria o el día entero */}
             <div>
-              <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-2">Duración</label>
-              <div className="flex gap-1.5 flex-wrap">
-                {[15, 20, 30, 40, 45, 60, 90, 120].map(d => (
+              <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-2">Qué bloquear</label>
+              <div className="flex gap-1.5">
+                {([['hours', 'Franja horaria'], ['fullday', 'Día completo']] as const).map(([val, label]) => (
                   <button
-                    key={d}
+                    key={val}
                     type="button"
-                    onClick={() => {
-                      setDuration(d)
-                      if (form.start_time) {
-                        const end = new Date(new Date(form.start_time).getTime() + d * 60 * 1000)
-                        setForm(f => ({ ...f, end_time: toLocalInputValue(end) }))
-                      }
-                    }}
-                    className={`px-2.5 py-1 rounded-lg text-[12px] border-[0.5px] transition-colors ${
-                      duration === d ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-primary border-border text-text-secondary hover:text-text-primary'
+                    onClick={() => setBlockKind(val)}
+                    className={`px-3 py-1.5 rounded-lg text-[12px] border-[0.5px] transition-colors ${
+                      blockKind === val ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-primary border-border text-text-secondary hover:text-text-primary'
                     }`}
                   >
-                    {d}min
+                    {label}
                   </button>
                 ))}
               </div>
             </div>
+
+            {/* Cuándo: un día suelto o un rango de fechas */}
+            <div>
+              <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-2">Cuándo</label>
+              {!isEdit && (
+                <div className="flex gap-1.5 mb-2">
+                  {([['single', 'Un día'], ['range', 'Rango de días']] as const).map(([val, label]) => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => setBlockSpan(val)}
+                      className={`px-3 py-1.5 rounded-lg text-[12px] border-[0.5px] transition-colors ${
+                        blockSpan === val ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-primary border-border text-text-secondary hover:text-text-primary'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] text-text-secondary mb-1">
+                    {blockSpan === 'range' && !isEdit ? 'Desde' : 'Día'}
+                  </label>
+                  <input
+                    type="date"
+                    value={blockDateFrom}
+                    onChange={e => {
+                      const v = e.target.value
+                      setBlockDateFrom(v)
+                      if (blockDateTo < v) setBlockDateTo(v)
+                    }}
+                    className={inputCls}
+                  />
+                </div>
+                {blockSpan === 'range' && !isEdit && (
+                  <div>
+                    <label className="block text-[11px] text-text-secondary mb-1">Hasta</label>
+                    <input type="date" value={blockDateTo} min={blockDateFrom} onChange={e => setBlockDateTo(e.target.value)} className={inputCls} />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Horario de la franja */}
+            {blockKind === 'hours' ? (
+              <div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Desde</label>
+                    <input type="time" value={blockTimeFrom} onChange={e => setBlockTimeFrom(e.target.value)} className={inputCls} />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Hasta</label>
+                    <input type="time" value={blockTimeTo} onChange={e => setBlockTimeTo(e.target.value)} className={inputCls} />
+                  </div>
+                </div>
+                <div className="flex gap-1.5 flex-wrap mt-2">
+                  {[30, 60, 90, 120].map(d => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => {
+                        const from = hhmmToMin(blockTimeFrom)
+                        if (from !== null) setBlockTimeTo(minToHHMM(Math.min(from + d, 23 * 60 + 59)))
+                      }}
+                      className="px-2.5 py-1 rounded-lg text-[12px] border-[0.5px] bg-bg-primary border-border text-text-secondary hover:text-text-primary transition-colors"
+                    >
+                      +{d}min
+                    </button>
+                  ))}
+                </div>
+                {blockEndMin <= blockStartMin && (
+                  <p className="text-[11px] text-warning mt-1.5">La hora de fin tiene que ser posterior a la de inicio.</p>
+                )}
+              </div>
+            ) : (
+              <p className="text-[12px] text-text-secondary">
+                Se bloquea de {minToHHMM(openMin)} a {minToHHMM(closeMin)}, el horario visible de la agenda.
+              </p>
+            )}
+
             {/* Áreas a bloquear: por defecto todas, para que el bloqueo no quede
                 escondido en una sola agenda. Al editar se elige una sola. */}
             <div>
@@ -752,11 +879,14 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
             </div>
             {professionals.length > 0 && (
               <div>
-                <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Profesional</label>
+                <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">¿De quién?</label>
                 <select value={form.professional_id ?? ''} onChange={e => setForm(f => ({ ...f, professional_id: e.target.value || null }))} className={inputCls}>
-                  <option value="">Sin asignar</option>
-                  {professionals.map(p => <option key={p.id} value={p.id}>{p.full_name ?? p.id}</option>)}
+                  <option value="">Todo el centro (sin profesional)</option>
+                  {professionals.map(p => <option key={p.id} value={p.id}>Solo {p.full_name ?? p.id}</option>)}
                 </select>
+                <p className="text-[11px] text-text-tertiary mt-1">
+                  {form.professional_id ? 'Bloquea solo la agenda de este profesional.' : 'El bloqueo aparece en la agenda de todos los profesionales.'}
+                </p>
               </div>
             )}
             <div>
@@ -764,8 +894,8 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
               <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Ej: Reunión, feriado, descanso..." rows={2} className={`${inputCls} resize-none`} />
             </div>
 
-            {/* Repetir (solo al crear un bloqueo nuevo) */}
-            {!isEdit && (
+            {/* Repetir: solo para un día suelto; con rango de días no aplica */}
+            {!isEdit && blockSpan === 'single' && (
               <div>
                 <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-2">Repetir</label>
                 <div className="flex gap-1.5 flex-wrap">
@@ -792,13 +922,23 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
                     >
                       {[2, 4, 8, 12].map(w => <option key={w} value={w}>{w} semanas</option>)}
                     </select>
-                    <span className="text-[11px] text-text-tertiary">
-                      ({(blockRepeat === 'weekly' ? blockRepeatWeeks : blockRepeatWeeks * 5) * Math.max(1, blockAreas.length)} bloqueos)
-                    </span>
+                    <span className="text-[11px] text-text-tertiary">({blockRowCount} bloqueos)</span>
                   </div>
                 )}
               </div>
             )}
+
+            {/* Resumen de lo que se va a crear */}
+            {blockOccurrences.length > 0 && blockRowCount <= BLOCK_ROW_CAP ? (
+              <p className="text-[12px] text-text-secondary border-t-[0.5px] border-border pt-3">
+                Se {blockRowCount === 1 ? 'creará' : 'crearán'} <strong className="text-text-primary">{blockRowCount}</strong> {blockRowCount === 1 ? 'bloqueo' : 'bloqueos'}
+                {blockAreas.length > 1 ? ` (${blockOccurrences.length} × ${blockAreas.length} áreas)` : ''}.
+              </p>
+            ) : blockRowCount > BLOCK_ROW_CAP ? (
+              <p className="text-[12px] text-warning border-t-[0.5px] border-border pt-3">
+                Son demasiados bloqueos ({blockRowCount}). Acortá el rango de fechas o reducí las áreas (máx. {BLOCK_ROW_CAP}).
+              </p>
+            ) : null}
           </div>
         ) : (
           /* Normal appointment form */
