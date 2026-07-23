@@ -420,7 +420,32 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
     defaultStatus?: string
   }>({ open: false })
   const [cloneModal, setCloneModal] = useState<Turno | null>(null)
-  const [quickMenu, setQuickMenu] = useState<{ turno: Turno; x: number; y: number } | null>(null)
+  // Menú contextual de un turno. Guardamos el rectángulo del chip clickeado
+  // (no un solo punto) para poder abrir el menú hacia abajo o hacia arriba según
+  // el espacio disponible, y medirlo después de montarlo.
+  const [quickMenu, setQuickMenu] = useState<{ turno: Turno; anchorLeft: number; anchorTop: number; anchorBottom: number } | null>(null)
+  const quickMenuRef = useRef<HTMLDivElement | null>(null)
+  const [quickMenuPos, setQuickMenuPos] = useState<{ top: number; left: number } | null>(null)
+
+  // Reposiciona el menú una vez que conocemos su alto real: lo mantiene dentro de
+  // la pantalla, prefiriendo abajo del turno y volcándose arriba si no entra.
+  useEffect(() => {
+    if (!quickMenu) { setQuickMenuPos(null); return }
+    const el = quickMenuRef.current
+    if (!el) return
+    const M = 8 // margen con los bordes de la pantalla
+    const { height, width } = el.getBoundingClientRect()
+    const vh = window.innerHeight
+    const vw = window.innerWidth
+    let top = quickMenu.anchorBottom + 4
+    // Si no entra abajo, lo abrimos por encima del turno.
+    if (top + height > vh - M) {
+      const above = quickMenu.anchorTop - 4 - height
+      top = above >= M ? above : Math.max(M, vh - height - M)
+    }
+    const left = Math.max(M, Math.min(quickMenu.anchorLeft, vw - width - M))
+    setQuickMenuPos({ top, left })
+  }, [quickMenu])
 
   const supabaseRef = useRef(createClient())
 
@@ -608,7 +633,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                   onClick={e => {
                     if (t.is_blocked) { openEdit(t); return }
                     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-                    setQuickMenu({ turno: t, x: rect.left, y: rect.bottom + 4 })
+                    setQuickMenu({ turno: t, anchorLeft: rect.left, anchorTop: rect.top, anchorBottom: rect.bottom })
                   }}
                   className="absolute inset-0 px-1.5 py-1 w-full text-left cursor-pointer hover:opacity-80 transition-opacity"
                   title={t.is_blocked ? (t.notes || 'Bloqueado') : `${t.patient_name} · ${formatTime(start)} - ${formatTime(end)}`}
@@ -956,8 +981,13 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
         <>
           <div className="fixed inset-0 z-40" onClick={() => setQuickMenu(null)} />
           <div
-            className="fixed z-50 bg-bg-secondary border-[0.5px] border-border rounded-xl shadow-xl py-1 min-w-[160px]"
-            style={{ top: Math.min(quickMenu.y, window.innerHeight - 130), left: Math.min(quickMenu.x, window.innerWidth - 180) }}
+            ref={quickMenuRef}
+            className="fixed z-50 bg-bg-secondary border-[0.5px] border-border rounded-xl shadow-xl py-1 min-w-[160px] max-h-[calc(100vh-16px)] overflow-y-auto"
+            style={{
+              top: quickMenuPos?.top ?? quickMenu.anchorBottom + 4,
+              left: quickMenuPos?.left ?? quickMenu.anchorLeft,
+              visibility: quickMenuPos ? 'visible' : 'hidden',
+            }}
           >
             <p className="px-3 py-1.5 text-[11px] text-text-tertiary truncate border-b-[0.5px] border-border">{quickMenu.turno.patient_name}</p>
             <button
