@@ -115,11 +115,16 @@ export default function AgendaSettings({
     const newAccess = !memberAccess[memberId]
     setSavingMember(memberId)
     setMemberAccess(prev => ({ ...prev, [memberId]: newAccess }))
-    await supabase.rpc('set_member_agenda_access', {
+    const { error } = await supabase.rpc('set_member_agenda_access', {
       p_org_id: orgId,
       p_user_id: memberId,
       p_access: newAccess,
     })
+    // Si falla, revertimos el toggle y avisamos en vez de fingir que se guardó.
+    if (error) {
+      setMemberAccess(prev => ({ ...prev, [memberId]: !newAccess }))
+      alert('No se pudo cambiar el acceso a la agenda. Intentá de nuevo.')
+    }
     setSavingMember(null)
   }
 

@@ -537,9 +537,10 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
   }
 
   const quickStatus = useCallback(async (id: string, status: string) => {
+    if (!isOwner) return
     setTurnos(prev => prev.map(t => t.id === id ? { ...t, status } : t))
     await supabaseRef.current.from('turnos').update({ status }).eq('id', id)
-  }, [])
+  }, [isOwner])
 
   const markReminded = useCallback((id: string) => {
     setRemindedIds(prev => {
@@ -550,14 +551,19 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
     })
   }, [])
 
+  // Solo el dueño (Pro/admin) edita. Los integrantes con acceso habilitado entran
+  // en modo solo-lectura: ven pacientes y horarios pero no crean/editan/borran.
+  const canEdit = isOwner
+
   const openNew = (day?: Date, hour?: number, minute?: number, defaultStatus?: string) => {
+    if (!canEdit) return
     const defaultDay = day ?? (view === 'day' ? selectedDay : new Date())
     const defaultStart = new Date(defaultDay)
     defaultStart.setHours(hour ?? 9, minute ?? 0, 0, 0)
     setModal({ open: true, defaultStart, defaultDay, defaultStatus })
   }
 
-  const openEdit = (t: Turno) => setModal({ open: true, turno: t })
+  const openEdit = (t: Turno) => { if (!canEdit) return; setModal({ open: true, turno: t }) }
   const closeModal = () => setModal({ open: false })
   const handleSaved = () => { closeModal(); fetchTurnos() }
 
@@ -592,7 +598,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
         className={`relative border-r-[0.5px] border-border last:border-r-0 ${isToday ? 'bg-accent/[0.02]' : ''}`}
         style={{ height: `${GRID_HEIGHT}px` }}
       >
-        <SlotOverlay gridStart={gridStart} gridEnd={gridEnd} gridTotal={gridTotal} gridHeight={GRID_HEIGHT} snapStep={effectiveInterval} onPick={(h, m) => openNew(day, h, m)} />
+        {canEdit && <SlotOverlay gridStart={gridStart} gridEnd={gridEnd} gridTotal={gridTotal} gridHeight={GRID_HEIGHT} snapStep={effectiveInterval} onPick={(h, m) => openNew(day, h, m)} />}
         <div className="absolute inset-0 pointer-events-none">
           {dayTurnos.map(t => {
             const start = new Date(t.start_time)
@@ -661,7 +667,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                 {/* Barra de acciones. Cuando hay muchos turnos apilados (sobreturnos
                     en semana) no entran todos los botones: en ese caso ocultamos los
                     extras pero SIEMPRE mantenemos el WA, que es el más importante. */}
-                {!t.is_blocked && (
+                {!t.is_blocked && canEdit && (
                   <div className="absolute bottom-0.5 right-0.5 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity rounded bg-bg-primary/70 backdrop-blur-[2px] p-0.5">
                     {!compact && (
                       <>
@@ -817,13 +823,21 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
             </>
           )}
 
-          <button onClick={() => setSettingsOpen(true)} className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors" title="Configurar agenda">
-            ⚙
-          </button>
+          {canEdit && (
+            <button onClick={() => setSettingsOpen(true)} className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors" title="Configurar agenda">
+              ⚙
+            </button>
+          )}
 
-          <button onClick={() => openNew()} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity">
-            + Nuevo turno
-          </button>
+          {canEdit ? (
+            <button onClick={() => openNew()} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity">
+              + Nuevo turno
+            </button>
+          ) : (
+            <span className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[12px] text-text-secondary" title="Tu acceso es solo de lectura">
+              Solo lectura
+            </span>
+          )}
         </div>
       </div>
 
@@ -990,12 +1004,14 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
             }}
           >
             <p className="px-3 py-1.5 text-[11px] text-text-tertiary truncate border-b-[0.5px] border-border">{quickMenu.turno.patient_name}</p>
-            <button
-              onClick={() => { setQuickMenu(null); openEdit(quickMenu.turno) }}
-              className="w-full text-left px-3 py-2 text-[13px] hover:bg-bg-primary transition-colors"
-            >
-              Editar turno
-            </button>
+            {canEdit && (
+              <button
+                onClick={() => { setQuickMenu(null); openEdit(quickMenu.turno) }}
+                className="w-full text-left px-3 py-2 text-[13px] hover:bg-bg-primary transition-colors"
+              >
+                Editar turno
+              </button>
+            )}
             {quickMenu.turno.patient_id && (
               <a
                 href={`/dashboard/pacientes/${quickMenu.turno.patient_id}`}
@@ -1005,7 +1021,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                 Ver paciente
               </a>
             )}
-            {!quickMenu.turno.is_blocked && (
+            {canEdit && !quickMenu.turno.is_blocked && (
               <div className="flex border-y-[0.5px] border-border">
                 <button
                   onClick={() => { const t = quickMenu.turno; setQuickMenu(null); quickStatus(t.id, t.status === 'presente' ? 'programado' : 'presente') }}
@@ -1021,7 +1037,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                 </button>
               </div>
             )}
-            {!quickMenu.turno.is_blocked && (
+            {canEdit && !quickMenu.turno.is_blocked && (
               quickMenu.turno.patient_phone ? (
                 <a
                   href={buildWhatsAppUrl(
@@ -1049,16 +1065,18 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                 </button>
               )
             )}
-            <button
-              onClick={() => {
-                const t = quickMenu.turno
-                setQuickMenu(null)
-                openNew(new Date(t.start_time), new Date(t.start_time).getHours(), new Date(t.start_time).getMinutes(), 'sobreturno')
-              }}
-              className="w-full text-left px-3 py-2 text-[13px] hover:bg-bg-primary transition-colors"
-            >
-              Dar sobreturno
-            </button>
+            {canEdit && (
+              <button
+                onClick={() => {
+                  const t = quickMenu.turno
+                  setQuickMenu(null)
+                  openNew(new Date(t.start_time), new Date(t.start_time).getHours(), new Date(t.start_time).getMinutes(), 'sobreturno')
+                }}
+                className="w-full text-left px-3 py-2 text-[13px] hover:bg-bg-primary transition-colors"
+              >
+                Dar sobreturno
+              </button>
+            )}
           </div>
         </>
       )}
