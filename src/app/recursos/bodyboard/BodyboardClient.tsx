@@ -295,7 +295,7 @@ export default function BodyboardClient() {
                     <span className="text-[12px] text-text-primary flex-1 truncate">{m.label || cat?.label}</span>
                     <button
                       onClick={() => setMarkers(prev => prev.filter(x => x.id !== m.id))}
-                      className="text-text-secondary hover:text-warning opacity-0 group-hover:opacity-100 text-[16px] transition-opacity shrink-0"
+                      className="text-text-secondary hover:text-warning opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 text-[16px] transition-opacity shrink-0"
                     >×</button>
                   </div>
                 )
@@ -332,7 +332,7 @@ export default function BodyboardClient() {
                         <span className="text-[13px] text-text-primary">{item.label}</span>
                         <button
                           onClick={() => setPanelItems(prev => prev.filter(x => x.id !== item.id))}
-                          className="text-text-secondary hover:text-warning opacity-0 group-hover:opacity-100 text-[16px] transition-opacity ml-2 shrink-0"
+                          className="text-text-secondary hover:text-warning opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 text-[16px] transition-opacity ml-2 shrink-0"
                         >×</button>
                       </div>
                     ))}

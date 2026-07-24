@@ -227,7 +227,7 @@ export default function PacienteDetail({ patient: initialPatient, userId }: { pa
             <div className="text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-3">Expediente clínico</div>
             <div className="text-[18px] font-medium mb-1">Ficha Clínica</div>
             <div className="text-[13px] text-text-secondary">Anamnesis, diagnóstico, goniometría, cuestionarios, dinamometría</div>
-            <div className="mt-5 text-accent text-[13px] font-medium opacity-0 group-hover:opacity-100 transition-opacity">Abrir →</div>
+            <div className="mt-5 text-accent text-[13px] font-medium opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity">Abrir →</div>
           </div>
         </Link>
 
@@ -236,7 +236,7 @@ export default function PacienteDetail({ patient: initialPatient, userId }: { pa
             <div className="text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-3">Seguimiento</div>
             <div className="text-[18px] font-medium mb-1">Monitoreo de Carga</div>
             <div className="text-[13px] text-text-secondary">Sesiones, ACWR, VAS, RPE y consejo semanal</div>
-            <div className="mt-5 text-accent text-[13px] font-medium opacity-0 group-hover:opacity-100 transition-opacity">Abrir →</div>
+            <div className="mt-5 text-accent text-[13px] font-medium opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity">Abrir →</div>
           </div>
         </Link>
 
@@ -245,7 +245,7 @@ export default function PacienteDetail({ patient: initialPatient, userId }: { pa
             <div className="text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-3">Ejercicio</div>
             <div className="text-[18px] font-medium mb-1">Plan de Ejercicio</div>
             <div className="text-[13px] text-text-secondary">Planificación de ejercicios y bloques de entrenamiento</div>
-            <div className="mt-5 text-accent text-[13px] font-medium opacity-0 group-hover:opacity-100 transition-opacity">Abrir →</div>
+            <div className="mt-5 text-accent text-[13px] font-medium opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity">Abrir →</div>
           </div>
         </Link>
 
@@ -254,7 +254,7 @@ export default function PacienteDetail({ patient: initialPatient, userId }: { pa
             <div className="text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-3">Planificación</div>
             <div className="text-[18px] font-medium mb-1">Calendario</div>
             <div className="text-[13px] text-text-secondary">Programá sesiones en fechas específicas para el paciente</div>
-            <div className="mt-5 text-accent text-[13px] font-medium opacity-0 group-hover:opacity-100 transition-opacity">Abrir →</div>
+            <div className="mt-5 text-accent text-[13px] font-medium opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity">Abrir →</div>
           </div>
         </Link>
 
@@ -263,7 +263,7 @@ export default function PacienteDetail({ patient: initialPatient, userId }: { pa
             <div className="text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-3">Protocolos RTS</div>
             <div className="text-[18px] font-medium mb-1">Retorno al Deporte</div>
             <div className="text-[13px] text-text-secondary">LCA, isquiotibiales, tobillo, femoropatelar, tendinopatía, inguinal, hombro</div>
-            <div className="mt-5 text-accent text-[13px] font-medium opacity-0 group-hover:opacity-100 transition-opacity">Abrir →</div>
+            <div className="mt-5 text-accent text-[13px] font-medium opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity">Abrir →</div>
           </div>
         </Link>
       </div>

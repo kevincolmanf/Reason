@@ -161,7 +161,7 @@ export default function PlanList({ userId, patientId }: { userId: string; patien
                   Modificado: {new Date(plan.updated_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}
                 </p>
                 
-                <div className="mt-auto pt-4 border-t-[0.5px] border-border flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="mt-auto pt-4 border-t-[0.5px] border-border flex justify-between items-center opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity">
                   <span className="text-accent text-[13px] font-medium">Editar →</span>
                   
                   <div className="flex gap-3">

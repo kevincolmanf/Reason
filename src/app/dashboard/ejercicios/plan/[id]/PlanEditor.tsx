@@ -1478,7 +1478,7 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
                           : `${ex.category.replace(/_/g, ' ').toUpperCase()} • ${ex.equipment || 'Sin equipo'}`}
                       </div>
                     </div>
-                    <div className="text-accent text-[20px] opacity-0 group-hover:opacity-100 transition-opacity">+</div>
+                    <div className="text-accent text-[20px] opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity">+</div>
                   </button>
                 ))
               )}
@@ -1636,7 +1636,7 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
                         <div className="text-[14px] font-medium text-text-primary mb-0.5">{s.name}</div>
                         <div className="text-[12px] text-text-secondary">{exerciseCount} ejercicio{exerciseCount !== 1 ? 's' : ''}</div>
                       </div>
-                      <span className="text-accent text-[20px] opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-3">→</span>
+                      <span className="text-accent text-[20px] opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity shrink-0 ml-3">→</span>
                     </div>
                   </button>
                 )

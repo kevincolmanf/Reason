@@ -817,7 +817,7 @@ export default function FichaClient({
                       </button>
                       <button
                         onClick={() => handleDeleteRecomendacionPdf(pdf.id)}
-                        className="text-text-secondary hover:text-warning text-[12px] opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="text-text-secondary hover:text-warning text-[12px] opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity"
                       >
                         Eliminar
                       </button>
@@ -894,7 +894,7 @@ export default function FichaClient({
                   <div className="flex-1 text-[14px] text-text-primary whitespace-pre-wrap">{act.texto}</div>
                   <button
                     onClick={() => handleDeleteActualizacion(act.id)}
-                    className="text-[11px] text-text-tertiary hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 pt-0.5"
+                    className="text-[11px] text-text-tertiary hover:text-red-400 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity shrink-0 pt-0.5"
                   >
                     Eliminar
                   </button>
@@ -1077,7 +1077,7 @@ export default function FichaClient({
                         )}
                         {rec.notes && <div className="text-[12px] text-text-secondary mt-1">{rec.notes}</div>}
                       </div>
-                      <button onClick={() => handleDeleteGonio(rec.id)} className="text-text-secondary hover:text-warning text-[12px] opacity-0 group-hover:opacity-100 transition-opacity ml-4 shrink-0">
+                      <button onClick={() => handleDeleteGonio(rec.id)} className="text-text-secondary hover:text-warning text-[12px] opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity ml-4 shrink-0">
                         Eliminar
                       </button>
                     </div>
@@ -1126,7 +1126,7 @@ export default function FichaClient({
                           {new Date(result.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })} · <span className="text-accent">Abrir cuestionario →</span>
                         </div>
                       </button>
-                      <button onClick={() => handleDeleteQ(result.id)} className="text-text-secondary hover:text-warning text-[12px] opacity-0 group-hover:opacity-100 transition-opacity ml-4 shrink-0">
+                      <button onClick={() => handleDeleteQ(result.id)} className="text-text-secondary hover:text-warning text-[12px] opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity ml-4 shrink-0">
                         Eliminar
                       </button>
                     </div>
@@ -1180,7 +1180,7 @@ export default function FichaClient({
                         )}
                         {d.notes && <div className="text-[12px] text-text-secondary mt-1 truncate max-w-[400px]">{d.notes}</div>}
                       </div>
-                      <button onClick={() => handleDeleteDynamo(d.id)} className="text-text-secondary hover:text-warning text-[12px] opacity-0 group-hover:opacity-100 transition-opacity ml-4 shrink-0">
+                      <button onClick={() => handleDeleteDynamo(d.id)} className="text-text-secondary hover:text-warning text-[12px] opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity ml-4 shrink-0">
                         Eliminar
                       </button>
                     </div>
