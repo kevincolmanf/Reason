@@ -111,19 +111,14 @@ export async function middleware(request: NextRequest) {
     const trialExpiresAt = userData?.trial_expires_at
     const trialActive = trialExpiresAt ? new Date(trialExpiresAt) > new Date() : false
 
-    // Check if user is actively in an org context (cookie reason_ctx)
-    let isInOrgContext = false
-    try {
-      const ctxRaw = request.cookies.get('reason_ctx')?.value
-      if (ctxRaw) {
-        const ctx = JSON.parse(ctxRaw)
-        isInOrgContext = ctx?.type === 'org' && !!ctx?.orgId
-      }
-    } catch { /* invalid cookie → treat as personal */ }
-
-    // Check org membership only when in org context
+    // ¿Es integrante de alguna organización? No dependemos del cookie de contexto:
+    // un integrante recién logueado todavía no lo tiene seteado (su contexto por
+    // defecto ya es la organización), y aun así debe poder acceder a las features
+    // del equipo —incluida la agenda, en modo lectura— aunque su plan personal sea
+    // free o subscriber. Antes se exigía estar "en contexto org" por cookie, y por
+    // eso el integrante caía en el paywall.
     let isOrgMember = false
-    if ((role === 'free' || role === 'subscriber') && isInOrgContext) {
+    if (role === 'free' || role === 'subscriber') {
       const { count } = await supabase
         .from('organization_members')
         .select('*', { count: 'exact', head: true })
