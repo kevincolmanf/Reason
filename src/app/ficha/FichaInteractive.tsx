@@ -393,7 +393,7 @@ Documento generado con Reason — reason.com.ar`
                       </button>
                       <button
                         onClick={() => handleDeleteRecomendacionPdf(pdf.id)}
-                        className="text-text-secondary hover:text-warning text-[12px] opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="text-text-secondary hover:text-warning text-[12px] opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity"
                       >
                         Eliminar
                       </button>

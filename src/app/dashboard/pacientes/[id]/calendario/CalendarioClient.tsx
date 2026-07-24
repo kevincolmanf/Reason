@@ -249,7 +249,7 @@ export default function CalendarioClient({ patientId, userId, patientName, plans
                           <div className={`text-[11px] font-medium leading-tight truncate cursor-pointer ${s.completed ? 'line-through text-text-secondary' : 'text-text-primary'}`} onClick={() => handleToggleComplete(s)}>{s.session_name}</div>
                           <div className="text-[10px] text-text-secondary">S{s.week}</div>
                         </div>
-                        <button onClick={() => handleDelete(s.id)} className="text-[10px] text-text-secondary opacity-0 group-hover:opacity-100 hover:text-warning shrink-0 ml-1">✕</button>
+                        <button onClick={() => handleDelete(s.id)} className="text-[10px] text-text-secondary opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 hover:text-warning shrink-0 ml-1">✕</button>
                       </div>
                     </div>
                   ))}

@@ -990,7 +990,7 @@ export default function LoadMonitorClient({
                         )}
                       </div>
                     )}
-                    <button onClick={() => handleDeleteSession(s.id)} className="text-text-secondary hover:text-warning text-[11px] mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => handleDeleteSession(s.id)} className="text-text-secondary hover:text-warning text-[11px] mt-1 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity">
                       Eliminar
                     </button>
                   </div>
@@ -1006,7 +1006,7 @@ export default function LoadMonitorClient({
                         {s.vas_post !== null ? s.vas_post : '—'}
                       </span>
                       <SourceBadge source={s.source} />
-                      <button onClick={() => handleDeleteSession(s.id)} className="text-text-secondary hover:text-warning text-[12px] opacity-0 group-hover:opacity-100 transition-opacity text-right">
+                      <button onClick={() => handleDeleteSession(s.id)} className="text-text-secondary hover:text-warning text-[12px] opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity text-right">
                         Eliminar
                       </button>
                     </div>

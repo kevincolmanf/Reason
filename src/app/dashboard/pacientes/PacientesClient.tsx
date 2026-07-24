@@ -437,12 +437,12 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
                     {p.source && <p className="text-[11px] text-text-secondary mt-1 opacity-60">Vía: {p.source}</p>}
                     <div className="mt-4 pt-4 border-t-[0.5px] border-border flex justify-between items-center">
                       <span className="text-[12px] text-text-secondary">{p.plan_count} plan{p.plan_count !== 1 ? 'es' : ''}</span>
-                      <span className="text-accent text-[13px] font-medium opacity-0 group-hover:opacity-100 transition-opacity">Ver →</span>
+                      <span className="text-accent text-[13px] font-medium opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity">Ver →</span>
                     </div>
                   </div>
                 </Link>
                 {(isPro || p.user_id === userId) && (
-                  <button onClick={() => setDeleteConfirm(p.id)} className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity text-[11px] text-text-secondary hover:text-red-400 bg-bg-primary border-[0.5px] border-border rounded-lg px-2 py-1">
+                  <button onClick={() => setDeleteConfirm(p.id)} className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity text-[11px] text-text-secondary hover:text-red-400 bg-bg-primary border-[0.5px] border-border rounded-lg px-2 py-1">
                     Eliminar
                   </button>
                 )}
