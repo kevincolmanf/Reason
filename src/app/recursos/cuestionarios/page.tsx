@@ -8,10 +8,27 @@ export const metadata = {
   title: 'Cuestionarios | Reason',
 }
 
-export default async function CuestionariosPage() {
+export default async function CuestionariosPage({
+  searchParams,
+}: {
+  searchParams: { paciente?: string }
+}) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+
+  // Si venimos desde la ficha de un paciente (?paciente=<id>), lo dejamos fijado
+  // para guardar el resultado ahí sin tener que volver a elegirlo. La RLS de
+  // patients valida el acceso: si no devuelve fila, no se fija nada.
+  let lockedPatient: { id: string; name: string } | null = null
+  if (searchParams?.paciente) {
+    const { data: p } = await supabase
+      .from('patients')
+      .select('id, name')
+      .eq('id', searchParams.paciente)
+      .single()
+    if (p) lockedPatient = p
+  }
 
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
@@ -27,7 +44,7 @@ export default async function CuestionariosPage() {
             Completá el formulario y guardá el resultado vinculado al paciente.
           </p>
         </div>
-        <QuestionariosClient userId={user.id} />
+        <QuestionariosClient userId={user.id} lockedPatient={lockedPatient} />
       </main>
     </div>
   )

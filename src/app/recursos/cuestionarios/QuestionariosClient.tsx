@@ -337,13 +337,14 @@ function LikertItem({
 
 // ─── Main Component ────────────────────────────────────────────────────────
 
-export default function QuestionariosClient({ userId }: { userId: string }) {
+export default function QuestionariosClient({ userId, lockedPatient }: { userId: string; lockedPatient?: { id: string; name: string } | null }) {
   const [selected, setSelected] = useState<string | null>(null)
   const [result, setResult] = useState<QuestionnaireResult | null>(null)
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [patients, setPatients] = useState<Patient[]>([])
-  const [selectedPatient, setSelectedPatient] = useState<string>('')
+  // Si venimos desde la ficha de un paciente, arranca fijado en ese paciente.
+  const [selectedPatient, setSelectedPatient] = useState<string>(lockedPatient?.id ?? '')
   const [patientsLoaded, setPatientsLoaded] = useState(false)
 
   // SPADI state
@@ -903,29 +904,56 @@ export default function QuestionariosClient({ userId }: { userId: string }) {
           {/* Save section */}
           {!saveSuccess ? (
             <div className="mt-5 pt-5 border-t-[0.5px] border-border">
-              <p className="text-[13px] font-medium text-text-primary mb-3">Guardar resultado en ficha de paciente</p>
-              <div className="flex gap-3 items-center flex-wrap">
-                <select
-                  value={selectedPatient}
-                  onChange={e => setSelectedPatient(e.target.value)}
-                  className="bg-bg-primary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:border-accent min-w-[200px]"
-                >
-                  <option value="">Sin paciente (guardar de todos modos)</option>
-                  {patients.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
-                <button
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="bg-accent text-bg-primary px-5 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
-                >
-                  {saving ? 'Guardando...' : 'Guardar resultado'}
-                </button>
-              </div>
+              {lockedPatient ? (
+                // Fijado al paciente de la ficha: sin volver a seleccionar.
+                <div className="flex gap-3 items-center flex-wrap">
+                  <p className="text-[13px] text-text-primary">
+                    Se guarda en la ficha de <strong>{lockedPatient.name}</strong>
+                  </p>
+                  <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="bg-accent text-bg-primary px-5 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
+                  >
+                    {saving ? 'Guardando...' : `Guardar en ${lockedPatient.name}`}
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <p className="text-[13px] font-medium text-text-primary mb-3">Guardar resultado en ficha de paciente</p>
+                  <div className="flex gap-3 items-center flex-wrap">
+                    <select
+                      value={selectedPatient}
+                      onChange={e => setSelectedPatient(e.target.value)}
+                      className="bg-bg-primary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:border-accent min-w-[200px]"
+                    >
+                      <option value="">Sin paciente (guardar de todos modos)</option>
+                      {patients.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                    <button
+                      onClick={handleSave}
+                      disabled={saving}
+                      className="bg-accent text-bg-primary px-5 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
+                    >
+                      {saving ? 'Guardando...' : 'Guardar resultado'}
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           ) : (
-            <div className="mt-5 pt-5 border-t-[0.5px] border-border flex items-center gap-2 text-[#16a34a]">
-              <span className="text-[16px]">✓</span>
-              <span className="text-[13px] font-medium">Resultado guardado correctamente</span>
+            <div className="mt-5 pt-5 border-t-[0.5px] border-border flex items-center gap-3 flex-wrap">
+              <span className="flex items-center gap-2 text-[#16a34a]">
+                <span className="text-[16px]">✓</span>
+                <span className="text-[13px] font-medium">
+                  {lockedPatient ? `Guardado en la ficha de ${lockedPatient.name}` : 'Resultado guardado correctamente'}
+                </span>
+              </span>
+              {lockedPatient && (
+                <a href={`/dashboard/pacientes/${lockedPatient.id}/ficha`} className="text-[13px] text-accent hover:underline">
+                  Volver a la ficha →
+                </a>
+              )}
             </div>
           )}
         </div>
