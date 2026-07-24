@@ -203,6 +203,7 @@ const emptyFicha: FichaData = {
 
 export default function FichaClient({
   ficha: initialFicha,
+  patientId,
   patientName,
   questionnaireResults,
   dynamoResults,
@@ -1093,14 +1094,14 @@ export default function FichaClient({
           <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-[16px] font-medium">Cuestionarios</h3>
-              <Link href="/recursos/cuestionarios" className="text-accent text-[13px] font-medium hover:opacity-80 no-underline">
+              <Link href={`/recursos/cuestionarios?paciente=${patientId}`} className="text-accent text-[13px] font-medium hover:opacity-80 no-underline">
                 + Completar cuestionario
               </Link>
             </div>
             {qResults.length === 0 ? (
               <div className="text-center py-8 bg-bg-secondary rounded-xl border-[0.5px] border-dashed border-border">
                 <p className="text-[14px] text-text-secondary mb-3">Sin cuestionarios todavía.</p>
-                <Link href="/recursos/cuestionarios" className="text-accent text-[13px] font-medium hover:opacity-80 no-underline">
+                <Link href={`/recursos/cuestionarios?paciente=${patientId}`} className="text-accent text-[13px] font-medium hover:opacity-80 no-underline">
                   Ir a Cuestionarios →
                 </Link>
               </div>
