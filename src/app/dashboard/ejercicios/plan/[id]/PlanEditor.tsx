@@ -370,9 +370,18 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
         if (searchQuery) params.set('q', searchQuery)
         if (searchCategory) params.set('category', searchCategory)
         const res = await fetch(`/api/exercises?${params.toString()}`)
-        if (res.ok) {
-          const data = await res.json()
-          setSearchResults(data)
+        const curated = res.ok ? await res.json() : []
+        // En "Todas" (sin categoría) también incluimos los ejercicios propios que
+        // matchean, arriba de los curados. Con una categoría curada específica no,
+        // porque los propios no tienen categoría.
+        if (searchCategory === '') {
+          let mineQuery = supabaseRef.current.from('user_exercises').select('id, name, youtube_url').eq('user_id', userId).limit(50)
+          if (searchQuery) mineQuery = mineQuery.ilike('name', `%${searchQuery}%`)
+          const { data: mineData } = await mineQuery
+          const mine = (mineData ?? []).map(e => ({ ...e, category: 'mis_ejercicios', equipment: null }))
+          setSearchResults([...mine, ...curated])
+        } else {
+          setSearchResults(curated)
         }
       }
       setIsSearching(false)
