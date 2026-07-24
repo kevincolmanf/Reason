@@ -868,8 +868,11 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
               )
             })()}
           </div>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="w-full sm:w-[200px]">
+          {/* Se apilan hasta lg: en tablet (768–1023px) el bloque queda angosto
+              porque el header exterior ya es horizontal (md), y meter aquí 3
+              columnas hacía que "Observaciones" se desbordara sobre "Paciente". */}
+          <div className="flex flex-col lg:flex-row gap-4">
+            <div className="w-full lg:w-[200px]">
               <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Fecha de Inicio (Opcional)</label>
               <input
                 type="date"
@@ -878,7 +881,7 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
                 className="w-full bg-bg-secondary border-[0.5px] border-border rounded-lg p-2 text-[13px] focus:outline-none focus:border-accent"
               />
             </div>
-            <div className="flex-grow">
+            <div className="flex-grow min-w-0">
               <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Observaciones Generales</label>
               <input
                 type="text"
@@ -888,7 +891,7 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
                 className="w-full bg-bg-secondary border-[0.5px] border-border rounded-lg p-2 text-[13px] focus:outline-none focus:border-accent"
               />
             </div>
-            <div className="w-full sm:w-[200px]">
+            <div className="w-full lg:w-[200px]">
               <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Paciente</label>
               <select
                 value={plan.patient_id || ''}
