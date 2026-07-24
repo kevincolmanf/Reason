@@ -53,6 +53,12 @@ export default function BibliotecaInteractive({ equipments, userId }: { equipmen
   const [newUrl, setNewUrl] = useState('')
   const [saving, setSaving] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  // Editar/agregar video a un ejercicio propio ya creado
+  const [editingVideoId, setEditingVideoId] = useState<string | null>(null)
+  const [videoUrlInput, setVideoUrlInput] = useState('')
+  const [savingVideo, setSavingVideo] = useState(false)
+  // Ejercicios propios que matchean la búsqueda dentro de la vista Biblioteca
+  const [bibUserMatches, setBibUserMatches] = useState<UserExercise[]>([])
 
   const PAGE_SIZE = 50
   const supabaseRef = useRef(createClient())
@@ -136,6 +142,41 @@ export default function BibliotecaInteractive({ equipments, userId }: { equipmen
     setDeleteConfirm(null)
   }
 
+  const startEditVideo = (ex: UserExercise) => {
+    setEditingVideoId(ex.id)
+    setVideoUrlInput(ex.youtube_url ?? '')
+  }
+
+  const handleSaveVideo = async (id: string) => {
+    setSavingVideo(true)
+    const url = videoUrlInput.trim() || null
+    const { error } = await supabaseRef.current.from('user_exercises').update({ youtube_url: url }).eq('id', id)
+    if (!error) {
+      setUserExercises(prev => prev.map(e => e.id === id ? { ...e, youtube_url: url } : e))
+      setBibUserMatches(prev => prev.map(e => e.id === id ? { ...e, youtube_url: url } : e))
+      setEditingVideoId(null)
+      setVideoUrlInput('')
+    }
+    setSavingVideo(false)
+  }
+
+  // En la vista Biblioteca, al buscar por nombre también traemos los ejercicios
+  // propios que matchean (sin categoría/equipo, que no aplican a los propios).
+  useEffect(() => {
+    if (view !== 'biblioteca' || !search.trim() || category || equipment) {
+      setBibUserMatches([])
+      return
+    }
+    let cancelled = false
+    ;(async () => {
+      let q = supabaseRef.current.from('user_exercises').select('*').eq('user_id', userId)
+      for (const t of search.trim().split(/\s+/)) q = q.ilike('name', `%${t}%`)
+      const { data } = await q.order('created_at', { ascending: false })
+      if (!cancelled && data) setBibUserMatches(data as UserExercise[])
+    })()
+    return () => { cancelled = true }
+  }, [view, search, category, equipment, userId])
+
   const formatCategory = (cat: string) => {
     return CATEGORIES.find(c => c.value === cat)?.label || cat
   }
@@ -210,6 +251,30 @@ export default function BibliotecaInteractive({ equipments, userId }: { equipmen
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            {/* Ejercicios propios que matchean la búsqueda (aparecen primero) */}
+            {bibUserMatches.map(ex => (
+              <div key={`u-${ex.id}`} className="bg-bg-primary border-[0.5px] border-accent/40 rounded-xl p-6 flex flex-col hover:border-accent transition-colors">
+                <div className="mb-4">
+                  <span className="inline-block bg-accent/10 text-accent text-[10px] py-1 px-2 rounded-full uppercase tracking-[0.05em] border-[0.5px] border-accent/30 font-medium">
+                    Mis Ejercicios
+                  </span>
+                </div>
+                <h3 className="text-[16px] font-medium leading-[1.3] mb-2 flex-grow">{ex.name}</h3>
+                <div className="flex justify-between items-center mt-auto pt-4 border-t-[0.5px] border-border">
+                  {ex.youtube_url ? (
+                    <button
+                      onClick={() => setActiveVideo(getYoutubeId(ex.youtube_url!))}
+                      className="text-accent text-[13px] font-medium hover:opacity-80 flex items-center gap-2"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
+                      Ver Video
+                    </button>
+                  ) : (
+                    <span className="text-text-secondary text-[13px]">Sin video</span>
+                  )}
+                </div>
+              </div>
+            ))}
             {exercises.map(ex => (
               <div key={ex.id} className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 flex flex-col hover:border-border-strong transition-colors">
                 <div className="mb-4">
@@ -256,7 +321,7 @@ export default function BibliotecaInteractive({ equipments, userId }: { equipmen
             </div>
           )}
 
-          {!loading && exercises.length === 0 && (
+          {!loading && exercises.length === 0 && bibUserMatches.length === 0 && (
             <div className="text-center py-16 text-text-secondary bg-bg-secondary rounded-xl border-[0.5px] border-border">
               <p className="text-[16px] mb-2">No se encontraron ejercicios</p>
               <p className="text-[14px]">Probá ajustando los filtros de búsqueda.</p>
@@ -336,19 +401,58 @@ export default function BibliotecaInteractive({ equipments, userId }: { equipmen
                   </div>
                   <h3 className="text-[16px] font-medium leading-[1.3] mb-2 flex-grow">{ex.name}</h3>
 
+                  {editingVideoId === ex.id ? (
+                    <div className="mt-auto pt-4 border-t-[0.5px] border-border">
+                      <input
+                        type="url"
+                        value={videoUrlInput}
+                        onChange={e => setVideoUrlInput(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && handleSaveVideo(ex.id)}
+                        placeholder="https://youtube.com/watch?v=..."
+                        autoFocus
+                        className="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded-lg p-2 text-[13px] focus:outline-none focus:border-accent mb-2"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleSaveVideo(ex.id)}
+                          disabled={savingVideo}
+                          className="bg-accent text-bg-primary px-3 py-1.5 rounded-lg text-[12px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
+                        >
+                          {savingVideo ? 'Guardando...' : 'Guardar'}
+                        </button>
+                        <button
+                          onClick={() => { setEditingVideoId(null); setVideoUrlInput('') }}
+                          className="text-text-secondary text-[12px] hover:text-text-primary px-2"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
                   <div className="flex justify-between items-center mt-auto pt-4 border-t-[0.5px] border-border">
                     {ex.youtube_url ? (
-                      <button
-                        onClick={() => setActiveVideo(getYoutubeId(ex.youtube_url!))}
-                        className="text-accent text-[13px] font-medium hover:opacity-80 flex items-center gap-2"
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M8 5v14l11-7z" />
-                        </svg>
-                        Ver Video
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => setActiveVideo(getYoutubeId(ex.youtube_url!))}
+                          className="text-accent text-[13px] font-medium hover:opacity-80 flex items-center gap-2"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M8 5v14l11-7z" />
+                          </svg>
+                          Ver Video
+                        </button>
+                        <button onClick={() => startEditVideo(ex)} className="text-text-secondary text-[12px] hover:text-text-primary transition-colors">
+                          Editar
+                        </button>
+                      </div>
                     ) : (
-                      <span className="text-text-secondary text-[13px]">Sin video</span>
+                      <button
+                        onClick={() => startEditVideo(ex)}
+                        className="text-accent text-[13px] font-medium hover:opacity-80 flex items-center gap-1.5"
+                      >
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Agregar video
+                      </button>
                     )}
 
                     {deleteConfirm === ex.id ? (
@@ -377,6 +481,7 @@ export default function BibliotecaInteractive({ equipments, userId }: { equipmen
                       </button>
                     )}
                   </div>
+                  )}
                 </div>
               ))}
             </div>

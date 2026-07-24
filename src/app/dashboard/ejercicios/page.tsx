@@ -53,10 +53,10 @@ export default async function EjerciciosHubPage() {
             desc="Explorá la base de datos completa de ejercicios clasificados por patrón, equipo y categoría."
             href="/dashboard/ejercicios/biblioteca"
           />
-          <SectionCard 
-            title="Mis Planes" 
-            desc="Tus programas de entrenamiento y rehabilitación guardados. Compartilos fácilmente con tus pacientes."
-            href="/dashboard/ejercicios/plan"
+          <SectionCard
+            title="Pacientes"
+            desc="Los planes de entrenamiento y rehabilitación se arman y guardan desde la ficha de cada paciente."
+            href="/dashboard/pacientes"
           />
         </div>
       </main>
