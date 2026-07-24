@@ -87,26 +87,35 @@ export default async function AgendaPage() {
 
   // Load org members — check access for non-owners, build professional filter
   let professionals: { id: string; full_name: string | null }[] = []
-  let members: { id: string; full_name: string | null; agendaAccess: boolean }[] = []
+  let members: { id: string; full_name: string | null; agendaAccess: boolean; agendaAreas: string[] | null }[] = []
+  // Áreas que puede ver el usuario actual. Para el dueño = todas; para un
+  // integrante = las que le habilitó el dueño (null = todas). La RLS ya restringe
+  // los turnos por área; esto restringe además las pestañas de área que ve.
+  let viewableAreas = areas
 
   if (orgId) {
-    type MemberRow = { user_id: string; agenda_access: boolean; users: { id: string; full_name: string | null; email: string | null } | null }
+    type MemberRow = { user_id: string; agenda_access: boolean; agenda_areas: string[] | null; users: { id: string; full_name: string | null; email: string | null } | null }
     const adminClient = createAdminClient()
     const { data: memberRows } = await adminClient
       .from('organization_members')
-      .select('user_id, agenda_access, users(id, full_name, email)')
+      .select('user_id, agenda_access, agenda_areas, users(id, full_name, email)')
       .eq('org_id', orgId)
 
     members = ((memberRows ?? []) as unknown as MemberRow[]).map(m => ({
       id: m.users?.id ?? m.user_id,
       full_name: m.users?.full_name ?? m.users?.email ?? null,
       agendaAccess: m.agenda_access ?? false,
+      agendaAreas: m.agenda_areas ?? null,
     }))
 
     // Non-owner members need explicit agenda_access to enter
     if (!isOwner) {
-      const myAccess = members.find(m => m.id === user.id)?.agendaAccess ?? false
-      if (!myAccess) redirect('/dashboard')
+      const me = members.find(m => m.id === user.id)
+      if (!(me?.agendaAccess ?? false)) redirect('/dashboard')
+      // Restringir las áreas visibles a las habilitadas (null/[] = todas)
+      if (me?.agendaAreas && me.agendaAreas.length > 0) {
+        viewableAreas = areas.filter(a => me.agendaAreas!.includes(a))
+      }
     }
 
     professionals = members.map(m => ({ id: m.id, full_name: m.full_name }))
@@ -126,7 +135,7 @@ export default async function AgendaPage() {
           orgName={orgName}
           professionals={professionals}
           members={members}
-          areas={areas}
+          areas={viewableAreas}
           isOwner={isOwner}
           shareToken={shareToken}
           shareEnabled={shareEnabled}

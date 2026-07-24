@@ -19,6 +19,7 @@ interface Member {
   id: string
   full_name: string | null
   agendaAccess: boolean
+  agendaAreas: string[] | null
 }
 
 interface Props {
@@ -63,6 +64,10 @@ export default function AgendaSettings({
   const [shareEnabled, setShareEnabled] = useState(initialShareEnabled)
   const [memberAccess, setMemberAccess] = useState<Record<string, boolean>>(
     Object.fromEntries(members.map(m => [m.id, m.agendaAccess]))
+  )
+  // Áreas visibles por integrante. null = todas.
+  const [memberAreas, setMemberAreas] = useState<Record<string, string[] | null>>(
+    Object.fromEntries(members.map(m => [m.id, m.agendaAreas]))
   )
   const [savingMember, setSavingMember] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -126,6 +131,31 @@ export default function AgendaSettings({
       alert('No se pudo cambiar el acceso a la agenda. Intentá de nuevo.')
     }
     setSavingMember(null)
+  }
+
+  // Guarda las áreas visibles de un integrante. next=null → todas.
+  const saveMemberAreas = async (memberId: string, next: string[] | null) => {
+    if (!orgId || !isOwner) return
+    const prev = memberAreas[memberId]
+    setMemberAreas(p => ({ ...p, [memberId]: next }))
+    const { error } = await supabase.rpc('set_member_agenda_areas', {
+      p_org_id: orgId,
+      p_user_id: memberId,
+      p_areas: next,
+    })
+    if (error) {
+      setMemberAreas(p => ({ ...p, [memberId]: prev }))
+      alert('No se pudieron guardar las áreas. Intentá de nuevo.')
+    }
+  }
+
+  // Enciende/apaga un área para el integrante. null = todas; no permite dejarlo
+  // sin ninguna (si querés que no vea nada, apagá el acceso).
+  const toggleMemberArea = (memberId: string, area: string) => {
+    const base = memberAreas[memberId] ?? [...areas]
+    const next = base.includes(area) ? base.filter(a => a !== area) : [...base, area]
+    if (next.length === 0) return
+    saveMemberAreas(memberId, next.length === areas.length ? null : next)
   }
 
   const handleSave = async () => {
@@ -333,24 +363,52 @@ export default function AgendaSettings({
               Acceso a la agenda por integrante
             </label>
             <p className="text-[12px] text-text-secondary mb-3">
-              Los integrantes sin acceso no pueden ver la agenda del equipo.
+              Los integrantes sin acceso no pueden ver la agenda del equipo. Con acceso, entran en modo solo lectura y ven únicamente las áreas que les habilites.
             </p>
             <div className="flex flex-col gap-2">
               {members.map(m => {
                 const access = memberAccess[m.id] ?? false
                 const isSaving = savingMember === m.id
+                const mAreas = memberAreas[m.id] // null = todas
                 return (
-                  <div key={m.id} className="flex items-center justify-between py-2 border-b-[0.5px] border-border last:border-0">
-                    <span className="text-[13px] text-text-primary truncate mr-3">
-                      {m.full_name || 'Sin nombre'}
-                    </span>
-                    <button
-                      onClick={() => !isSaving && toggleMemberAccess(m.id)}
-                      disabled={isSaving}
-                      className={`relative shrink-0 w-10 h-5 rounded-full transition-colors disabled:opacity-50 ${access ? 'bg-accent' : 'bg-border-strong'}`}
-                    >
-                      <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${access ? 'translate-x-5' : 'translate-x-0.5'}`} />
-                    </button>
+                  <div key={m.id} className="py-2 border-b-[0.5px] border-border last:border-0">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[13px] text-text-primary truncate mr-3">
+                        {m.full_name || 'Sin nombre'}
+                      </span>
+                      <button
+                        onClick={() => !isSaving && toggleMemberAccess(m.id)}
+                        disabled={isSaving}
+                        className={`relative shrink-0 w-10 h-5 rounded-full transition-colors disabled:opacity-50 ${access ? 'bg-accent' : 'bg-border-strong'}`}
+                      >
+                        <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${access ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                      </button>
+                    </div>
+                    {access && areas.length > 1 && (
+                      <div className="mt-2">
+                        <p className="text-[10px] uppercase tracking-[0.05em] text-text-tertiary mb-1.5">Áreas que puede ver</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          <button
+                            onClick={() => saveMemberAreas(m.id, null)}
+                            className={`px-2.5 py-1 rounded-lg text-[12px] border-[0.5px] transition-colors ${mAreas === null ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-primary border-border text-text-secondary hover:text-text-primary'}`}
+                          >
+                            Todas
+                          </button>
+                          {areas.map(a => {
+                            const selected = mAreas === null || mAreas.includes(a)
+                            return (
+                              <button
+                                key={a}
+                                onClick={() => toggleMemberArea(m.id, a)}
+                                className={`px-2.5 py-1 rounded-lg text-[12px] border-[0.5px] transition-colors ${selected ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-primary border-border text-text-secondary hover:text-text-primary'}`}
+                              >
+                                {a}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )
               })}

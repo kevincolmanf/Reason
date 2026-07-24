@@ -38,6 +38,7 @@ interface Member {
   id: string
   full_name: string | null
   agendaAccess: boolean
+  agendaAreas: string[] | null
 }
 
 interface Props {
