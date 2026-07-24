@@ -4,8 +4,10 @@ import { resetPassword } from '../auth/actions'
 export default function ForgotPasswordPage({
   searchParams,
 }: {
-  searchParams: { message: string }
+  searchParams: { message?: string; sent?: string; error?: string }
 }) {
+  const isError = searchParams?.error === '1'
+  const isSent = searchParams?.sent === '1'
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col justify-center items-center p-4">
       <Link href="/" className="absolute top-8 left-8 text-[18px] font-medium tracking-[-0.01em] no-underline text-text-primary">
@@ -22,7 +24,13 @@ export default function ForgotPasswordPage({
 
         <form className="flex flex-col gap-5" action={resetPassword}>
           {searchParams?.message && (
-            <div className="p-4 bg-bg-secondary text-text-primary text-[14px] rounded-lg border-[0.5px] border-border-strong text-center">
+            <div className={`p-4 text-[14px] rounded-lg border-[0.5px] text-center ${
+              isError
+                ? 'bg-warning/10 text-warning border-warning'
+                : isSent
+                ? 'bg-accent/10 text-accent border-accent'
+                : 'bg-bg-secondary text-text-primary border-border-strong'
+            }`}>
               {searchParams.message}
             </div>
           )}
