@@ -40,12 +40,16 @@ export default async function Header() {
       .filter((o): o is { id: string; name: string } => o !== null)
       .filter(o => !ownedOrgs.some(owned => owned.id === o.id))
 
-    if (isOwner) {
-      hasAgendaAccess = true
-    } else if (isOrgCtx && ctx.orgId) {
+    // En una org que NO es propia, el usuario es integrante: el acceso a la agenda
+    // lo define agenda_access, no el role personal (que podría ser 'pro' propagado
+    // por error). Solo cuenta como dueño la org que realmente le pertenece.
+    const ownsThisOrg = isOrgCtx && !!ctx.orgId && ownedOrgs.some(o => o.id === ctx.orgId)
+    if (isOrgCtx && ctx.orgId && !ownsThisOrg) {
       const myMemberRow = memberRows.find(r => r.org_id === ctx.orgId)
       hasAgendaAccess = myMemberRow?.agenda_access ?? false
       agendaBlockedReason = 'member'
+    } else if (role === 'pro' || role === 'admin') {
+      hasAgendaAccess = true
     }
 
     available = [

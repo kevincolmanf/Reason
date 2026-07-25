@@ -35,7 +35,11 @@ export default async function AgendaPage() {
   const isActive = role === 'admin' || role === 'pro' || isOrgContext
   if (!isActive) redirect('/paywall')
 
-  const isOwner = role === 'pro' || role === 'admin'
+  // Dueño = quién puede editar la agenda. Se deriva de la PROPIEDAD real de la
+  // organización (owner_id), no del role personal. Antes era role === 'pro', pero
+  // un integrante podía tener role 'pro' (propagado por error) y así se colaba
+  // como dueño. Se calcula más abajo, una vez cargada la org.
+  let isOrgOwner = false
 
   // Get org context
   let orgId: string | null = null
@@ -66,8 +70,13 @@ export default async function AgendaPage() {
       areaDurations = org.agenda_area_durations ?? {}
       shareToken = org.agenda_share_token
       shareEnabled = org.agenda_share_enabled ?? false
+      isOrgOwner = org.owner_id === user.id
     }
   }
+
+  // admin: superusuario. Sin org (agenda personal): es su propia agenda. Con org:
+  // solo el dueño real edita; los integrantes entran en solo lectura.
+  const isOwner = role === 'admin' || !orgId || isOrgOwner
 
   // Lectura defensiva del horario visible (columnas nuevas). Si la migración no
   // corrió aún, la consulta devuelve error y quedan los defaults 7–21.
