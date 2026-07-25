@@ -170,11 +170,26 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
   const router = useRouter()
   const [plan, setPlan] = useState<ExercisePlan>(initialPlan)
   // Ubicación en el calendario: por la fecha elegida (evaluation_date) o, si no
-  // tiene, por la fecha de creación.
-  const rtsForDay = (d: string) => rtsEvals.filter(r => ((r.evaluation_date ?? r.created_at ?? '').slice(0, 10)) === d)
+  // tiene, por la fecha de creación. En estado para reflejar el borrado al instante.
+  const [rtsList, setRtsList] = useState<RtsEval[]>(rtsEvals)
+  const rtsForDay = (d: string) => rtsList.filter(r => ((r.evaluation_date ?? r.created_at ?? '').slice(0, 10)) === d)
   const [newRtsOpen, setNewRtsOpen] = useState(false)
   const [newRtsProtocol, setNewRtsProtocol] = useState('lca')
   const [newRtsDate, setNewRtsDate] = useState('')
+
+  // Modal de acciones al tocar un RTS guardado en el calendario (como los hitos:
+  // abrir/editar la evaluación o borrarla).
+  const [rtsAction, setRtsAction] = useState<RtsEval | null>(null)
+  const [rtsDeleting, setRtsDeleting] = useState(false)
+  const deleteRtsEval = async () => {
+    if (!rtsAction) return
+    setRtsDeleting(true)
+    const id = rtsAction.id
+    await supabaseRef.current.from('rts_evaluations').delete().eq('id', id)
+    setRtsList(prev => prev.filter(r => r.id !== id))
+    setRtsDeleting(false)
+    setRtsAction(null)
+  }
 
   // Hitos del tratamiento sobre el calendario, editables (click en la banderita).
   const [events, setEvents] = useState<PatientEvent[]>(initialEvents)
@@ -1156,14 +1171,14 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
                       </span>
                     )
                   })}
-                  {/* Evaluaciones RTS de ese día — hito extendido: click abre la evaluación completa */}
+                  {/* Evaluaciones RTS de ese día — hito extendido: click abre opciones (editar/borrar) */}
                   {rtsForDay(dateStr).map(r => (
                     <span
                       key={r.id}
-                      onClick={e => { e.stopPropagation(); router.push(`/dashboard/pacientes/${plan.patient_id}/rts?eval=${r.id}`) }}
+                      onClick={e => { e.stopPropagation(); setRtsAction(r) }}
                       className="flex items-center gap-1 rounded px-1 py-0.5 mb-0.5 cursor-pointer hover:brightness-125 transition-all"
                       style={{ backgroundColor: RTS_COLOR + '26' }}
-                      title={`RTS · ${RTS_LABELS[r.protocol_type] ?? r.protocol_type} — abrir evaluación`}
+                      title={`RTS · ${RTS_LABELS[r.protocol_type] ?? r.protocol_type} — tocar para editar o borrar`}
                     >
                       <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={RTS_COLOR} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                       <span className="text-[9px] font-medium truncate leading-tight" style={{ color: RTS_COLOR }}>RTS · {RTS_LABELS[r.protocol_type] ?? r.protocol_type}</span>
@@ -1781,6 +1796,37 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
               </button>
               {editEvent && <button onClick={deleteEditEvent} className="px-4 py-2.5 text-[13px] text-warning hover:opacity-80 transition-opacity">Borrar</button>}
               <button onClick={() => { setEditEvent(null); setAddingEvent(false) }} className="px-3 py-2.5 text-[13px] text-text-secondary hover:text-text-primary">Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL ACCIONES DE UN RTS GUARDADO (editar / borrar), como los hitos */}
+      {rtsAction && (
+        <div className="fixed inset-0 bg-bg-primary/90 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) setRtsAction(null) }}>
+          <div className="bg-bg-secondary border-[0.5px] border-border rounded-2xl w-full max-w-[380px] shadow-xl p-6">
+            <div className="flex items-center gap-2 mb-1">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={RTS_COLOR} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <h3 className="text-[16px] font-medium">RTS · {RTS_LABELS[rtsAction.protocol_type] ?? rtsAction.protocol_type}</h3>
+            </div>
+            <p className="text-[13px] text-text-secondary mb-5">
+              {(rtsAction.evaluation_date ?? rtsAction.created_at ?? '').slice(0, 10)}
+              {rtsAction.affected_side ? ` · ${rtsAction.affected_side === 'left' ? 'Izquierdo' : rtsAction.affected_side === 'right' ? 'Derecho' : rtsAction.affected_side}` : ''}
+            </p>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => router.push(`/dashboard/pacientes/${plan.patient_id}/rts?eval=${rtsAction.id}`)}
+                className="w-full text-white py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity"
+                style={{ backgroundColor: RTS_COLOR }}>
+                Abrir / editar evaluación
+              </button>
+              <div className="flex items-center gap-2">
+                <button onClick={deleteRtsEval} disabled={rtsDeleting}
+                  className="flex-1 py-2.5 rounded-lg text-[13px] text-warning border-[0.5px] border-border hover:border-warning disabled:opacity-40 transition-colors">
+                  {rtsDeleting ? 'Borrando…' : 'Borrar evaluación'}
+                </button>
+                <button onClick={() => setRtsAction(null)} className="px-3 py-2.5 text-[13px] text-text-secondary hover:text-text-primary">Cancelar</button>
+              </div>
             </div>
           </div>
         </div>
