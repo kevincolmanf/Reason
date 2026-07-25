@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { jsPDF } from 'jspdf'
@@ -242,8 +243,12 @@ export default function FichaClient({
   const [nuevaActTexto, setNuevaActTexto] = useState('')
 
   const supabaseRef = useRef(createClient())
+  const router = useRouter()
 
-  const handleSave = async () => {
+  // Navegación pendiente cuando hay cambios sin guardar (evita perder la ficha).
+  const [pendingNav, setPendingNav] = useState<string | null>(null)
+
+  const handleSave = async (): Promise<boolean> => {
     setSaveStatus('saving')
     const { error } = await supabaseRef.current
       .from('patient_fichas')
@@ -252,11 +257,39 @@ export default function FichaClient({
     if (error) {
       setSaveStatus('error')
       alert(`Error al guardar: ${error.message}`)
-    } else {
-      setSaveStatus('saved')
-      setHasChanges(false)
+      return false
     }
+    setSaveStatus('saved')
+    setHasChanges(false)
+    return true
   }
+
+  // Guard de "cambios sin guardar": interceptamos el cierre/recarga de la
+  // pestaña y los clics en enlaces internos para no perder lo escrito en la ficha.
+  useEffect(() => {
+    if (!hasChanges) return
+    const onBeforeUnload = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = '' }
+    const onClickCapture = (e: MouseEvent) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+      const a = (e.target as HTMLElement)?.closest?.('a') as HTMLAnchorElement | null
+      if (!a) return
+      const href = a.getAttribute('href')
+      if (!href || !href.startsWith('/') || a.target === '_blank') return
+      if (href === window.location.pathname) return
+      e.preventDefault()
+      e.stopPropagation()
+      setPendingNav(href)
+    }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    document.addEventListener('click', onClickCapture, true)
+    return () => {
+      window.removeEventListener('beforeunload', onBeforeUnload)
+      document.removeEventListener('click', onClickCapture, true)
+    }
+  }, [hasChanges])
+
+  const leaveWithoutSaving = () => { const href = pendingNav; setPendingNav(null); setHasChanges(false); if (href) router.push(href) }
+  const saveAndLeave = async () => { const href = pendingNav; const ok = await handleSave(); if (ok && href) { setPendingNav(null); router.push(href) } }
 
   const handleChange = (field: keyof FichaData, value: string) => {
     setFicha(prev => ({ ...prev, [field]: value }))
@@ -503,6 +536,26 @@ export default function FichaClient({
 
   return (
     <>
+    {/* Guard: cambios sin guardar al intentar salir de la ficha */}
+    {pendingNav && (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setPendingNav(null)}>
+        <div className="bg-bg-secondary border-[0.5px] border-border rounded-2xl w-full max-w-[420px] shadow-xl p-6" onClick={e => e.stopPropagation()}>
+          <h3 className="text-[17px] font-medium mb-2">Tenés cambios sin guardar</h3>
+          <p className="text-[13px] text-text-secondary mb-5">Si salís de la ficha ahora, se perderá lo que cargaste. ¿Querés guardar antes de salir?</p>
+          <div className="flex flex-col gap-2">
+            <button onClick={saveAndLeave} disabled={saveStatus === 'saving'} className="w-full bg-accent text-bg-primary py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity">
+              {saveStatus === 'saving' ? 'Guardando…' : 'Guardar y salir'}
+            </button>
+            <div className="flex items-center gap-2">
+              <button onClick={leaveWithoutSaving} disabled={saveStatus === 'saving'} className="flex-1 py-2.5 rounded-lg text-[13px] text-warning border-[0.5px] border-border hover:border-warning disabled:opacity-40 transition-colors">
+                Salir sin guardar
+              </button>
+              <button onClick={() => setPendingNav(null)} className="px-3 py-2.5 text-[13px] text-text-secondary hover:text-text-primary">Seguir editando</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
     {openQ && (() => {
       const meta = QUESTIONNAIRE_NAMES[openQ.questionnaire_type] ?? { label: openQ.questionnaire_type, unit: '' }
       const responses = getResponseItems(openQ.questionnaire_type, openQ.result_data)
