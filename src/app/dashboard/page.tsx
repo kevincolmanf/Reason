@@ -9,7 +9,7 @@ import { getActiveContext } from '@/lib/context'
 function CategoryCard({ title, slug, desc }: { title: string, slug: string, desc: string }) {
   return (
     <Link href={`/library?category=${slug}`} className="block no-underline">
-      <div className="bg-bg-secondary border-[0.5px] border-border rounded-xl p-8 hover:bg-[#F0F0F0] transition-colors h-full flex flex-col justify-center text-center">
+      <div className="bg-bg-secondary border-[0.5px] border-border rounded-xl p-8 hover:border-accent hover:bg-bg-primary transition-colors h-full flex flex-col justify-center text-center">
         <h3 className="text-[18px] font-medium mb-2">{title}</h3>
         <p className="text-[13px] text-text-secondary">{desc}</p>
       </div>

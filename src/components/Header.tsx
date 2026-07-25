@@ -99,6 +99,11 @@ export default async function Header() {
               </div>
             </div>
           )}
+          {isProOrAdmin && (
+            <Link href="/account/crm" className="hidden md:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+              Analíticas
+            </Link>
+          )}
 
           {user && (
             <ContextBadge

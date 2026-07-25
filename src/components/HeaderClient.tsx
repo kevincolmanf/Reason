@@ -56,9 +56,13 @@ export default function HeaderClient({ userMetadata, hasAgendaAccess, isProOrAdm
     <div className="relative" ref={menuRef}>
       <button
         onClick={toggleMenu}
+        aria-label="Menú"
         className="flex items-center justify-center w-8 h-8 rounded-full bg-bg-secondary border-[0.5px] border-border text-[12px] font-medium text-text-primary hover:border-border-strong transition-colors focus:outline-none"
       >
-        {initials}
+        {/* En mobile mostramos un ícono de menú para que la navegación sea descubrible;
+            en desktop, las iniciales del usuario. */}
+        <svg className="md:hidden" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <span className="hidden md:inline">{initials}</span>
       </button>
 
       {isOpen && (
