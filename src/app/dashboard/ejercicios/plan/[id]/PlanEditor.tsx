@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from 'uuid'
 import jsPDF from 'jspdf'
 import QRCode from 'qrcode'
 import { EVENT_TYPES, eventMeta, type PatientEvent } from '@/lib/patientEvents'
+import { useConfirm, useToast } from '@/components/Dialogs'
 
 // ─── Interfaces ────────────────────────────────────────────────────────────────
 
@@ -168,6 +169,7 @@ const RTS_COLOR = '#C27B54' // terracota — coincide con el hito "RTP"
 
 interface DynEval { id: string; created_at: string; evaluation_date?: string | null }
 const DYN_COLOR = '#2563EB' // azul — dinamometría
+// (confirmaciones y avisos estilizados vía useConfirm/useToast)
 
 interface QEval { id: string; questionnaire_type: string; created_at: string; evaluation_date?: string | null }
 const Q_COLOR = '#059669' // verde — cuestionarios
@@ -179,6 +181,8 @@ const Q_LABELS: Record<string, string> = {
 
 export default function PlanEditor({ initialPlan, userId, initialEvents = [], rtsEvals = [], dynEvals = [], qEvals = [] }: { initialPlan: ExercisePlan, userId: string, initialEvents?: PatientEvent[], rtsEvals?: RtsEval[], dynEvals?: DynEval[], qEvals?: QEval[] }) {
   const router = useRouter()
+  const { confirm, confirmDialog } = useConfirm()
+  const { notify, toast } = useToast()
   const [plan, setPlan] = useState<ExercisePlan>(initialPlan)
   // Ubicación en el calendario: por la fecha elegida (evaluation_date) o, si no
   // tiene, por la fecha de creación. En estado para reflejar el borrado al instante.
@@ -568,7 +572,7 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
 
   const createSession = async (dateStr: string) => {
     if (!plan.patient_id) {
-      alert('Asigná un paciente al plan antes de crear sesiones.')
+      notify('Asigná un paciente al plan antes de crear sesiones.', 'error')
       return
     }
     const res = await fetch('/api/sessions/create', {
@@ -578,7 +582,7 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
     })
     const json = await res.json()
     if (!res.ok) {
-      alert('Error al crear sesión: ' + (json.error ?? res.status))
+      notify('Error al crear sesión: ' + (json.error ?? res.status), 'error')
       return
     }
     setScheduledSessions(prev =>
@@ -590,7 +594,8 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
   }
 
   const deleteSession = async () => {
-    if (!selectedDate || !confirm('¿Eliminar la sesión del ' + selectedDate + '?')) return
+    if (!selectedDate) return
+    if (!(await confirm({ title: 'Eliminar sesión', message: '¿Eliminar la sesión del ' + selectedDate + '?', danger: true, confirmLabel: 'Eliminar' }))) return
     const sessionsForDate = scheduledSessions.filter(s => s.scheduled_date === selectedDate)
     for (const session of sessionsForDate) {
       const res = await fetch('/api/sessions/delete', {
@@ -600,7 +605,7 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
       })
       if (!res.ok) {
         const json = await res.json().catch(() => ({}))
-        alert('Error al eliminar la sesión: ' + (json.error ?? res.status))
+        notify('Error al eliminar la sesión: ' + (json.error ?? res.status), 'error')
         return
       }
     }
@@ -627,7 +632,7 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
     if (!res.ok) {
       const json = await res.json().catch(() => ({}))
       console.error('[saveSession] Error:', json.error)
-      alert(`Error al guardar: ${json.error ?? res.status}`)
+      notify(`Error al guardar: ${json.error ?? res.status}`, 'error')
       setSessionSaveStatus('error')
     } else {
       const json = await res.json().catch(() => ({}))
@@ -654,8 +659,8 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
     }))
   }
 
-  const removeBlock = (blockIdx: number) => {
-    if (!confirm('¿Eliminar este bloque?')) return
+  const removeBlock = async (blockIdx: number) => {
+    if (!(await confirm({ message: '¿Eliminar este bloque?', danger: true, confirmLabel: 'Eliminar' }))) return
     updateSelectedSession(data => ({
       ...data,
       blocks: data.blocks.filter((_, i) => i !== blockIdx),
@@ -693,8 +698,8 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
     setTargetBlock(null)
   }
 
-  const removeExercise = (blockIdx: number, exIdx: number) => {
-    if (!confirm('¿Quitar este ejercicio?')) return
+  const removeExercise = async (blockIdx: number, exIdx: number) => {
+    if (!(await confirm({ message: '¿Quitar este ejercicio?', danger: true, confirmLabel: 'Quitar' }))) return
     updateSelectedSession(data => ({
       ...data,
       blocks: data.blocks.map((b, bi) => {
@@ -765,9 +770,9 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
     } catch { /* ignorar */ }
   }
 
-  const handlePasteSession = () => {
+  const handlePasteSession = async () => {
     if (!copiedSessionData) return
-    if (!confirm('¿Reemplazar la sesión de este día con la copiada?')) return
+    if (!(await confirm({ message: '¿Reemplazar la sesión de este día con la copiada?', confirmLabel: 'Reemplazar' }))) return
     updateSelectedSession(() => ({
       blocks: copiedSessionData.blocks.map(b => ({
         ...b,
@@ -830,10 +835,10 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
     setBulkLoadState('done')
   }
 
-  const handleImportFromPlan = (planSession: PlanDataSession) => {
+  const handleImportFromPlan = async (planSession: PlanDataSession) => {
     const currentBlocks = selectedSession?.session_data?.blocks ?? []
     const hasExisting = currentBlocks.some(b => b.exercises.length > 0)
-    if (hasExisting && !confirm(`¿Reemplazar los ejercicios actuales con los de "${planSession.name}"?`)) return
+    if (hasExisting && !(await confirm({ message: `¿Reemplazar los ejercicios actuales con los de "${planSession.name}"?`, confirmLabel: 'Reemplazar' }))) return
     updateSelectedSession(() => ({
       blocks: (planSession.blocks ?? [])
         .filter(b => b.exercises?.length > 0)
@@ -1018,6 +1023,8 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
 
   return (
     <div className="pb-24">
+      {confirmDialog}
+      {toast}
 
       {/* HEADER DEL PLAN */}
       <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 mb-8 flex flex-col md:flex-row gap-6">

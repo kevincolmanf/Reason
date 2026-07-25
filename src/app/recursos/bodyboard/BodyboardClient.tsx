@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import { useConfirm } from '@/components/Dialogs'
 
 const VB_W = 180
 const VB_H = 440
@@ -157,6 +158,7 @@ function HumanBodySVG({
 }
 
 export default function BodyboardClient() {
+  const { confirm, confirmDialog } = useConfirm()
   const [view, setView] = useState<ViewType>('anterior')
   const [selectedCat, setSelectedCat] = useState<string | null>(null)
   const [labelInput, setLabelInput] = useState('')
@@ -187,8 +189,8 @@ export default function BodyboardClient() {
     setLabelInput('')
   }
 
-  const handleClear = () => {
-    if (!confirm('¿Limpiar todo el tablero?')) return
+  const handleClear = async () => {
+    if (!(await confirm({ message: '¿Limpiar todo el tablero?', danger: true, confirmLabel: 'Limpiar' }))) return
     setMarkers([])
     setPanelItems([])
     setSelectedCat(null)
@@ -203,6 +205,7 @@ export default function BodyboardClient() {
 
   return (
     <div className="space-y-4">
+      {confirmDialog}
 
       {/* Selector de categoría */}
       <div className="bg-bg-secondary border-[0.5px] border-border rounded-xl p-4">

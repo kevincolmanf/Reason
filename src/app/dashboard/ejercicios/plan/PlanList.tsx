@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useConfirm, useToast } from '@/components/Dialogs'
 
 interface ExercisePlan {
   id: string
@@ -34,6 +35,8 @@ export default function PlanList({ userId, patientId }: { userId: string; patien
   // planes para el mismo paciente y termine mostrando el plan vacío.
   const [busy, setBusy] = useState(false)
   const router = useRouter()
+  const { confirm, confirmDialog } = useConfirm()
+  const { notify, toast } = useToast()
   const supabaseRef = useRef(createClient())
 
   const fetchPlans = useCallback(async () => {
@@ -88,7 +91,7 @@ export default function PlanList({ userId, patientId }: { userId: string; patien
       .single()
 
     if (error) {
-      alert('Error al crear el plan')
+      notify('Error al crear el plan', 'error')
       console.error(error)
       setBusy(false)
     } else if (data) {
@@ -101,11 +104,11 @@ export default function PlanList({ userId, patientId }: { userId: string; patien
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.preventDefault()
-    if (!confirm('¿Estás seguro de eliminar este plan? Esta acción no se puede deshacer.')) return
+    if (!(await confirm({ title: 'Eliminar plan', message: '¿Estás seguro de eliminar este plan? Esta acción no se puede deshacer.', danger: true, confirmLabel: 'Eliminar' }))) return
 
     const { error } = await supabaseRef.current.from('exercise_plans').delete().eq('id', id)
     if (error) {
-      alert('Error al eliminar')
+      notify('Error al eliminar', 'error')
     } else {
       fetchPlans()
     }
@@ -124,7 +127,7 @@ export default function PlanList({ userId, patientId }: { userId: string; patien
       .single()
       
     if (fetchError || !fullPlan) {
-      alert('Error al recuperar datos para duplicar')
+      notify('Error al recuperar datos para duplicar', 'error')
       setBusy(false)
       return
     }
@@ -142,7 +145,7 @@ export default function PlanList({ userId, patientId }: { userId: string; patien
       .single()
 
     if (error) {
-      alert('Error al duplicar el plan')
+      notify('Error al duplicar el plan', 'error')
     } else if (data) {
       fetchPlans()
     }
@@ -155,6 +158,8 @@ export default function PlanList({ userId, patientId }: { userId: string; patien
 
   return (
     <div>
+      {confirmDialog}
+      {toast}
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-[20px] font-medium">{patientId ? 'Planes asignados' : 'Tus Planes Guardados'}</h2>
         <button

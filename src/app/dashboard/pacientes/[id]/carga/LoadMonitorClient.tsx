@@ -3,6 +3,7 @@
 import { useState, useMemo, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import QuickNoteField from '@/components/QuickNoteField'
+import { useConfirm } from '@/components/Dialogs'
 
 interface ActivityLog {
   id: string
@@ -189,6 +190,7 @@ export default function LoadMonitorClient({
   initialActivityLogs: ActivityLog[]
 }) {
   const supabaseRef = useRef(createClient())
+  const { confirm, confirmDialog } = useConfirm()
   const [sessions, setSessions] = useState<LoadSession[]>(initialSessions)
   const [activityLogs] = useState<ActivityLog[]>(initialActivityLogs)
   const [expandedSessions, setExpandedSessions] = useState<Set<string>>(new Set())
@@ -566,7 +568,7 @@ export default function LoadMonitorClient({
   }
 
   const handleDeleteSession = async (id: string) => {
-    if (!confirm('¿Eliminar esta sesión? No se puede deshacer.')) return
+    if (!(await confirm({ title: 'Eliminar sesión', message: '¿Eliminar esta sesión? No se puede deshacer.', danger: true, confirmLabel: 'Eliminar' }))) return
     const { error } = await supabaseRef.current.from('load_sessions').delete().eq('id', id)
     if (!error) setSessions(prev => prev.filter(s => s.id !== id))
   }
@@ -591,6 +593,7 @@ export default function LoadMonitorClient({
 
   return (
     <div className="space-y-10">
+      {confirmDialog}
 
       {/* ── 0. Consejo de carga ────────────────────────────────────────────── */}
       {advice ? (

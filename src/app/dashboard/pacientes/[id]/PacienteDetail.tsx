@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import QuickSessionSheet from '@/components/QuickSessionSheet'
 import { EVENT_TYPES, eventMeta, type PatientEvent } from '@/lib/patientEvents'
+import { useConfirm, useToast } from '@/components/Dialogs'
 
 interface Patient {
   id: string
@@ -53,6 +54,8 @@ function treatmentDuration(start: string | null): string | null {
 
 export default function PacienteDetail({ patient: initialPatient, userId, initialEvents = [], treatmentStart = null }: { patient: Patient; userId: string; initialEvents?: PatientEvent[]; treatmentStart?: string | null }) {
   const isOwner = initialPatient.user_id === userId
+  const { confirm, confirmDialog } = useConfirm()
+  const { notify, toast } = useToast()
   const [patient, setPatient] = useState<Patient>(initialPatient)
   const [editing, setEditing] = useState(false)
   const [editForm, setEditForm] = useState({
@@ -126,7 +129,7 @@ export default function PacienteDetail({ patient: initialPatient, userId, initia
   }
 
   const revokePortalToken = async () => {
-    if (!confirm('¿Revocar el link del portal? El paciente ya no podrá acceder.')) return
+    if (!(await confirm({ title: 'Revocar link del portal', message: 'El paciente ya no podrá acceder con el link actual. ¿Revocar?', danger: true, confirmLabel: 'Revocar' }))) return
     const { data, error } = await supabaseRef.current
       .from('patients')
       .update({ load_share_token: null })
@@ -196,13 +199,15 @@ export default function PacienteDetail({ patient: initialPatient, userId, initia
   }
 
   const handleDelete = async () => {
-    if (!confirm(`¿Eliminar a ${patient.name}? Los planes asociados quedarán sin paciente asignado.`)) return
+    if (!(await confirm({ title: 'Eliminar paciente', message: `¿Eliminar a ${patient.name}? Los planes asociados quedarán sin paciente asignado.`, danger: true, confirmLabel: 'Eliminar' }))) return
     const { error } = await supabaseRef.current.from('patients').delete().eq('id', patient.id)
     if (!error) router.push('/dashboard/pacientes')
   }
 
   return (
     <div>
+      {confirmDialog}
+      {toast}
       {/* HEADER */}
       <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 mb-6">
         {editing ? (
@@ -466,7 +471,7 @@ export default function PacienteDetail({ patient: initialPatient, userId, initia
             </p>
             <div className="flex gap-2">
               <button
-                onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/paciente/${patient.load_share_token}`); alert('Link copiado') }}
+                onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/paciente/${patient.load_share_token}`); notify('Link copiado') }}
                 className="bg-[#24342A] border-[0.5px] border-[#34D399]/50 text-[#34D399] px-4 py-2 rounded-lg text-[13px] font-medium flex-grow truncate"
               >
                 Enviar link al paciente

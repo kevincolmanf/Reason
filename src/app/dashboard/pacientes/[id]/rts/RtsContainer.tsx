@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
+import { useConfirm } from '@/components/Dialogs'
 import { PROTOCOL_OPTIONS } from './protocols/shared'
 import HamstringProtocol from './protocols/HamstringProtocol'
 import AnkleProtocol from './protocols/AnkleProtocol'
@@ -71,6 +72,7 @@ export default function RtsContainer({ patient, userId, lastDynamo, lastKoos, la
   const [loadedEval, setLoadedEval] = useState<SavedEval | null>(null)
   const [showHistory, setShowHistory] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const { confirm, confirmDialog } = useConfirm()
   const supabase = useRef(createClient())
 
   // Abrir directo una evaluación cuando se llega desde el calendario (?eval=<id>).
@@ -116,7 +118,7 @@ export default function RtsContainer({ patient, userId, lastDynamo, lastKoos, la
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Eliminar esta evaluación? Esta acción no se puede deshacer.')) return
+    if (!(await confirm({ title: 'Eliminar evaluación', message: '¿Eliminar esta evaluación? Esta acción no se puede deshacer.', danger: true, confirmLabel: 'Eliminar' }))) return
     setDeletingId(id)
     await supabase.current.from('rts_evaluations').delete().eq('id', id)
     setEvalsList(prev => prev.filter(e => e.id !== id))
@@ -134,6 +136,7 @@ export default function RtsContainer({ patient, userId, lastDynamo, lastKoos, la
   if (!activeProtocol) {
     return (
       <div>
+        {confirmDialog}
         {/* Previous evaluations */}
         {evalsList.length > 0 && (
           <div className="mb-8">
@@ -199,6 +202,8 @@ export default function RtsContainer({ patient, userId, lastDynamo, lastKoos, la
 
   // Protocol header (shown when a protocol is active)
   const ProtocolHeader = () => (
+    <>
+    {confirmDialog}
     <div className="flex items-center gap-3 mb-8">
       <button onClick={handleNewEval} className="text-[12px] text-text-secondary hover:text-text-primary transition-colors">← Protocolos</button>
       <span className="text-text-secondary/30">|</span>
@@ -212,6 +217,7 @@ export default function RtsContainer({ patient, userId, lastDynamo, lastKoos, la
         </>
       )}
     </div>
+    </>
   )
 
   // Protocol history (shown inline when requested)
