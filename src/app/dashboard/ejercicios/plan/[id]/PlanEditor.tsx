@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { v4 as uuidv4 } from 'uuid'
 import jsPDF from 'jspdf'
@@ -149,8 +150,17 @@ function formatDateHeader(d: Date): string {
 
 // ─── Component ─────────────────────────────────────────────────────────────────
 
-export default function PlanEditor({ initialPlan, userId, initialEvents = [] }: { initialPlan: ExercisePlan, userId: string, initialEvents?: PatientEvent[] }) {
+interface RtsEval { id: string; protocol_type: string; created_at: string; affected_side: string | null }
+const RTS_LABELS: Record<string, string> = {
+  lca: 'LCA', hamstring: 'Isquios', ankle: 'Tobillo', pfp: 'Femoropatelar',
+  tendinopathy: 'Tendinopatía', groin: 'Inguinal', shoulder: 'Hombro',
+}
+const RTS_COLOR = '#C27B54' // terracota — coincide con el hito "RTP"
+
+export default function PlanEditor({ initialPlan, userId, initialEvents = [], rtsEvals = [] }: { initialPlan: ExercisePlan, userId: string, initialEvents?: PatientEvent[], rtsEvals?: RtsEval[] }) {
+  const router = useRouter()
   const [plan, setPlan] = useState<ExercisePlan>(initialPlan)
+  const rtsForDay = (d: string) => rtsEvals.filter(r => (r.created_at ?? '').slice(0, 10) === d)
 
   // Hitos del tratamiento sobre el calendario, editables (click en la banderita).
   const [events, setEvents] = useState<PatientEvent[]>(initialEvents)
@@ -1142,6 +1152,19 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [] }: 
                       </span>
                     )
                   })}
+                  {/* Evaluaciones RTS de ese día — hito extendido: click abre la evaluación completa */}
+                  {rtsForDay(dateStr).map(r => (
+                    <span
+                      key={r.id}
+                      onClick={e => { e.stopPropagation(); router.push(`/dashboard/pacientes/${plan.patient_id}/rts?eval=${r.id}`) }}
+                      className="flex items-center gap-1 rounded px-1 py-0.5 mb-0.5 cursor-pointer hover:brightness-125 transition-all"
+                      style={{ backgroundColor: RTS_COLOR + '26' }}
+                      title={`RTS · ${RTS_LABELS[r.protocol_type] ?? r.protocol_type} — abrir evaluación`}
+                    >
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={RTS_COLOR} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                      <span className="text-[9px] font-medium truncate leading-tight" style={{ color: RTS_COLOR }}>RTS · {RTS_LABELS[r.protocol_type] ?? r.protocol_type}</span>
+                    </span>
+                  ))}
                   {session && (
                     <span className="flex items-center gap-1 mt-auto">
                       <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isLogged ? 'bg-green-500' : 'bg-accent'}`} />
