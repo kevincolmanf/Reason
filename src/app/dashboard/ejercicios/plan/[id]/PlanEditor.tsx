@@ -166,7 +166,10 @@ const RTS_PROTOCOLS: { value: string; label: string }[] = [
 ]
 const RTS_COLOR = '#C27B54' // terracota — coincide con el hito "RTP"
 
-export default function PlanEditor({ initialPlan, userId, initialEvents = [], rtsEvals = [] }: { initialPlan: ExercisePlan, userId: string, initialEvents?: PatientEvent[], rtsEvals?: RtsEval[] }) {
+interface DynEval { id: string; created_at: string; evaluation_date?: string | null }
+const DYN_COLOR = '#2563EB' // azul — dinamometría
+
+export default function PlanEditor({ initialPlan, userId, initialEvents = [], rtsEvals = [], dynEvals = [] }: { initialPlan: ExercisePlan, userId: string, initialEvents?: PatientEvent[], rtsEvals?: RtsEval[], dynEvals?: DynEval[] }) {
   const router = useRouter()
   const [plan, setPlan] = useState<ExercisePlan>(initialPlan)
   // Ubicación en el calendario: por la fecha elegida (evaluation_date) o, si no
@@ -189,6 +192,24 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
     setRtsList(prev => prev.filter(r => r.id !== id))
     setRtsDeleting(false)
     setRtsAction(null)
+  }
+
+  // Dinamometría sobre el calendario (como el RTS: crear desde un día, marcador,
+  // click para abrir/editar o borrar). Se ubica por evaluation_date o created_at.
+  const [dynList, setDynList] = useState<DynEval[]>(dynEvals)
+  const dynForDay = (d: string) => dynList.filter(r => ((r.evaluation_date ?? r.created_at ?? '').slice(0, 10)) === d)
+  const [dynAction, setDynAction] = useState<DynEval | null>(null)
+  const [dynDeleting, setDynDeleting] = useState(false)
+  const planReturn = `/dashboard/ejercicios/plan/${initialPlan.id}`
+  const openDynFor = (d: string) => router.push(`/recursos/dinamometro?paciente=${plan.patient_id}&date=${d}&from=${planReturn}`)
+  const deleteDynEval = async () => {
+    if (!dynAction) return
+    setDynDeleting(true)
+    const id = dynAction.id
+    await supabaseRef.current.from('dynamometer_results').delete().eq('id', id)
+    setDynList(prev => prev.filter(r => r.id !== id))
+    setDynDeleting(false)
+    setDynAction(null)
   }
 
   // Hitos del tratamiento sobre el calendario, editables (click en la banderita).
@@ -1184,6 +1205,19 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
                       <span className="text-[9px] font-medium truncate leading-tight" style={{ color: RTS_COLOR }}>RTS · {RTS_LABELS[r.protocol_type] ?? r.protocol_type}</span>
                     </span>
                   ))}
+                  {/* Dinamometría de ese día — click abre opciones (editar/borrar) */}
+                  {dynForDay(dateStr).map(d => (
+                    <span
+                      key={d.id}
+                      onClick={e => { e.stopPropagation(); setDynAction(d) }}
+                      className="flex items-center gap-1 rounded px-1 py-0.5 mb-0.5 cursor-pointer hover:brightness-125 transition-all"
+                      style={{ backgroundColor: DYN_COLOR + '26' }}
+                      title="Dinamometría — tocar para editar o borrar"
+                    >
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={DYN_COLOR} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M6.5 6.5 17.5 17.5"/><path d="M21 21l-1-1"/><path d="M3 3l1 1"/><path d="m18 22 4-4"/><path d="m2 6 4-4"/><path d="m3 10 7-7"/><path d="m14 21 7-7"/></svg>
+                      <span className="text-[9px] font-medium truncate leading-tight" style={{ color: DYN_COLOR }}>Dinamometría</span>
+                    </span>
+                  ))}
                   {session && (
                     <span className="flex items-center gap-1 mt-auto">
                       <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isLogged ? 'bg-green-500' : 'bg-accent'}`} />
@@ -1270,6 +1304,7 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
                     <span className="w-px h-4 bg-border mx-0.5" />
                     <button onClick={openAddEvent} className="bg-bg-secondary border-[0.5px] border-border text-text-secondary px-3 py-1.5 rounded-lg text-[12px] hover:text-text-primary hover:border-accent transition-colors">+ Hito</button>
                     <button onClick={() => { setNewRtsDate(selectedDate ?? todayStr); setNewRtsProtocol('lca'); setNewRtsOpen(true) }} className="bg-bg-secondary border-[0.5px] px-3 py-1.5 rounded-lg text-[12px] transition-colors" style={{ borderColor: RTS_COLOR + '66', color: RTS_COLOR }}>+ RTS</button>
+                    {plan.patient_id && <button onClick={() => openDynFor(selectedDate ?? todayStr)} className="bg-bg-secondary border-[0.5px] px-3 py-1.5 rounded-lg text-[12px] transition-colors" style={{ borderColor: DYN_COLOR + '66', color: DYN_COLOR }}>+ Dinamo</button>}
                   </div>
                 ) : null}
               </div>
@@ -1301,6 +1336,16 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                       Agregar RTS
                     </button>
+                    {plan.patient_id && (
+                      <button
+                        onClick={() => openDynFor(selectedDate ?? todayStr)}
+                        className="inline-flex items-center gap-2 bg-bg-primary border-[0.5px] px-4 py-2.5 rounded-lg text-[13px] font-medium transition-colors"
+                        style={{ borderColor: DYN_COLOR + '66', color: DYN_COLOR }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6.5 6.5 17.5 17.5"/><path d="m18 22 4-4"/><path d="m2 6 4-4"/><path d="m3 10 7-7"/><path d="m14 21 7-7"/></svg>
+                        Agregar dinamometría
+                      </button>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -1826,6 +1871,36 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
                   {rtsDeleting ? 'Borrando…' : 'Borrar evaluación'}
                 </button>
                 <button onClick={() => setRtsAction(null)} className="px-3 py-2.5 text-[13px] text-text-secondary hover:text-text-primary">Cancelar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL ACCIONES DE UNA DINAMOMETRÍA GUARDADA (editar / borrar) */}
+      {dynAction && (
+        <div className="fixed inset-0 bg-bg-primary/90 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) setDynAction(null) }}>
+          <div className="bg-bg-secondary border-[0.5px] border-border rounded-2xl w-full max-w-[380px] shadow-xl p-6">
+            <div className="flex items-center gap-2 mb-1">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={DYN_COLOR} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M6.5 6.5 17.5 17.5"/><path d="m18 22 4-4"/><path d="m2 6 4-4"/><path d="m3 10 7-7"/><path d="m14 21 7-7"/></svg>
+              <h3 className="text-[16px] font-medium">Dinamometría</h3>
+            </div>
+            <p className="text-[13px] text-text-secondary mb-5">
+              {(dynAction.evaluation_date ?? dynAction.created_at ?? '').slice(0, 10)}
+            </p>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => router.push(`/recursos/dinamometro?edit=${dynAction.id}&from=${planReturn}`)}
+                className="w-full text-white py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity"
+                style={{ backgroundColor: DYN_COLOR }}>
+                Abrir / editar evaluación
+              </button>
+              <div className="flex items-center gap-2">
+                <button onClick={deleteDynEval} disabled={dynDeleting}
+                  className="flex-1 py-2.5 rounded-lg text-[13px] text-warning border-[0.5px] border-border hover:border-warning disabled:opacity-40 transition-colors">
+                  {dynDeleting ? 'Borrando…' : 'Borrar evaluación'}
+                </button>
+                <button onClick={() => setDynAction(null)} className="px-3 py-2.5 text-[13px] text-text-secondary hover:text-text-primary">Cancelar</button>
               </div>
             </div>
           </div>

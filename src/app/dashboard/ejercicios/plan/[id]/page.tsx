@@ -34,15 +34,18 @@ export default async function PlanEditorPage({ params }: { params: { id: string 
   let patientName: string | null = null
   let events: { id: string; event_date: string; type: string; title: string | null; note: string | null }[] = []
   let rtsEvals: { id: string; protocol_type: string; created_at: string; evaluation_date: string | null; affected_side: string | null }[] = []
+  let dynEvals: { id: string; created_at: string; evaluation_date: string | null }[] = []
   if (plan.patient_id) {
-    const [{ data: pt }, { data: evs }, { data: rts }] = await Promise.all([
+    const [{ data: pt }, { data: evs }, { data: rts }, { data: dyn }] = await Promise.all([
       supabase.from('patients').select('name').eq('id', plan.patient_id).single(),
       supabase.from('patient_events').select('id, event_date, type, title, note').eq('patient_id', plan.patient_id).order('event_date', { ascending: true }),
       supabase.from('rts_evaluations').select('id, protocol_type, created_at, evaluation_date, affected_side').eq('patient_id', plan.patient_id).order('created_at', { ascending: true }),
+      supabase.from('dynamometer_results').select('id, created_at, evaluation_date').eq('patient_id', plan.patient_id).order('created_at', { ascending: true }),
     ])
     patientName = pt?.name ?? null
     events = evs ?? []
     rtsEvals = rts ?? []
+    dynEvals = dyn ?? []
   }
   const backHref = plan.patient_id ? `/dashboard/pacientes/${plan.patient_id}` : '/dashboard/pacientes'
   const backLabel = patientName ? `← Volver a ${patientName}` : '← Volver a Pacientes'
@@ -60,7 +63,7 @@ export default async function PlanEditorPage({ params }: { params: { id: string 
           </div>
         </div>
 
-        <PlanEditor initialPlan={plan} userId={user.id} initialEvents={events} rtsEvals={rtsEvals} />
+        <PlanEditor initialPlan={plan} userId={user.id} initialEvents={events} rtsEvals={rtsEvals} dynEvals={dynEvals} />
       </main>
     </div>
   )
