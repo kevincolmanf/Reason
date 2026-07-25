@@ -65,29 +65,12 @@ async function syncUserFromPreApproval(supabaseAdmin: any, mpClient: MercadoPago
     .upsert({ id: userId, email: authUser?.email ?? '', role: newRole }, { onConflict: 'id' })
   if (userError) throw userError
 
-  // Para planes Pro: propagar rol a miembros de la organización
-  if (isPro) {
-    const { data: org } = await supabaseAdmin
-      .from('organizations')
-      .select('id')
-      .eq('owner_id', userId)
-      .single()
-
-    if (org) {
-      const { data: members } = await supabaseAdmin
-        .from('organization_members')
-        .select('user_id')
-        .eq('org_id', org.id)
-        .neq('user_id', userId)
-
-      if (members?.length) {
-        await supabaseAdmin
-          .from('users')
-          .update({ role: newRole })
-          .in('id', members.map((m: { user_id: string }) => m.user_id))
-      }
-    }
-  }
+  // NO propagar el role Pro a los integrantes de la organización. El acceso del
+  // equipo viene de organization_members, no del role personal (así lo crea
+  // equipo/actions.ts). Propagarlo hacía que un integrante quedara con role 'pro'
+  // y se colara como "dueño" (agenda editable, límites de pro, y quedaba pegado
+  // aunque lo sacaran del equipo). El dueño paga; los integrantes acceden por ser
+  // miembros, conservando su plan personal (free/subscriber).
 }
 
 export async function POST(request: Request) {
