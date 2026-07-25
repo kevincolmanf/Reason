@@ -484,12 +484,8 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
     if (orgId) query = query.eq('org_id', orgId)
     else       query = query.eq('created_by', userId)
 
-    // Al filtrar por profesional seguimos mostrando los bloqueos sin profesional
-    // asignado: son bloqueos del centro (feriado, refacción) y aplican a todos.
-    if (filterProf !== 'all') {
-      query = query.or(`professional_id.eq.${filterProf},and(is_blocked.is.true,professional_id.is.null)`)
-    }
-
+    // El filtro por profesional se aplica en cliente (ver visibleTurnos): así
+    // cambiar de profesional es instantáneo y no re-consulta la agenda.
     const { data, error } = await query
     // Si la consulta falla, NO vaciamos la agenda: dejamos lo que ya estaba.
     if (error) { setLoading(false); return }
@@ -517,7 +513,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
     setTurnos(list)
     setLoading(false)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [weekStart, selectedDay, view, orgId, userId, filterProf])
+  }, [weekStart, selectedDay, view, orgId, userId])
 
   useEffect(() => { fetchTurnos() }, [fetchTurnos])
 
@@ -739,7 +735,13 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
   const MIN_COL_WIDTH = 130
 
   // Filtro de área client-side (permite mostrar contadores por área sin queries extra)
-  const visibleTurnos = filterArea === 'all' ? turnos : turnos.filter(t => t.area === filterArea)
+  // Filtros de área y profesional, ambos en cliente (sin re-consultar). Al filtrar
+  // por profesional seguimos mostrando los bloqueos del centro (sin profesional).
+  const visibleTurnos = turnos.filter(t => {
+    if (filterArea !== 'all' && t.area !== filterArea) return false
+    if (filterProf !== 'all' && t.professional_id !== filterProf && !(t.is_blocked && t.professional_id === null)) return false
+    return true
+  })
 
   const dayTurnos = visibleTurnos.filter(t => isSameDay(new Date(t.start_time), selectedDay))
   const dayColLayout = assignColumns(dayTurnos)

@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { login } from '../auth/actions'
+import PasswordField from './PasswordField'
 
 export default function LoginPage({
   searchParams,
@@ -53,14 +54,7 @@ export default function LoginPage({
                 ¿Te olvidaste?
               </Link>
             </div>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              placeholder="••••••••"
-              required
-              className="w-full p-4 bg-bg-primary border-[0.5px] border-border-strong rounded-lg text-[15px] focus:outline-none focus:border-accent transition-colors"
-            />
+            <PasswordField />
           </div>
 
           <button

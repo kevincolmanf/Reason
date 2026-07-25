@@ -99,7 +99,9 @@ export default function DinamometroClient({ userId, initialPatient, initialDate,
 
   useEffect(() => {
     const supabase = createClient()
-    supabase.from('patients').select('id, name').eq('user_id', userId).order('name')
+    // Sin filtrar por user_id: la RLS ya limita a los pacientes accesibles (propios
+    // y los compartidos del equipo), así que un integrante también los encuentra.
+    supabase.from('patients').select('id, name').order('name')
       .then(({ data }) => { if (data) setPatients(data) })
   }, [userId])
 

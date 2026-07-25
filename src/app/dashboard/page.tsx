@@ -128,7 +128,11 @@ export default async function DashboardPage() {
       <main className="flex-grow w-full max-w-[1080px] mx-auto px-8 py-12">
         <div className="mb-12">
           <h1 className="text-[32px] font-medium tracking-[-0.02em] mb-2">
-            Hola, {user.user_metadata?.full_name || 'Suscriptor'}
+            {(() => {
+              const fullName = user.user_metadata?.full_name as string | undefined
+              const firstName = fullName?.trim().split(/\s+/)[0]
+              return firstName ? `Hola, ${firstName}` : 'Hola'
+            })()}
           </h1>
           <p className="text-text-secondary text-[16px]">
             ¿Con qué paciente trabajás hoy?
