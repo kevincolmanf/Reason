@@ -1091,8 +1091,8 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
             </button>
           </div>
 
-          {/* Acciones del calendario: duplicar semana y agregar hito */}
-          <div className="flex justify-center gap-2 mb-4">
+          {/* Acción de semana (las de día —sesión/hito/RTS— viven en el panel del día) */}
+          <div className="flex justify-center mb-4">
             <button
               onClick={() => { setDupState('idle'); setShowDupWeek(true) }}
               disabled={sourceWeekSessions.length === 0}
@@ -1102,27 +1102,6 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
               Duplicar semana
             </button>
-            {plan.patient_id && (
-              <button
-                onClick={openAddEvent}
-                title="Agregar un hito del tratamiento (evaluación, RTP, alta…)"
-                className="inline-flex items-center gap-2 text-[12px] font-medium px-3 py-1.5 rounded-lg border-[0.5px] border-border bg-bg-secondary text-text-secondary hover:text-text-primary hover:border-accent transition-colors"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                Agregar hito
-              </button>
-            )}
-            {plan.patient_id && (
-              <button
-                onClick={() => { setNewRtsDate(selectedDate ?? todayStr); setNewRtsProtocol('lca'); setNewRtsOpen(true) }}
-                title="Crear una evaluación de retorno al deporte en un día"
-                className="inline-flex items-center gap-2 text-[12px] font-medium px-3 py-1.5 rounded-lg border-[0.5px] transition-colors"
-                style={{ borderColor: RTS_COLOR + '66', color: RTS_COLOR, backgroundColor: RTS_COLOR + '14' }}
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                Nueva evaluación RTS
-              </button>
-            )}
           </div>
 
           {/* Grilla */}
@@ -1271,20 +1250,43 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
                     >
                       Eliminar sesión
                     </button>
+
+                    {/* Hito / RTS también en un día que ya tiene sesión */}
+                    <span className="w-px h-4 bg-border mx-0.5" />
+                    <button onClick={openAddEvent} className="bg-bg-secondary border-[0.5px] border-border text-text-secondary px-3 py-1.5 rounded-lg text-[12px] hover:text-text-primary hover:border-accent transition-colors">+ Hito</button>
+                    <button onClick={() => { setNewRtsDate(selectedDate ?? todayStr); setNewRtsProtocol('lca'); setNewRtsOpen(true) }} className="bg-bg-secondary border-[0.5px] px-3 py-1.5 rounded-lg text-[12px] transition-colors" style={{ borderColor: RTS_COLOR + '66', color: RTS_COLOR }}>+ RTS</button>
                   </div>
                 ) : null}
               </div>
 
               {!selectedSession ? (
-                /* Sin sesión: botón crear */
-                <div className="text-center py-12 bg-bg-secondary border-[0.5px] border-dashed border-border rounded-xl">
-                  <p className="text-[14px] text-text-secondary mb-4">No hay sesión para este día.</p>
-                  <button
-                    onClick={() => createSession(selectedDate)}
-                    className="bg-accent text-bg-primary px-5 py-2.5 rounded-lg text-[14px] font-medium hover:opacity-90 transition-opacity"
-                  >
-                    Crear sesión para este día
-                  </button>
+                /* Sin sesión: opciones para este día — sesión, hito o evaluación RTS */
+                <div className="py-10 px-6 bg-bg-secondary border-[0.5px] border-dashed border-border rounded-xl">
+                  <p className="text-[13px] text-text-secondary mb-4 text-center">¿Qué querés cargar en este día?</p>
+                  <div className="flex flex-wrap justify-center gap-2.5">
+                    <button
+                      onClick={() => createSession(selectedDate)}
+                      className="inline-flex items-center gap-2 bg-accent text-bg-primary px-4 py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                      Crear sesión
+                    </button>
+                    <button
+                      onClick={openAddEvent}
+                      className="inline-flex items-center gap-2 bg-bg-primary border-[0.5px] border-border text-text-primary px-4 py-2.5 rounded-lg text-[13px] font-medium hover:border-accent transition-colors"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+                      Agregar hito
+                    </button>
+                    <button
+                      onClick={() => { setNewRtsDate(selectedDate ?? todayStr); setNewRtsProtocol('lca'); setNewRtsOpen(true) }}
+                      className="inline-flex items-center gap-2 bg-bg-primary border-[0.5px] px-4 py-2.5 rounded-lg text-[13px] font-medium transition-colors"
+                      style={{ borderColor: RTS_COLOR + '66', color: RTS_COLOR }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                      Agregar RTS
+                    </button>
+                  </div>
                 </div>
               ) : (
                 /* Con sesión: editor */
