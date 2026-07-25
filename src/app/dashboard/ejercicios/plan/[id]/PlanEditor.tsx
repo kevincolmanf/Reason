@@ -156,6 +156,7 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [] }: 
   const [events, setEvents] = useState<PatientEvent[]>(initialEvents)
   const eventsForDay = (d: string) => events.filter(e => e.event_date === d)
   const [editEvent, setEditEvent] = useState<PatientEvent | null>(null)
+  const [addingEvent, setAddingEvent] = useState(false)
   const [edType, setEdType] = useState('evaluacion')
   const [edDate, setEdDate] = useState('')
   const [edTitle, setEdTitle] = useState('')
@@ -163,22 +164,32 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [] }: 
   const [edSaving, setEdSaving] = useState(false)
 
   const openEditEvent = (ev: PatientEvent) => {
-    setEditEvent(ev); setEdType(ev.type); setEdDate(ev.event_date); setEdTitle(ev.title ?? ''); setEdNote(ev.note ?? '')
+    setAddingEvent(false); setEditEvent(ev); setEdType(ev.type); setEdDate(ev.event_date); setEdTitle(ev.title ?? ''); setEdNote(ev.note ?? '')
   }
-  const saveEditEvent = async () => {
-    if (!editEvent || !edDate) return
+  const openAddEvent = () => {
+    setEditEvent(null); setAddingEvent(true); setEdType('evaluacion')
+    setEdDate(selectedDate ?? toDateStr(new Date())); setEdTitle(''); setEdNote('')
+  }
+  const saveEvent = async () => {
+    if (!edDate) return
     setEdSaving(true)
-    const { data, error } = await supabaseRef.current
-      .from('patient_events')
-      .update({ type: edType, event_date: edDate, title: edTitle.trim() || null, note: edNote.trim() || null })
-      .eq('id', editEvent.id)
-      .select('id, event_date, type, title, note')
-      .single()
-    if (!error && data) {
-      setEvents(prev => prev.map(e => e.id === editEvent.id ? (data as PatientEvent) : e))
-      setEditEvent(null)
+    if (editEvent) {
+      const { data, error } = await supabaseRef.current
+        .from('patient_events')
+        .update({ type: edType, event_date: edDate, title: edTitle.trim() || null, note: edNote.trim() || null })
+        .eq('id', editEvent.id)
+        .select('id, event_date, type, title, note')
+        .single()
+      if (!error && data) setEvents(prev => prev.map(e => e.id === editEvent.id ? (data as PatientEvent) : e))
+    } else if (plan.patient_id) {
+      const { data, error } = await supabaseRef.current
+        .from('patient_events')
+        .insert({ patient_id: plan.patient_id, user_id: userId, event_date: edDate, type: edType, title: edTitle.trim() || null, note: edNote.trim() || null })
+        .select('id, event_date, type, title, note')
+        .single()
+      if (!error && data) setEvents(prev => [...prev, data as PatientEvent].sort((a, b) => a.event_date.localeCompare(b.event_date)))
     }
-    setEdSaving(false)
+    setEditEvent(null); setAddingEvent(false); setEdSaving(false)
   }
   const deleteEditEvent = async () => {
     if (!editEvent) return
@@ -1056,8 +1067,8 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [] }: 
             </button>
           </div>
 
-          {/* Duplicar semana — replica una semana entera a las próximas */}
-          <div className="flex justify-center mb-4">
+          {/* Acciones del calendario: duplicar semana y agregar hito */}
+          <div className="flex justify-center gap-2 mb-4">
             <button
               onClick={() => { setDupState('idle'); setShowDupWeek(true) }}
               disabled={sourceWeekSessions.length === 0}
@@ -1067,6 +1078,16 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [] }: 
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
               Duplicar semana
             </button>
+            {plan.patient_id && (
+              <button
+                onClick={openAddEvent}
+                title="Agregar un hito del tratamiento (evaluación, RTP, alta…)"
+                className="inline-flex items-center gap-2 text-[12px] font-medium px-3 py-1.5 rounded-lg border-[0.5px] border-border bg-bg-secondary text-text-secondary hover:text-text-primary hover:border-accent transition-colors"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Agregar hito
+              </button>
+            )}
           </div>
 
           {/* Grilla */}
@@ -1638,11 +1659,11 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [] }: 
         </div>
       )}
 
-      {/* MODAL EDITAR HITO */}
-      {editEvent && (
-        <div className="fixed inset-0 bg-bg-primary/90 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) setEditEvent(null) }}>
+      {/* MODAL AGREGAR / EDITAR HITO */}
+      {(editEvent || addingEvent) && (
+        <div className="fixed inset-0 bg-bg-primary/90 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) { setEditEvent(null); setAddingEvent(false) } }}>
           <div className="bg-bg-secondary border-[0.5px] border-border rounded-2xl w-full max-w-[420px] shadow-xl p-6">
-            <h3 className="text-[16px] font-medium mb-4">Editar hito</h3>
+            <h3 className="text-[16px] font-medium mb-4">{editEvent ? 'Editar hito' : 'Agregar hito'}</h3>
             <div className="space-y-3">
               <div>
                 <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-2">Tipo</label>
@@ -1673,12 +1694,12 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [] }: 
               </div>
             </div>
             <div className="flex items-center gap-2 mt-5">
-              <button onClick={saveEditEvent} disabled={edSaving || !edDate}
+              <button onClick={saveEvent} disabled={edSaving || !edDate}
                 className="flex-1 bg-accent text-bg-primary py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity">
-                {edSaving ? 'Guardando…' : 'Guardar'}
+                {edSaving ? 'Guardando…' : (editEvent ? 'Guardar' : 'Agregar')}
               </button>
-              <button onClick={deleteEditEvent} className="px-4 py-2.5 text-[13px] text-warning hover:opacity-80 transition-opacity">Borrar</button>
-              <button onClick={() => setEditEvent(null)} className="px-3 py-2.5 text-[13px] text-text-secondary hover:text-text-primary">Cancelar</button>
+              {editEvent && <button onClick={deleteEditEvent} className="px-4 py-2.5 text-[13px] text-warning hover:opacity-80 transition-opacity">Borrar</button>}
+              <button onClick={() => { setEditEvent(null); setAddingEvent(false) }} className="px-3 py-2.5 text-[13px] text-text-secondary hover:text-text-primary">Cancelar</button>
             </div>
           </div>
         </div>

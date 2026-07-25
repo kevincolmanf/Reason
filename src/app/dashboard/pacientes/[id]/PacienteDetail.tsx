@@ -308,20 +308,14 @@ export default function PacienteDetail({ patient: initialPatient, userId, initia
           </div>
         </Link>
 
+        {/* El Calendario del paciente se unificó dentro del plan: una sola vista de
+            planificación (sesiones, duplicar semana, hitos). La card vieja de
+            "Calendario" se retiró para no tener dos calendarios. */}
         <Link href={`/dashboard/ejercicios/plan?paciente=${patient.id}`} className="block no-underline group">
           <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 hover:bg-bg-secondary transition-colors h-full">
-            <div className="text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-3">Ejercicio</div>
-            <div className="text-[18px] font-medium mb-1">Plan de Ejercicio</div>
-            <div className="text-[13px] text-text-secondary">Planificación de ejercicios y bloques de entrenamiento</div>
-            <div className="mt-5 text-accent text-[13px] font-medium opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity">Abrir →</div>
-          </div>
-        </Link>
-
-        <Link href={`/dashboard/pacientes/${patient.id}/calendario`} className="block no-underline group">
-          <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 hover:bg-bg-secondary transition-colors h-full">
             <div className="text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-3">Planificación</div>
-            <div className="text-[18px] font-medium mb-1">Calendario</div>
-            <div className="text-[13px] text-text-secondary">Programá sesiones en fechas específicas para el paciente</div>
+            <div className="text-[18px] font-medium mb-1">Plan de Ejercicio / Calendario</div>
+            <div className="text-[13px] text-text-secondary">Armá el plan, programá las sesiones en el calendario y marcá los hitos del tratamiento</div>
             <div className="mt-5 text-accent text-[13px] font-medium opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity">Abrir →</div>
           </div>
         </Link>
