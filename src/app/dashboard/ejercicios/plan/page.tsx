@@ -33,13 +33,16 @@ export default async function PlanListPage({ searchParams }: { searchParams: { p
       .single()
     patientName = data?.name ?? null
 
-    // Un plan por paciente: si ya existe, ir directo al editor (sin filtrar por user_id para org)
+    // Un plan por paciente: si ya existe, ir directo al editor (sin filtrar por
+    // user_id para org). Ordenamos por created_at asc para caer siempre en el plan
+    // original de forma determinista si hubiera duplicados históricos.
     const { data: existing } = await supabase
       .from('exercise_plans')
       .select('id')
       .eq('patient_id', patientId)
+      .order('created_at', { ascending: true })
       .limit(1)
-      .single()
+      .maybeSingle()
     if (existing) redirect(`/dashboard/ejercicios/plan/${existing.id}`)
   }
 

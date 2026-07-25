@@ -30,6 +30,9 @@ const initialPlanData = {
 export default function PlanList({ userId, patientId }: { userId: string; patientId: string | null }) {
   const [plans, setPlans] = useState<ExercisePlan[]>([])
   const [loading, setLoading] = useState(true)
+  // Guarda anti doble-submit: evita que un doble-tap (típico en tablet) cree dos
+  // planes para el mismo paciente y termine mostrando el plan vacío.
+  const [busy, setBusy] = useState(false)
   const router = useRouter()
   const supabaseRef = useRef(createClient())
 
@@ -54,6 +57,25 @@ export default function PlanList({ userId, patientId }: { userId: string; patien
   }, [fetchPlans])
 
   const handleCreatePlan = async () => {
+    if (busy) return
+    setBusy(true)
+
+    // Un plan por paciente: si ya existe (p. ej. se creó en otra pestaña o por un
+    // click previo), no creamos otro — vamos al que ya está.
+    if (patientId) {
+      const { data: existing } = await supabaseRef.current
+        .from('exercise_plans')
+        .select('id')
+        .eq('patient_id', patientId)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle()
+      if (existing) {
+        router.push(`/dashboard/ejercicios/plan/${existing.id}`)
+        return
+      }
+    }
+
     const { data, error } = await supabaseRef.current
       .from('exercise_plans')
       .insert({
@@ -68,8 +90,12 @@ export default function PlanList({ userId, patientId }: { userId: string; patien
     if (error) {
       alert('Error al crear el plan')
       console.error(error)
+      setBusy(false)
     } else if (data) {
       router.push(`/dashboard/ejercicios/plan/${data.id}`)
+      // No reseteamos busy: navegamos fuera de esta vista.
+    } else {
+      setBusy(false)
     }
   }
 
@@ -87,7 +113,9 @@ export default function PlanList({ userId, patientId }: { userId: string; patien
 
   const handleDuplicate = async (e: React.MouseEvent, plan: ExercisePlan) => {
     e.preventDefault()
-    
+    if (busy) return
+    setBusy(true)
+
     // Fetch full plan data to duplicate
     const { data: fullPlan, error: fetchError } = await supabaseRef.current
       .from('exercise_plans')
@@ -97,6 +125,7 @@ export default function PlanList({ userId, patientId }: { userId: string; patien
       
     if (fetchError || !fullPlan) {
       alert('Error al recuperar datos para duplicar')
+      setBusy(false)
       return
     }
 
@@ -117,6 +146,7 @@ export default function PlanList({ userId, patientId }: { userId: string; patien
     } else if (data) {
       fetchPlans()
     }
+    setBusy(false)
   }
 
   if (loading) {
@@ -127,11 +157,12 @@ export default function PlanList({ userId, patientId }: { userId: string; patien
     <div>
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-[20px] font-medium">{patientId ? 'Planes asignados' : 'Tus Planes Guardados'}</h2>
-        <button 
+        <button
           onClick={handleCreatePlan}
-          className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity"
+          disabled={busy}
+          className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
         >
-          + Crear Nuevo Plan
+          {busy ? 'Creando…' : '+ Crear Nuevo Plan'}
         </button>
       </div>
 
