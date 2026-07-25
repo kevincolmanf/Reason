@@ -25,6 +25,13 @@ export default async function PacientePage({ params }: { params: { id: string } 
 
   if (error || !patient) redirect('/dashboard/pacientes')
 
+  // Hitos del tratamiento (evaluación, RTP, alta, competencia, etc.)
+  const { data: events } = await supabase
+    .from('patient_events')
+    .select('id, event_date, type, title, note')
+    .eq('patient_id', params.id)
+    .order('event_date', { ascending: true })
+
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
       <Header />
@@ -35,7 +42,7 @@ export default async function PacientePage({ params }: { params: { id: string } 
           </Link>
         </div>
 
-        <PacienteDetail patient={patient} userId={user.id} />
+        <PacienteDetail patient={patient} userId={user.id} initialEvents={events ?? []} />
       </main>
     </div>
   )
