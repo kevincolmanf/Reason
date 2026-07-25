@@ -59,9 +59,57 @@ WHERE P.patient_id IS NOT NULL
   );
 
 -- ─────────────────────────────────────────────────────────────────────────────
+-- PASO 2b — FUSIÓN de duplicados CON contenido (si el PASO 3 falla por
+-- "duplicate key"). Por cada paciente conserva el plan más antiguo y le mueve las
+-- sesiones y registros de los demás, luego borra los duplicados. No pierde datos
+-- (pueden quedar dos sesiones el mismo día, que se limpian desde el calendario).
+-- ─────────────────────────────────────────────────────────────────────────────
+UPDATE scheduled_sessions s
+SET plan_id = (
+  SELECT q.id FROM exercise_plans q
+  WHERE q.patient_id = ep.patient_id
+  ORDER BY q.created_at ASC, q.id ASC
+  LIMIT 1
+)
+FROM exercise_plans ep
+WHERE s.plan_id = ep.id
+  AND ep.patient_id IS NOT NULL
+  AND ep.id <> (
+    SELECT q.id FROM exercise_plans q
+    WHERE q.patient_id = ep.patient_id
+    ORDER BY q.created_at ASC, q.id ASC
+    LIMIT 1
+  );
+
+UPDATE plan_activity_logs l
+SET plan_id = (
+  SELECT q.id FROM exercise_plans q
+  WHERE q.patient_id = ep.patient_id
+  ORDER BY q.created_at ASC, q.id ASC
+  LIMIT 1
+)
+FROM exercise_plans ep
+WHERE l.plan_id = ep.id
+  AND ep.patient_id IS NOT NULL
+  AND ep.id <> (
+    SELECT q.id FROM exercise_plans q
+    WHERE q.patient_id = ep.patient_id
+    ORDER BY q.created_at ASC, q.id ASC
+    LIMIT 1
+  );
+
+DELETE FROM exercise_plans ep
+WHERE ep.patient_id IS NOT NULL
+  AND ep.id <> (
+    SELECT q.id FROM exercise_plans q
+    WHERE q.patient_id = ep.patient_id
+    ORDER BY q.created_at ASC, q.id ASC
+    LIMIT 1
+  );
+
+-- ─────────────────────────────────────────────────────────────────────────────
 -- PASO 3 — ÍNDICE ÚNICO (defensa en profundidad). Un solo plan por paciente a
--- nivel de base de datos. Si esto falla por "duplicate key", quedaron duplicados
--- con contenido: volvé al PASO 1, resolvelos a mano y reintentá.
+-- nivel de base de datos. Si falla por "duplicate key", corré antes el PASO 2b.
 -- ─────────────────────────────────────────────────────────────────────────────
 CREATE UNIQUE INDEX IF NOT EXISTS uniq_exercise_plans_patient
   ON exercise_plans (patient_id)
