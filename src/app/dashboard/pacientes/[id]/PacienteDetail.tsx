@@ -280,8 +280,10 @@ export default function PacienteDetail({ patient: initialPatient, userId }: { pa
           <h2 className="text-[14px] font-medium">Portal del Paciente</h2>
         </div>
 
-        {/* Modalidad de seguimiento: define qué se le pide al paciente */}
-        {isOwner && (() => {
+        {/* Modalidad de seguimiento: define qué se le pide al paciente. Se muestra
+            igual que el resto de la sección Portal (sin exigir ser el creador del
+            registro): en un equipo, cualquiera que gestiona al paciente la ve. */}
+        {(() => {
           const mode = patient.follow_up_mode ?? 'presencial'
           const opts: { value: 'presencial' | 'online' | 'hibrido'; label: string; desc: string }[] = [
             { value: 'presencial', label: 'Presencial', desc: 'Lo ves en el centro. El registro lo llevás vos con notas — al paciente no se le pide cargar sesiones.' },
