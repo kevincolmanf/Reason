@@ -169,7 +169,15 @@ const RTS_COLOR = '#C27B54' // terracota — coincide con el hito "RTP"
 interface DynEval { id: string; created_at: string; evaluation_date?: string | null }
 const DYN_COLOR = '#2563EB' // azul — dinamometría
 
-export default function PlanEditor({ initialPlan, userId, initialEvents = [], rtsEvals = [], dynEvals = [] }: { initialPlan: ExercisePlan, userId: string, initialEvents?: PatientEvent[], rtsEvals?: RtsEval[], dynEvals?: DynEval[] }) {
+interface QEval { id: string; questionnaire_type: string; created_at: string; evaluation_date?: string | null }
+const Q_COLOR = '#059669' // verde — cuestionarios
+const Q_LABELS: Record<string, string> = {
+  spadi: 'SPADI', ndi: 'NDI', roland_morris: 'Roland-Morris', start_back: 'STarT Back',
+  tampa: 'TAMPA', catastrofismo: 'PCS', oswestry: 'Oswestry', dash: 'DASH',
+  lefs: 'LEFS', psfs: 'PSFS', fabq: 'FABQ', koos: 'KOOS', acl_rsi: 'ACL-RSI',
+}
+
+export default function PlanEditor({ initialPlan, userId, initialEvents = [], rtsEvals = [], dynEvals = [], qEvals = [] }: { initialPlan: ExercisePlan, userId: string, initialEvents?: PatientEvent[], rtsEvals?: RtsEval[], dynEvals?: DynEval[], qEvals?: QEval[] }) {
   const router = useRouter()
   const [plan, setPlan] = useState<ExercisePlan>(initialPlan)
   // Ubicación en el calendario: por la fecha elegida (evaluation_date) o, si no
@@ -210,6 +218,24 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
     setDynList(prev => prev.filter(r => r.id !== id))
     setDynDeleting(false)
     setDynAction(null)
+  }
+
+  // Cuestionarios sobre el calendario. Como no se editan (son solo-creación en
+  // toda la app), el marcador ofrece verlos en la ficha o borrarlos; se crean
+  // desde el día eligiendo el tipo en el propio tool de cuestionarios.
+  const [qList, setQList] = useState<QEval[]>(qEvals)
+  const qForDay = (d: string) => qList.filter(r => ((r.evaluation_date ?? r.created_at ?? '').slice(0, 10)) === d)
+  const [qAction, setQAction] = useState<QEval | null>(null)
+  const [qDeleting, setQDeleting] = useState(false)
+  const openQuestFor = (d: string) => router.push(`/recursos/cuestionarios?paciente=${plan.patient_id}&date=${d}&from=${planReturn}`)
+  const deleteQEval = async () => {
+    if (!qAction) return
+    setQDeleting(true)
+    const id = qAction.id
+    await supabaseRef.current.from('questionnaire_results').delete().eq('id', id)
+    setQList(prev => prev.filter(r => r.id !== id))
+    setQDeleting(false)
+    setQAction(null)
   }
 
   // Hitos del tratamiento sobre el calendario, editables (click en la banderita).
@@ -1218,6 +1244,19 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
                       <span className="text-[9px] font-medium truncate leading-tight" style={{ color: DYN_COLOR }}>Dinamometría</span>
                     </span>
                   ))}
+                  {/* Cuestionarios de ese día — click abre opciones (ver en ficha / borrar) */}
+                  {qForDay(dateStr).map(q => (
+                    <span
+                      key={q.id}
+                      onClick={e => { e.stopPropagation(); setQAction(q) }}
+                      className="flex items-center gap-1 rounded px-1 py-0.5 mb-0.5 cursor-pointer hover:brightness-125 transition-all"
+                      style={{ backgroundColor: Q_COLOR + '26' }}
+                      title={`Cuestionario ${Q_LABELS[q.questionnaire_type] ?? q.questionnaire_type} — tocar para ver o borrar`}
+                    >
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={Q_COLOR} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                      <span className="text-[9px] font-medium truncate leading-tight" style={{ color: Q_COLOR }}>{Q_LABELS[q.questionnaire_type] ?? 'Cuestionario'}</span>
+                    </span>
+                  ))}
                   {session && (
                     <span className="flex items-center gap-1 mt-auto">
                       <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isLogged ? 'bg-green-500' : 'bg-accent'}`} />
@@ -1305,6 +1344,7 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
                     <button onClick={openAddEvent} className="bg-bg-secondary border-[0.5px] border-border text-text-secondary px-3 py-1.5 rounded-lg text-[12px] hover:text-text-primary hover:border-accent transition-colors">+ Hito</button>
                     <button onClick={() => { setNewRtsDate(selectedDate ?? todayStr); setNewRtsProtocol('lca'); setNewRtsOpen(true) }} className="bg-bg-secondary border-[0.5px] px-3 py-1.5 rounded-lg text-[12px] transition-colors" style={{ borderColor: RTS_COLOR + '66', color: RTS_COLOR }}>+ RTS</button>
                     {plan.patient_id && <button onClick={() => openDynFor(selectedDate ?? todayStr)} className="bg-bg-secondary border-[0.5px] px-3 py-1.5 rounded-lg text-[12px] transition-colors" style={{ borderColor: DYN_COLOR + '66', color: DYN_COLOR }}>+ Dinamo</button>}
+                    {plan.patient_id && <button onClick={() => openQuestFor(selectedDate ?? todayStr)} className="bg-bg-secondary border-[0.5px] px-3 py-1.5 rounded-lg text-[12px] transition-colors" style={{ borderColor: Q_COLOR + '66', color: Q_COLOR }}>+ Cuest</button>}
                   </div>
                 ) : null}
               </div>
@@ -1344,6 +1384,16 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
                       >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6.5 6.5 17.5 17.5"/><path d="m18 22 4-4"/><path d="m2 6 4-4"/><path d="m3 10 7-7"/><path d="m14 21 7-7"/></svg>
                         Agregar dinamometría
+                      </button>
+                    )}
+                    {plan.patient_id && (
+                      <button
+                        onClick={() => openQuestFor(selectedDate ?? todayStr)}
+                        className="inline-flex items-center gap-2 bg-bg-primary border-[0.5px] px-4 py-2.5 rounded-lg text-[13px] font-medium transition-colors"
+                        style={{ borderColor: Q_COLOR + '66', color: Q_COLOR }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                        Agregar cuestionario
                       </button>
                     )}
                   </div>
@@ -1901,6 +1951,36 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
                   {dynDeleting ? 'Borrando…' : 'Borrar evaluación'}
                 </button>
                 <button onClick={() => setDynAction(null)} className="px-3 py-2.5 text-[13px] text-text-secondary hover:text-text-primary">Cancelar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL ACCIONES DE UN CUESTIONARIO GUARDADO (ver en ficha / borrar) */}
+      {qAction && (
+        <div className="fixed inset-0 bg-bg-primary/90 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) setQAction(null) }}>
+          <div className="bg-bg-secondary border-[0.5px] border-border rounded-2xl w-full max-w-[380px] shadow-xl p-6">
+            <div className="flex items-center gap-2 mb-1">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={Q_COLOR} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+              <h3 className="text-[16px] font-medium">Cuestionario · {Q_LABELS[qAction.questionnaire_type] ?? qAction.questionnaire_type}</h3>
+            </div>
+            <p className="text-[13px] text-text-secondary mb-5">
+              {(qAction.evaluation_date ?? qAction.created_at ?? '').slice(0, 10)}
+            </p>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => router.push(`/dashboard/pacientes/${plan.patient_id}/ficha`)}
+                className="w-full text-white py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity"
+                style={{ backgroundColor: Q_COLOR }}>
+                Ver en la ficha
+              </button>
+              <div className="flex items-center gap-2">
+                <button onClick={deleteQEval} disabled={qDeleting}
+                  className="flex-1 py-2.5 rounded-lg text-[13px] text-warning border-[0.5px] border-border hover:border-warning disabled:opacity-40 transition-colors">
+                  {qDeleting ? 'Borrando…' : 'Borrar cuestionario'}
+                </button>
+                <button onClick={() => setQAction(null)} className="px-3 py-2.5 text-[13px] text-text-secondary hover:text-text-primary">Cancelar</button>
               </div>
             </div>
           </div>
