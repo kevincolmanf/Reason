@@ -5,6 +5,7 @@ import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { jsPDF } from 'jspdf'
 import { getResponseItems } from '@/lib/questionnaires'
+import QuickNoteField from '@/components/QuickNoteField'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -778,7 +779,13 @@ export default function FichaClient({
 
         <div>
           <label className="block text-[12px] uppercase tracking-[0.05em] text-accent mb-2 font-medium">6. Plan de Tratamiento</label>
-          <textarea rows={4} value={ficha.planTratamiento} onChange={e => handleChange('planTratamiento', e.target.value)} placeholder="Intervenciones, técnicas, frecuencia, pautas de ejercicio..." className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y" />
+          <QuickNoteField
+            value={ficha.planTratamiento}
+            onChange={v => handleChange('planTratamiento', v)}
+            rows={4}
+            placeholder="Intervenciones, técnicas, frecuencia, pautas de ejercicio..."
+            phrases={['Terapia manual', 'Ejercicio terapéutico', 'Educación y pautas', 'Progresión de carga', 'Control en 1 semana', 'Reevaluar en 2 semanas']}
+          />
         </div>
 
         {/* 7. RECOMENDACIONES DE OTROS PROFESIONALES */}

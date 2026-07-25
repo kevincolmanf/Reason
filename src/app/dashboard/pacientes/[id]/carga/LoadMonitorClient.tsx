@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
+import QuickNoteField from '@/components/QuickNoteField'
 
 interface ActivityLog {
   id: string
@@ -773,15 +774,16 @@ export default function LoadMonitorClient({
               <VasSlider label="Dolor post-sesión" value={formVasPost} onChange={setFormVasPost} />
             </div>
 
-            {/* Notas */}
+            {/* Notas — con chips de frases frecuentes y dictado por voz */}
             <div>
               <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Notas</label>
-              <textarea
-                rows={2}
+              <QuickNoteField
                 value={formNotes}
-                onChange={e => setFormNotes(e.target.value)}
+                onChange={setFormNotes}
+                rows={2}
                 placeholder="Observaciones..."
-                className="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-none"
+                phrases={['Tolera bien la carga', 'Sin dolor', 'Dolor leve post', 'Buena técnica', 'Progresa de fase', 'Aumentar carga próxima', 'Mantener carga', 'Fatiga marcada']}
+                textClassName="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y"
               />
             </div>
 
