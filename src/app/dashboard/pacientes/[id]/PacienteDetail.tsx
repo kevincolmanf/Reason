@@ -19,6 +19,7 @@ interface Patient {
   created_at: string
   org_id: string | null
   load_share_token: string | null
+  follow_up_mode?: string | null
   user_id: string
 }
 
@@ -84,6 +85,11 @@ export default function PacienteDetail({ patient: initialPatient, userId }: { pa
       .select()
       .single()
     if (!error && data) setPatient(data)
+  }
+
+  const setFollowUpMode = async (mode: 'presencial' | 'online' | 'hibrido') => {
+    setPatient(p => ({ ...p, follow_up_mode: mode }))
+    await supabaseRef.current.from('patients').update({ follow_up_mode: mode }).eq('id', patient.id)
   }
 
   const handleSaveEdit = async () => {
@@ -273,6 +279,32 @@ export default function PacienteDetail({ patient: initialPatient, userId }: { pa
         <div className="flex justify-between items-center mb-3">
           <h2 className="text-[14px] font-medium">Portal del Paciente</h2>
         </div>
+
+        {/* Modalidad de seguimiento: define qué se le pide al paciente. Se muestra
+            igual que el resto de la sección Portal (sin exigir ser el creador del
+            registro): en un equipo, cualquiera que gestiona al paciente la ve. */}
+        {(() => {
+          const mode = patient.follow_up_mode ?? 'presencial'
+          const opts: { value: 'presencial' | 'online' | 'hibrido'; label: string; desc: string }[] = [
+            { value: 'presencial', label: 'Presencial', desc: 'Lo ves en el centro. El registro lo llevás vos con notas — al paciente no se le pide cargar sesiones.' },
+            { value: 'online',     label: 'Online',     desc: 'Se entrena a distancia. Registra un check-in corto desde su portal.' },
+            { value: 'hibrido',    label: 'Híbrido',    desc: 'Combina presencial y a distancia. Registra el check-in corto los días que no viene.' },
+          ]
+          return (
+            <div className="mb-4 pb-4 border-b-[0.5px] border-border">
+              <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-2">Modalidad de seguimiento</label>
+              <div className="flex gap-1.5 mb-2">
+                {opts.map(o => (
+                  <button key={o.value} onClick={() => setFollowUpMode(o.value)}
+                    className={`flex-1 px-3 py-2 rounded-lg text-[13px] font-medium border-[0.5px] transition-colors ${mode === o.value ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-secondary border-border text-text-secondary hover:text-text-primary'}`}>
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[12px] text-text-secondary">{opts.find(o => o.value === mode)?.desc}</p>
+            </div>
+          )
+        })()}
         {patient.load_share_token ? (
           <div>
             <p className="text-[13px] text-text-secondary mb-3">

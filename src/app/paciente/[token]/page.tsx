@@ -32,7 +32,7 @@ export default async function PatientPortalPage({ params }: { params: { token: s
 
   const { data: patient, error: patientError } = await supabase
     .from('patients')
-    .select('id, name, user_id')
+    .select('id, name, user_id, follow_up_mode')
     .eq('load_share_token', params.token)
     .single()
 
