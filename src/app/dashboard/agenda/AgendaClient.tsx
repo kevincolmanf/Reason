@@ -255,7 +255,10 @@ function assignColumns(turnos: Turno[]): Map<string, { col: number; totalCols: n
 }
 
 function blockColorClass(t: Turno): string {
-  if (t.is_blocked) return 'bg-bg-secondary border-border text-text-tertiary opacity-70'
+  // Bloqueo: terracota suave con textura diagonal (el rayado se aplica en el style
+  // inline). Se distingue de un vistazo de los turnos activos sin gritar, y el
+  // rayado da una pista no-cromática (accesibilidad para daltonismo).
+  if (t.is_blocked) return 'border-[#c27b54]/55 text-[#dda081]'
   if (t.status === 'cancelado')  return STATUS_COLORS.cancelado
   // sobreturno queda neutro, con el mismo color que el resto según su tipo
   // presente/ausente mantienen el color del tipo — el estado se muestra con un indicador
@@ -623,6 +626,10 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                 className={`absolute group rounded-lg border-[0.5px] text-left overflow-hidden pointer-events-auto ${colorClass}`}
                 style={{
                   top: `${top}%`, height: `${height}%`, minHeight: '22px', left: `${leftPct}%`, width: `${widthPct}%`,
+                  ...(t.is_blocked ? {
+                    backgroundColor: 'rgba(194,123,84,0.13)',
+                    backgroundImage: 'repeating-linear-gradient(45deg, transparent 0 7px, rgba(194,123,84,0.16) 7px 14px)',
+                  } : {}),
                   ...(!t.is_blocked && t.status === 'presente' ? { borderLeftColor: 'rgb(52 211 153)', borderLeftWidth: '3px' } : {}),
                   ...(!t.is_blocked && t.status === 'ausente'  ? { borderLeftColor: 'rgb(248 113 113)', borderLeftWidth: '3px' } : {}),
                 }}
@@ -646,7 +653,10 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                   title={t.is_blocked ? (t.notes || 'Bloqueado') : `${t.patient_name} · ${formatTime(start)} - ${formatTime(end)}`}
                 >
                   {t.is_blocked ? (
-                    <p className="text-[11px] leading-tight truncate text-text-secondary">{t.notes || 'Bloqueado'}</p>
+                    <p className="text-[11px] leading-tight truncate text-[#dda081] font-medium flex items-center gap-1">
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="shrink-0 opacity-80"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                      <span className="truncate">{t.notes || 'Bloqueado'}</span>
+                    </p>
                   ) : (
                     <>
                       <p className={`text-[11.5px] font-semibold leading-tight flex items-center gap-1 ${t.status === 'cancelado' ? '' : 'text-text-primary'}`}>
