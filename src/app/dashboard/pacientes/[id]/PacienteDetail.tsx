@@ -6,6 +6,27 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import QuickSessionSheet from '@/components/QuickSessionSheet'
 
+interface PatientEvent {
+  id: string
+  event_date: string
+  type: string
+  title: string | null
+  note: string | null
+}
+
+// Tipos de hito del tratamiento, con su color.
+const EVENT_TYPES: { value: string; label: string; color: string }[] = [
+  { value: 'evaluacion',   label: 'Evaluación',   color: '#2F6FB0' },
+  { value: 'reevaluacion', label: 'Reevaluación', color: '#7A5AB8' },
+  { value: 'rtp',          label: 'RTP',          color: '#C27B54' },
+  { value: 'control',      label: 'Control',      color: '#A66A11' },
+  { value: 'alta',         label: 'Alta',         color: '#1E9E74' },
+  { value: 'objetivo',     label: 'Objetivo',     color: '#5B6B78' },
+  { value: 'competencia',  label: 'Competencia',  color: '#B23A2E' },
+  { value: 'otro',         label: 'Otro',         color: '#8A9691' },
+]
+const eventMeta = (type: string) => EVENT_TYPES.find(e => e.value === type) ?? EVENT_TYPES[EVENT_TYPES.length - 1]
+
 interface Patient {
   id: string
   name: string
@@ -35,7 +56,7 @@ function calcAge(birth_date: string | null): number | null {
 
 interface PatientSource { id: string; label: string }
 
-export default function PacienteDetail({ patient: initialPatient, userId }: { patient: Patient; userId: string }) {
+export default function PacienteDetail({ patient: initialPatient, userId, initialEvents = [] }: { patient: Patient; userId: string; initialEvents?: PatientEvent[] }) {
   const isOwner = initialPatient.user_id === userId
   const [patient, setPatient] = useState<Patient>(initialPatient)
   const [editing, setEditing] = useState(false)
@@ -56,6 +77,35 @@ export default function PacienteDetail({ patient: initialPatient, userId }: { pa
   const [modeSaving, setModeSaving] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [sessionSheet, setSessionSheet] = useState(false)
   const [sessionSaved, setSessionSaved] = useState(false)
+
+  // ── Hitos del tratamiento ──────────────────────────────────────────────────
+  const [events, setEvents] = useState<PatientEvent[]>(initialEvents)
+  const [showEventForm, setShowEventForm] = useState(false)
+  const [evType, setEvType] = useState('evaluacion')
+  const [evDate, setEvDate] = useState(() => new Date().toISOString().split('T')[0])
+  const [evTitle, setEvTitle] = useState('')
+  const [evNote, setEvNote] = useState('')
+  const [evSaving, setEvSaving] = useState(false)
+
+  const addEvent = async () => {
+    if (!evDate) return
+    setEvSaving(true)
+    const { data, error } = await supabaseRef.current
+      .from('patient_events')
+      .insert({ patient_id: patient.id, user_id: userId, event_date: evDate, type: evType, title: evTitle.trim() || null, note: evNote.trim() || null })
+      .select('id, event_date, type, title, note')
+      .single()
+    if (!error && data) {
+      setEvents(prev => [...prev, data as PatientEvent].sort((a, b) => a.event_date.localeCompare(b.event_date)))
+      setEvTitle(''); setEvNote(''); setShowEventForm(false)
+    }
+    setEvSaving(false)
+  }
+
+  const deleteEvent = async (id: string) => {
+    setEvents(prev => prev.filter(e => e.id !== id))
+    await supabaseRef.current.from('patient_events').delete().eq('id', id)
+  }
 
   const router = useRouter()
   const supabaseRef = useRef(createClient())
@@ -304,6 +354,79 @@ export default function PacienteDetail({ patient: initialPatient, userId }: { pa
             <div className="mt-5 text-accent text-[13px] font-medium opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity">Abrir →</div>
           </div>
         </Link>
+      </div>
+
+      {/* HITOS DEL TRATAMIENTO */}
+      <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-5 mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-[16px] font-medium">Hitos del tratamiento</h2>
+          <button onClick={() => setShowEventForm(v => !v)} className="text-[13px] font-medium text-accent hover:opacity-80">
+            {showEventForm ? 'Cerrar' : '+ Agregar hito'}
+          </button>
+        </div>
+
+        {showEventForm && (
+          <div className="bg-bg-secondary border-[0.5px] border-border rounded-xl p-4 mb-4 space-y-3">
+            <div>
+              <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-2">Tipo</label>
+              <div className="flex flex-wrap gap-1.5">
+                {EVENT_TYPES.map(t => (
+                  <button key={t.value} onClick={() => setEvType(t.value)}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[12px] font-medium border-[0.5px] transition-colors ${evType === t.value ? 'text-white' : 'bg-bg-primary border-border text-text-secondary hover:text-text-primary'}`}
+                    style={evType === t.value ? { backgroundColor: t.color, borderColor: t.color } : {}}>
+                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: evType === t.value ? '#fff' : t.color }} />
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Fecha</label>
+                <input type="date" value={evDate} onChange={e => setEvDate(e.target.value)} className="w-full bg-bg-primary border-[0.5px] border-border rounded-lg p-2.5 text-[14px] focus:outline-none focus:border-accent" />
+              </div>
+              <div>
+                <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Título (opcional)</label>
+                <input type="text" value={evTitle} onChange={e => setEvTitle(e.target.value)} placeholder="Ej: Reeval. LCA, torneo regional…" className="w-full bg-bg-primary border-[0.5px] border-border rounded-lg p-2.5 text-[14px] focus:outline-none focus:border-accent" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Nota (opcional)</label>
+              <input type="text" value={evNote} onChange={e => setEvNote(e.target.value)} placeholder="Detalle del hito…" className="w-full bg-bg-primary border-[0.5px] border-border rounded-lg p-2.5 text-[14px] focus:outline-none focus:border-accent" />
+            </div>
+            <button onClick={addEvent} disabled={evSaving || !evDate}
+              className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity">
+              {evSaving ? 'Guardando…' : 'Agregar hito'}
+            </button>
+          </div>
+        )}
+
+        {events.length === 0 ? (
+          <p className="text-[13px] text-text-secondary bg-bg-secondary border-[0.5px] border-dashed border-border rounded-xl px-4 py-5 text-center">
+            Sin hitos todavía. Marcá evaluaciones, RTP, altas o competencias para ver el proceso completo del paciente.
+          </p>
+        ) : (
+          <div className="border-[0.5px] border-border rounded-xl overflow-hidden divide-y-[0.5px] divide-border">
+            {events.map(ev => {
+              const meta = eventMeta(ev.type)
+              const past = ev.event_date < new Date().toISOString().split('T')[0]
+              return (
+                <div key={ev.id} className={`flex items-center gap-3 px-4 py-3 ${past ? 'opacity-60' : ''}`}>
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: meta.color }} />
+                  <div className="w-[92px] shrink-0 text-[12px] text-text-secondary tabular-nums">
+                    {new Date(ev.event_date + 'T12:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: '2-digit' })}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[13px] font-medium" style={{ color: meta.color }}>{meta.label}</span>
+                    {ev.title && <span className="text-[13px] text-text-primary"> · {ev.title}</span>}
+                    {ev.note && <p className="text-[12px] text-text-secondary truncate">{ev.note}</p>}
+                  </div>
+                  <button onClick={() => deleteEvent(ev.id)} className="text-text-secondary hover:text-warning text-[14px] shrink-0 transition-colors" title="Eliminar hito">×</button>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
 
       {/* PORTAL */}

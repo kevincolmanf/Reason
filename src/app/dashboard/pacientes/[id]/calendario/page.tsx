@@ -68,13 +68,6 @@ export default async function CalendarioPage({ params }: { params: { id: string 
     ...(turnosByName ?? []).map(t => t.start_time.slice(0, 10)),
   ]))
 
-  // Hitos del tratamiento (evaluación, RTP, alta, competencia, etc.)
-  const { data: events } = await supabase
-    .from('patient_events')
-    .select('id, event_date, type, title, note')
-    .eq('patient_id', params.id)
-    .order('event_date', { ascending: true })
-
   return (
     <div className="max-w-[900px] mx-auto px-4 py-6">
       <div className="mb-6">
@@ -91,7 +84,6 @@ export default async function CalendarioPage({ params }: { params: { id: string 
         unassignedPlans={unassignedPlans}
         initialScheduled={scheduled ?? []}
         turnoDates={turnoDates}
-        initialEvents={events ?? []}
       />
     </div>
   )
