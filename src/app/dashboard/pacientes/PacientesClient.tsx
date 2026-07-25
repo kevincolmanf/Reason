@@ -17,7 +17,7 @@ interface Patient {
   source: string | null
   created_at: string
   user_id: string
-  plan_count?: number
+  has_plan?: boolean
 }
 
 interface PatientSource {
@@ -77,14 +77,16 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
     const { data } = await query
     const rows = (data ?? []) as Patient[]
 
-    const withCounts = await Promise.all(
-      rows.map(async (p) => {
-        const { count } = await sb.from('exercise_plans').select('id', { count: 'exact', head: true }).eq('patient_id', p.id)
-        return { ...p, plan_count: count ?? 0 }
-      })
-    )
+    // Una sola consulta para saber qué pacientes tienen plan (antes se hacía un
+    // count por paciente: N+1 que con cientos de pacientes volvía lenta la lista).
+    const ids = rows.map(r => r.id)
+    let plannedSet = new Set<string>()
+    if (ids.length > 0) {
+      const { data: plans } = await sb.from('exercise_plans').select('patient_id').in('patient_id', ids)
+      plannedSet = new Set((plans ?? []).map(p => p.patient_id as string))
+    }
 
-    setPatients(withCounts)
+    setPatients(rows.map(p => ({ ...p, has_plan: plannedSet.has(p.id) })))
     setLoading(false)
   }, [userId, orgId, isOrgContext])
 
@@ -411,7 +413,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
                   <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 h-full flex flex-col opacity-40 pointer-events-none">
                     <p className="text-[17px] font-medium mb-1">{p.name}</p>
                     <p className="text-[13px] text-text-secondary flex-grow">{(() => { const age = calcAge(p.birth_date) ?? p.age; return [age ? `${age} años` : null, p.occupation || null].filter(Boolean).join(' · ') })()}</p>
-                    <p className="text-[12px] text-text-secondary mt-4 pt-4 border-t-[0.5px] border-border">{p.plan_count} plan{p.plan_count !== 1 ? 'es' : ''}</p>
+                    <p className="text-[12px] text-text-secondary mt-4 pt-4 border-t-[0.5px] border-border">{p.has_plan ? 'Con plan' : 'Sin plan'}</p>
                   </div>
                   <a href="/paywall" className="absolute inset-0 flex items-center justify-center">
                     <span className="bg-bg-primary border-[0.5px] border-border rounded-lg px-3 py-1.5 text-[12px] font-medium text-text-secondary flex items-center gap-1.5">
@@ -436,7 +438,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
                     </p>
                     {p.source && <p className="text-[11px] text-text-secondary mt-1 opacity-60">Vía: {p.source}</p>}
                     <div className="mt-4 pt-4 border-t-[0.5px] border-border flex justify-between items-center">
-                      <span className="text-[12px] text-text-secondary">{p.plan_count} plan{p.plan_count !== 1 ? 'es' : ''}</span>
+                      <span className="text-[12px] text-text-secondary">{p.has_plan ? 'Con plan' : 'Sin plan'}</span>
                       <span className="text-accent text-[13px] font-medium opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity">Ver →</span>
                     </div>
                   </div>
