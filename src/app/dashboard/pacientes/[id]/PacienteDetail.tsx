@@ -88,8 +88,22 @@ export default function PacienteDetail({ patient: initialPatient, userId }: { pa
   }
 
   const setFollowUpMode = async (mode: 'presencial' | 'online' | 'hibrido') => {
-    setPatient(p => ({ ...p, follow_up_mode: mode }))
-    await supabaseRef.current.from('patients').update({ follow_up_mode: mode }).eq('id', patient.id)
+    const prev = patient.follow_up_mode ?? 'presencial'
+    if (mode === prev) return
+    setPatient(p => ({ ...p, follow_up_mode: mode })) // optimista
+    const { data, error } = await supabaseRef.current
+      .from('patients')
+      .update({ follow_up_mode: mode })
+      .eq('id', patient.id)
+      .select()
+      .single()
+    // Si falla, revertimos y avisamos — no dejamos un cambio que no persistió.
+    if (error || !data) {
+      setPatient(p => ({ ...p, follow_up_mode: prev }))
+      alert('No se pudo guardar la modalidad. Intentá de nuevo.')
+      return
+    }
+    setPatient(data)
   }
 
   const handleSaveEdit = async () => {
