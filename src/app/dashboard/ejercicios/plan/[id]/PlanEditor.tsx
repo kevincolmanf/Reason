@@ -166,6 +166,9 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
   const [bulkLoadState, setBulkLoadState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
   const [bulkLoadDone, setBulkLoadDone] = useState(0)
   const [bulkLoadError, setBulkLoadError] = useState<string | null>(null)
+  const [showDupWeek, setShowDupWeek] = useState(false)
+  const [dupWeeks, setDupWeeks] = useState(3)
+  const [dupState, setDupState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
 
   // Search/modal state
   const [isSearchOpen, setIsSearchOpen] = useState(false)
@@ -847,6 +850,37 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
     return `${DAY_NAMES[0]} ${s.getDate()} ${sm} – ${DAY_NAMES[6]} ${e.getDate()} ${em}`
   })()
 
+  // ─── Duplicar semana ─────────────────────────────────────────────────────────
+  // Semana origen: la del día seleccionado, o la primera semana visible.
+  const sourceMondayDate = selectedDate ? getMondayOfWeek(new Date(selectedDate + 'T00:00:00')) : viewStart
+  const sourceWeekMonday = toDateStr(sourceMondayDate)
+  const sourceWeekSessions = scheduledSessions.filter(
+    s => s.scheduled_date >= sourceWeekMonday && s.scheduled_date <= toDateStr(addDays(sourceMondayDate, 6))
+  )
+  const sourceWeekLabel = `${sourceMondayDate.getDate()} ${MONTH_NAMES[sourceMondayDate.getMonth()].slice(0, 3)} – ${addDays(sourceMondayDate, 6).getDate()} ${MONTH_NAMES[addDays(sourceMondayDate, 6).getMonth()].slice(0, 3)}`
+
+  const handleDuplicateWeek = async () => {
+    setDupState('loading')
+    try {
+      const res = await fetch('/api/sessions/duplicate-week', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan_id: plan.id, source_week_start: sourceWeekMonday, weeks: dupWeeks }),
+      })
+      const json = await res.json()
+      if (!res.ok) { setDupState('error'); return }
+      if (json.created?.length) {
+        setScheduledSessions(prev =>
+          [...prev, ...(json.created as ScheduledSession[])].sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date))
+        )
+      }
+      setDupState('done')
+      setTimeout(() => { setShowDupWeek(false); setDupState('idle') }, 1200)
+    } catch {
+      setDupState('error')
+    }
+  }
+
   // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
@@ -983,6 +1017,19 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
               className="w-8 h-8 flex items-center justify-center rounded-lg border-[0.5px] border-border bg-bg-secondary hover:border-accent text-text-secondary hover:text-accent transition-colors"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
+
+          {/* Duplicar semana — replica una semana entera a las próximas */}
+          <div className="flex justify-center mb-4">
+            <button
+              onClick={() => { setDupState('idle'); setShowDupWeek(true) }}
+              disabled={sourceWeekSessions.length === 0}
+              title={sourceWeekSessions.length === 0 ? 'La semana seleccionada no tiene sesiones' : 'Copiar esta semana a las próximas'}
+              className="inline-flex items-center gap-2 text-[12px] font-medium px-3 py-1.5 rounded-lg border-[0.5px] border-border bg-bg-secondary text-text-secondary hover:text-text-primary hover:border-accent disabled:opacity-40 disabled:hover:text-text-secondary disabled:hover:border-border transition-colors"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              Duplicar semana
             </button>
           </div>
 
@@ -1534,6 +1581,39 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
                   </button>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DUPLICAR SEMANA */}
+      {showDupWeek && (
+        <div className="fixed inset-0 bg-bg-primary/90 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) setShowDupWeek(false) }}>
+          <div className="bg-bg-secondary border-[0.5px] border-border rounded-2xl w-full max-w-[420px] shadow-xl p-6">
+            <h3 className="text-[16px] font-medium mb-1">Duplicar semana</h3>
+            <p className="text-[13px] text-text-secondary mb-4">
+              Copio la semana <strong className="text-text-primary">{sourceWeekLabel}</strong> ({sourceWeekSessions.length} {sourceWeekSessions.length === 1 ? 'sesión' : 'sesiones'}) a las próximas semanas, en los mismos días. No piso días que ya tengan sesión.
+            </p>
+
+            <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-2">¿A cuántas semanas?</label>
+            <div className="flex gap-1.5 flex-wrap mb-5">
+              {[1, 2, 3, 4, 6, 8].map(n => (
+                <button key={n} onClick={() => setDupWeeks(n)}
+                  className={`px-3.5 py-2 rounded-lg text-[13px] font-medium border-[0.5px] transition-colors ${dupWeeks === n ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-primary border-border text-text-secondary hover:text-text-primary'}`}>
+                  {n}
+                </button>
+              ))}
+            </div>
+
+            {dupState === 'error' && <p className="text-[13px] text-warning mb-3">No se pudo duplicar. Intentá de nuevo.</p>}
+            {dupState === 'done' && <p className="text-[13px] text-[#4ade80] mb-3">✓ Semana duplicada</p>}
+
+            <div className="flex gap-2">
+              <button onClick={handleDuplicateWeek} disabled={dupState === 'loading' || dupState === 'done'}
+                className="flex-1 bg-accent text-bg-primary py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity">
+                {dupState === 'loading' ? 'Duplicando…' : `Duplicar a ${dupWeeks} ${dupWeeks === 1 ? 'semana' : 'semanas'}`}
+              </button>
+              <button onClick={() => setShowDupWeek(false)} className="px-4 py-2.5 text-[13px] text-text-secondary hover:text-text-primary">Cancelar</button>
             </div>
           </div>
         </div>
