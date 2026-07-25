@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -73,9 +74,16 @@ function hqColor(hq: number | null): string {
 
 // ─── Main Component ─────────────────────────────────────────────────────────
 
-export default function DinamometroClient({ userId }: { userId: string }) {
+export default function DinamometroClient({ userId, initialPatient, initialDate, editId, returnTo }: {
+  userId: string
+  initialPatient?: string | null
+  initialDate?: string | null
+  editId?: string | null
+  returnTo?: string | null
+}) {
+  const router = useRouter()
   const [patients, setPatients] = useState<Patient[]>([])
-  const [selectedPatient, setSelectedPatient] = useState('')
+  const [selectedPatient, setSelectedPatient] = useState(initialPatient ?? '')
   const [unit, setUnit] = useState<'kg' | 'N' | 'lbs'>('kg')
   const [notes, setNotes] = useState('')
   const [muscleResults, setMuscleResults] = useState<Record<MuscleKey, MuscleValues>>(
@@ -83,12 +91,36 @@ export default function DinamometroClient({ userId }: { userId: string }) {
   )
   const [saving, setSaving] = useState(false)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle')
+  // Fecha del día del calendario donde se ubica esta evaluación (si vino de ahí).
+  const evalDate = useRef<string | null>(initialDate ?? null)
+  const [loadingEdit, setLoadingEdit] = useState(!!editId)
 
   useEffect(() => {
     const supabase = createClient()
     supabase.from('patients').select('id, name').eq('user_id', userId).order('name')
       .then(({ data }) => { if (data) setPatients(data) })
   }, [userId])
+
+  // Editar una evaluación existente (se abre desde el calendario con ?edit=<id>).
+  useEffect(() => {
+    if (!editId) return
+    const supabase = createClient()
+    supabase.from('dynamometer_results').select('*').eq('id', editId).single()
+      .then(({ data }) => {
+        if (data) {
+          setSelectedPatient(data.patient_id ?? '')
+          setUnit((data.unit as 'kg' | 'N' | 'lbs') ?? 'kg')
+          setNotes(data.notes ?? '')
+          evalDate.current = data.evaluation_date ?? null
+          if (data.muscle_results) {
+            setMuscleResults(Object.fromEntries(
+              MUSCLE_KEYS.map(k => [k, data.muscle_results[k] ?? { right: '', left: '' }])
+            ) as Record<MuscleKey, MuscleValues>)
+          }
+        }
+        setLoadingEdit(false)
+      })
+  }, [editId])
 
   const updateMuscle = (key: MuscleKey, side: 'right' | 'left', value: string) => {
     // Allow only numbers and decimal point
@@ -102,20 +134,26 @@ export default function DinamometroClient({ userId }: { userId: string }) {
   const hasAnyData = MUSCLE_KEYS.some(k => muscleResults[k].right !== '' || muscleResults[k].left !== '')
 
   const handleSave = async () => {
-    if (!hasAnyData) return
+    if (!hasAnyData || saving) return
     setSaving(true)
     setSaveStatus('idle')
     try {
       const supabase = createClient()
-      const { error } = await supabase.from('dynamometer_results').insert({
+      const payload = {
         user_id: userId,
         patient_id: selectedPatient || null,
         unit,
         notes: notes || null,
         muscle_results: muscleResults,
-      })
+        ...(evalDate.current ? { evaluation_date: evalDate.current } : {}),
+      }
+      const { error } = editId
+        ? await supabase.from('dynamometer_results').update(payload).eq('id', editId)
+        : await supabase.from('dynamometer_results').insert(payload)
       if (error) throw error
       setSaveStatus('saved')
+      // Si vino del calendario, volver ahí (el marcador aparece en ese día).
+      if (returnTo) { router.push(returnTo); router.refresh(); return }
     } catch (e) {
       console.error(e)
       setSaveStatus('error')
@@ -133,6 +171,22 @@ export default function DinamometroClient({ userId }: { userId: string }) {
 
   return (
     <div className="max-w-[900px] space-y-6">
+
+      {/* Contexto cuando se llega desde el calendario del plan */}
+      {returnTo && (
+        <div className="flex items-center justify-between gap-3 bg-bg-secondary border-[0.5px] border-accent/40 rounded-xl px-4 py-3">
+          <span className="text-[13px] text-text-secondary">
+            {editId ? 'Editando una' : 'Nueva'} evaluación de dinamometría
+            {evalDate.current ? ` del ${new Date(evalDate.current + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })}` : ''}
+            {' '}· se guarda en el calendario del paciente.
+          </span>
+          <button onClick={() => router.push(returnTo)} className="text-[13px] text-accent hover:opacity-80 whitespace-nowrap">← Volver al calendario</button>
+        </div>
+      )}
+
+      {loadingEdit && (
+        <div className="text-[13px] text-text-secondary">Cargando evaluación…</div>
+      )}
 
       {/* Controls */}
       <div className="flex flex-wrap gap-4 items-center bg-bg-secondary border-[0.5px] border-border rounded-xl p-4">
@@ -268,7 +322,7 @@ export default function DinamometroClient({ userId }: { userId: string }) {
             disabled={saving || !hasAnyData}
             className="bg-accent text-bg-primary px-6 py-2.5 rounded-lg text-[14px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
           >
-            {saving ? 'Guardando...' : 'Guardar evaluación'}
+            {saving ? 'Guardando...' : editId ? 'Actualizar evaluación' : 'Guardar evaluación'}
           </button>
         </div>
       </div>

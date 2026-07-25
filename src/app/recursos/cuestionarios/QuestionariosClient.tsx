@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import {
   SPADI_PAIN,
@@ -337,7 +338,8 @@ function LikertItem({
 
 // ─── Main Component ────────────────────────────────────────────────────────
 
-export default function QuestionariosClient({ userId, lockedPatient }: { userId: string; lockedPatient?: { id: string; name: string } | null }) {
+export default function QuestionariosClient({ userId, lockedPatient, initialDate, returnTo }: { userId: string; lockedPatient?: { id: string; name: string } | null; initialDate?: string | null; returnTo?: string | null }) {
+  const router = useRouter()
   const [selected, setSelected] = useState<string | null>(null)
   const [result, setResult] = useState<QuestionnaireResult | null>(null)
   const [saving, setSaving] = useState(false)
@@ -486,9 +488,12 @@ export default function QuestionariosClient({ userId, lockedPatient }: { userId:
         score: result.score,
         interpretation: result.interpretation,
         result_data: result.result_data,
+        ...(initialDate ? { evaluation_date: initialDate } : {}),
       })
       if (error) throw error
       setSaveSuccess(true)
+      // Si vino del calendario del plan, volver ahí (el marcador aparece en ese día).
+      if (returnTo) { router.push(returnTo); router.refresh() }
     } catch (e) {
       console.error(e)
     } finally {
@@ -767,7 +772,18 @@ export default function QuestionariosClient({ userId, lockedPatient }: { userId:
 
   if (!selected) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div>
+        {returnTo && (
+          <div className="flex items-center justify-between gap-3 bg-bg-secondary border-[0.5px] border-accent/40 rounded-xl px-4 py-3 mb-4">
+            <span className="text-[13px] text-text-secondary">
+              Elegí un cuestionario para cargarlo
+              {initialDate ? ` el ${new Date(initialDate + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })}` : ''}
+              {' '}en el calendario del paciente.
+            </span>
+            <button onClick={() => router.push(returnTo)} className="text-[13px] text-accent hover:opacity-80 whitespace-nowrap">← Volver al calendario</button>
+          </div>
+        )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {QUESTIONNAIRES.map(q => (
           <button
             key={q.id}
@@ -789,6 +805,7 @@ export default function QuestionariosClient({ userId, lockedPatient }: { userId:
             </div>
           </button>
         ))}
+        </div>
       </div>
     )
   }

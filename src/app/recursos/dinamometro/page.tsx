@@ -8,10 +8,15 @@ export const metadata = {
   title: 'Dinamómetro | Reason',
 }
 
-export default async function DinamometroPage() {
+export default async function DinamometroPage({ searchParams }: { searchParams: { paciente?: string; date?: string; edit?: string; from?: string } }) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+
+  // Retorno seguro al calendario del plan (solo rutas internas conocidas).
+  const returnTo = searchParams?.from && /^\/dashboard\/ejercicios\/plan\/[\w-]+$/.test(searchParams.from)
+    ? searchParams.from
+    : null
 
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
@@ -27,7 +32,13 @@ export default async function DinamometroPage() {
             y ratio H:Q. Los resultados se guardan en la ficha del paciente.
           </p>
         </div>
-        <DinamometroClient userId={user.id} />
+        <DinamometroClient
+          userId={user.id}
+          initialPatient={searchParams?.paciente ?? null}
+          initialDate={searchParams?.date ?? null}
+          editId={searchParams?.edit ?? null}
+          returnTo={returnTo}
+        />
       </main>
     </div>
   )

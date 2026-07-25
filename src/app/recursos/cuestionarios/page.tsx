@@ -11,7 +11,7 @@ export const metadata = {
 export default async function CuestionariosPage({
   searchParams,
 }: {
-  searchParams: { paciente?: string }
+  searchParams: { paciente?: string; date?: string; from?: string }
 }) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -30,6 +30,11 @@ export default async function CuestionariosPage({
     if (p) lockedPatient = p
   }
 
+  // Retorno seguro al calendario del plan (solo rutas internas conocidas).
+  const returnTo = searchParams?.from && /^\/dashboard\/ejercicios\/plan\/[\w-]+$/.test(searchParams.from)
+    ? searchParams.from
+    : null
+
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
       <Header />
@@ -44,7 +49,7 @@ export default async function CuestionariosPage({
             Completá el formulario y guardá el resultado vinculado al paciente.
           </p>
         </div>
-        <QuestionariosClient userId={user.id} lockedPatient={lockedPatient} />
+        <QuestionariosClient userId={user.id} lockedPatient={lockedPatient} initialDate={searchParams?.date ?? null} returnTo={returnTo} />
       </main>
     </div>
   )
