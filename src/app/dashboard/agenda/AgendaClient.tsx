@@ -6,6 +6,7 @@ import TurnoModal from './TurnoModal'
 import CloneTurnoModal from './CloneTurnoModal'
 import AgendaSettings from './AgendaSettings'
 import MiniCalendar from './MiniCalendar'
+import QuickSessionSheet from '@/components/QuickSessionSheet'
 
 interface Turno {
   id: string
@@ -424,6 +425,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
     defaultStatus?: string
   }>({ open: false })
   const [cloneModal, setCloneModal] = useState<Turno | null>(null)
+  const [sessionSheet, setSessionSheet] = useState<{ patientId: string; patientName: string; turnoId: string } | null>(null)
   // Menú contextual de un turno. Guardamos el rectángulo del chip clickeado
   // (no un solo punto) para poder abrir el menú hacia abajo o hacia arriba según
   // el espacio disponible, y medirlo después de montarlo.
@@ -1015,6 +1017,15 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
             }}
           >
             <p className="px-3 py-1.5 text-[11px] text-text-tertiary truncate border-b-[0.5px] border-border">{quickMenu.turno.patient_name}</p>
+            {/* Registrar sesión: solo turnos con paciente vinculado y editables */}
+            {canEdit && !quickMenu.turno.is_blocked && quickMenu.turno.patient_id && (
+              <button
+                onClick={() => { setSessionSheet({ patientId: quickMenu.turno.patient_id!, patientName: quickMenu.turno.patient_name, turnoId: quickMenu.turno.id }); setQuickMenu(null) }}
+                className="w-full text-left px-3 py-2 text-[13px] text-accent font-medium hover:bg-bg-primary transition-colors"
+              >
+                + Registrar sesión
+              </button>
+            )}
             {canEdit && (
               <button
                 onClick={() => { setQuickMenu(null); openEdit(quickMenu.turno) }}
@@ -1123,6 +1134,18 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
           orgId={orgId}
           onClose={() => setCloneModal(null)}
           onSaved={() => { setCloneModal(null); fetchTurnos() }}
+        />
+      )}
+
+      {/* REGISTRO RÁPIDO DE SESIÓN (desde el turno) */}
+      {sessionSheet && (
+        <QuickSessionSheet
+          patientId={sessionSheet.patientId}
+          patientName={sessionSheet.patientName}
+          turnoId={sessionSheet.turnoId}
+          canMarkPresent
+          onClose={() => setSessionSheet(null)}
+          onSaved={() => fetchTurnos()}
         />
       )}
 
