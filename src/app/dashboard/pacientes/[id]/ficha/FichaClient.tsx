@@ -248,11 +248,11 @@ export default function FichaClient({
   // Navegación pendiente cuando hay cambios sin guardar (evita perder la ficha).
   const [pendingNav, setPendingNav] = useState<string | null>(null)
 
-  const handleSave = async (): Promise<boolean> => {
+  const persistFicha = async (data: FichaData): Promise<boolean> => {
     setSaveStatus('saving')
     const { error } = await supabaseRef.current
       .from('patient_fichas')
-      .update({ fecha: ficha.fecha || null, ficha_data: ficha })
+      .update({ fecha: data.fecha || null, ficha_data: data })
       .eq('id', initialFicha.id)
     if (error) {
       setSaveStatus('error')
@@ -263,6 +263,7 @@ export default function FichaClient({
     setHasChanges(false)
     return true
   }
+  const handleSave = (): Promise<boolean> => persistFicha(ficha)
 
   // Guard de "cambios sin guardar": interceptamos el cierre/recarga de la
   // pestaña y los clics en enlaces internos para no perder lo escrito en la ficha.
@@ -334,7 +335,7 @@ export default function FichaClient({
     setGonioValues(prev => ({ ...prev, [key]: value }))
   }
 
-  const handleSaveGonio = () => {
+  const handleSaveGonio = async () => {
     if (!selectedRegion) return
     const record: GonioRecord = {
       id: crypto.randomUUID(),
@@ -344,19 +345,21 @@ export default function FichaClient({
       pain: null,
       notes: gonioNotes,
     }
-    setFicha(prev => ({ ...prev, goniometria: [record, ...(prev.goniometria ?? [])] }))
-    setHasChanges(true)
-    setSaveStatus('idle')
+    // Persistimos de inmediato: "Guardar" en goniometría guarda de verdad, sin
+    // depender del botón global de la ficha.
+    const next = { ...ficha, goniometria: [record, ...(ficha.goniometria ?? [])] }
+    setFicha(next)
     setShowGonioForm(false)
     setGonioValues({})
     setGonioNotes('')
     setGonioDate(new Date().toISOString().split('T')[0])
+    await persistFicha(next)
   }
 
-  const handleDeleteGonio = (id: string) => {
-    setFicha(prev => ({ ...prev, goniometria: (prev.goniometria ?? []).filter(r => r.id !== id) }))
-    setHasChanges(true)
-    setSaveStatus('idle')
+  const handleDeleteGonio = async (id: string) => {
+    const next = { ...ficha, goniometria: (ficha.goniometria ?? []).filter(r => r.id !== id) }
+    setFicha(next)
+    await persistFicha(next)
   }
 
   // ─── Respuesta al movimiento (lista rápida, sin goniometría) ─────────────────
