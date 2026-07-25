@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
-import { PROTOCOL_OPTIONS, formatDate } from './protocols/shared'
+import { PROTOCOL_OPTIONS } from './protocols/shared'
 import HamstringProtocol from './protocols/HamstringProtocol'
 import AnkleProtocol from './protocols/AnkleProtocol'
 import PfpProtocol from './protocols/PfpProtocol'
@@ -15,6 +15,7 @@ import { RtsEvaluation } from './rtsUtils'
 interface SavedEval {
   id: string
   created_at: string
+  evaluation_date?: string | null
   protocol_type: string
   affected_side: string
   notes: string | null
@@ -37,6 +38,31 @@ interface Props {
 
 function protocolLabel(type: string) {
   return PROTOCOL_OPTIONS.find(p => p.value === type)?.label ?? type
+}
+
+function sideLabel(side: string | null) {
+  if (!side) return ''
+  if (side === 'left') return 'Izquierdo'
+  if (side === 'right') return 'Derecho'
+  return side
+}
+
+// Fecha con la que se ubica la evaluación: la del día del calendario si existe,
+// si no la de creación. La devolvemos como Date para ordenar y formatear.
+function effectiveDate(ev: SavedEval): Date {
+  // evaluation_date viene como 'YYYY-MM-DD' (date puro): lo interpretamos en hora
+  // local para no mostrar un día menos en Argentina (UTC-3).
+  if (ev.evaluation_date) return new Date(ev.evaluation_date + 'T00:00:00')
+  return new Date(ev.created_at)
+}
+
+function formatEvalDate(ev: SavedEval) {
+  return effectiveDate(ev).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+// Orden por fecha efectiva descendente (la evaluación más reciente arriba).
+function byDateDesc(a: SavedEval, b: SavedEval) {
+  return effectiveDate(b).getTime() - effectiveDate(a).getTime()
 }
 
 export default function RtsContainer({ patient, userId, lastDynamo, lastKoos, lastAclRsi, previousEvals, initialEvalId, initialProtocol, initialDate }: Props) {
@@ -123,7 +149,7 @@ export default function RtsContainer({ patient, userId, lastDynamo, lastKoos, la
             {showHistory && (
               <div className="border-[0.5px] border-border rounded-xl overflow-hidden mb-6">
                 <div className="divide-y-[0.5px] divide-border">
-                  {evalsList.map(ev => (
+                  {[...evalsList].sort(byDateDesc).map(ev => (
                     <div key={ev.id} className="flex items-center hover:bg-bg-secondary transition-colors">
                       <button
                         onClick={() => loadEval(ev)}
@@ -131,7 +157,7 @@ export default function RtsContainer({ patient, userId, lastDynamo, lastKoos, la
                       >
                         <div>
                           <div className="text-[13px] font-medium text-text-primary">{protocolLabel(ev.protocol_type)}</div>
-                          <div className="text-[12px] text-text-secondary mt-0.5">{formatDate(ev.created_at)}{ev.affected_side ? ` · ${ev.affected_side === 'left' ? 'Izquierdo' : ev.affected_side === 'right' ? 'Derecho' : ev.affected_side}` : ''}</div>
+                          <div className="text-[12px] text-text-secondary mt-0.5">{formatEvalDate(ev)}{ev.affected_side ? ` · ${sideLabel(ev.affected_side)}` : ''}</div>
                         </div>
                         <span className="text-[12px] text-accent shrink-0">Cargar →</span>
                       </button>
@@ -190,16 +216,16 @@ export default function RtsContainer({ patient, userId, lastDynamo, lastKoos, la
 
   // Protocol history (shown inline when requested)
   const ProtocolHistory = () => {
-    const protocolEvals = evalsList.filter(e => e.protocol_type === activeProtocol)
+    const protocolEvals = evalsList.filter(e => e.protocol_type === activeProtocol).sort(byDateDesc)
     if (!showHistory || protocolEvals.length === 0) return null
     return (
       <div className="border-[0.5px] border-border rounded-xl overflow-hidden mb-8">
         <div className="divide-y-[0.5px] divide-border">
           {protocolEvals.map(ev => (
             <div key={ev.id} className="flex items-center hover:bg-bg-secondary transition-colors">
-              <button onClick={() => loadEval(ev)} className="flex-1 text-left px-4 py-3 flex justify-between items-center">
-                <div className="text-[13px] text-text-secondary">{formatDate(ev.created_at)}</div>
-                <span className="text-[12px] text-accent">Cargar →</span>
+              <button onClick={() => loadEval(ev)} className="flex-1 text-left px-4 py-3 flex justify-between items-center gap-4">
+                <div className="text-[13px] text-text-secondary">{formatEvalDate(ev)}{ev.affected_side ? ` · ${sideLabel(ev.affected_side)}` : ''}</div>
+                <span className="text-[12px] text-accent shrink-0">Cargar →</span>
               </button>
               <button
                 onClick={() => handleDelete(ev.id)}
