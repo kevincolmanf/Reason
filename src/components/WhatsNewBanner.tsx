@@ -50,7 +50,12 @@ export default function WhatsNewBanner() {
             {expanded ? 'Cerrar' : 'Ver más'}
           </button>
           <button
-            onClick={() => setVisible(false)}
+            onClick={() => {
+              // Persistir el cierre: sin esto el banner reaparecía en cada login
+              // durante 24h (la X solo lo ocultaba en memoria).
+              try { localStorage.setItem(BANNER_KEY, 'dismissed') } catch { /* noop */ }
+              setVisible(false)
+            }}
             className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-accent/15 text-text-secondary hover:text-text-primary transition-colors"
             aria-label="Cerrar"
           >

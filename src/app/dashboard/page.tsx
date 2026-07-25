@@ -4,7 +4,6 @@ import Link from 'next/link'
 import ContentCard from '@/components/ContentCard'
 import Header from '@/components/Header'
 import PlanningReminderBanner from '@/components/PlanningReminderBanner'
-import WhatsNewBanner from '@/components/WhatsNewBanner'
 import { getActiveContext } from '@/lib/context'
 
 function CategoryCard({ title, slug, desc }: { title: string, slug: string, desc: string }) {
@@ -172,7 +171,6 @@ export default async function DashboardPage() {
           </div>
         )}
 
-        <WhatsNewBanner />
         <PlanningReminderBanner patients={planningAlerts} />
 
         {/* PACIENTES — contexto activo */}
