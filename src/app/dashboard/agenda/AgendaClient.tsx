@@ -909,8 +909,8 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
 
             <div className="relative overflow-y-auto" style={{ maxHeight: '640px' }}>
               {loading && (
-                <div className="absolute inset-0 z-10 flex items-center justify-center bg-bg-primary/60">
-                  <span className="text-[13px] text-text-secondary">Cargando...</span>
+                <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 pointer-events-none bg-bg-secondary/95 border-[0.5px] border-border rounded-full px-3 py-1 shadow-sm">
+                  <span className="text-[12px] text-text-secondary">Actualizando…</span>
                 </div>
               )}
               <div className="flex" style={{ height: `${GRID_HEIGHT}px` }}>
@@ -958,8 +958,8 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
 
             <div className="relative overflow-y-auto" style={{ maxHeight: '640px' }}>
               {loading && (
-                <div className="absolute inset-0 z-10 flex items-center justify-center bg-bg-primary/60">
-                  <span className="text-[13px] text-text-secondary">Cargando...</span>
+                <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 pointer-events-none bg-bg-secondary/95 border-[0.5px] border-border rounded-full px-3 py-1 shadow-sm">
+                  <span className="text-[12px] text-text-secondary">Actualizando…</span>
                 </div>
               )}
               <div className="grid" style={{ gridTemplateColumns: `48px repeat(${weekDays.length}, 1fr)` }}>
