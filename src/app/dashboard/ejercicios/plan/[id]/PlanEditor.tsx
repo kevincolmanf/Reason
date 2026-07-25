@@ -5,7 +5,7 @@ import { createClient } from '@/utils/supabase/client'
 import { v4 as uuidv4 } from 'uuid'
 import jsPDF from 'jspdf'
 import QRCode from 'qrcode'
-import { eventMeta, type PatientEvent } from '@/lib/patientEvents'
+import { EVENT_TYPES, eventMeta, type PatientEvent } from '@/lib/patientEvents'
 
 // ─── Interfaces ────────────────────────────────────────────────────────────────
 
@@ -151,7 +151,41 @@ function formatDateHeader(d: Date): string {
 
 export default function PlanEditor({ initialPlan, userId, initialEvents = [] }: { initialPlan: ExercisePlan, userId: string, initialEvents?: PatientEvent[] }) {
   const [plan, setPlan] = useState<ExercisePlan>(initialPlan)
-  const eventsForDay = (d: string) => initialEvents.filter(e => e.event_date === d)
+
+  // Hitos del tratamiento sobre el calendario, editables (click en la banderita).
+  const [events, setEvents] = useState<PatientEvent[]>(initialEvents)
+  const eventsForDay = (d: string) => events.filter(e => e.event_date === d)
+  const [editEvent, setEditEvent] = useState<PatientEvent | null>(null)
+  const [edType, setEdType] = useState('evaluacion')
+  const [edDate, setEdDate] = useState('')
+  const [edTitle, setEdTitle] = useState('')
+  const [edNote, setEdNote] = useState('')
+  const [edSaving, setEdSaving] = useState(false)
+
+  const openEditEvent = (ev: PatientEvent) => {
+    setEditEvent(ev); setEdType(ev.type); setEdDate(ev.event_date); setEdTitle(ev.title ?? ''); setEdNote(ev.note ?? '')
+  }
+  const saveEditEvent = async () => {
+    if (!editEvent || !edDate) return
+    setEdSaving(true)
+    const { data, error } = await supabaseRef.current
+      .from('patient_events')
+      .update({ type: edType, event_date: edDate, title: edTitle.trim() || null, note: edNote.trim() || null })
+      .eq('id', editEvent.id)
+      .select('id, event_date, type, title, note')
+      .single()
+    if (!error && data) {
+      setEvents(prev => prev.map(e => e.id === editEvent.id ? (data as PatientEvent) : e))
+      setEditEvent(null)
+    }
+    setEdSaving(false)
+  }
+  const deleteEditEvent = async () => {
+    if (!editEvent) return
+    setEvents(prev => prev.filter(e => e.id !== editEvent.id))
+    await supabaseRef.current.from('patient_events').delete().eq('id', editEvent.id)
+    setEditEvent(null)
+  }
   const [activeTab, setActiveTab] = useState<'calendar' | 'logs'>('calendar')
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved')
 
@@ -1071,11 +1105,17 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [] }: 
                   <span className={`text-[13px] font-medium leading-none mb-1 ${isLogged && !isSelected ? 'text-green-500' : isToday ? 'text-accent' : 'text-text-primary'}`}>
                     {day.getDate()}
                   </span>
-                  {/* Hitos del tratamiento en ese día (banderitas de color) */}
+                  {/* Hitos del tratamiento en ese día — click para editar/borrar */}
                   {eventsForDay(dateStr).map(ev => {
                     const meta = eventMeta(ev.type)
                     return (
-                      <span key={ev.id} className="flex items-center gap-1 rounded px-1 py-0.5 mb-0.5" style={{ backgroundColor: meta.color + '26' }} title={ev.title || meta.label}>
+                      <span
+                        key={ev.id}
+                        onClick={e => { e.stopPropagation(); openEditEvent(ev) }}
+                        className="flex items-center gap-1 rounded px-1 py-0.5 mb-0.5 cursor-pointer hover:brightness-125 transition-all"
+                        style={{ backgroundColor: meta.color + '26' }}
+                        title={`${ev.title || meta.label} — tocar para editar`}
+                      >
                         <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: meta.color }} />
                         <span className="text-[9px] font-medium truncate leading-tight" style={{ color: meta.color }}>{ev.title || meta.label}</span>
                       </span>
@@ -1593,6 +1633,52 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [] }: 
                   </button>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL EDITAR HITO */}
+      {editEvent && (
+        <div className="fixed inset-0 bg-bg-primary/90 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) setEditEvent(null) }}>
+          <div className="bg-bg-secondary border-[0.5px] border-border rounded-2xl w-full max-w-[420px] shadow-xl p-6">
+            <h3 className="text-[16px] font-medium mb-4">Editar hito</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-2">Tipo</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {EVENT_TYPES.map(t => (
+                    <button key={t.value} onClick={() => setEdType(t.value)}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[12px] font-medium border-[0.5px] transition-colors ${edType === t.value ? 'text-white' : 'bg-bg-primary border-border text-text-secondary hover:text-text-primary'}`}
+                      style={edType === t.value ? { backgroundColor: t.color, borderColor: t.color } : {}}>
+                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: edType === t.value ? '#fff' : t.color }} />
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Fecha</label>
+                  <input type="date" value={edDate} onChange={e => setEdDate(e.target.value)} className="w-full bg-bg-primary border-[0.5px] border-border rounded-lg p-2.5 text-[14px] focus:outline-none focus:border-accent" />
+                </div>
+                <div>
+                  <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Título (opcional)</label>
+                  <input type="text" value={edTitle} onChange={e => setEdTitle(e.target.value)} className="w-full bg-bg-primary border-[0.5px] border-border rounded-lg p-2.5 text-[14px] focus:outline-none focus:border-accent" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Nota (opcional)</label>
+                <input type="text" value={edNote} onChange={e => setEdNote(e.target.value)} className="w-full bg-bg-primary border-[0.5px] border-border rounded-lg p-2.5 text-[14px] focus:outline-none focus:border-accent" />
+              </div>
+            </div>
+            <div className="flex items-center gap-2 mt-5">
+              <button onClick={saveEditEvent} disabled={edSaving || !edDate}
+                className="flex-1 bg-accent text-bg-primary py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity">
+                {edSaving ? 'Guardando…' : 'Guardar'}
+              </button>
+              <button onClick={deleteEditEvent} className="px-4 py-2.5 text-[13px] text-warning hover:opacity-80 transition-opacity">Borrar</button>
+              <button onClick={() => setEditEvent(null)} className="px-3 py-2.5 text-[13px] text-text-secondary hover:text-text-primary">Cancelar</button>
             </div>
           </div>
         </div>
