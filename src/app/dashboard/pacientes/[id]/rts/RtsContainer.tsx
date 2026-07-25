@@ -31,13 +31,15 @@ interface Props {
   lastAclRsi: { score: number | null; created_at: string } | null
   previousEvals: SavedEval[]
   initialEvalId?: string | null
+  initialProtocol?: string | null
+  initialDate?: string | null
 }
 
 function protocolLabel(type: string) {
   return PROTOCOL_OPTIONS.find(p => p.value === type)?.label ?? type
 }
 
-export default function RtsContainer({ patient, userId, lastDynamo, lastKoos, lastAclRsi, previousEvals, initialEvalId }: Props) {
+export default function RtsContainer({ patient, userId, lastDynamo, lastKoos, lastAclRsi, previousEvals, initialEvalId, initialProtocol, initialDate }: Props) {
   const [activeProtocol, setActiveProtocol] = useState<string>('')
   const [evalsList, setEvalsList] = useState<SavedEval[]>(previousEvals)
   const [loadedEval, setLoadedEval] = useState<SavedEval | null>(null)
@@ -47,15 +49,23 @@ export default function RtsContainer({ patient, userId, lastDynamo, lastKoos, la
 
   // Abrir directo una evaluación cuando se llega desde el calendario (?eval=<id>).
   useEffect(() => {
-    if (!initialEvalId) return
-    const ev = previousEvals.find(e => e.id === initialEvalId)
-    if (ev) { setLoadedEval(ev); setActiveProtocol(ev.protocol_type); setShowHistory(false) }
+    if (initialEvalId) {
+      const ev = previousEvals.find(e => e.id === initialEvalId)
+      if (ev) { setLoadedEval(ev); setActiveProtocol(ev.protocol_type); setShowHistory(false) }
+    } else if (initialProtocol) {
+      // Nueva evaluación desde el calendario: abrir el protocolo directamente.
+      setActiveProtocol(initialProtocol)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialEvalId])
+  }, [initialEvalId, initialProtocol])
 
   // Al guardar traemos la fila completa: si solo agregáramos el id, la entrada
   // del historial quedaría sin form_data y al recargarla el formulario abría vacío.
   const handleSaved = async (id: string, protocol: string) => {
+    // Si la evaluación se creó desde un día del calendario, le fijamos esa fecha.
+    if (initialDate) {
+      await supabase.current.from('rts_evaluations').update({ evaluation_date: initialDate }).eq('id', id)
+    }
     const { data } = await supabase.current
       .from('rts_evaluations')
       .select('*')

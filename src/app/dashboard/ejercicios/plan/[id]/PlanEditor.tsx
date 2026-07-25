@@ -150,17 +150,31 @@ function formatDateHeader(d: Date): string {
 
 // ─── Component ─────────────────────────────────────────────────────────────────
 
-interface RtsEval { id: string; protocol_type: string; created_at: string; affected_side: string | null }
+interface RtsEval { id: string; protocol_type: string; created_at: string; evaluation_date?: string | null; affected_side: string | null }
 const RTS_LABELS: Record<string, string> = {
   lca: 'LCA', hamstring: 'Isquios', ankle: 'Tobillo', pfp: 'Femoropatelar',
   tendinopathy: 'Tendinopatía', groin: 'Inguinal', shoulder: 'Hombro',
 }
+const RTS_PROTOCOLS: { value: string; label: string }[] = [
+  { value: 'lca', label: 'LCA' },
+  { value: 'hamstring', label: 'Isquiotibiales' },
+  { value: 'ankle', label: 'Tobillo' },
+  { value: 'pfp', label: 'Femoropatelar' },
+  { value: 'tendinopathy', label: 'Tendinopatía' },
+  { value: 'groin', label: 'Inguinal' },
+  { value: 'shoulder', label: 'Hombro' },
+]
 const RTS_COLOR = '#C27B54' // terracota — coincide con el hito "RTP"
 
 export default function PlanEditor({ initialPlan, userId, initialEvents = [], rtsEvals = [] }: { initialPlan: ExercisePlan, userId: string, initialEvents?: PatientEvent[], rtsEvals?: RtsEval[] }) {
   const router = useRouter()
   const [plan, setPlan] = useState<ExercisePlan>(initialPlan)
-  const rtsForDay = (d: string) => rtsEvals.filter(r => (r.created_at ?? '').slice(0, 10) === d)
+  // Ubicación en el calendario: por la fecha elegida (evaluation_date) o, si no
+  // tiene, por la fecha de creación.
+  const rtsForDay = (d: string) => rtsEvals.filter(r => ((r.evaluation_date ?? r.created_at ?? '').slice(0, 10)) === d)
+  const [newRtsOpen, setNewRtsOpen] = useState(false)
+  const [newRtsProtocol, setNewRtsProtocol] = useState('lca')
+  const [newRtsDate, setNewRtsDate] = useState('')
 
   // Hitos del tratamiento sobre el calendario, editables (click en la banderita).
   const [events, setEvents] = useState<PatientEvent[]>(initialEvents)
@@ -1077,8 +1091,8 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
             </button>
           </div>
 
-          {/* Acciones del calendario: duplicar semana y agregar hito */}
-          <div className="flex justify-center gap-2 mb-4">
+          {/* Acción de semana (las de día —sesión/hito/RTS— viven en el panel del día) */}
+          <div className="flex justify-center mb-4">
             <button
               onClick={() => { setDupState('idle'); setShowDupWeek(true) }}
               disabled={sourceWeekSessions.length === 0}
@@ -1088,16 +1102,6 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
               Duplicar semana
             </button>
-            {plan.patient_id && (
-              <button
-                onClick={openAddEvent}
-                title="Agregar un hito del tratamiento (evaluación, RTP, alta…)"
-                className="inline-flex items-center gap-2 text-[12px] font-medium px-3 py-1.5 rounded-lg border-[0.5px] border-border bg-bg-secondary text-text-secondary hover:text-text-primary hover:border-accent transition-colors"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                Agregar hito
-              </button>
-            )}
           </div>
 
           {/* Grilla */}
@@ -1246,20 +1250,43 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
                     >
                       Eliminar sesión
                     </button>
+
+                    {/* Hito / RTS también en un día que ya tiene sesión */}
+                    <span className="w-px h-4 bg-border mx-0.5" />
+                    <button onClick={openAddEvent} className="bg-bg-secondary border-[0.5px] border-border text-text-secondary px-3 py-1.5 rounded-lg text-[12px] hover:text-text-primary hover:border-accent transition-colors">+ Hito</button>
+                    <button onClick={() => { setNewRtsDate(selectedDate ?? todayStr); setNewRtsProtocol('lca'); setNewRtsOpen(true) }} className="bg-bg-secondary border-[0.5px] px-3 py-1.5 rounded-lg text-[12px] transition-colors" style={{ borderColor: RTS_COLOR + '66', color: RTS_COLOR }}>+ RTS</button>
                   </div>
                 ) : null}
               </div>
 
               {!selectedSession ? (
-                /* Sin sesión: botón crear */
-                <div className="text-center py-12 bg-bg-secondary border-[0.5px] border-dashed border-border rounded-xl">
-                  <p className="text-[14px] text-text-secondary mb-4">No hay sesión para este día.</p>
-                  <button
-                    onClick={() => createSession(selectedDate)}
-                    className="bg-accent text-bg-primary px-5 py-2.5 rounded-lg text-[14px] font-medium hover:opacity-90 transition-opacity"
-                  >
-                    Crear sesión para este día
-                  </button>
+                /* Sin sesión: opciones para este día — sesión, hito o evaluación RTS */
+                <div className="py-10 px-6 bg-bg-secondary border-[0.5px] border-dashed border-border rounded-xl">
+                  <p className="text-[13px] text-text-secondary mb-4 text-center">¿Qué querés cargar en este día?</p>
+                  <div className="flex flex-wrap justify-center gap-2.5">
+                    <button
+                      onClick={() => createSession(selectedDate)}
+                      className="inline-flex items-center gap-2 bg-accent text-bg-primary px-4 py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                      Crear sesión
+                    </button>
+                    <button
+                      onClick={openAddEvent}
+                      className="inline-flex items-center gap-2 bg-bg-primary border-[0.5px] border-border text-text-primary px-4 py-2.5 rounded-lg text-[13px] font-medium hover:border-accent transition-colors"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+                      Agregar hito
+                    </button>
+                    <button
+                      onClick={() => { setNewRtsDate(selectedDate ?? todayStr); setNewRtsProtocol('lca'); setNewRtsOpen(true) }}
+                      className="inline-flex items-center gap-2 bg-bg-primary border-[0.5px] px-4 py-2.5 rounded-lg text-[13px] font-medium transition-colors"
+                      style={{ borderColor: RTS_COLOR + '66', color: RTS_COLOR }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                      Agregar RTS
+                    </button>
+                  </div>
                 </div>
               ) : (
                 /* Con sesión: editor */
@@ -1677,6 +1704,37 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
                   </button>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL NUEVA EVALUACIÓN RTS */}
+      {newRtsOpen && (
+        <div className="fixed inset-0 bg-bg-primary/90 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) setNewRtsOpen(false) }}>
+          <div className="bg-bg-secondary border-[0.5px] border-border rounded-2xl w-full max-w-[420px] shadow-xl p-6">
+            <h3 className="text-[16px] font-medium mb-1">Nueva evaluación RTS</h3>
+            <p className="text-[13px] text-text-secondary mb-4">Elegí el protocolo y el día. Se abre el formulario completo y la evaluación queda en ese día del calendario.</p>
+            <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-2">Protocolo</label>
+            <div className="flex flex-wrap gap-1.5 mb-4">
+              {RTS_PROTOCOLS.map(p => (
+                <button key={p.value} onClick={() => setNewRtsProtocol(p.value)}
+                  className={`px-3 py-1.5 rounded-full text-[12px] font-medium border-[0.5px] transition-colors ${newRtsProtocol === p.value ? 'text-white' : 'bg-bg-primary border-border text-text-secondary hover:text-text-primary'}`}
+                  style={newRtsProtocol === p.value ? { backgroundColor: RTS_COLOR, borderColor: RTS_COLOR } : {}}>
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Día</label>
+            <input type="date" value={newRtsDate} onChange={e => setNewRtsDate(e.target.value)}
+              className="w-full bg-bg-primary border-[0.5px] border-border rounded-lg p-2.5 text-[14px] focus:outline-none focus:border-accent mb-5" />
+            <div className="flex gap-2">
+              <button
+                onClick={() => { const d = newRtsDate || todayStr; setNewRtsOpen(false); router.push(`/dashboard/pacientes/${plan.patient_id}/rts?protocol=${newRtsProtocol}&date=${d}`) }}
+                className="flex-1 bg-accent text-bg-primary py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity">
+                Crear evaluación
+              </button>
+              <button onClick={() => setNewRtsOpen(false)} className="px-4 py-2.5 text-[13px] text-text-secondary hover:text-text-primary">Cancelar</button>
             </div>
           </div>
         </div>
