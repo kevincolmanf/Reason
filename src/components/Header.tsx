@@ -27,8 +27,6 @@ export default async function Header() {
 
     ctx = activeCtx
     const role = userDataResult.data?.role
-    const isOwner = role === 'admin' || role === 'pro'
-    isProOrAdmin = isOwner
     const isOrgCtx = ctx.type === 'org' && !!ctx.orgId
 
     type MemberRow = { org_id: string; agenda_access: boolean | null; organizations: { id: string; name: string } | null }
@@ -39,6 +37,12 @@ export default async function Header() {
       .map(r => r.organizations)
       .filter((o): o is { id: string; name: string } => o !== null)
       .filter(o => !ownedOrgs.some(owned => owned.id === o.id))
+
+    // Analíticas/CRM (métricas del centro): solo el dueño real de una organización
+    // o un admin. Coincide con la protección de la propia página /account/crm
+    // (owner_id === user.id). Antes se basaba en role === 'pro', y un integrante
+    // con ese role veía el link (aunque la página lo expulsara).
+    isProOrAdmin = role === 'admin' || ownedOrgs.length > 0
 
     // En una org que NO es propia, el usuario es integrante: el acceso a la agenda
     // lo define agenda_access, no el role personal (que podría ser 'pro' propagado

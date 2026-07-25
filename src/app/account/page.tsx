@@ -17,6 +17,14 @@ export default async function AccountPage() {
     .eq('id', user.id)
     .single()
 
+  // Las métricas del centro son solo del dueño real de una organización (o admin).
+  // No alcanza con role === 'pro': un integrante mal promovido lo tendría.
+  const { data: ownedOrgs } = await supabase
+    .from('organizations')
+    .select('id')
+    .eq('owner_id', user.id)
+  const canSeeMetrics = userData?.role === 'admin' || (ownedOrgs?.length ?? 0) > 0
+
   const joinDate = new Date(user.created_at).toLocaleDateString('es-AR', {
     year: 'numeric',
     month: 'long',
@@ -89,7 +97,7 @@ export default async function AccountPage() {
               </Link>
             </div>
           )}
-          {(userData?.role === 'pro' || userData?.role === 'admin') && (
+          {canSeeMetrics && (
             <div className="p-8 bg-bg-primary flex justify-between items-center">
               <div>
                 <h2 className="text-[16px] font-medium mb-1">Panel de gestión</h2>
