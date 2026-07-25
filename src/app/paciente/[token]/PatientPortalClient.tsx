@@ -31,7 +31,7 @@ interface PlanSession {
 }
 
 interface Props {
-  patient: { id: string; name: string; user_id: string }
+  patient: { id: string; name: string; user_id: string; follow_up_mode?: string | null }
   token: string; recentSessions: RecentSession[]; scheduledSessions: ScheduledItem[]
   planSessions: PlanSession[]
 }
@@ -166,6 +166,9 @@ function groupSessionsByWeek(sessions: ScheduledItem[], today: string): WeekGrou
 
 export default function PatientPortalClient({ patient, token, recentSessions, scheduledSessions, planSessions }: Props) {
   const [showHelp, setShowHelp] = useState(false)
+  // Paciente presencial: no se le pide registrar; su kinesiólogo lo hace en el
+  // centro. El portal le sirve para ver el plan y los videos.
+  const isPresencial = (patient.follow_up_mode ?? 'presencial') === 'presencial'
 
   // Sesión de hoy y próxima sesión
   const todaySession = useMemo(() => scheduledSessions.find(s => s.scheduled_date === todayStr()) ?? null, [scheduledSessions])
@@ -352,8 +355,11 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
           {([
             { href: '#hoy', label: 'Hoy', icon: <path d="M22 12h-4l-3 9L9 3l-3 9H2" /> },
             { href: '#semana', label: 'Semana', icon: <><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></> },
-            { href: '#registrar', label: 'Registrar', icon: <><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></> },
-            { href: '#historial', label: 'Historial', icon: <><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></> },
+            // El paciente presencial no registra: se ocultan Registrar e Historial.
+            ...(isPresencial ? [] : [
+              { href: '#registrar', label: 'Registrar', icon: <><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></> },
+              { href: '#historial', label: 'Historial', icon: <><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></> },
+            ]),
           ] as const).map(({ href, label, icon }) => (
             <a
               key={href}
@@ -426,13 +432,16 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
                   <span className="shrink-0 text-accent mt-0.5">→</span>
                   <span><span className="text-text-primary font-medium">Mi plan:</span> todos los ejercicios del programa. Tocá <span className="text-text-primary">▶ Ver</span> para abrir el video de cada ejercicio.</span>
                 </li>
+                {!isPresencial && (
                 <li className="flex gap-2">
                   <span className="shrink-0 text-accent mt-0.5">→</span>
                   <span><span className="text-text-primary font-medium">Registrar sesión:</span> completá después de cada entrenamiento. Tu kinesiólogo lo ve en tiempo real.</span>
                 </li>
+                )}
               </ul>
             </div>
 
+            {!isPresencial && (
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-accent mb-2">Cómo registrar una sesión</p>
               <ul className="space-y-1.5 text-text-secondary">
@@ -444,6 +453,7 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
               </ul>
               <p className="text-text-secondary mt-2">Si no tenés todos los datos, podés guardar igual — el sistema te avisa antes de confirmar.</p>
             </div>
+            )}
 
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-accent mb-3">Instalá como app — Android</p>
@@ -605,6 +615,19 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
       )}
 
       {/* ── REGISTRAR SESIÓN ───────────────────────────────── */}
+      {isPresencial ? (
+        <section id="registrar" className="scroll-mt-16">
+          <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 text-center">
+            <div className="w-11 h-11 mx-auto mb-3 rounded-full bg-accent/10 flex items-center justify-center">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-accent"><path d="M20 6 9 17l-5-5" /></svg>
+            </div>
+            <h2 className="text-[18px] font-medium mb-1">Tu evolución la registra tu kinesiólogo</h2>
+            <p className="text-[13px] text-text-secondary max-w-[340px] mx-auto">
+              No hace falta que cargues nada acá. En el centro anotamos cómo vas y ajustamos tu plan. Usá este portal para ver tus ejercicios y videos.
+            </p>
+          </div>
+        </section>
+      ) : (
       <section id="registrar" className="scroll-mt-16">
         <h2 className="flex items-center gap-2 text-[20px] font-medium tracking-[-0.01em] mb-1">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-accent"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
@@ -762,9 +785,10 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
           </button>
         </div>
       </section>
+      )}
 
       {/* ── ÚLTIMAS SESIONES ──────────────────────────────── */}
-      {localSessions.length > 0 && (
+      {!isPresencial && localSessions.length > 0 && (
         <section id="historial" className="scroll-mt-16">
           <h2 className="flex items-center gap-2 text-[20px] font-medium tracking-[-0.01em] mb-3">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-accent"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
