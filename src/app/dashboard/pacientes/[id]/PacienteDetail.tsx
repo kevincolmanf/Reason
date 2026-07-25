@@ -36,7 +36,22 @@ function calcAge(birth_date: string | null): number | null {
 
 interface PatientSource { id: string; label: string }
 
-export default function PacienteDetail({ patient: initialPatient, userId, initialEvents = [] }: { patient: Patient; userId: string; initialEvents?: PatientEvent[] }) {
+// Tiempo de tratamiento desde el día en que se cargó el primer plan. Contamos
+// desde el día 1: recién cargado muestra "Semana 1 · Mes 1".
+function treatmentDuration(start: string | null): string | null {
+  if (!start) return null
+  const from = new Date(start)
+  const now = new Date()
+  const days = Math.floor((now.getTime() - from.getTime()) / 86400000)
+  if (days < 0) return null
+  const week = Math.floor(days / 7) + 1
+  let months = (now.getFullYear() - from.getFullYear()) * 12 + (now.getMonth() - from.getMonth())
+  if (now.getDate() < from.getDate()) months--
+  const month = Math.max(0, months) + 1
+  return `Semana ${week} · Mes ${month} de tratamiento`
+}
+
+export default function PacienteDetail({ patient: initialPatient, userId, initialEvents = [], treatmentStart = null }: { patient: Patient; userId: string; initialEvents?: PatientEvent[]; treatmentStart?: string | null }) {
   const isOwner = initialPatient.user_id === userId
   const [patient, setPatient] = useState<Patient>(initialPatient)
   const [editing, setEditing] = useState(false)
@@ -261,10 +276,15 @@ export default function PacienteDetail({ patient: initialPatient, userId, initia
                 {patient.phone && <span className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1 text-[13px] text-text-secondary">📞 {patient.phone}</span>}
                 {patient.email && <span className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1 text-[13px] text-text-secondary">✉ {patient.email}</span>}
                 {patient.obra_social && <span className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1 text-[13px] text-text-secondary">{patient.obra_social}</span>}
-                {patient.source && <span className="bg-accent/10 border-[0.5px] border-accent/30 rounded-full px-3 py-1 text-[12px] text-accent">Vía: {patient.source}</span>}
-                <span className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1 text-[12px] text-text-secondary">
+                {patient.source && <span className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1 text-[13px] text-text-secondary">Vía: {patient.source}</span>}
+                <span className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1 text-[13px] text-text-secondary">
                   Desde {new Date(patient.created_at).toLocaleDateString('es-AR', { month: 'short', year: 'numeric' })}
                 </span>
+                {treatmentDuration(treatmentStart) && (
+                  <span className="bg-accent/10 border-[0.5px] border-accent/30 rounded-full px-3 py-1 text-[13px] text-accent font-medium">
+                    {treatmentDuration(treatmentStart)}
+                  </span>
+                )}
               </div>
             </div>
             <div className="flex gap-2 shrink-0 items-center flex-wrap">

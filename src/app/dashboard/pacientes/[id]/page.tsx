@@ -32,6 +32,16 @@ export default async function PacientePage({ params }: { params: { id: string } 
     .eq('patient_id', params.id)
     .order('event_date', { ascending: true })
 
+  // Inicio del tratamiento: el día en que se cargó el primer plan de entrenamiento.
+  // Desde ahí se cuentan las semanas y meses de trabajo.
+  const { data: firstPlan } = await supabase
+    .from('exercise_plans')
+    .select('created_at')
+    .eq('patient_id', params.id)
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle()
+
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
       <Header />
@@ -42,7 +52,7 @@ export default async function PacientePage({ params }: { params: { id: string } 
           </Link>
         </div>
 
-        <PacienteDetail patient={patient} userId={user.id} initialEvents={events ?? []} />
+        <PacienteDetail patient={patient} userId={user.id} initialEvents={events ?? []} treatmentStart={firstPlan?.created_at ?? null} />
       </main>
     </div>
   )
