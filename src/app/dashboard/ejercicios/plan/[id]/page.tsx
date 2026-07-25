@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation'
 import { verifyPlanAccess } from '@/utils/patient-access'
 
 export const metadata = {
-  title: 'Editar Plan | Reason',
+  title: 'Editor de Planes / Calendario | Reason',
 }
 
 export default async function PlanEditorPage({ params }: { params: { id: string } }) {
@@ -49,10 +49,12 @@ export default async function PlanEditorPage({ params }: { params: { id: string 
       <Header />
       <main className="flex-grow w-full max-w-[1440px] mx-auto px-4 sm:px-8 py-8">
         <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <Link href={backHref} className="text-[13px] text-text-secondary hover:text-text-primary transition-colors no-underline flex items-center gap-2">
-            {backLabel}
-          </Link>
-          
+          <div>
+            <Link href={backHref} className="text-[13px] text-text-secondary hover:text-text-primary transition-colors no-underline flex items-center gap-2 mb-1">
+              {backLabel}
+            </Link>
+            <p className="text-[11px] uppercase tracking-[0.06em] text-text-secondary">Editor de Planes / Calendario</p>
+          </div>
         </div>
 
         <PlanEditor initialPlan={plan} userId={user.id} initialEvents={events} />
