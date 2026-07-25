@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { jsPDF } from 'jspdf'
 import { getResponseItems } from '@/lib/questionnaires'
 import QuickNoteField from '@/components/QuickNoteField'
+import { useConfirm, useToast } from '@/components/Dialogs'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -244,6 +245,8 @@ export default function FichaClient({
 
   const supabaseRef = useRef(createClient())
   const router = useRouter()
+  const { confirm, confirmDialog } = useConfirm()
+  const { notify, toast } = useToast()
 
   // Navegación pendiente cuando hay cambios sin guardar (evita perder la ficha).
   const [pendingNav, setPendingNav] = useState<string | null>(null)
@@ -256,7 +259,7 @@ export default function FichaClient({
       .eq('id', initialFicha.id)
     if (error) {
       setSaveStatus('error')
-      alert(`Error al guardar: ${error.message}`)
+      notify(`Error al guardar: ${error.message}`, 'error')
       return false
     }
     setSaveStatus('saved')
@@ -382,13 +385,13 @@ export default function FichaClient({
   // ─── Questionnaire delete ───────────────────────────────────────────────────
 
   const handleDeleteQ = async (id: string) => {
-    if (!confirm('¿Eliminar este resultado?')) return
+    if (!(await confirm({ message: '¿Eliminar este resultado?', danger: true, confirmLabel: 'Eliminar' }))) return
     const { error } = await supabaseRef.current.from('questionnaire_results').delete().eq('id', id)
     if (!error) setQResults(prev => prev.filter(r => r.id !== id))
   }
 
   const handleDeleteDynamo = async (id: string) => {
-    if (!confirm('¿Eliminar esta evaluación?')) return
+    if (!(await confirm({ message: '¿Eliminar esta evaluación?', danger: true, confirmLabel: 'Eliminar' }))) return
     const { error } = await supabaseRef.current.from('dynamometer_results').delete().eq('id', id)
     if (!error) setDynResults(prev => prev.filter(d => d.id !== id))
   }
@@ -539,6 +542,8 @@ export default function FichaClient({
 
   return (
     <>
+    {confirmDialog}
+    {toast}
     {/* Guard: cambios sin guardar al intentar salir de la ficha */}
     {pendingNav && (
       <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setPendingNav(null)}>

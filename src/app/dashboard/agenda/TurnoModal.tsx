@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
+import { useConfirm } from '@/components/Dialogs'
 
 interface Turno {
   id: string
@@ -242,6 +243,7 @@ function formatISOToDMY(iso: string): string {
 
 export default function TurnoModal({ userId, orgId, orgName, professionals, areas, turno, defaultStart, defaultStatus, defaultArea, slotInterval, dayStart, dayEnd, onClose, onSaved, onClone, onReminderSent, onHistorialChanged }: Props) {
   const isEdit = !!turno
+  const { confirm, confirmDialog } = useConfirm()
   const effectiveAreas = areas.length > 0 ? areas : AREAS
   const defaultDuration = slotInterval ?? 60
   const openMin  = dayStart ?? 7 * 60
@@ -639,7 +641,7 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
   }
 
   const handleDelete = async () => {
-    if (!confirm('¿Eliminar este turno?')) return
+    if (!(await confirm({ title: 'Eliminar turno', message: '¿Eliminar este turno?', danger: true, confirmLabel: 'Eliminar' }))) return
     setDeleting(true)
     await supabaseRef.current.from('turnos').delete().eq('id', turno!.id)
     setDeleting(false)
@@ -647,7 +649,7 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
   }
 
   const handleDeleteHistorialTurno = async (id: string) => {
-    if (!confirm('¿Eliminar este turno? Se borra de la agenda y no se puede deshacer.')) return
+    if (!(await confirm({ title: 'Eliminar turno', message: '¿Eliminar este turno? Se borra de la agenda y no se puede deshacer.', danger: true, confirmLabel: 'Eliminar' }))) return
     setCancelingIds(prev => new Set(prev).add(id))
     await supabaseRef.current.from('turnos').delete().eq('id', id)
     setHistorial(prev => prev.filter(t => t.id !== id))
@@ -685,6 +687,7 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      {confirmDialog}
       <div className="bg-bg-secondary border-[0.5px] border-border rounded-2xl p-6 w-full max-w-[480px] shadow-xl max-h-[90vh] overflow-y-auto">
 
         {/* Header */}

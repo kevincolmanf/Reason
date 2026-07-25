@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
+import { useConfirm } from '@/components/Dialogs'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -82,6 +83,7 @@ export default function DinamometroClient({ userId, initialPatient, initialDate,
   returnTo?: string | null
 }) {
   const router = useRouter()
+  const { confirm, confirmDialog } = useConfirm()
   const [patients, setPatients] = useState<Patient[]>([])
   const [selectedPatient, setSelectedPatient] = useState(initialPatient ?? '')
   const [unit, setUnit] = useState<'kg' | 'N' | 'lbs'>('kg')
@@ -162,8 +164,8 @@ export default function DinamometroClient({ userId, initialPatient, initialDate,
     }
   }
 
-  const handleReset = () => {
-    if (!confirm('¿Limpiar todos los valores?')) return
+  const handleReset = async () => {
+    if (!(await confirm({ message: '¿Limpiar todos los valores?', danger: true, confirmLabel: 'Limpiar' }))) return
     setMuscleResults(Object.fromEntries(MUSCLE_KEYS.map(k => [k, { right: '', left: '' }])) as Record<MuscleKey, MuscleValues>)
     setNotes('')
     setSaveStatus('idle')
@@ -171,6 +173,7 @@ export default function DinamometroClient({ userId, initialPatient, initialDate,
 
   return (
     <div className="max-w-[900px] space-y-6">
+      {confirmDialog}
 
       {/* Contexto cuando se llega desde el calendario del plan */}
       {returnTo && (
