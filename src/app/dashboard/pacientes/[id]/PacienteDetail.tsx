@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import QuickSessionSheet from '@/components/QuickSessionSheet'
 
 interface Patient {
   id: string
@@ -53,6 +54,8 @@ export default function PacienteDetail({ patient: initialPatient, userId }: { pa
   const [dniError, setDniError] = useState<string | null>(null)
   const [generatingToken, setGeneratingToken] = useState(false)
   const [modeSaving, setModeSaving] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [sessionSheet, setSessionSheet] = useState(false)
+  const [sessionSaved, setSessionSaved] = useState(false)
 
   const router = useRouter()
   const supabaseRef = useRef(createClient())
@@ -234,13 +237,26 @@ export default function PacienteDetail({ patient: initialPatient, userId }: { pa
                 </span>
               </div>
             </div>
-            <div className="flex gap-2 shrink-0">
+            <div className="flex gap-2 shrink-0 items-center flex-wrap">
+              {sessionSaved && <span className="text-[12px] text-[#4ade80]">✓ Sesión registrada</span>}
+              <button onClick={() => setSessionSheet(true)} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity">
+                + Registrar sesión
+              </button>
               <button onClick={() => setEditing(true)} className="bg-bg-secondary border-[0.5px] border-border text-text-secondary px-4 py-2 rounded-lg text-[13px] hover:text-text-primary transition-colors">Editar</button>
               {isOwner && <button onClick={handleDelete} className="bg-bg-secondary border-[0.5px] border-border text-text-secondary px-4 py-2 rounded-lg text-[13px] hover:text-warning transition-colors">Eliminar</button>}
             </div>
           </div>
         )}
       </div>
+
+      {sessionSheet && (
+        <QuickSessionSheet
+          patientId={patient.id}
+          patientName={patient.name}
+          onClose={() => setSessionSheet(false)}
+          onSaved={() => { setSessionSaved(true); setTimeout(() => setSessionSaved(false), 3000) }}
+        />
+      )}
 
       {/* 3 CARDS PRINCIPALES */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
