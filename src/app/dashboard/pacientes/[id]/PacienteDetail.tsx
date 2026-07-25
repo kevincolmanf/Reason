@@ -52,6 +52,7 @@ export default function PacienteDetail({ patient: initialPatient, userId }: { pa
   const [saving, setSaving] = useState(false)
   const [dniError, setDniError] = useState<string | null>(null)
   const [generatingToken, setGeneratingToken] = useState(false)
+  const [modeSaving, setModeSaving] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
 
   const router = useRouter()
   const supabaseRef = useRef(createClient())
@@ -91,19 +92,20 @@ export default function PacienteDetail({ patient: initialPatient, userId }: { pa
     const prev = patient.follow_up_mode ?? 'presencial'
     if (mode === prev) return
     setPatient(p => ({ ...p, follow_up_mode: mode })) // optimista
-    const { data, error } = await supabaseRef.current
-      .from('patients')
-      .update({ follow_up_mode: mode })
-      .eq('id', patient.id)
-      .select()
-      .single()
-    // Si falla, revertimos y avisamos — no dejamos un cambio que no persistió.
-    if (error || !data) {
+    setModeSaving('saving')
+    try {
+      const res = await fetch('/api/pacientes/modalidad', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patientId: patient.id, mode }),
+      })
+      if (!res.ok) throw new Error()
+      setModeSaving('saved')
+      setTimeout(() => setModeSaving('idle'), 2500)
+    } catch {
       setPatient(p => ({ ...p, follow_up_mode: prev }))
-      alert('No se pudo guardar la modalidad. Intentá de nuevo.')
-      return
+      setModeSaving('error')
     }
-    setPatient(data)
   }
 
   const handleSaveEdit = async () => {
@@ -306,7 +308,12 @@ export default function PacienteDetail({ patient: initialPatient, userId }: { pa
           ]
           return (
             <div className="mb-4 pb-4 border-b-[0.5px] border-border">
-              <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-2">Modalidad de seguimiento</label>
+              <div className="flex items-center gap-2 mb-2">
+                <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary">Modalidad de seguimiento</label>
+                {modeSaving === 'saving' && <span className="text-[11px] text-text-secondary">Guardando…</span>}
+                {modeSaving === 'saved' && <span className="text-[11px] text-[#4ade80]">✓ Guardado</span>}
+                {modeSaving === 'error' && <span className="text-[11px] text-warning">Error al guardar — reintentá</span>}
+              </div>
               <div className="flex gap-1.5 mb-2">
                 {opts.map(o => (
                   <button key={o.value} onClick={() => setFollowUpMode(o.value)}
