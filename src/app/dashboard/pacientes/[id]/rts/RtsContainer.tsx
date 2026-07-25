@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { PROTOCOL_OPTIONS, formatDate } from './protocols/shared'
 import HamstringProtocol from './protocols/HamstringProtocol'
@@ -30,19 +30,28 @@ interface Props {
   lastKoos: { score: number | null; result_data: unknown; created_at: string } | null
   lastAclRsi: { score: number | null; created_at: string } | null
   previousEvals: SavedEval[]
+  initialEvalId?: string | null
 }
 
 function protocolLabel(type: string) {
   return PROTOCOL_OPTIONS.find(p => p.value === type)?.label ?? type
 }
 
-export default function RtsContainer({ patient, userId, lastDynamo, lastKoos, lastAclRsi, previousEvals }: Props) {
+export default function RtsContainer({ patient, userId, lastDynamo, lastKoos, lastAclRsi, previousEvals, initialEvalId }: Props) {
   const [activeProtocol, setActiveProtocol] = useState<string>('')
   const [evalsList, setEvalsList] = useState<SavedEval[]>(previousEvals)
   const [loadedEval, setLoadedEval] = useState<SavedEval | null>(null)
   const [showHistory, setShowHistory] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const supabase = useRef(createClient())
+
+  // Abrir directo una evaluación cuando se llega desde el calendario (?eval=<id>).
+  useEffect(() => {
+    if (!initialEvalId) return
+    const ev = previousEvals.find(e => e.id === initialEvalId)
+    if (ev) { setLoadedEval(ev); setActiveProtocol(ev.protocol_type); setShowHistory(false) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialEvalId])
 
   // Al guardar traemos la fila completa: si solo agregáramos el id, la entrada
   // del historial quedaría sin form_data y al recargarla el formulario abría vacío.

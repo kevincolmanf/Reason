@@ -7,7 +7,7 @@ import { verifyPatientAccess } from '@/utils/patient-access'
 
 export const metadata = { title: 'Retorno al Deporte | Reason' }
 
-export default async function RtsPage({ params }: { params: { id: string } }) {
+export default async function RtsPage({ params, searchParams }: { params: { id: string }; searchParams: { eval?: string } }) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -74,6 +74,7 @@ export default async function RtsPage({ params }: { params: { id: string } }) {
           lastKoos={koos ?? null}
           lastAclRsi={aclRsi ?? null}
           previousEvals={previousEvals ?? []}
+          initialEvalId={searchParams?.eval ?? null}
         />
       </main>
     </div>
