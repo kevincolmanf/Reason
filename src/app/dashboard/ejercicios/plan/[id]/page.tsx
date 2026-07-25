@@ -32,13 +32,14 @@ export default async function PlanEditorPage({ params }: { params: { id: string 
 
   // El plan es de un paciente: al volver, ir a su perfil (no a "Mis Planes").
   let patientName: string | null = null
+  let events: { id: string; event_date: string; type: string; title: string | null; note: string | null }[] = []
   if (plan.patient_id) {
-    const { data: pt } = await supabase
-      .from('patients')
-      .select('name')
-      .eq('id', plan.patient_id)
-      .single()
+    const [{ data: pt }, { data: evs }] = await Promise.all([
+      supabase.from('patients').select('name').eq('id', plan.patient_id).single(),
+      supabase.from('patient_events').select('id, event_date, type, title, note').eq('patient_id', plan.patient_id).order('event_date', { ascending: true }),
+    ])
     patientName = pt?.name ?? null
+    events = evs ?? []
   }
   const backHref = plan.patient_id ? `/dashboard/pacientes/${plan.patient_id}` : '/dashboard/pacientes'
   const backLabel = patientName ? `← Volver a ${patientName}` : '← Volver a Pacientes'
@@ -54,7 +55,7 @@ export default async function PlanEditorPage({ params }: { params: { id: string 
           
         </div>
 
-        <PlanEditor initialPlan={plan} userId={user.id} />
+        <PlanEditor initialPlan={plan} userId={user.id} initialEvents={events} />
       </main>
     </div>
   )

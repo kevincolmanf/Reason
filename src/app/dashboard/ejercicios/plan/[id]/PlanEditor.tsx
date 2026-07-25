@@ -5,6 +5,7 @@ import { createClient } from '@/utils/supabase/client'
 import { v4 as uuidv4 } from 'uuid'
 import jsPDF from 'jspdf'
 import QRCode from 'qrcode'
+import { eventMeta, type PatientEvent } from '@/lib/patientEvents'
 
 // ─── Interfaces ────────────────────────────────────────────────────────────────
 
@@ -148,8 +149,9 @@ function formatDateHeader(d: Date): string {
 
 // ─── Component ─────────────────────────────────────────────────────────────────
 
-export default function PlanEditor({ initialPlan, userId }: { initialPlan: ExercisePlan, userId: string }) {
+export default function PlanEditor({ initialPlan, userId, initialEvents = [] }: { initialPlan: ExercisePlan, userId: string, initialEvents?: PatientEvent[] }) {
   const [plan, setPlan] = useState<ExercisePlan>(initialPlan)
+  const eventsForDay = (d: string) => initialEvents.filter(e => e.event_date === d)
   const [activeTab, setActiveTab] = useState<'calendar' | 'logs'>('calendar')
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved')
 
@@ -1069,6 +1071,16 @@ export default function PlanEditor({ initialPlan, userId }: { initialPlan: Exerc
                   <span className={`text-[13px] font-medium leading-none mb-1 ${isLogged && !isSelected ? 'text-green-500' : isToday ? 'text-accent' : 'text-text-primary'}`}>
                     {day.getDate()}
                   </span>
+                  {/* Hitos del tratamiento en ese día (banderitas de color) */}
+                  {eventsForDay(dateStr).map(ev => {
+                    const meta = eventMeta(ev.type)
+                    return (
+                      <span key={ev.id} className="flex items-center gap-1 rounded px-1 py-0.5 mb-0.5" style={{ backgroundColor: meta.color + '26' }} title={ev.title || meta.label}>
+                        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: meta.color }} />
+                        <span className="text-[9px] font-medium truncate leading-tight" style={{ color: meta.color }}>{ev.title || meta.label}</span>
+                      </span>
+                    )
+                  })}
                   {session && (
                     <span className="flex items-center gap-1 mt-auto">
                       <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isLogged ? 'bg-green-500' : 'bg-accent'}`} />
