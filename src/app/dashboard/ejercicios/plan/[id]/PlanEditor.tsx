@@ -150,17 +150,31 @@ function formatDateHeader(d: Date): string {
 
 // ─── Component ─────────────────────────────────────────────────────────────────
 
-interface RtsEval { id: string; protocol_type: string; created_at: string; affected_side: string | null }
+interface RtsEval { id: string; protocol_type: string; created_at: string; evaluation_date?: string | null; affected_side: string | null }
 const RTS_LABELS: Record<string, string> = {
   lca: 'LCA', hamstring: 'Isquios', ankle: 'Tobillo', pfp: 'Femoropatelar',
   tendinopathy: 'Tendinopatía', groin: 'Inguinal', shoulder: 'Hombro',
 }
+const RTS_PROTOCOLS: { value: string; label: string }[] = [
+  { value: 'lca', label: 'LCA' },
+  { value: 'hamstring', label: 'Isquiotibiales' },
+  { value: 'ankle', label: 'Tobillo' },
+  { value: 'pfp', label: 'Femoropatelar' },
+  { value: 'tendinopathy', label: 'Tendinopatía' },
+  { value: 'groin', label: 'Inguinal' },
+  { value: 'shoulder', label: 'Hombro' },
+]
 const RTS_COLOR = '#C27B54' // terracota — coincide con el hito "RTP"
 
 export default function PlanEditor({ initialPlan, userId, initialEvents = [], rtsEvals = [] }: { initialPlan: ExercisePlan, userId: string, initialEvents?: PatientEvent[], rtsEvals?: RtsEval[] }) {
   const router = useRouter()
   const [plan, setPlan] = useState<ExercisePlan>(initialPlan)
-  const rtsForDay = (d: string) => rtsEvals.filter(r => (r.created_at ?? '').slice(0, 10) === d)
+  // Ubicación en el calendario: por la fecha elegida (evaluation_date) o, si no
+  // tiene, por la fecha de creación.
+  const rtsForDay = (d: string) => rtsEvals.filter(r => ((r.evaluation_date ?? r.created_at ?? '').slice(0, 10)) === d)
+  const [newRtsOpen, setNewRtsOpen] = useState(false)
+  const [newRtsProtocol, setNewRtsProtocol] = useState('lca')
+  const [newRtsDate, setNewRtsDate] = useState('')
 
   // Hitos del tratamiento sobre el calendario, editables (click en la banderita).
   const [events, setEvents] = useState<PatientEvent[]>(initialEvents)
@@ -1098,6 +1112,17 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
                 Agregar hito
               </button>
             )}
+            {plan.patient_id && (
+              <button
+                onClick={() => { setNewRtsDate(selectedDate ?? todayStr); setNewRtsProtocol('lca'); setNewRtsOpen(true) }}
+                title="Crear una evaluación de retorno al deporte en un día"
+                className="inline-flex items-center gap-2 text-[12px] font-medium px-3 py-1.5 rounded-lg border-[0.5px] transition-colors"
+                style={{ borderColor: RTS_COLOR + '66', color: RTS_COLOR, backgroundColor: RTS_COLOR + '14' }}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                Nueva evaluación RTS
+              </button>
+            )}
           </div>
 
           {/* Grilla */}
@@ -1677,6 +1702,37 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
                   </button>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL NUEVA EVALUACIÓN RTS */}
+      {newRtsOpen && (
+        <div className="fixed inset-0 bg-bg-primary/90 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) setNewRtsOpen(false) }}>
+          <div className="bg-bg-secondary border-[0.5px] border-border rounded-2xl w-full max-w-[420px] shadow-xl p-6">
+            <h3 className="text-[16px] font-medium mb-1">Nueva evaluación RTS</h3>
+            <p className="text-[13px] text-text-secondary mb-4">Elegí el protocolo y el día. Se abre el formulario completo y la evaluación queda en ese día del calendario.</p>
+            <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-2">Protocolo</label>
+            <div className="flex flex-wrap gap-1.5 mb-4">
+              {RTS_PROTOCOLS.map(p => (
+                <button key={p.value} onClick={() => setNewRtsProtocol(p.value)}
+                  className={`px-3 py-1.5 rounded-full text-[12px] font-medium border-[0.5px] transition-colors ${newRtsProtocol === p.value ? 'text-white' : 'bg-bg-primary border-border text-text-secondary hover:text-text-primary'}`}
+                  style={newRtsProtocol === p.value ? { backgroundColor: RTS_COLOR, borderColor: RTS_COLOR } : {}}>
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Día</label>
+            <input type="date" value={newRtsDate} onChange={e => setNewRtsDate(e.target.value)}
+              className="w-full bg-bg-primary border-[0.5px] border-border rounded-lg p-2.5 text-[14px] focus:outline-none focus:border-accent mb-5" />
+            <div className="flex gap-2">
+              <button
+                onClick={() => { const d = newRtsDate || todayStr; setNewRtsOpen(false); router.push(`/dashboard/pacientes/${plan.patient_id}/rts?protocol=${newRtsProtocol}&date=${d}`) }}
+                className="flex-1 bg-accent text-bg-primary py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity">
+                Crear evaluación
+              </button>
+              <button onClick={() => setNewRtsOpen(false)} className="px-4 py-2.5 text-[13px] text-text-secondary hover:text-text-primary">Cancelar</button>
             </div>
           </div>
         </div>
