@@ -426,6 +426,9 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
   }>({ open: false })
   const [cloneModal, setCloneModal] = useState<Turno | null>(null)
   const [sessionSheet, setSessionSheet] = useState<{ patientId: string; patientName: string; turnoId: string } | null>(null)
+  // Claves "patient_id|YYYY-MM-DD" con sesión de carga registrada, para marcar en
+  // la agenda si ya se cargó la sesión del paciente (recordatorio antes de irse).
+  const [registeredKeys, setRegisteredKeys] = useState<Set<string>>(new Set())
   // Menú contextual de un turno. Guardamos el rectángulo del chip clickeado
   // (no un solo punto) para poder abrir el menú hacia abajo o hacia arriba según
   // el espacio disponible, y medirlo después de montarlo.
@@ -512,6 +515,21 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
 
     setTurnos(list)
     setLoading(false)
+
+    // Marca de "sesión registrada": buscamos las sesiones de carga de los
+    // pacientes visibles en el rango. La RLS ya permite ver las del equipo.
+    const patIds = Array.from(new Set(list.filter(t => t.patient_id).map(t => t.patient_id as string)))
+    if (patIds.length > 0) {
+      const { data: ls } = await supabaseRef.current
+        .from('load_sessions')
+        .select('patient_id, session_date')
+        .in('patient_id', patIds)
+        .gte('session_date', from.slice(0, 10))
+        .lt('session_date', to.slice(0, 10))
+      setRegisteredKeys(new Set((ls ?? []).map(r => `${r.patient_id}|${r.session_date}`)))
+    } else {
+      setRegisteredKeys(new Set())
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weekStart, selectedDay, view, orgId, userId])
 
@@ -660,6 +678,11 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                       <p className={`text-[11.5px] font-semibold leading-tight flex items-center gap-1 ${t.status === 'cancelado' ? '' : 'text-text-primary'}`}>
                         {remindedIds.has(t.id) && (
                           <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-green-400" title="Recordatorio enviado" />
+                        )}
+                        {t.patient_id && registeredKeys.has(`${t.patient_id}|${new Date(t.start_time).toISOString().slice(0, 10)}`) && (
+                          <span className="shrink-0 text-sky-400" title="Sesión registrada">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                          </span>
                         )}
                         <span className="truncate">{compact ? t.patient_name : `${formatTime(start)} ${t.patient_name}`}</span>
                       </p>
