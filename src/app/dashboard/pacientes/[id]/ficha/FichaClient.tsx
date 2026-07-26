@@ -161,6 +161,7 @@ const QUESTIONNAIRE_NAMES: Record<string, { label: string; unit: string }> = {
   lefs: { label: 'LEFS', unit: '/ 80' },
   psfs: { label: 'PSFS', unit: '/ 10' },
   fabq: { label: 'FABQ', unit: '(PA / Trabajo)' },
+  acl_rsi: { label: 'ACL-RSI', unit: '/ 100' },
 }
 
 const MUSCLE_LABELS: Record<string, string> = {

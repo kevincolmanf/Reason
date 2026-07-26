@@ -19,6 +19,7 @@ import {
   LEFS_ITEMS,
   LEFS_OPTIONS,
   FABQ_ITEMS,
+  ACL_RSI_ITEMS,
 } from '@/lib/questionnaires'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -137,6 +138,15 @@ const QUESTIONNAIRES = [
     range: 'PA ≥15 · Trabajo ≥29 = alto riesgo',
     region: 'Psicosocial',
     color: '#DB2777',
+  },
+  {
+    id: 'acl_rsi',
+    name: 'ACL-RSI',
+    fullName: 'ACL Return to Sport after Injury',
+    description: 'Disposición psicológica para volver al deporte tras lesión de LCA.',
+    range: '0-100 · Mayor = mejor',
+    region: 'Rodilla / LCA',
+    color: '#C27B54',
   },
 ]
 
@@ -268,6 +278,18 @@ function scoreFABQ(answers: number[]): { pa_score: number; work_score: number; i
   return { pa_score, work_score, interpretation, color }
 }
 
+function scoreACLRSI(answers: number[]): { score: number; interpretation: string; color: string } {
+  // Cada ítem 0-10; los invertidos (miedo/nerviosismo) se puntúan 10 - v.
+  // Promedio × 10 → 0-100. Mayor = mejor disposición psicológica.
+  const sum = answers.reduce((s, v, i) => s + (ACL_RSI_ITEMS[i]?.reverse ? 10 - v : v), 0)
+  const score = Math.round((sum / answers.length) * 10)
+  let interpretation: string, color: string
+  if (score >= 65) { interpretation = 'Buena disposición psicológica para volver al deporte'; color = 'green' }
+  else if (score >= 45) { interpretation = 'Disposición psicológica moderada'; color = 'yellow' }
+  else { interpretation = 'Baja disposición psicológica (barreras a trabajar)'; color = 'red' }
+  return { score, interpretation, color }
+}
+
 // ─── Color helpers ─────────────────────────────────────────────────────────
 
 function colorClass(c: string) {
@@ -392,6 +414,9 @@ export default function QuestionariosClient({ userId, lockedPatient, initialDate
   // FABQ state
   const [fabqAnswers, setFabqAnswers] = useState<number[]>(Array(16).fill(0))
 
+  // ACL-RSI: 12 ítems 0-10, arrancan en 5 (punto medio neutro)
+  const [aclRsiAnswers, setAclRsiAnswers] = useState<number[]>(Array(12).fill(5))
+
   useEffect(() => {
     if (!patientsLoaded) {
       const supabase = createClient()
@@ -469,6 +494,10 @@ export default function QuestionariosClient({ userId, lockedPatient, initialDate
       case 'fabq': {
         const { pa_score, work_score, interpretation, color } = scoreFABQ(fabqAnswers)
         return { questionnaire_type: 'fabq', score: null, interpretation, result_data: { pa_score, work_score, answers: fabqAnswers, color } }
+      }
+      case 'acl_rsi': {
+        const { score, interpretation, color } = scoreACLRSI(aclRsiAnswers)
+        return { questionnaire_type: 'acl_rsi', score, interpretation, result_data: { answers: aclRsiAnswers, color } }
       }
       default:
         return null
@@ -761,6 +790,33 @@ export default function QuestionariosClient({ userId, lockedPatient, initialDate
                       {v}
                     </button>
                   ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )
+
+      case 'acl_rsi':
+        return (
+          <div>
+            <p className="text-[13px] text-text-secondary mb-5">
+              Pensando en volver a tu deporte, indicá del <strong>0 al 10</strong> cuánto refleja tu situación cada afirmación.<br />
+              <span className="text-[12px]">0 = nada / totalmente en desacuerdo · 10 = totalmente / completamente</span>
+            </p>
+            {ACL_RSI_ITEMS.map((item, i) => (
+              <div key={i} className="mb-4 p-4 bg-bg-secondary border-[0.5px] border-border rounded-xl">
+                <div className="flex justify-between items-start gap-3 mb-3">
+                  <p className="text-[13px] font-medium text-text-primary">
+                    <span className="text-text-secondary mr-1">{i + 1}.</span> {item.text}
+                  </p>
+                  <span className="text-[13px] font-medium text-text-primary shrink-0">{aclRsiAnswers[i]}</span>
+                </div>
+                <input type="range" min={0} max={10} value={aclRsiAnswers[i]}
+                  onChange={e => { const n = [...aclRsiAnswers]; n[i] = Number(e.target.value); setAclRsiAnswers(n) }}
+                  className="w-full accent-accent" />
+                <div className="flex justify-between text-[10px] text-text-secondary mt-0.5">
+                  <span>0</span>
+                  <span>10</span>
                 </div>
               </div>
             ))}

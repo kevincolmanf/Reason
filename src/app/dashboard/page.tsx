@@ -16,7 +16,7 @@ const RTS_LABELS: Record<string, string> = {
 const Q_LABELS: Record<string, string> = {
   spadi: 'SPADI', ndi: 'NDI', roland_morris: 'Roland-Morris', start_back: 'STarT Back',
   tampa: 'TAMPA', catastrofismo: 'PCS', oswestry: 'Oswestry', dash: 'DASH',
-  lefs: 'LEFS', psfs: 'PSFS', fabq: 'FABQ',
+  lefs: 'LEFS', psfs: 'PSFS', fabq: 'FABQ', acl_rsi: 'ACL-RSI',
 }
 const RTS_COLOR = '#C27B54'
 const DYN_COLOR = '#2563EB'
