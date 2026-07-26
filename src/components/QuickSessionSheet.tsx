@@ -102,6 +102,7 @@ export default function QuickSessionSheet({ patientId, patientName, onClose, onS
               rows={2}
               placeholder="Cómo le fue hoy…"
               phrases={['Tolera bien la carga', 'Sin dolor', 'Dolor leve post', 'Buena técnica', 'Progresa de fase', 'Aumentar carga próxima', 'Mantener carga', 'Fatiga marcada']}
+              presetHideKey="session_note"
               customPhrases={customPhrases}
               onAddPhrase={addPhrase}
               onDeletePhrase={deletePhrase}

@@ -786,6 +786,7 @@ export default function LoadMonitorClient({
                 rows={2}
                 placeholder="Observaciones..."
                 phrases={['Tolera bien la carga', 'Sin dolor', 'Dolor leve post', 'Buena técnica', 'Progresa de fase', 'Aumentar carga próxima', 'Mantener carga', 'Fatiga marcada']}
+                presetHideKey="session_note"
                 textClassName="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y"
               />
             </div>

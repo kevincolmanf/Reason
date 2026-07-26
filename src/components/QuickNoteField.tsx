@@ -28,6 +28,9 @@ interface Props {
   customPhrases?: CustomPhrase[]
   onAddPhrase?: (label: string) => void | Promise<void>
   onDeletePhrase?: (id: string) => void | Promise<void>
+  /** Si se pasa, las frases preestablecidas se pueden ocultar (× por chip),
+   *  guardado en este dispositivo bajo esta clave. Con opción de restaurar. */
+  presetHideKey?: string
 }
 
 const DEFAULT_TEXTAREA =
@@ -44,12 +47,31 @@ export default function QuickNoteField({
   customPhrases,
   onAddPhrase,
   onDeletePhrase,
+  presetHideKey,
 }: Props) {
   const [listening, setListening] = useState(false)
   const [voiceSupported, setVoiceSupported] = useState(false)
   const [adding, setAdding] = useState(false)
   const [newPhrase, setNewPhrase] = useState('')
   const [savingPhrase, setSavingPhrase] = useState(false)
+
+  // Preestablecidas ocultadas en este dispositivo (solo si presetHideKey)
+  const storageKey = presetHideKey ? `hidden_presets_${presetHideKey}` : null
+  const [hiddenPresets, setHiddenPresets] = useState<string[]>([])
+  useEffect(() => {
+    if (!storageKey) return
+    try {
+      const raw = localStorage.getItem(storageKey)
+      if (raw) setHiddenPresets(JSON.parse(raw))
+    } catch { /* noop */ }
+  }, [storageKey])
+  const persistHidden = (next: string[]) => {
+    setHiddenPresets(next)
+    if (storageKey) { try { localStorage.setItem(storageKey, JSON.stringify(next)) } catch { /* noop */ } }
+  }
+  const hidePreset = (p: string) => persistHidden([...hiddenPresets, p])
+  const restorePresets = () => persistHidden([])
+  const visiblePhrases = storageKey ? phrases.filter(p => !hiddenPresets.includes(p)) : phrases
 
   const submitNewPhrase = async () => {
     const label = newPhrase.trim()
@@ -106,17 +128,38 @@ export default function QuickNoteField({
 
   return (
     <div>
-      {(phrases.length > 0 || (customPhrases?.length ?? 0) > 0 || canManagePhrases || voiceSupported) && (
+      {(visiblePhrases.length > 0 || (customPhrases?.length ?? 0) > 0 || canManagePhrases || voiceSupported || hiddenPresets.length > 0) && (
         <div className="flex flex-wrap items-center gap-1.5 mb-2">
-          {phrases.map(p => (
-            <button
-              key={p}
-              type="button"
-              onClick={() => appendText(p)}
-              className="text-[12px] px-2.5 py-1.5 rounded-full border-[0.5px] border-accent/35 bg-accent/10 text-accent hover:bg-accent/20 active:bg-accent/25 transition-colors"
-            >
-              + {p}
-            </button>
+          {visiblePhrases.map(p => (
+            storageKey ? (
+              // Ocultable: insertar al tocar, ocultar con la ×
+              <span key={p} className="inline-flex items-center rounded-full border-[0.5px] border-accent/35 bg-accent/10 overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => appendText(p)}
+                  className="text-[12px] pl-2.5 pr-1.5 py-1.5 text-accent hover:bg-accent/20 active:bg-accent/25 transition-colors"
+                >
+                  + {p}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => hidePreset(p)}
+                  title="Ocultar esta frase sugerida (en este dispositivo)"
+                  className="text-[13px] leading-none px-1.5 py-1.5 text-accent/60 hover:text-warning hover:bg-accent/20 transition-colors"
+                >
+                  ×
+                </button>
+              </span>
+            ) : (
+              <button
+                key={p}
+                type="button"
+                onClick={() => appendText(p)}
+                className="text-[12px] px-2.5 py-1.5 rounded-full border-[0.5px] border-accent/35 bg-accent/10 text-accent hover:bg-accent/20 active:bg-accent/25 transition-colors"
+              >
+                + {p}
+              </button>
+            )
           ))}
           {/* Frases propias del equipo: insertar al tocar, borrar con la × */}
           {customPhrases?.map(cp => (
@@ -168,6 +211,16 @@ export default function QuickNoteField({
                 + Frase
               </button>
             )
+          )}
+          {storageKey && hiddenPresets.length > 0 && (
+            <button
+              type="button"
+              onClick={restorePresets}
+              title="Volver a mostrar las frases sugeridas ocultadas"
+              className="text-[12px] px-2.5 py-1.5 rounded-full border-[0.5px] border-dashed border-border-strong text-text-secondary hover:text-text-primary hover:border-accent transition-colors"
+            >
+              ↺ Restaurar sugeridas
+            </button>
           )}
           {voiceSupported && (
             <button
