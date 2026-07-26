@@ -338,9 +338,13 @@ function LikertItem({
 
 // ─── Main Component ────────────────────────────────────────────────────────
 
-export default function QuestionariosClient({ userId, lockedPatient, initialDate, returnTo }: { userId: string; lockedPatient?: { id: string; name: string } | null; initialDate?: string | null; returnTo?: string | null }) {
+export default function QuestionariosClient({ userId, lockedPatient, initialDate, initialType, returnTo }: { userId: string; lockedPatient?: { id: string; name: string } | null; initialDate?: string | null; initialType?: string | null; returnTo?: string | null }) {
   const router = useRouter()
-  const [selected, setSelected] = useState<string | null>(null)
+  // Si viene un ?type= válido (p. ej. desde una evaluación programada), arranca
+  // con ese cuestionario ya seleccionado.
+  const [selected, setSelected] = useState<string | null>(
+    initialType && QUESTIONNAIRES.some(q => q.id === initialType) ? initialType : null
+  )
   const [result, setResult] = useState<QuestionnaireResult | null>(null)
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)

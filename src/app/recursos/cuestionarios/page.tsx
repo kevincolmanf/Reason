@@ -11,7 +11,7 @@ export const metadata = {
 export default async function CuestionariosPage({
   searchParams,
 }: {
-  searchParams: { paciente?: string; date?: string; from?: string }
+  searchParams: { paciente?: string; date?: string; from?: string; type?: string }
 }) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -49,7 +49,7 @@ export default async function CuestionariosPage({
             Completá el formulario y guardá el resultado vinculado al paciente.
           </p>
         </div>
-        <QuestionariosClient userId={user.id} lockedPatient={lockedPatient} initialDate={searchParams?.date ?? null} returnTo={returnTo} />
+        <QuestionariosClient userId={user.id} lockedPatient={lockedPatient} initialDate={searchParams?.date ?? null} initialType={searchParams?.type ?? null} returnTo={returnTo} />
       </main>
     </div>
   )

@@ -188,8 +188,13 @@ const EVAL_META: Record<EvalKind, { label: string; color: string }> = {
   dyn:   { label: 'Dinamometría',  color: DYN_COLOR },
   quest: { label: 'Cuestionario',  color: Q_COLOR },
 }
+// Tipos de cuestionario elegibles al programar. Solo los que la herramienta
+// (/recursos/cuestionarios) sabe completar, para que la preselección funcione.
+const QUEST_TYPES = ['spadi', 'ndi', 'roland_morris', 'start_back', 'tampa', 'catastrofismo', 'oswestry', 'dash', 'lefs', 'psfs', 'fabq']
+const QUEST_OPTIONS = QUEST_TYPES.map(value => ({ value, label: Q_LABELS[value] ?? value }))
 function schedLabel(s: SchedEval): string {
   if (s.kind === 'rts') return `RTS · ${RTS_LABELS[s.protocol_type ?? ''] ?? s.protocol_type ?? ''}`
+  if (s.kind === 'quest') return s.protocol_type ? `Cuestionario · ${Q_LABELS[s.protocol_type] ?? s.protocol_type}` : 'Cuestionario'
   return EVAL_META[s.kind].label
 }
 
@@ -209,7 +214,8 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
   const [evalDate, setEvalDate] = useState('')
   const [evalProtocol, setEvalProtocol] = useState('lca')
   const openEvalModal = (kind: EvalKind, d: string) => {
-    setEvalProtocol('lca'); setEvalDate(d); setEvalModal({ kind })
+    // RTS arranca en 'lca'; cuestionario obliga a elegir tipo (arranca vacío)
+    setEvalProtocol(kind === 'rts' ? 'lca' : ''); setEvalDate(d); setEvalModal({ kind })
   }
 
   // Evaluaciones programadas a futuro: marcador en el calendario + recordatorio.
@@ -256,7 +262,7 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
   const qForDay = (d: string) => qList.filter(r => ((r.evaluation_date ?? r.created_at ?? '').slice(0, 10)) === d)
   const [qAction, setQAction] = useState<QEval | null>(null)
   const [qDeleting, setQDeleting] = useState(false)
-  const openQuestFor = (d: string) => router.push(`/recursos/cuestionarios?paciente=${plan.patient_id}&date=${d}&from=${planReturn}`)
+  const openQuestFor = (d: string, type?: string) => router.push(`/recursos/cuestionarios?paciente=${plan.patient_id}&date=${d}${type ? `&type=${type}` : ''}&from=${planReturn}`)
   const deleteQEval = async () => {
     if (!qAction) return
     setQDeleting(true)
@@ -271,23 +277,28 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
   const evalCompleteNow = (kind: EvalKind, protocol: string, d: string) => {
     if (kind === 'rts') router.push(`/dashboard/pacientes/${plan.patient_id}/rts?protocol=${protocol}&date=${d}`)
     else if (kind === 'dyn') openDynFor(d)
-    else openQuestFor(d)
+    else openQuestFor(d, protocol || undefined)
   }
   const scheduleEval = async () => {
     if (!evalModal || !plan.patient_id) { setEvalModal(null); return }
     const kind = evalModal.kind
-    const { data } = await supabaseRef.current
+    const { data, error } = await supabaseRef.current
       .from('scheduled_evaluations')
       .insert({
         patient_id: plan.patient_id,
         user_id: userId,
         kind,
-        protocol_type: kind === 'rts' ? evalProtocol : null,
+        // RTS guarda el protocolo; cuestionario guarda el tipo elegido; dinamo no usa
+        protocol_type: kind === 'dyn' ? null : (evalProtocol || null),
         scheduled_date: evalDate,
       })
       .select('id, kind, protocol_type, scheduled_date, completed')
       .single()
-    if (data) setSchedList(prev => [...prev, data as SchedEval])
+    if (error || !data) {
+      notify('No se pudo programar la evaluación: ' + (error?.message ?? 'error'), 'error')
+      return
+    }
+    setSchedList(prev => [...prev, data as SchedEval])
     setEvalModal(null)
   }
   // Al completar una evaluación programada, se abre la herramienta ya con
@@ -296,7 +307,7 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
     await supabaseRef.current.from('scheduled_evaluations').delete().eq('id', s.id)
     setSchedList(prev => prev.filter(x => x.id !== s.id))
     setSchedAction(null)
-    evalCompleteNow(s.kind, s.protocol_type ?? 'lca', s.scheduled_date)
+    evalCompleteNow(s.kind, s.protocol_type ?? (s.kind === 'rts' ? 'lca' : ''), s.scheduled_date)
   }
   const deleteSched = async (s: SchedEval) => {
     await supabaseRef.current.from('scheduled_evaluations').delete().eq('id', s.id)
@@ -1985,18 +1996,36 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
                 </div>
               </>
             )}
+            {evalModal.kind === 'quest' && (
+              <>
+                <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-2">Cuestionario</label>
+                <div className="flex flex-wrap gap-1.5 mb-4">
+                  {QUEST_OPTIONS.map(o => (
+                    <button key={o.value} onClick={() => setEvalProtocol(o.value)}
+                      className={`px-3 py-1.5 rounded-full text-[12px] font-medium border-[0.5px] transition-colors ${evalProtocol === o.value ? 'text-white' : 'bg-bg-primary border-border text-text-secondary hover:text-text-primary'}`}
+                      style={evalProtocol === o.value ? { backgroundColor: Q_COLOR, borderColor: Q_COLOR } : {}}>
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
             <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Día</label>
             <input type="date" value={evalDate} onChange={e => setEvalDate(e.target.value)}
               className="w-full bg-bg-primary border-[0.5px] border-border rounded-lg p-2.5 text-[14px] focus:outline-none focus:border-accent mb-5" />
+            {evalModal.kind === 'quest' && !evalProtocol && (
+              <p className="text-[12px] text-text-secondary mb-3 -mt-2">Elegí qué cuestionario para continuar.</p>
+            )}
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => { const d = evalDate || todayStr; const k = evalModal.kind; const p = evalProtocol; setEvalModal(null); evalCompleteNow(k, p, d) }}
-                className="flex-1 min-w-[130px] bg-accent text-bg-primary py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity">
+                disabled={evalModal.kind === 'quest' && !evalProtocol}
+                className="flex-1 min-w-[130px] bg-accent text-bg-primary py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity">
                 Completar ahora
               </button>
               <button
                 onClick={scheduleEval}
-                disabled={!evalDate}
+                disabled={!evalDate || (evalModal.kind === 'quest' && !evalProtocol)}
                 className="flex-1 min-w-[130px] bg-bg-primary border-[0.5px] border-border py-2.5 rounded-lg text-[13px] font-medium hover:border-accent disabled:opacity-40 transition-colors">
                 Programar
               </button>
