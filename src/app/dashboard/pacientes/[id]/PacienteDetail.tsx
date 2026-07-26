@@ -23,6 +23,7 @@ interface Patient {
   org_id: string | null
   load_share_token: string | null
   follow_up_mode?: string | null
+  plan_mode?: string | null
   user_id: string
 }
 
@@ -156,6 +157,23 @@ export default function PacienteDetail({ patient: initialPatient, userId, initia
     } catch {
       setPatient(p => ({ ...p, follow_up_mode: prev }))
       setModeSaving('error')
+    }
+  }
+
+  const setPlanMode = async (mode: 'detallado' | 'simple') => {
+    const prev = patient.plan_mode ?? 'detallado'
+    if (mode === prev) return
+    setPatient(p => ({ ...p, plan_mode: mode })) // optimista
+    try {
+      const res = await fetch('/api/pacientes/plan-mode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patientId: patient.id, mode }),
+      })
+      if (!res.ok) throw new Error()
+    } catch {
+      setPatient(p => ({ ...p, plan_mode: prev }))
+      notify('No se pudo cambiar el modo de planificación.', 'error')
     }
   }
 
@@ -333,17 +351,42 @@ export default function PacienteDetail({ patient: initialPatient, userId, initia
           </div>
         </Link>
 
-        {/* El Calendario del paciente se unificó dentro del plan: una sola vista de
-            planificación (sesiones, duplicar semana, hitos). La card vieja de
-            "Calendario" se retiró para no tener dos calendarios. */}
-        <Link href={`/dashboard/ejercicios/plan?paciente=${patient.id}`} className="block no-underline group">
-          <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 hover:bg-bg-secondary transition-colors h-full">
-            <div className="text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-3">Planificación</div>
-            <div className="text-[18px] font-medium mb-1">Plan de Ejercicio / Calendario</div>
-            <div className="text-[13px] text-text-secondary">Armá el plan, programá las sesiones en el calendario y marcá los hitos del tratamiento</div>
-            <div className="mt-5 text-accent text-[13px] font-medium opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity">Abrir →</div>
-          </div>
-        </Link>
+        {/* Planificación: según el modo del paciente, editor de planes (detallado)
+            o bitácora simple. El toggle de abajo cambia el modo (default detallado,
+            así nadie deja de progresar a quien lo necesita). */}
+        {(() => {
+          const isSimple = (patient.plan_mode ?? 'detallado') === 'simple'
+          return (
+            <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 h-full flex flex-col">
+              {isSimple ? (
+                <Link href={`/dashboard/pacientes/${patient.id}/bitacora`} className="block no-underline group flex-grow">
+                  <div className="text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-3">Planificación · Modo simple</div>
+                  <div className="text-[18px] font-medium mb-1">Bitácora de actividad</div>
+                  <div className="text-[13px] text-text-secondary">Registro simple del día a día, sin dosificación. Ideal para pacientes agudos; visible para el equipo.</div>
+                  <div className="mt-5 text-accent text-[13px] font-medium opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity">Abrir →</div>
+                </Link>
+              ) : (
+                <Link href={`/dashboard/ejercicios/plan?paciente=${patient.id}`} className="block no-underline group flex-grow">
+                  <div className="text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-3">Planificación</div>
+                  <div className="text-[18px] font-medium mb-1">Plan de Ejercicio / Calendario</div>
+                  <div className="text-[13px] text-text-secondary">Armá el plan, programá las sesiones en el calendario y marcá los hitos del tratamiento</div>
+                  <div className="mt-5 text-accent text-[13px] font-medium opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity">Abrir →</div>
+                </Link>
+              )}
+              <div className="mt-4 pt-3 border-t-[0.5px] border-border flex items-center gap-1.5">
+                <span className="text-[10px] uppercase tracking-[0.05em] text-text-secondary mr-1" title="Cómo planificás a este paciente">Modo</span>
+                <button onClick={() => setPlanMode('detallado')}
+                  className={`px-2.5 py-1 rounded-md text-[12px] font-medium border-[0.5px] transition-colors ${!isSimple ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-secondary border-border text-text-secondary hover:text-text-primary'}`}>
+                  Detallado
+                </button>
+                <button onClick={() => setPlanMode('simple')}
+                  className={`px-2.5 py-1 rounded-md text-[12px] font-medium border-[0.5px] transition-colors ${isSimple ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-secondary border-border text-text-secondary hover:text-text-primary'}`}>
+                  Simple
+                </button>
+              </div>
+            </div>
+          )
+        })()}
 
         <Link href={`/dashboard/pacientes/${patient.id}/rts`} className="block no-underline group">
           <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 hover:bg-bg-secondary transition-colors h-full">
