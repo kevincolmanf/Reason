@@ -13,11 +13,6 @@ const RTS_LABELS: Record<string, string> = {
   lca: 'LCA', hamstring: 'Isquios', ankle: 'Tobillo', pfp: 'Femoropatelar',
   tendinopathy: 'Tendinopatía', groin: 'Inguinal', shoulder: 'Hombro',
 }
-const Q_LABELS: Record<string, string> = {
-  spadi: 'SPADI', ndi: 'NDI', roland_morris: 'Roland-Morris', start_back: 'STarT Back',
-  tampa: 'TAMPA', catastrofismo: 'PCS', oswestry: 'Oswestry', dash: 'DASH',
-  lefs: 'LEFS', psfs: 'PSFS', fabq: 'FABQ', koos: 'KOOS', acl_rsi: 'ACL-RSI',
-}
 const RTS_COLOR = '#C27B54'
 const DYN_COLOR = '#2563EB'
 const Q_COLOR = '#059669'
@@ -136,23 +131,18 @@ export default async function DashboardPage() {
 
   const milestones: WeekMilestone[] = []
   if (patientIds.length > 0) {
-    const [{ data: evs }, { data: rts }, { data: dyn }, { data: quest }] = await Promise.all([
+    const [{ data: evs }, { data: sched }] = await Promise.all([
+      // Hitos: toda la semana en curso (lun–dom)
       supabase.from('patient_events')
         .select('id, patient_id, event_date, type, title')
         .in('patient_id', patientIds)
         .gte('event_date', mondayStr).lte('event_date', sundayStr),
-      supabase.from('rts_evaluations')
-        .select('id, patient_id, evaluation_date, protocol_type')
+      // Evaluaciones programadas pendientes: de hoy hasta fin de semana
+      supabase.from('scheduled_evaluations')
+        .select('id, patient_id, kind, protocol_type, scheduled_date')
         .in('patient_id', patientIds)
-        .gte('evaluation_date', todayStr).lte('evaluation_date', sundayStr),
-      supabase.from('dynamometer_results')
-        .select('id, patient_id, evaluation_date')
-        .in('patient_id', patientIds)
-        .gte('evaluation_date', todayStr).lte('evaluation_date', sundayStr),
-      supabase.from('questionnaire_results')
-        .select('id, patient_id, evaluation_date, questionnaire_type')
-        .in('patient_id', patientIds)
-        .gte('evaluation_date', todayStr).lte('evaluation_date', sundayStr),
+        .eq('completed', false)
+        .gte('scheduled_date', todayStr).lte('scheduled_date', sundayStr),
     ])
 
     for (const e of evs ?? []) {
@@ -164,28 +154,15 @@ export default async function DashboardPage() {
         date: e.event_date, dateLabel: dateLabel(e.event_date), color: meta.color,
       })
     }
-    for (const r of rts ?? []) {
+    for (const s of sched ?? []) {
+      const color = s.kind === 'rts' ? RTS_COLOR : s.kind === 'dyn' ? DYN_COLOR : Q_COLOR
+      const label = s.kind === 'rts'
+        ? `Evaluación RTS · ${RTS_LABELS[s.protocol_type as string] ?? s.protocol_type ?? ''}`
+        : s.kind === 'dyn' ? 'Dinamometría' : 'Cuestionario'
       milestones.push({
-        key: `rts_${r.id}`, patientId: r.patient_id,
-        patientName: patientNameById.get(r.patient_id) ?? 'Paciente',
-        label: `Evaluación RTS · ${RTS_LABELS[r.protocol_type] ?? r.protocol_type}`,
-        date: r.evaluation_date, dateLabel: dateLabel(r.evaluation_date), color: RTS_COLOR,
-      })
-    }
-    for (const d of dyn ?? []) {
-      milestones.push({
-        key: `dyn_${d.id}`, patientId: d.patient_id,
-        patientName: patientNameById.get(d.patient_id) ?? 'Paciente',
-        label: 'Dinamometría',
-        date: d.evaluation_date, dateLabel: dateLabel(d.evaluation_date), color: DYN_COLOR,
-      })
-    }
-    for (const q of quest ?? []) {
-      milestones.push({
-        key: `q_${q.id}`, patientId: q.patient_id,
-        patientName: patientNameById.get(q.patient_id) ?? 'Paciente',
-        label: `Cuestionario ${Q_LABELS[q.questionnaire_type] ?? q.questionnaire_type}`,
-        date: q.evaluation_date, dateLabel: dateLabel(q.evaluation_date), color: Q_COLOR,
+        key: `sched_${s.id}`, patientId: s.patient_id,
+        patientName: patientNameById.get(s.patient_id) ?? 'Paciente',
+        label, date: s.scheduled_date, dateLabel: dateLabel(s.scheduled_date), color,
       })
     }
     milestones.sort((a, b) => a.date.localeCompare(b.date) || a.patientName.localeCompare(b.patientName))
