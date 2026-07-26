@@ -180,6 +180,19 @@ const Q_LABELS: Record<string, string> = {
   lefs: 'LEFS', psfs: 'PSFS', fabq: 'FABQ', koos: 'KOOS', acl_rsi: 'ACL-RSI',
 }
 
+// Evaluaciones programadas (agendadas a futuro sin completar en el momento)
+type EvalKind = 'rts' | 'dyn' | 'quest'
+interface SchedEval { id: string; kind: EvalKind; protocol_type: string | null; scheduled_date: string; completed: boolean }
+const EVAL_META: Record<EvalKind, { label: string; color: string }> = {
+  rts:   { label: 'RTS',           color: RTS_COLOR },
+  dyn:   { label: 'Dinamometría',  color: DYN_COLOR },
+  quest: { label: 'Cuestionario',  color: Q_COLOR },
+}
+function schedLabel(s: SchedEval): string {
+  if (s.kind === 'rts') return `RTS · ${RTS_LABELS[s.protocol_type ?? ''] ?? s.protocol_type ?? ''}`
+  return EVAL_META[s.kind].label
+}
+
 export default function PlanEditor({ initialPlan, userId, initialEvents = [], rtsEvals = [], dynEvals = [], qEvals = [] }: { initialPlan: ExercisePlan, userId: string, initialEvents?: PatientEvent[], rtsEvals?: RtsEval[], dynEvals?: DynEval[], qEvals?: QEval[] }) {
   const router = useRouter()
   const { confirm, confirmDialog } = useConfirm()
@@ -189,9 +202,20 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
   // tiene, por la fecha de creación. En estado para reflejar el borrado al instante.
   const [rtsList, setRtsList] = useState<RtsEval[]>(rtsEvals)
   const rtsForDay = (d: string) => rtsList.filter(r => ((r.evaluation_date ?? r.created_at ?? '').slice(0, 10)) === d)
-  const [newRtsOpen, setNewRtsOpen] = useState(false)
-  const [newRtsProtocol, setNewRtsProtocol] = useState('lca')
-  const [newRtsDate, setNewRtsDate] = useState('')
+
+  // Modal unificado para agregar/programar una evaluación (RTS/dinamo/cuestionario)
+  // desde un día del calendario. Ofrece "Completar ahora" o "Programar".
+  const [evalModal, setEvalModal] = useState<null | { kind: EvalKind }>(null)
+  const [evalDate, setEvalDate] = useState('')
+  const [evalProtocol, setEvalProtocol] = useState('lca')
+  const openEvalModal = (kind: EvalKind, d: string) => {
+    setEvalProtocol('lca'); setEvalDate(d); setEvalModal({ kind })
+  }
+
+  // Evaluaciones programadas a futuro: marcador en el calendario + recordatorio.
+  const [schedList, setSchedList] = useState<SchedEval[]>([])
+  const schedForDay = (d: string) => schedList.filter(s => s.scheduled_date === d && !s.completed)
+  const [schedAction, setSchedAction] = useState<SchedEval | null>(null)
 
   // Modal de acciones al tocar un RTS guardado en el calendario (como los hitos:
   // abrir/editar la evaluación o borrarla).
@@ -241,6 +265,43 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
     setQList(prev => prev.filter(r => r.id !== id))
     setQDeleting(false)
     setQAction(null)
+  }
+
+  // ─── Evaluaciones: completar ahora / programar a futuro ──────────────────────
+  const evalCompleteNow = (kind: EvalKind, protocol: string, d: string) => {
+    if (kind === 'rts') router.push(`/dashboard/pacientes/${plan.patient_id}/rts?protocol=${protocol}&date=${d}`)
+    else if (kind === 'dyn') openDynFor(d)
+    else openQuestFor(d)
+  }
+  const scheduleEval = async () => {
+    if (!evalModal || !plan.patient_id) { setEvalModal(null); return }
+    const kind = evalModal.kind
+    const { data } = await supabaseRef.current
+      .from('scheduled_evaluations')
+      .insert({
+        patient_id: plan.patient_id,
+        user_id: userId,
+        kind,
+        protocol_type: kind === 'rts' ? evalProtocol : null,
+        scheduled_date: evalDate,
+      })
+      .select('id, kind, protocol_type, scheduled_date, completed')
+      .single()
+    if (data) setSchedList(prev => [...prev, data as SchedEval])
+    setEvalModal(null)
+  }
+  // Al completar una evaluación programada, se abre la herramienta ya con
+  // protocolo y fecha, y se elimina el marcador (deja de nagear en el recordatorio).
+  const completeSched = async (s: SchedEval) => {
+    await supabaseRef.current.from('scheduled_evaluations').delete().eq('id', s.id)
+    setSchedList(prev => prev.filter(x => x.id !== s.id))
+    setSchedAction(null)
+    evalCompleteNow(s.kind, s.protocol_type ?? 'lca', s.scheduled_date)
+  }
+  const deleteSched = async (s: SchedEval) => {
+    await supabaseRef.current.from('scheduled_evaluations').delete().eq('id', s.id)
+    setSchedList(prev => prev.filter(x => x.id !== s.id))
+    setSchedAction(null)
   }
 
   // Hitos del tratamiento sobre el calendario, editables (click en la banderita).
@@ -417,6 +478,23 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
     fetchSessions()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plan.id])
+
+  // Cargar evaluaciones programadas (pendientes) del paciente
+  useEffect(() => {
+    if (!plan.patient_id) { setSchedList([]); return }
+    let cancelled = false
+    const fetchSched = async () => {
+      const { data } = await supabaseRef.current
+        .from('scheduled_evaluations')
+        .select('id, kind, protocol_type, scheduled_date, completed')
+        .eq('patient_id', plan.patient_id)
+        .eq('completed', false)
+        .order('scheduled_date')
+      if (!cancelled && data) setSchedList(data as SchedEval[])
+    }
+    fetchSched()
+    return () => { cancelled = true }
+  }, [plan.patient_id])
 
   // Cargar últimos logs para semáforo y fechas completadas
   useEffect(() => {
@@ -1292,6 +1370,22 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
                       <span className="text-[9px] font-medium truncate leading-tight" style={{ color: Q_COLOR }}>{Q_LABELS[q.questionnaire_type] ?? 'Cuestionario'}</span>
                     </span>
                   ))}
+                  {/* Evaluaciones programadas de ese día — marcador punteado; click para completar o eliminar */}
+                  {schedForDay(dateStr).map(s => {
+                    const color = EVAL_META[s.kind].color
+                    return (
+                      <span
+                        key={s.id}
+                        onClick={e => { e.stopPropagation(); setSchedAction(s) }}
+                        className="flex items-center gap-1 rounded px-1 py-0.5 mb-0.5 cursor-pointer hover:brightness-125 transition-all border-[0.5px] border-dashed"
+                        style={{ borderColor: color + '88' }}
+                        title={`${schedLabel(s)} — programada · tocar para completar o eliminar`}
+                      >
+                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+                        <span className="text-[9px] font-medium truncate leading-tight" style={{ color }}>{schedLabel(s)}</span>
+                      </span>
+                    )
+                  })}
                   {session && (
                     <span className="flex items-center gap-1 mt-auto">
                       <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isLogged ? 'bg-green-500' : 'bg-accent'}`} />
@@ -1377,9 +1471,9 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
                     {/* Hito / RTS también en un día que ya tiene sesión */}
                     <span className="w-px h-4 bg-border mx-0.5" />
                     <button onClick={openAddEvent} className="bg-bg-secondary border-[0.5px] border-border text-text-secondary px-3 py-1.5 rounded-lg text-[12px] hover:text-text-primary hover:border-accent transition-colors">+ Hito</button>
-                    <button onClick={() => { setNewRtsDate(selectedDate ?? todayStr); setNewRtsProtocol('lca'); setNewRtsOpen(true) }} className="bg-bg-secondary border-[0.5px] px-3 py-1.5 rounded-lg text-[12px] transition-colors" style={{ borderColor: RTS_COLOR + '66', color: RTS_COLOR }}>+ RTS</button>
-                    {plan.patient_id && <button onClick={() => openDynFor(selectedDate ?? todayStr)} className="bg-bg-secondary border-[0.5px] px-3 py-1.5 rounded-lg text-[12px] transition-colors" style={{ borderColor: DYN_COLOR + '66', color: DYN_COLOR }}>+ Dinamo</button>}
-                    {plan.patient_id && <button onClick={() => openQuestFor(selectedDate ?? todayStr)} className="bg-bg-secondary border-[0.5px] px-3 py-1.5 rounded-lg text-[12px] transition-colors" style={{ borderColor: Q_COLOR + '66', color: Q_COLOR }}>+ Cuest</button>}
+                    <button onClick={() => openEvalModal('rts', selectedDate ?? todayStr)} className="bg-bg-secondary border-[0.5px] px-3 py-1.5 rounded-lg text-[12px] transition-colors" style={{ borderColor: RTS_COLOR + '66', color: RTS_COLOR }}>+ RTS</button>
+                    {plan.patient_id && <button onClick={() => openEvalModal('dyn', selectedDate ?? todayStr)} className="bg-bg-secondary border-[0.5px] px-3 py-1.5 rounded-lg text-[12px] transition-colors" style={{ borderColor: DYN_COLOR + '66', color: DYN_COLOR }}>+ Dinamo</button>}
+                    {plan.patient_id && <button onClick={() => openEvalModal('quest', selectedDate ?? todayStr)} className="bg-bg-secondary border-[0.5px] px-3 py-1.5 rounded-lg text-[12px] transition-colors" style={{ borderColor: Q_COLOR + '66', color: Q_COLOR }}>+ Cuest</button>}
                   </div>
                 ) : null}
               </div>
@@ -1404,7 +1498,7 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
                       Agregar hito
                     </button>
                     <button
-                      onClick={() => { setNewRtsDate(selectedDate ?? todayStr); setNewRtsProtocol('lca'); setNewRtsOpen(true) }}
+                      onClick={() => openEvalModal('rts', selectedDate ?? todayStr)}
                       className="inline-flex items-center gap-2 bg-bg-primary border-[0.5px] px-4 py-2.5 rounded-lg text-[13px] font-medium transition-colors"
                       style={{ borderColor: RTS_COLOR + '66', color: RTS_COLOR }}
                     >
@@ -1413,7 +1507,7 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
                     </button>
                     {plan.patient_id && (
                       <button
-                        onClick={() => openDynFor(selectedDate ?? todayStr)}
+                        onClick={() => openEvalModal('dyn', selectedDate ?? todayStr)}
                         className="inline-flex items-center gap-2 bg-bg-primary border-[0.5px] px-4 py-2.5 rounded-lg text-[13px] font-medium transition-colors"
                         style={{ borderColor: DYN_COLOR + '66', color: DYN_COLOR }}
                       >
@@ -1423,7 +1517,7 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
                     )}
                     {plan.patient_id && (
                       <button
-                        onClick={() => openQuestFor(selectedDate ?? todayStr)}
+                        onClick={() => openEvalModal('quest', selectedDate ?? todayStr)}
                         className="inline-flex items-center gap-2 bg-bg-primary border-[0.5px] px-4 py-2.5 rounded-lg text-[13px] font-medium transition-colors"
                         style={{ borderColor: Q_COLOR + '66', color: Q_COLOR }}
                       >
@@ -1868,32 +1962,70 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
         </div>
       )}
 
-      {/* MODAL NUEVA EVALUACIÓN RTS */}
-      {newRtsOpen && (
-        <div className="fixed inset-0 bg-bg-primary/90 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) setNewRtsOpen(false) }}>
+      {/* MODAL NUEVA EVALUACIÓN (RTS / DINAMO / CUESTIONARIO) — completar ahora o programar */}
+      {evalModal && (
+        <div className="fixed inset-0 bg-bg-primary/90 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) setEvalModal(null) }}>
           <div className="bg-bg-secondary border-[0.5px] border-border rounded-2xl w-full max-w-[420px] shadow-xl p-6">
-            <h3 className="text-[16px] font-medium mb-1">Nueva evaluación RTS</h3>
-            <p className="text-[13px] text-text-secondary mb-4">Elegí el protocolo y el día. Se abre el formulario completo y la evaluación queda en ese día del calendario.</p>
-            <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-2">Protocolo</label>
-            <div className="flex flex-wrap gap-1.5 mb-4">
-              {RTS_PROTOCOLS.map(p => (
-                <button key={p.value} onClick={() => setNewRtsProtocol(p.value)}
-                  className={`px-3 py-1.5 rounded-full text-[12px] font-medium border-[0.5px] transition-colors ${newRtsProtocol === p.value ? 'text-white' : 'bg-bg-primary border-border text-text-secondary hover:text-text-primary'}`}
-                  style={newRtsProtocol === p.value ? { backgroundColor: RTS_COLOR, borderColor: RTS_COLOR } : {}}>
-                  {p.label}
-                </button>
-              ))}
-            </div>
+            <h3 className="text-[16px] font-medium mb-1">Evaluación de {EVAL_META[evalModal.kind].label}</h3>
+            <p className="text-[13px] text-text-secondary mb-4">
+              Completala ahora, o dejala <span className="font-medium">programada</span> para ese día: queda como
+              recordatorio en el calendario y en el inicio, y la completás cuando llegue la fecha.
+            </p>
+            {evalModal.kind === 'rts' && (
+              <>
+                <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-2">Protocolo</label>
+                <div className="flex flex-wrap gap-1.5 mb-4">
+                  {RTS_PROTOCOLS.map(p => (
+                    <button key={p.value} onClick={() => setEvalProtocol(p.value)}
+                      className={`px-3 py-1.5 rounded-full text-[12px] font-medium border-[0.5px] transition-colors ${evalProtocol === p.value ? 'text-white' : 'bg-bg-primary border-border text-text-secondary hover:text-text-primary'}`}
+                      style={evalProtocol === p.value ? { backgroundColor: RTS_COLOR, borderColor: RTS_COLOR } : {}}>
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
             <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Día</label>
-            <input type="date" value={newRtsDate} onChange={e => setNewRtsDate(e.target.value)}
+            <input type="date" value={evalDate} onChange={e => setEvalDate(e.target.value)}
               className="w-full bg-bg-primary border-[0.5px] border-border rounded-lg p-2.5 text-[14px] focus:outline-none focus:border-accent mb-5" />
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button
-                onClick={() => { const d = newRtsDate || todayStr; setNewRtsOpen(false); router.push(`/dashboard/pacientes/${plan.patient_id}/rts?protocol=${newRtsProtocol}&date=${d}`) }}
-                className="flex-1 bg-accent text-bg-primary py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity">
-                Crear evaluación
+                onClick={() => { const d = evalDate || todayStr; const k = evalModal.kind; const p = evalProtocol; setEvalModal(null); evalCompleteNow(k, p, d) }}
+                className="flex-1 min-w-[130px] bg-accent text-bg-primary py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity">
+                Completar ahora
               </button>
-              <button onClick={() => setNewRtsOpen(false)} className="px-4 py-2.5 text-[13px] text-text-secondary hover:text-text-primary">Cancelar</button>
+              <button
+                onClick={scheduleEval}
+                disabled={!evalDate}
+                className="flex-1 min-w-[130px] bg-bg-primary border-[0.5px] border-border py-2.5 rounded-lg text-[13px] font-medium hover:border-accent disabled:opacity-40 transition-colors">
+                Programar
+              </button>
+              <button onClick={() => setEvalModal(null)} className="px-4 py-2.5 text-[13px] text-text-secondary hover:text-text-primary">Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL ACCIÓN EVALUACIÓN PROGRAMADA — completar o eliminar */}
+      {schedAction && (
+        <div className="fixed inset-0 bg-bg-primary/90 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) setSchedAction(null) }}>
+          <div className="bg-bg-secondary border-[0.5px] border-border rounded-2xl w-full max-w-[400px] shadow-xl p-6">
+            <h3 className="text-[16px] font-medium mb-1">{schedLabel(schedAction)}</h3>
+            <p className="text-[13px] text-text-secondary mb-5">
+              Evaluación programada para el {formatDateHeader(new Date(schedAction.scheduled_date + 'T00:00:00')).toLowerCase()}.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => completeSched(schedAction)}
+                className="flex-1 min-w-[130px] bg-accent text-bg-primary py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity">
+                Completar ahora
+              </button>
+              <button
+                onClick={() => deleteSched(schedAction)}
+                className="flex-1 min-w-[130px] bg-bg-primary border-[0.5px] border-border py-2.5 rounded-lg text-[13px] font-medium text-warning hover:border-warning transition-colors">
+                Eliminar
+              </button>
+              <button onClick={() => setSchedAction(null)} className="px-4 py-2.5 text-[13px] text-text-secondary hover:text-text-primary">Cancelar</button>
             </div>
           </div>
         </div>
