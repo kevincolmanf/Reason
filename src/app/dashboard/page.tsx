@@ -4,7 +4,36 @@ import Link from 'next/link'
 import ContentCard from '@/components/ContentCard'
 import Header from '@/components/Header'
 import PlanningReminderBanner from '@/components/PlanningReminderBanner'
+import WeekMilestonesBanner, { type WeekMilestone } from '@/components/WeekMilestonesBanner'
+import { eventMeta } from '@/lib/patientEvents'
 import { getActiveContext } from '@/lib/context'
+
+// Etiquetas y colores para los hitos de la semana
+const RTS_LABELS: Record<string, string> = {
+  lca: 'LCA', hamstring: 'Isquios', ankle: 'Tobillo', pfp: 'Femoropatelar',
+  tendinopathy: 'Tendinopatía', groin: 'Inguinal', shoulder: 'Hombro',
+}
+const Q_LABELS: Record<string, string> = {
+  spadi: 'SPADI', ndi: 'NDI', roland_morris: 'Roland-Morris', start_back: 'STarT Back',
+  tampa: 'TAMPA', catastrofismo: 'PCS', oswestry: 'Oswestry', dash: 'DASH',
+  lefs: 'LEFS', psfs: 'PSFS', fabq: 'FABQ', koos: 'KOOS', acl_rsi: 'ACL-RSI',
+}
+const RTS_COLOR = '#C27B54'
+const DYN_COLOR = '#2563EB'
+const Q_COLOR = '#059669'
+
+function toDateStr(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+const SHORT_DAYS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb']
+function dateLabel(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00')
+  return `${SHORT_DAYS[d.getDay()]} ${d.getDate()}`
+}
 
 function CategoryCard({ title, slug, desc }: { title: string, slug: string, desc: string }) {
   return (
@@ -84,6 +113,82 @@ export default async function DashboardPage() {
       .order('created_at', { ascending: false })
       .limit(3)
     recentPatients = data ?? []
+  }
+
+  // ── Hitos de la semana (hitos + RTS + dinamometría + cuestionarios) ──
+  // Ventana: semana actual (lun–dom). Evaluaciones (RTS/dinamo/cuestionarios):
+  // solo con fecha de hoy en adelante (recordatorio de lo que viene).
+  const dow = today.getDay() // 0 = domingo
+  const monday = new Date(today)
+  monday.setDate(today.getDate() + (dow === 0 ? -6 : 1 - dow))
+  const sunday = new Date(monday)
+  sunday.setDate(monday.getDate() + 6)
+  const mondayStr = toDateStr(monday)
+  const sundayStr = toDateStr(sunday)
+
+  // Pacientes del contexto activo (para nombrar y filtrar los hitos)
+  const patientQuery = contextOrgId
+    ? supabase.from('patients').select('id, name').eq('org_id', contextOrgId)
+    : supabase.from('patients').select('id, name').eq('user_id', user.id).is('org_id', null)
+  const { data: ctxPatients } = await patientQuery
+  const patientNameById = new Map((ctxPatients ?? []).map(p => [p.id, p.name]))
+  const patientIds = Array.from(patientNameById.keys())
+
+  const milestones: WeekMilestone[] = []
+  if (patientIds.length > 0) {
+    const [{ data: evs }, { data: rts }, { data: dyn }, { data: quest }] = await Promise.all([
+      supabase.from('patient_events')
+        .select('id, patient_id, event_date, type, title')
+        .in('patient_id', patientIds)
+        .gte('event_date', mondayStr).lte('event_date', sundayStr),
+      supabase.from('rts_evaluations')
+        .select('id, patient_id, evaluation_date, protocol_type')
+        .in('patient_id', patientIds)
+        .gte('evaluation_date', todayStr).lte('evaluation_date', sundayStr),
+      supabase.from('dynamometer_results')
+        .select('id, patient_id, evaluation_date')
+        .in('patient_id', patientIds)
+        .gte('evaluation_date', todayStr).lte('evaluation_date', sundayStr),
+      supabase.from('questionnaire_results')
+        .select('id, patient_id, evaluation_date, questionnaire_type')
+        .in('patient_id', patientIds)
+        .gte('evaluation_date', todayStr).lte('evaluation_date', sundayStr),
+    ])
+
+    for (const e of evs ?? []) {
+      const meta = eventMeta(e.type)
+      milestones.push({
+        key: `ev_${e.id}`, patientId: e.patient_id,
+        patientName: patientNameById.get(e.patient_id) ?? 'Paciente',
+        label: e.title?.trim() ? `${meta.label}: ${e.title.trim()}` : meta.label,
+        date: e.event_date, dateLabel: dateLabel(e.event_date), color: meta.color,
+      })
+    }
+    for (const r of rts ?? []) {
+      milestones.push({
+        key: `rts_${r.id}`, patientId: r.patient_id,
+        patientName: patientNameById.get(r.patient_id) ?? 'Paciente',
+        label: `Evaluación RTS · ${RTS_LABELS[r.protocol_type] ?? r.protocol_type}`,
+        date: r.evaluation_date, dateLabel: dateLabel(r.evaluation_date), color: RTS_COLOR,
+      })
+    }
+    for (const d of dyn ?? []) {
+      milestones.push({
+        key: `dyn_${d.id}`, patientId: d.patient_id,
+        patientName: patientNameById.get(d.patient_id) ?? 'Paciente',
+        label: 'Dinamometría',
+        date: d.evaluation_date, dateLabel: dateLabel(d.evaluation_date), color: DYN_COLOR,
+      })
+    }
+    for (const q of quest ?? []) {
+      milestones.push({
+        key: `q_${q.id}`, patientId: q.patient_id,
+        patientName: patientNameById.get(q.patient_id) ?? 'Paciente',
+        label: `Cuestionario ${Q_LABELS[q.questionnaire_type] ?? q.questionnaire_type}`,
+        date: q.evaluation_date, dateLabel: dateLabel(q.evaluation_date), color: Q_COLOR,
+      })
+    }
+    milestones.sort((a, b) => a.date.localeCompare(b.date) || a.patientName.localeCompare(b.patientName))
   }
 
   const role = userData?.role
@@ -174,6 +279,8 @@ export default async function DashboardPage() {
             </Link>
           </div>
         )}
+
+        <WeekMilestonesBanner milestones={milestones} />
 
         <PlanningReminderBanner patients={planningAlerts} />
 
