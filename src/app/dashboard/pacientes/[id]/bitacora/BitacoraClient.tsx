@@ -12,6 +12,7 @@ interface Entry {
   exercises: ExerciseRef[]
   note: string | null
   created_at: string
+  user_id: string | null
 }
 
 function todayStr(): string {
@@ -23,14 +24,14 @@ function formatDate(dateStr: string): string {
   return new Date(dateStr + 'T00:00:00').toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })
 }
 
-const GRADUATE_AFTER_DAYS = 21 // ~3 semanas: aviso para pasar a plan detallado
-
 export default function BitacoraClient({
-  patientId, userId, planMode, initialEntries,
+  patientId, userId, planMode, graduateWeeks: initialGraduateWeeks, authorNames, initialEntries,
 }: {
   patientId: string
   userId: string
   planMode: string
+  graduateWeeks: number
+  authorNames: Record<string, string>
   initialEntries: Entry[]
 }) {
   const router = useRouter()
@@ -43,6 +44,10 @@ export default function BitacoraClient({
   const [chips, setChips] = useState<ExerciseRef[]>([])
   const [note, setNote] = useState('')
   const [saving, setSaving] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [graduateWeeks, setGraduateWeeks] = useState(initialGraduateWeeks)
+
+  const authorName = (id: string | null) => (id ? (authorNames[id] ?? '—') : '—')
 
   // Buscador de ejercicios (biblioteca + propios), para sumar por nombre
   const [q, setQ] = useState('')
@@ -72,33 +77,76 @@ export default function BitacoraClient({
 
   const canSave = chips.length > 0 || note.trim().length > 0
 
+  const resetForm = () => { setChips([]); setNote(''); setDate(todayStr()); setEditingId(null); setQ(''); setResults([]) }
+
+  const startEdit = (e: Entry) => {
+    setEditingId(e.id)
+    setDate(e.activity_date)
+    setChips(e.exercises ?? [])
+    setNote(e.note ?? '')
+    setQ(''); setResults([])
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   const saveEntry = async () => {
     if (!canSave || !date) return
     setSaving(true)
+    if (editingId) {
+      // Editar (cualquier profesional del equipo puede; no se cambia el autor original)
+      const { data, error } = await supabaseRef.current
+        .from('simple_activity_log')
+        .update({ activity_date: date, exercises: chips, note: note.trim() || null })
+        .eq('id', editingId)
+        .select('id, activity_date, exercises, note, created_at, user_id')
+        .single()
+      setSaving(false)
+      if (error || !data) { notify('No se pudo guardar el cambio: ' + (error?.message ?? 'error'), 'error'); return }
+      setEntries(prev => prev.map(e => e.id === editingId ? (data as Entry) : e).sort((a, b) =>
+        b.activity_date.localeCompare(a.activity_date) || b.created_at.localeCompare(a.created_at)))
+      resetForm()
+      return
+    }
     const { data, error } = await supabaseRef.current
       .from('simple_activity_log')
       .insert({ patient_id: patientId, user_id: userId, activity_date: date, exercises: chips, note: note.trim() || null })
-      .select('id, activity_date, exercises, note, created_at')
+      .select('id, activity_date, exercises, note, created_at, user_id')
       .single()
     setSaving(false)
     if (error || !data) { notify('No se pudo guardar: ' + (error?.message ?? 'error'), 'error'); return }
     setEntries(prev => [data as Entry, ...prev].sort((a, b) =>
       b.activity_date.localeCompare(a.activity_date) || b.created_at.localeCompare(a.created_at)))
-    setChips([]); setNote(''); setDate(todayStr())
+    resetForm()
   }
 
   const deleteEntry = async (id: string) => {
     if (!(await confirm({ message: '¿Borrar este registro de la bitácora?', danger: true, confirmLabel: 'Borrar' }))) return
     setEntries(prev => prev.filter(e => e.id !== id))
+    if (editingId === id) resetForm()
     await supabaseRef.current.from('simple_activity_log').delete().eq('id', id)
   }
 
-  // Aviso de graduación: si la bitácora lleva varias semanas, sugerir pasar a plan detallado
+  // Umbral de graduación configurable por paciente (semanas)
+  const updateGraduateWeeks = async (weeks: number) => {
+    const w = Math.max(1, Math.min(52, Math.round(weeks)))
+    setGraduateWeeks(w)
+    try {
+      const res = await fetch('/api/pacientes/plan-mode', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patientId, graduateWeeks: w }),
+      })
+      if (!res.ok) throw new Error()
+    } catch {
+      notify('No se pudo guardar el umbral de graduación.', 'error')
+    }
+  }
+
+  // Aviso de graduación: si la bitácora supera el umbral (semanas) del paciente,
+  // sugerir pasar a plan detallado.
   const oldest = entries.length > 0 ? entries[entries.length - 1].activity_date : null
   const daysSinceStart = oldest
     ? Math.floor((Date.now() - new Date(oldest + 'T00:00:00').getTime()) / 86_400_000)
     : 0
-  const suggestGraduate = daysSinceStart >= GRADUATE_AFTER_DAYS
+  const suggestGraduate = daysSinceStart >= graduateWeeks * 7
 
   const graduate = async () => {
     setGradSaving(true)
@@ -138,10 +186,22 @@ export default function BitacoraClient({
         </div>
       )}
 
+      {/* Umbral de graduación configurable por paciente */}
+      <div className="flex items-center gap-2 mb-4 text-[12px] text-text-secondary">
+        <span>Avisarme para graduar a plan detallado a las</span>
+        <input type="number" min={1} max={52} value={graduateWeeks}
+          onChange={e => setGraduateWeeks(Number(e.target.value))}
+          onBlur={e => updateGraduateWeeks(Number(e.target.value))}
+          className="w-14 bg-bg-secondary border-[0.5px] border-border rounded-lg px-2 py-1 text-[13px] text-text-primary text-center focus:outline-none focus:border-accent" />
+        <span>semanas de seguimiento simple</span>
+      </div>
+
       {/* Alta rápida */}
       <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-5 mb-8">
         <div className="flex flex-wrap items-center gap-3 mb-3">
-          <label className="text-[11px] uppercase tracking-[0.05em] text-text-secondary">Día</label>
+          <label className="text-[11px] uppercase tracking-[0.05em] text-text-secondary">
+            {editingId ? 'Editando registro · Día' : 'Día'}
+          </label>
           <input type="date" value={date} onChange={e => setDate(e.target.value)}
             className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-2.5 py-1.5 text-[13px] focus:outline-none focus:border-accent" />
         </div>
@@ -187,10 +247,17 @@ export default function BitacoraClient({
           className="w-full bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:border-accent resize-y mb-3"
         />
 
-        <button onClick={saveEntry} disabled={!canSave || saving}
-          className="bg-accent text-bg-primary px-5 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity">
-          {saving ? 'Guardando…' : 'Registrar día'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={saveEntry} disabled={!canSave || saving}
+            className="bg-accent text-bg-primary px-5 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity">
+            {saving ? 'Guardando…' : editingId ? 'Guardar cambios' : 'Registrar día'}
+          </button>
+          {editingId && (
+            <button onClick={resetForm} className="text-[13px] text-text-secondary hover:text-text-primary px-3 py-2">
+              Cancelar
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Historial */}
@@ -201,10 +268,16 @@ export default function BitacoraClient({
       ) : (
         <div className="space-y-3">
           {entries.map(e => (
-            <div key={e.id} className="bg-bg-primary border-[0.5px] border-border rounded-xl p-4">
+            <div key={e.id} className={`bg-bg-primary border-[0.5px] rounded-xl p-4 ${editingId === e.id ? 'border-accent' : 'border-border'}`}>
               <div className="flex items-start justify-between gap-3 mb-2">
-                <span className="text-[13px] font-medium text-text-primary capitalize">{formatDate(e.activity_date)}</span>
-                <button onClick={() => deleteEntry(e.id)} className="text-text-secondary hover:text-warning text-[16px] leading-none shrink-0" title="Borrar">×</button>
+                <div>
+                  <span className="text-[13px] font-medium text-text-primary capitalize">{formatDate(e.activity_date)}</span>
+                  <span className="text-[11px] text-text-secondary ml-2">· cargado por {authorName(e.user_id)}</span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button onClick={() => startEdit(e)} className="text-text-secondary hover:text-accent text-[12px]" title="Editar">Editar</button>
+                  <button onClick={() => deleteEntry(e.id)} className="text-text-secondary hover:text-warning text-[16px] leading-none" title="Borrar">×</button>
+                </div>
               </div>
               {e.exercises?.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mb-2">

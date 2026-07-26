@@ -1,4 +1,5 @@
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { redirect } from 'next/navigation'
 import Header from '@/components/Header'
 import Link from 'next/link'
@@ -18,17 +19,26 @@ export default async function BitacoraPage({ params }: { params: { id: string } 
 
   const { data: patient, error: patientError } = await supabase
     .from('patients')
-    .select('id, name, plan_mode')
+    .select('id, name, plan_mode, simple_graduate_weeks')
     .eq('id', params.id)
     .single()
   if (patientError || !patient) redirect('/dashboard/pacientes')
 
   const { data: entries } = await supabase
     .from('simple_activity_log')
-    .select('id, activity_date, exercises, note, created_at')
+    .select('id, activity_date, exercises, note, created_at, user_id')
     .eq('patient_id', patient.id)
     .order('activity_date', { ascending: false })
     .order('created_at', { ascending: false })
+
+  // Nombres de los autores (para "cargado por X"). La tabla users es solo-propio
+  // por RLS, así que resolvemos con el cliente admin (server-only). Incluimos al
+  // usuario actual para etiquetar sus propios registros nuevos al instante.
+  const authorIds = Array.from(new Set([user.id, ...(entries ?? []).map(e => e.user_id).filter(Boolean)]))
+  const admin = createAdminClient()
+  const { data: authors } = await admin.from('users').select('id, full_name, email').in('id', authorIds)
+  const authorNames: Record<string, string> = {}
+  for (const a of authors ?? []) authorNames[a.id] = a.full_name?.trim() || a.email || '—'
 
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
@@ -51,6 +61,8 @@ export default async function BitacoraPage({ params }: { params: { id: string } 
           patientId={patient.id}
           userId={user.id}
           planMode={patient.plan_mode ?? 'detallado'}
+          graduateWeeks={patient.simple_graduate_weeks ?? 3}
+          authorNames={authorNames}
           initialEntries={entries ?? []}
         />
       </main>

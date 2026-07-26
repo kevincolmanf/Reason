@@ -13,12 +13,20 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  let body: { patientId?: string; mode?: string }
+  let body: { patientId?: string; mode?: string; graduateWeeks?: number }
   try { body = await request.json() } catch { return NextResponse.json({ error: 'Body inválido' }, { status: 400 }) }
-  const { patientId, mode } = body
+  const { patientId, mode, graduateWeeks } = body
 
-  if (!patientId || !mode || !VALID.includes(mode)) {
-    return NextResponse.json({ error: 'Datos inválidos' }, { status: 400 })
+  if (!patientId) return NextResponse.json({ error: 'Falta patientId' }, { status: 400 })
+  if (mode !== undefined && !VALID.includes(mode)) {
+    return NextResponse.json({ error: 'Modo inválido' }, { status: 400 })
+  }
+  const weeksProvided = graduateWeeks !== undefined
+  if (weeksProvided && (!Number.isInteger(graduateWeeks) || graduateWeeks! < 1 || graduateWeeks! > 52)) {
+    return NextResponse.json({ error: 'Semanas inválidas (1 a 52)' }, { status: 400 })
+  }
+  if (mode === undefined && !weeksProvided) {
+    return NextResponse.json({ error: 'Nada para actualizar' }, { status: 400 })
   }
 
   const admin = createAdminClient()
@@ -51,8 +59,12 @@ export async function POST(request: Request) {
   }
   if (!allowed) return NextResponse.json({ error: 'Sin acceso a este paciente' }, { status: 403 })
 
-  const { error } = await admin.from('patients').update({ plan_mode: mode }).eq('id', patientId)
+  const update: { plan_mode?: string; simple_graduate_weeks?: number } = {}
+  if (mode !== undefined) update.plan_mode = mode
+  if (weeksProvided) update.simple_graduate_weeks = graduateWeeks
+
+  const { error } = await admin.from('patients').update(update).eq('id', patientId)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  return NextResponse.json({ ok: true, plan_mode: mode })
+  return NextResponse.json({ ok: true, ...update })
 }
