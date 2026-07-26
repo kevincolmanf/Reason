@@ -127,11 +127,12 @@ export default async function DashboardPage() {
   const mondayStr = toDateStr(monday)
   const sundayStr = toDateStr(sunday)
 
-  // Pacientes del contexto activo (para nombrar y filtrar los hitos)
-  const patientQuery = contextOrgId
-    ? supabase.from('patients').select('id, name').eq('org_id', contextOrgId)
-    : supabase.from('patients').select('id, name').eq('user_id', user.id).is('org_id', null)
-  const { data: ctxPatients } = await patientQuery
+  // Pacientes accesibles (personales + de todas sus organizaciones). No se filtra
+  // por el contexto activo a propósito: el recordatorio junta los pendientes de
+  // TODOS los pacientes de Kevin, así lo que programa siempre aparece sin importar
+  // en qué pestaña (equipo/personal) esté parado. La RLS de patients ya limita a
+  // lo accesible (auth.uid() = user_id OR miembro de la org del paciente).
+  const { data: ctxPatients } = await supabase.from('patients').select('id, name')
   const patientNameById = new Map((ctxPatients ?? []).map(p => [p.id, p.name]))
   const patientIds = Array.from(patientNameById.keys())
 
