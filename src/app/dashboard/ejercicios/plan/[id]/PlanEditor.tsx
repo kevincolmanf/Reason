@@ -100,6 +100,16 @@ const TRAFFIC_LABELS: Record<TrafficLight, string> = {
   red:    'Esfuerzo muy alto o dolor',
 }
 
+// Color por superserie. Todos los ejercicios de un mismo número (1, 1A, 1B…)
+// comparten color, para distinguir de un vistazo qué va con qué.
+const GROUP_PALETTE = ['#2563EB', '#059669', '#D97706', '#7C3AED', '#DB2777', '#0891B2']
+function groupColor(group?: string): string | null {
+  if (!group) return null
+  const n = parseInt(group, 10)
+  if (isNaN(n) || n < 1) return null
+  return GROUP_PALETTE[(n - 1) % GROUP_PALETTE.length]
+}
+
 const CATEGORIES = [
   { value: 'lower_body', label: 'Lower Body' },
   { value: 'upper_body', label: 'Upper Body' },
@@ -309,7 +319,8 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
 
   // Search/modal state
   const [isSearchOpen, setIsSearchOpen] = useState(false)
-  const [targetBlock, setTargetBlock] = useState<{ blockIdx: number } | null>(null)
+  // exIdx presente => modo "reelegir" (reemplaza ese ejercicio en vez de agregar uno nuevo)
+  const [targetBlock, setTargetBlock] = useState<{ blockIdx: number; exIdx?: number } | null>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [searchQuery, setSearchQuery] = useState('')
@@ -677,11 +688,26 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const addExerciseToBlock = (exercise: any) => {
     if (!targetBlock) return
-    const { blockIdx } = targetBlock
+    const { blockIdx, exIdx } = targetBlock
     updateSelectedSession(data => ({
       ...data,
       blocks: data.blocks.map((b, i) => {
         if (i !== blockIdx) return b
+        // Modo reelegir: reemplaza el ejercicio conservando la dosificación,
+        // la superserie y las recomendaciones ya cargadas.
+        if (exIdx != null) {
+          return {
+            ...b,
+            exercises: b.exercises.map((ex, ei) =>
+              ei !== exIdx ? ex : {
+                ...ex,
+                exercise_id: exercise.id,
+                exercise_name: exercise.name,
+                youtube_url: exercise.youtube_url || '',
+              }
+            ),
+          }
+        }
         return {
           ...b,
           exercises: [...b.exercises, {
@@ -855,6 +881,17 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
 
   const openSearch = (blockIdx: number) => {
     setTargetBlock({ blockIdx })
+    setIsSearchOpen(true)
+    setSearchQuery('')
+    setSearchCategory('')
+    setShowCreateForm(false)
+    setCreateName('')
+    setCreateUrl('')
+  }
+
+  // Reelegir: abre el buscador para reemplazar un ejercicio ya cargado.
+  const openReplace = (blockIdx: number, exIdx: number) => {
+    setTargetBlock({ blockIdx, exIdx })
     setIsSearchOpen(true)
     setSearchQuery('')
     setSearchCategory('')
@@ -1462,7 +1499,9 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
                           </div>
                         ) : (
                           <div className="space-y-6">
-                            {block.exercises.map((ex, exIdx) => (
+                            {block.exercises.map((ex, exIdx) => {
+                              const gColor = groupColor(ex.group)
+                              return (
                               <div
                                 key={ex.id}
                                 draggable
@@ -1478,6 +1517,7 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
                                 }}
                                 onDragEnd={() => { dragExRef.current = null; setDragOverEx(null) }}
                                 className={`bg-bg-secondary border-[0.5px] rounded-xl p-4 transition-colors ${dragOverEx?.bIdx === bIdx && dragOverEx?.exIdx === exIdx ? 'border-accent bg-accent/5' : 'border-border'}`}
+                                style={gColor ? { borderLeftWidth: '3px', borderLeftColor: gColor } : undefined}
                               >
                                 <div className="flex justify-between items-start mb-4">
                                   <div className="flex-1 min-w-0">
@@ -1488,7 +1528,8 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
                                       <select
                                         value={ex.group || ''}
                                         onChange={e => updateExerciseGroup(bIdx, exIdx, e.target.value)}
-                                        className={`shrink-0 text-[11px] font-mono font-medium rounded px-1.5 py-0.5 border-[0.5px] focus:outline-none cursor-pointer appearance-none transition-colors ${ex.group ? 'bg-accent/10 border-accent/40 text-accent' : 'bg-bg-primary border-border text-text-secondary hover:border-accent/40'}`}
+                                        className={`shrink-0 text-[11px] font-mono font-medium rounded px-1.5 py-0.5 border-[0.5px] focus:outline-none cursor-pointer appearance-none transition-colors ${ex.group ? '' : 'bg-bg-primary border-border text-text-secondary hover:border-accent/40'}`}
+                                        style={gColor ? { backgroundColor: `${gColor}1a`, borderColor: `${gColor}66`, color: gColor } : undefined}
                                         title="Superserie: ejercicios con el mismo número van alternados (ej: 1A y 1B)"
                                       >
                                         <option value="">—</option>
@@ -1530,11 +1571,20 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
                                       </a>
                                     )}
                                   </div>
-                                  <button
-                                    onClick={() => removeExercise(bIdx, exIdx)}
-                                    className="text-text-secondary hover:text-warning text-[18px] p-1 shrink-0"
-                                    title="Eliminar ejercicio"
-                                  >×</button>
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    <button
+                                      onClick={() => openReplace(bIdx, exIdx)}
+                                      className="text-text-secondary hover:text-accent p-1"
+                                      title="Reelegir: cambiar por otro ejercicio (conserva la dosificación)"
+                                    >
+                                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                                    </button>
+                                    <button
+                                      onClick={() => removeExercise(bIdx, exIdx)}
+                                      className="text-text-secondary hover:text-warning text-[18px] p-1"
+                                      title="Eliminar ejercicio"
+                                    >×</button>
+                                  </div>
                                 </div>
 
                                 {/* Dosificación plana (sin S1-S4) */}
@@ -1573,7 +1623,8 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
                                 </div>
 
                               </div>
-                            ))}
+                              )
+                            })}
                           </div>
                         )}
                       </div>
@@ -1726,7 +1777,7 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
                 autoFocus
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Buscar ejercicio para agregar..."
+                placeholder={targetBlock?.exIdx != null ? 'Buscar ejercicio para reemplazar...' : 'Buscar ejercicio para agregar...'}
                 className="flex-grow bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent"
               />
               <button onClick={() => setIsSearchOpen(false)} className="text-text-secondary hover:text-text-primary p-2 text-[13px] whitespace-nowrap">
@@ -1777,7 +1828,7 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
                           : `${ex.category.replace(/_/g, ' ').toUpperCase()} • ${ex.equipment || 'Sin equipo'}`}
                       </div>
                     </div>
-                    <div className="text-accent text-[20px] opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity">+</div>
+                    <div className="text-accent text-[20px] opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity">{targetBlock?.exIdx != null ? '↔' : '+'}</div>
                   </button>
                 ))
               )}
