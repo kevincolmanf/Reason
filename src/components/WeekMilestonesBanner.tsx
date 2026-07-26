@@ -11,6 +11,7 @@ export interface WeekMilestone {
   date: string      // YYYY-MM-DD
   dateLabel: string // ej: "mié 30"
   color: string
+  overdue?: boolean // evaluación programada con fecha ya pasada, aún no hecha
 }
 
 const STORAGE_KEY = 'week_milestones_dismissed'
@@ -97,7 +98,7 @@ export default function WeekMilestonesBanner({ milestones }: { milestones: WeekM
         {items.map(m => (
           <div
             key={m.key}
-            className="flex items-center gap-2.5 bg-bg-primary border-[0.5px] border-border rounded-lg px-3 py-2"
+            className={`flex items-center gap-2.5 rounded-lg px-3 py-2 border-[0.5px] ${m.overdue ? 'bg-warning/5 border-warning/40' : 'bg-bg-primary border-border'}`}
           >
             <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: m.color }} />
             <Link
@@ -109,6 +110,11 @@ export default function WeekMilestonesBanner({ milestones }: { milestones: WeekM
             <span className="text-[13px] text-text-secondary truncate flex-grow">
               — {m.label}
             </span>
+            {m.overdue && (
+              <span className="text-[10px] font-medium text-warning bg-warning/10 border-[0.5px] border-warning/40 rounded px-1.5 py-0.5 shrink-0 uppercase tracking-[0.03em]">
+                Atrasada
+              </span>
+            )}
             <span className="text-[11px] text-text-secondary shrink-0 capitalize">{m.dateLabel}</span>
             <button
               onClick={() => dismiss(m.key)}

@@ -144,12 +144,12 @@ export default async function DashboardPage() {
         .select('id, patient_id, event_date, type, title')
         .in('patient_id', patientIds)
         .gte('event_date', mondayStr).lte('event_date', sundayStr),
-      // Evaluaciones programadas pendientes: todas de hoy en adelante
+      // Evaluaciones programadas pendientes: TODAS las no completadas (incluye
+      // atrasadas de días pasados, que siguen recordándose hasta hacerlas o borrarlas).
       supabase.from('scheduled_evaluations')
         .select('id, patient_id, kind, protocol_type, scheduled_date')
         .in('patient_id', patientIds)
         .eq('completed', false)
-        .gte('scheduled_date', todayStr)
         .order('scheduled_date'),
     ])
 
@@ -172,9 +172,15 @@ export default async function DashboardPage() {
         key: `sched_${s.id}`, patientId: s.patient_id,
         patientName: patientNameById.get(s.patient_id) ?? 'Paciente',
         label, date: s.scheduled_date, dateLabel: dateLabel(s.scheduled_date), color,
+        overdue: s.scheduled_date < todayStr,
       })
     }
-    milestones.sort((a, b) => a.date.localeCompare(b.date) || a.patientName.localeCompare(b.patientName))
+    // Atrasadas primero (más urgentes), luego por fecha
+    milestones.sort((a, b) =>
+      (a.overdue === b.overdue ? 0 : a.overdue ? -1 : 1)
+      || a.date.localeCompare(b.date)
+      || a.patientName.localeCompare(b.patientName)
+    )
   }
 
   const role = userData?.role
