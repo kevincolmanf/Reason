@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
+import { useToast } from '@/components/Dialogs'
 import { jsPDF } from 'jspdf'
 
 interface FichaData {
@@ -38,6 +39,7 @@ const emptyData: FichaData = {
 }
 
 export default function PatientFichaEditor({ initialFicha, patientName }: { initialFicha: PatientFicha, patientName: string }) {
+  const { notify, toast } = useToast()
   const [ficha, setFicha] = useState<FichaData>({
     ...emptyData,
     ...initialFicha.ficha_data,
@@ -151,11 +153,12 @@ ${ficha.planTratamiento || '-'}
 --
 Documento generado con Reason — reason.com.ar`
     navigator.clipboard.writeText(text)
-    alert('Copiado al portapapeles')
+    notify('Copiado al portapapeles')
   }
 
   return (
     <div>
+      {toast}
       {/* Estado de guardado */}
       <div className="flex justify-end mb-4 text-[12px]">
         {saveStatus === 'saving' && <span className="text-text-secondary">Guardando...</span>}

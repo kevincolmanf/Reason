@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
+import { useToast } from '@/components/Dialogs'
 
 const DEFAULT_AREAS = [
   'Kinesiología',
@@ -55,6 +56,7 @@ export default function AgendaSettings({
   onClose,
   onSaved,
 }: Props) {
+  const { notify, toast } = useToast()
   const [areas, setAreas] = useState<string[]>(initialAreas)
   const [slotInterval, setSlotInterval] = useState(initialSlotInterval)
   const [areaDurations, setAreaDurations] = useState<Record<string, number>>(initialAreaDurations)
@@ -128,7 +130,7 @@ export default function AgendaSettings({
     // Si falla, revertimos el toggle y avisamos en vez de fingir que se guardó.
     if (error) {
       setMemberAccess(prev => ({ ...prev, [memberId]: !newAccess }))
-      alert('No se pudo cambiar el acceso a la agenda. Intentá de nuevo.')
+      notify('No se pudo cambiar el acceso a la agenda. Intentá de nuevo.', 'error')
     }
     setSavingMember(null)
   }
@@ -145,7 +147,7 @@ export default function AgendaSettings({
     })
     if (error) {
       setMemberAreas(p => ({ ...p, [memberId]: prev }))
-      alert('No se pudieron guardar las áreas. Intentá de nuevo.')
+      notify('No se pudieron guardar las áreas. Intentá de nuevo.', 'error')
     }
   }
 
@@ -192,6 +194,7 @@ export default function AgendaSettings({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      {toast}
       <div className="bg-bg-secondary border-[0.5px] border-border rounded-2xl p-6 w-full max-w-[480px] shadow-xl max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-5">
           <h2 className="text-[16px] font-medium">Configuración de agenda</h2>

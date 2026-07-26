@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
+import { useToast } from '@/components/Dialogs'
 
 interface Exercise {
   id: string
@@ -34,6 +35,7 @@ const CATEGORIES = [
 ]
 
 export default function BibliotecaInteractive({ equipments, userId }: { equipments: string[], userId: string }) {
+  const { notify, toast } = useToast()
   const [view, setView] = useState<'biblioteca' | 'mis_ejercicios'>('biblioteca')
 
   // Biblioteca state
@@ -190,6 +192,7 @@ export default function BibliotecaInteractive({ equipments, userId }: { equipmen
 
   return (
     <div>
+      {toast}
       {/* TABS */}
       <div className="flex gap-2 mb-8 border-b-[0.5px] border-border">
         <button
@@ -305,7 +308,7 @@ export default function BibliotecaInteractive({ equipments, userId }: { equipmen
                   )}
 
                   <button
-                    onClick={() => alert('Para agregar al plan, abrí el Planificador de Sesiones.')}
+                    onClick={() => notify('Para agregar al plan, abrí el Planificador de Sesiones.')}
                     className="text-text-primary bg-bg-secondary border-[0.5px] border-border px-3 py-1.5 rounded-lg text-[12px] font-medium hover:bg-border transition-colors"
                   >
                     + Plan
