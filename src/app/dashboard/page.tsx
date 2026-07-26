@@ -13,6 +13,11 @@ const RTS_LABELS: Record<string, string> = {
   lca: 'LCA', hamstring: 'Isquios', ankle: 'Tobillo', pfp: 'Femoropatelar',
   tendinopathy: 'Tendinopatía', groin: 'Inguinal', shoulder: 'Hombro',
 }
+const Q_LABELS: Record<string, string> = {
+  spadi: 'SPADI', ndi: 'NDI', roland_morris: 'Roland-Morris', start_back: 'STarT Back',
+  tampa: 'TAMPA', catastrofismo: 'PCS', oswestry: 'Oswestry', dash: 'DASH',
+  lefs: 'LEFS', psfs: 'PSFS', fabq: 'FABQ',
+}
 const RTS_COLOR = '#C27B54'
 const DYN_COLOR = '#2563EB'
 const Q_COLOR = '#059669'
@@ -158,7 +163,8 @@ export default async function DashboardPage() {
       const color = s.kind === 'rts' ? RTS_COLOR : s.kind === 'dyn' ? DYN_COLOR : Q_COLOR
       const label = s.kind === 'rts'
         ? `Evaluación RTS · ${RTS_LABELS[s.protocol_type as string] ?? s.protocol_type ?? ''}`
-        : s.kind === 'dyn' ? 'Dinamometría' : 'Cuestionario'
+        : s.kind === 'dyn' ? 'Dinamometría'
+        : s.protocol_type ? `Cuestionario · ${Q_LABELS[s.protocol_type] ?? s.protocol_type}` : 'Cuestionario'
       milestones.push({
         key: `sched_${s.id}`, patientId: s.patient_id,
         patientName: patientNameById.get(s.patient_id) ?? 'Paciente',
