@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
 import { useConfirm, useToast } from '@/components/Dialogs'
 
@@ -25,13 +26,14 @@ function formatDate(dateStr: string): string {
 }
 
 export default function BitacoraClient({
-  patientId, userId, planMode, graduateWeeks: initialGraduateWeeks, authorNames, initialEntries,
+  patientId, userId, planMode, graduateWeeks: initialGraduateWeeks, authorNames, hasDetailedPlan, initialEntries,
 }: {
   patientId: string
   userId: string
   planMode: string
   graduateWeeks: number
   authorNames: Record<string, string>
+  hasDetailedPlan: boolean
   initialEntries: Entry[]
 }) {
   const router = useRouter()
@@ -169,6 +171,18 @@ export default function BitacoraClient({
     <div>
       {confirmDialog}
       {toast}
+
+      {/* Red de seguridad: el plan detallado sigue guardado, no se borró al pasar a simple */}
+      {hasDetailedPlan && (
+        <div className="bg-bg-secondary border-[0.5px] border-border rounded-xl px-4 py-3 mb-6 flex items-center justify-between gap-3">
+          <p className="text-[12px] text-text-secondary">
+            Este paciente ya tiene un <span className="text-text-primary font-medium">plan detallado guardado</span>. Pasar a modo simple no lo borra.
+          </p>
+          <Link href={`/dashboard/ejercicios/plan?paciente=${patientId}`} className="shrink-0 text-[12px] text-accent hover:underline whitespace-nowrap no-underline">
+            Ver plan →
+          </Link>
+        </div>
+      )}
 
       {/* Aviso de graduación */}
       {suggestGraduate && (

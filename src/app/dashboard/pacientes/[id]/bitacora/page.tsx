@@ -40,6 +40,16 @@ export default async function BitacoraPage({ params }: { params: { id: string } 
   const authorNames: Record<string, string> = {}
   for (const a of authors ?? []) authorNames[a.id] = a.full_name?.trim() || a.email || '—'
 
+  // Red de seguridad: si el paciente tiene un plan detallado guardado, avisamos en
+  // la bitácora que sigue ahí (cambiar a modo simple no borra nada).
+  const { data: existingPlan } = await supabase
+    .from('exercise_plans')
+    .select('id')
+    .eq('patient_id', patient.id)
+    .limit(1)
+    .maybeSingle()
+  const hasDetailedPlan = !!existingPlan
+
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
       <Header />
@@ -63,6 +73,7 @@ export default async function BitacoraPage({ params }: { params: { id: string } 
           planMode={patient.plan_mode ?? 'detallado'}
           graduateWeeks={patient.simple_graduate_weeks ?? 3}
           authorNames={authorNames}
+          hasDetailedPlan={hasDetailedPlan}
           initialEntries={entries ?? []}
         />
       </main>
