@@ -13,6 +13,8 @@ import { useEffect, useRef, useState } from 'react'
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyRec = any
 
+interface CustomPhrase { id: string; label: string }
+
 interface Props {
   value: string
   onChange: (v: string) => void
@@ -22,6 +24,10 @@ interface Props {
   lang?: string
   /** clases del <textarea> — por defecto matchea el estilo de la ficha */
   textClassName?: string
+  /** frases propias (además de las preestablecidas), borrables y persistentes */
+  customPhrases?: CustomPhrase[]
+  onAddPhrase?: (label: string) => void | Promise<void>
+  onDeletePhrase?: (id: string) => void | Promise<void>
 }
 
 const DEFAULT_TEXTAREA =
@@ -35,9 +41,25 @@ export default function QuickNoteField({
   rows = 2,
   lang = 'es-AR',
   textClassName,
+  customPhrases,
+  onAddPhrase,
+  onDeletePhrase,
 }: Props) {
   const [listening, setListening] = useState(false)
   const [voiceSupported, setVoiceSupported] = useState(false)
+  const [adding, setAdding] = useState(false)
+  const [newPhrase, setNewPhrase] = useState('')
+  const [savingPhrase, setSavingPhrase] = useState(false)
+
+  const submitNewPhrase = async () => {
+    const label = newPhrase.trim()
+    if (!label || !onAddPhrase) return
+    setSavingPhrase(true)
+    await onAddPhrase(label)
+    setSavingPhrase(false)
+    setNewPhrase('')
+    setAdding(false)
+  }
   const recRef = useRef<AnyRec>(null)
   // Referencia siempre-fresca al valor, para que voz y chips agreguen sobre lo último.
   const valueRef = useRef(value)
@@ -80,9 +102,11 @@ export default function QuickNoteField({
     try { rec.start(); setListening(true) } catch { setListening(false) }
   }
 
+  const canManagePhrases = !!onAddPhrase
+
   return (
     <div>
-      {(phrases.length > 0 || voiceSupported) && (
+      {(phrases.length > 0 || (customPhrases?.length ?? 0) > 0 || canManagePhrases || voiceSupported) && (
         <div className="flex flex-wrap items-center gap-1.5 mb-2">
           {phrases.map(p => (
             <button
@@ -94,6 +118,57 @@ export default function QuickNoteField({
               + {p}
             </button>
           ))}
+          {/* Frases propias del equipo: insertar al tocar, borrar con la × */}
+          {customPhrases?.map(cp => (
+            <span key={cp.id} className="inline-flex items-center rounded-full border-[0.5px] border-accent/35 bg-accent/10 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => appendText(cp.label)}
+                className="text-[12px] pl-2.5 pr-1.5 py-1.5 text-accent hover:bg-accent/20 active:bg-accent/25 transition-colors"
+              >
+                + {cp.label}
+              </button>
+              {onDeletePhrase && (
+                <button
+                  type="button"
+                  onClick={() => onDeletePhrase(cp.id)}
+                  title="Borrar frase"
+                  className="text-[13px] leading-none px-1.5 py-1.5 text-accent/60 hover:text-warning hover:bg-accent/20 transition-colors"
+                >
+                  ×
+                </button>
+              )}
+            </span>
+          ))}
+          {/* Crear una frase nueva */}
+          {canManagePhrases && (
+            adding ? (
+              <span className="inline-flex items-center gap-1">
+                <input
+                  autoFocus
+                  value={newPhrase}
+                  onChange={e => setNewPhrase(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); submitNewPhrase() } else if (e.key === 'Escape') { setAdding(false); setNewPhrase('') } }}
+                  placeholder="Nueva frase…"
+                  maxLength={80}
+                  className="text-[12px] px-2.5 py-1.5 rounded-full border-[0.5px] border-border-strong bg-bg-primary focus:outline-none focus:border-accent w-[150px]"
+                />
+                <button type="button" onClick={submitNewPhrase} disabled={savingPhrase || !newPhrase.trim()} className="text-[12px] px-2.5 py-1.5 rounded-full bg-accent text-bg-primary font-medium disabled:opacity-40">
+                  {savingPhrase ? '…' : 'Guardar'}
+                </button>
+                <button type="button" onClick={() => { setAdding(false); setNewPhrase('') }} className="text-[12px] px-1.5 py-1.5 text-text-secondary hover:text-text-primary">×</button>
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setAdding(true)}
+                title="Crear una frase propia del equipo"
+                className="text-[12px] px-2.5 py-1.5 rounded-full border-[0.5px] border-dashed border-border-strong text-text-secondary hover:text-text-primary hover:border-accent transition-colors"
+              >
+                + Frase
+              </button>
+            )
+          )}
           {voiceSupported && (
             <button
               type="button"
