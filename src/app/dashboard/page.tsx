@@ -30,9 +30,10 @@ function toDateStr(d: Date): string {
 }
 
 const SHORT_DAYS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb']
+const SHORT_MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
 function dateLabel(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00')
-  return `${SHORT_DAYS[d.getDay()]} ${d.getDate()}`
+  return `${SHORT_DAYS[d.getDay()]} ${d.getDate()} ${SHORT_MONTHS[d.getMonth()]}`
 }
 
 function CategoryCard({ title, slug, desc }: { title: string, slug: string, desc: string }) {
@@ -142,12 +143,13 @@ export default async function DashboardPage() {
         .select('id, patient_id, event_date, type, title')
         .in('patient_id', patientIds)
         .gte('event_date', mondayStr).lte('event_date', sundayStr),
-      // Evaluaciones programadas pendientes: de hoy hasta fin de semana
+      // Evaluaciones programadas pendientes: todas de hoy en adelante
       supabase.from('scheduled_evaluations')
         .select('id, patient_id, kind, protocol_type, scheduled_date')
         .in('patient_id', patientIds)
         .eq('completed', false)
-        .gte('scheduled_date', todayStr).lte('scheduled_date', sundayStr),
+        .gte('scheduled_date', todayStr)
+        .order('scheduled_date'),
     ])
 
     for (const e of evs ?? []) {

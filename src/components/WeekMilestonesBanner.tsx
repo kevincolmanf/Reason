@@ -76,11 +76,11 @@ export default function WeekMilestonesBanner({ milestones }: { milestones: WeekM
         <div>
           <p className="text-[14px] font-medium text-text-primary mb-0.5">
             {items.length === 1
-              ? 'Un hito esta semana'
-              : `${items.length} hitos esta semana`}
+              ? 'Un recordatorio'
+              : `${items.length} recordatorios`}
           </p>
           <p className="text-[12px] text-text-secondary">
-            Evaluaciones e hitos programados para la semana en curso.
+            Hitos de esta semana y evaluaciones programadas pendientes.
           </p>
         </div>
         {items.length > 1 && (
