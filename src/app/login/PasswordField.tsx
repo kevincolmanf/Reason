@@ -3,8 +3,10 @@
 import { useState } from 'react'
 
 // Campo de contraseña con mostrar/ocultar. Mantiene name="password" para que el
-// form action del login lo reciba igual.
-export default function PasswordField() {
+// form action lo reciba igual. autoComplete configurable: 'current-password' para
+// login, 'new-password' para registro/reset. Es clave para que el navegador
+// guarde y autocomplete la contraseña de forma confiable.
+export default function PasswordField({ autoComplete = 'current-password' }: { autoComplete?: string }) {
   const [show, setShow] = useState(false)
   return (
     <div className="relative">
@@ -14,6 +16,7 @@ export default function PasswordField() {
         type={show ? 'text' : 'password'}
         placeholder="••••••••"
         required
+        autoComplete={autoComplete}
         className="w-full p-4 pr-12 bg-bg-primary border-[0.5px] border-border-strong rounded-lg text-[15px] focus:outline-none focus:border-accent transition-colors"
       />
       <button

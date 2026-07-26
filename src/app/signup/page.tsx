@@ -54,6 +54,7 @@ export default function SignupPage({
               type="email"
               placeholder="tu@email.com"
               required
+              autoComplete="username"
               className="w-full p-4 bg-bg-primary border-[0.5px] border-border-strong rounded-lg text-[15px] focus:outline-none focus:border-accent transition-colors"
             />
           </div>
@@ -69,6 +70,7 @@ export default function SignupPage({
               placeholder="Mínimo 6 caracteres"
               required
               minLength={6}
+              autoComplete="new-password"
               className="w-full p-4 bg-bg-primary border-[0.5px] border-border-strong rounded-lg text-[15px] focus:outline-none focus:border-accent transition-colors"
             />
           </div>
