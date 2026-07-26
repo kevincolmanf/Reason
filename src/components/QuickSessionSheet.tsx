@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import QuickNoteField from './QuickNoteField'
 
 // Hoja rápida para registrar una sesión durante la atención (tablet, una mano).
@@ -26,6 +26,33 @@ export default function QuickSessionSheet({ patientId, patientName, onClose, onS
   const [markPresent, setMarkPresent] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [customPhrases, setCustomPhrases] = useState<{ id: string; label: string }[]>([])
+
+  // Frases propias del equipo (persistentes, compartidas y borrables).
+  useEffect(() => {
+    fetch(`/api/sesiones/frases?patientId=${patientId}`)
+      .then(r => r.ok ? r.json() : [])
+      .then(data => { if (Array.isArray(data)) setCustomPhrases(data) })
+      .catch(() => {})
+  }, [patientId])
+
+  const addPhrase = async (label: string) => {
+    const res = await fetch('/api/sesiones/frases', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId, label }),
+    })
+    if (res.ok) { const nueva = await res.json(); setCustomPhrases(prev => [...prev, nueva]) }
+  }
+
+  const deletePhrase = async (id: string) => {
+    setCustomPhrases(prev => prev.filter(p => p.id !== id))
+    await fetch('/api/sesiones/frases', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, patientId }),
+    })
+  }
 
   const load = rpe !== null ? rpe * duration : null
 
@@ -75,6 +102,9 @@ export default function QuickSessionSheet({ patientId, patientName, onClose, onS
               rows={2}
               placeholder="Cómo le fue hoy…"
               phrases={['Tolera bien la carga', 'Sin dolor', 'Dolor leve post', 'Buena técnica', 'Progresa de fase', 'Aumentar carga próxima', 'Mantener carga', 'Fatiga marcada']}
+              customPhrases={customPhrases}
+              onAddPhrase={addPhrase}
+              onDeletePhrase={deletePhrase}
               textClassName="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y"
             />
           </div>
