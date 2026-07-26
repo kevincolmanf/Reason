@@ -1019,8 +1019,10 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
             }}
           >
             <p className="px-3 py-1.5 text-[11px] text-text-tertiary truncate border-b-[0.5px] border-border">{quickMenu.turno.patient_name}</p>
-            {/* Registrar sesión: solo turnos con paciente vinculado y editables */}
-            {canEdit && !quickMenu.turno.is_blocked && quickMenu.turno.patient_id && (
+            {/* Registrar sesión: cualquier integrante con acceso a la agenda (no solo
+                el dueño) puede registrar la sesión del paciente ahí mismo. El API
+                /api/carga/registrar-kine valida el acceso por membresía de la org. */}
+            {!quickMenu.turno.is_blocked && quickMenu.turno.patient_id && (
               <button
                 onClick={() => { setSessionSheet({ patientId: quickMenu.turno.patient_id!, patientName: quickMenu.turno.patient_name, turnoId: quickMenu.turno.id }); setQuickMenu(null) }}
                 className="w-full text-left px-3 py-2 text-[13px] text-accent font-medium hover:bg-bg-primary transition-colors"
