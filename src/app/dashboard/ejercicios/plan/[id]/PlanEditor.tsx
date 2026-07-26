@@ -190,7 +190,7 @@ const EVAL_META: Record<EvalKind, { label: string; color: string }> = {
 }
 // Tipos de cuestionario elegibles al programar. Solo los que la herramienta
 // (/recursos/cuestionarios) sabe completar, para que la preselección funcione.
-const QUEST_TYPES = ['spadi', 'ndi', 'roland_morris', 'start_back', 'tampa', 'catastrofismo', 'oswestry', 'dash', 'lefs', 'psfs', 'fabq']
+const QUEST_TYPES = ['spadi', 'ndi', 'roland_morris', 'start_back', 'tampa', 'catastrofismo', 'oswestry', 'dash', 'lefs', 'psfs', 'fabq', 'acl_rsi']
 const QUEST_OPTIONS = QUEST_TYPES.map(value => ({ value, label: Q_LABELS[value] ?? value }))
 function schedLabel(s: SchedEval): string {
   if (s.kind === 'rts') return `RTS · ${RTS_LABELS[s.protocol_type ?? ''] ?? s.protocol_type ?? ''}`

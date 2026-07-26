@@ -433,6 +433,25 @@ export const FABQ_ITEMS = [
   { text: 'No creo que alguna vez sea capaz de volver a mi trabajo habitual.', subscale: null },
 ]
 
+// ACL-RSI (ACL Return to Sport after Injury) — 12 ítems, escala 0-10.
+// Mide la disposición psicológica para volver al deporte tras lesión/cirugía de LCA.
+// Los ítems `reverse` están redactados en negativo (miedo, nerviosismo) y se
+// puntúan invertidos. Puntaje final 0-100: mayor = mejor disposición psicológica.
+export const ACL_RSI_ITEMS = [
+  { text: '¿Confiás en que podés rendir al mismo nivel de participación deportiva que antes de la lesión?', reverse: false },
+  { text: '¿Creés que es probable que te vuelvas a lesionar la rodilla al practicar tu deporte?', reverse: true },
+  { text: '¿Te ponés nervioso/a al practicar tu deporte?', reverse: true },
+  { text: '¿Confiás en que tu rodilla no va a fallar al practicar tu deporte?', reverse: false },
+  { text: '¿Confiás en que podrías practicar tu deporte sin preocuparte por tu rodilla?', reverse: false },
+  { text: '¿Te resulta frustrante tener que tener en cuenta tu rodilla al practicar tu deporte?', reverse: true },
+  { text: '¿Tenés miedo de volver a lesionarte la rodilla al practicar tu deporte?', reverse: true },
+  { text: '¿Confiás en que tu rodilla va a aguantar bajo presión?', reverse: false },
+  { text: '¿Tenés miedo de lesionarte la rodilla accidentalmente al practicar tu deporte?', reverse: true },
+  { text: '¿Los pensamientos de tener que pasar otra vez por cirugía y rehabilitación te impiden practicar tu deporte?', reverse: true },
+  { text: '¿Confiás en tu capacidad para rendir bien en tu deporte?', reverse: false },
+  { text: '¿Te sentís relajado/a al practicar tu deporte?', reverse: false },
+]
+
 // ─── Respuestas del paciente (para mostrar en la ficha) ─────────────────────
 
 export interface ResponseItem {
@@ -539,6 +558,15 @@ export function getResponseItems(type: string, data: any): ResponseItem[] {
         if (!FABQ_ITEMS[i]) return
         const sub = FABQ_ITEMS[i].subscale
         items.push({ text: FABQ_ITEMS[i].text, detail: `${v}/6`, tag: sub === 'pa' ? 'AF' : sub === 'work' ? 'Trabajo' : undefined, relevant: v >= 4 })
+      })
+      break
+    }
+    case 'acl_rsi': {
+      ;(data.answers ?? []).forEach((v: number, i: number) => {
+        if (!ACL_RSI_ITEMS[i]) return
+        // Ajustado: mayor = mejor disposición. Ítem a trabajar si la disposición es baja.
+        const adjusted = ACL_RSI_ITEMS[i].reverse ? 10 - v : v
+        items.push({ text: ACL_RSI_ITEMS[i].text, detail: `${v}/10`, relevant: adjusted <= 4 })
       })
       break
     }
