@@ -248,7 +248,7 @@ export default async function DashboardPage() {
         {/* POR CATEGORÍA */}
         <section className="mb-16">
           <h2 className="text-[20px] font-medium mb-6">Explorar por categoría</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <CategoryCard
               title="Resúmenes Comentados"
               slug="resumen_comentado"
@@ -258,16 +258,6 @@ export default async function DashboardPage() {
               title="Aplicaciones Clínicas"
               slug="aplicacion_clinica"
               desc="De la teoría a la práctica"
-            />
-            <CategoryCard
-              title="Protocolos"
-              slug="protocolo"
-              desc="Pasos claros para actuar"
-            />
-            <CategoryCard
-              title="Casos Reales"
-              slug="caso_real"
-              desc="Experiencia de consultorio"
             />
           </div>
         </section>
