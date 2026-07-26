@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import type { DaySession } from './page'
+import { groupColor } from '@/lib/exerciseGroups'
 
 // ─── Legacy types ────────────────────────────────────────────────────────────
 
@@ -111,12 +112,18 @@ function ExerciseCard({
   onLog: (ex: NewExercise) => void
 }) {
   const ytId = getYoutubeId(ex.youtube_url)
+  const gColor = groupColor(ex.group)
   return (
-    <div className="p-4 sm:p-5">
+    <div className="p-4 sm:p-5" style={gColor ? { borderLeft: `3px solid ${gColor}` } : undefined}>
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex items-center gap-2 flex-wrap">
           {ex.group && (
-            <span className="text-[11px] font-mono font-medium bg-accent/10 border-[0.5px] border-accent/40 text-accent rounded px-1.5 py-0.5 shrink-0">
+            <span
+              className="text-[11px] font-mono font-medium rounded px-1.5 py-0.5 shrink-0 border-[0.5px]"
+              style={gColor
+                ? { backgroundColor: `${gColor}1a`, borderColor: `${gColor}66`, color: gColor }
+                : undefined}
+            >
               {ex.group}
             </span>
           )}
@@ -731,12 +738,18 @@ function LegacyViewer({
                 const weekData = ex.weeks[activeWeek] ?? ex.weeks[0]
                 if (!weekData) return null
                 const ytId = getYoutubeId(ex.youtube_url)
+                const gColor = groupColor(ex.group)
                 return (
-                  <div key={ex.id} className="p-4 sm:p-5">
+                  <div key={ex.id} className="p-4 sm:p-5" style={gColor ? { borderLeft: `3px solid ${gColor}` } : undefined}>
                     <div className="flex items-start justify-between gap-3 mb-3">
                       <div className="flex items-center gap-2 flex-wrap">
                         {ex.group && (
-                          <span className="text-[11px] font-mono font-medium bg-accent/10 border-[0.5px] border-accent/40 text-accent rounded px-1.5 py-0.5 shrink-0">
+                          <span
+                            className="text-[11px] font-mono font-medium rounded px-1.5 py-0.5 shrink-0 border-[0.5px]"
+                            style={gColor
+                              ? { backgroundColor: `${gColor}1a`, borderColor: `${gColor}66`, color: gColor }
+                              : undefined}
+                          >
                             {ex.group}
                           </span>
                         )}

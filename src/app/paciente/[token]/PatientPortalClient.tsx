@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
+import { groupColor } from '@/lib/exerciseGroups'
 
 interface RecentSession {
   session_date: string; activity: string | null; rpe: number; load_units: number; vas_post: number | null; source: string
@@ -891,12 +892,19 @@ function SessionExercisesInline({ session, portalToken }: { session: ScheduledIt
             <span className="text-[12px] font-medium text-text-primary uppercase tracking-[0.05em]">{block.name}</span>
           </div>
           <div className="divide-y-[0.5px] divide-border">
-            {block.exercises.map(ex => (
-              <div key={ex.id} className="p-4">
+            {block.exercises.map(ex => {
+              const gColor = groupColor(ex.group)
+              return (
+              <div key={ex.id} className="p-4" style={gColor ? { borderLeft: `3px solid ${gColor}` } : undefined}>
                 {/* Nombre + grupo + video */}
                 <div className="flex items-start gap-1.5 flex-wrap mb-2">
                   {ex.group && (
-                    <span className="text-[11px] font-mono font-medium bg-accent/10 border-[0.5px] border-accent/40 text-accent rounded px-1.5 py-0.5">{ex.group}</span>
+                    <span
+                      className="text-[11px] font-mono font-medium rounded px-1.5 py-0.5 border-[0.5px]"
+                      style={gColor
+                        ? { backgroundColor: `${gColor}1a`, borderColor: `${gColor}66`, color: gColor }
+                        : undefined}
+                    >{ex.group}</span>
                   )}
                   <span className="text-[14px] font-medium text-text-primary">{ex.exercise_name}</span>
                 </div>
@@ -999,7 +1007,8 @@ function SessionExercisesInline({ session, portalToken }: { session: ScheduledIt
                   </div>
                 )}
               </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       ))}

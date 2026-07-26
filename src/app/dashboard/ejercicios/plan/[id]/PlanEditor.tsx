@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from 'uuid'
 import jsPDF from 'jspdf'
 import QRCode from 'qrcode'
 import { EVENT_TYPES, eventMeta, type PatientEvent } from '@/lib/patientEvents'
+import { groupColor } from '@/lib/exerciseGroups'
 import { useConfirm, useToast } from '@/components/Dialogs'
 
 // ─── Interfaces ────────────────────────────────────────────────────────────────
@@ -98,16 +99,6 @@ const TRAFFIC_LABELS: Record<TrafficLight, string> = {
   green:  'Bien tolerado',
   yellow: 'Esfuerzo moderado-alto',
   red:    'Esfuerzo muy alto o dolor',
-}
-
-// Color por superserie. Todos los ejercicios de un mismo número (1, 1A, 1B…)
-// comparten color, para distinguir de un vistazo qué va con qué.
-const GROUP_PALETTE = ['#2563EB', '#059669', '#D97706', '#7C3AED', '#DB2777', '#0891B2']
-function groupColor(group?: string): string | null {
-  if (!group) return null
-  const n = parseInt(group, 10)
-  if (isNaN(n) || n < 1) return null
-  return GROUP_PALETTE[(n - 1) % GROUP_PALETTE.length]
 }
 
 const CATEGORIES = [
