@@ -140,6 +140,13 @@ export default function HeaderClient({ userMetadata, hasAgendaAccess, isProOrAdm
             Gestionar suscripción
           </Link>
           <Link
+            href="/dashboard/papelera"
+            onClick={closeMenu}
+            className="block px-4 py-2 text-[14px] text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline"
+          >
+            Papelera
+          </Link>
+          <Link
             href="/account/ayuda"
             onClick={closeMenu}
             className="block px-4 py-2 text-[14px] text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline"

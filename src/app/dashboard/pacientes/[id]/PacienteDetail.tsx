@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import QuickSessionSheet from '@/components/QuickSessionSheet'
 import { EVENT_TYPES, eventMeta, type PatientEvent } from '@/lib/patientEvents'
 import { useConfirm, useToast } from '@/components/Dialogs'
+import { softDeleteRecord } from '@/lib/softDelete'
 
 interface Patient {
   id: string
@@ -102,8 +103,13 @@ export default function PacienteDetail({ patient: initialPatient, userId, initia
   }
 
   const deleteEvent = async (id: string) => {
+    if (!(await confirm({ title: 'Borrar hito', message: 'El hito se moverá a la papelera. Podés restaurarlo por 30 días.', danger: true, confirmLabel: 'Borrar' }))) return
+    const { error } = await softDeleteRecord(supabaseRef.current, {
+      table: 'patient_events', id, userId, patientId: patient.id, patientName: patient.name,
+    })
+    if (error) { notify('No se pudo borrar: ' + error, 'error'); return }
     setEvents(prev => prev.filter(e => e.id !== id))
-    await supabaseRef.current.from('patient_events').delete().eq('id', id)
+    notify('Hito movido a la papelera')
   }
 
   const router = useRouter()

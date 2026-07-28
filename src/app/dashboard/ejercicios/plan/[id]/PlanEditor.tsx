@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { EVENT_TYPES, eventMeta, type PatientEvent } from '@/lib/patientEvents'
 import { groupColor } from '@/lib/exerciseGroups'
 import { useConfirm, useToast } from '@/components/Dialogs'
+import { softDeleteRecord } from '@/lib/softDelete'
 
 // ─── Interfaces ────────────────────────────────────────────────────────────────
 
@@ -229,16 +230,21 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
     if (!rtsAction) return
     if (!(await confirm({
       title: 'Borrar evaluación RTS',
-      message: 'Esto elimina la evaluación RTS completa de forma permanente —no solo su marca en el calendario— y no se puede deshacer.',
+      message: 'Se borra la evaluación RTS completa (no solo su marca en el calendario). Va a la papelera: podés restaurarla por 30 días.',
       danger: true,
       confirmLabel: 'Borrar evaluación',
     }))) return
     setRtsDeleting(true)
     const id = rtsAction.id
-    await supabaseRef.current.from('rts_evaluations').delete().eq('id', id)
-    setRtsList(prev => prev.filter(r => r.id !== id))
+    const { error } = await softDeleteRecord(supabaseRef.current, {
+      table: 'rts_evaluations', id, userId, patientId: plan.patient_id,
+      label: `RTS · ${RTS_LABELS[rtsAction.protocol_type] ?? rtsAction.protocol_type}`,
+    })
     setRtsDeleting(false)
+    if (error) { notify('No se pudo borrar: ' + error, 'error'); return }
+    setRtsList(prev => prev.filter(r => r.id !== id))
     setRtsAction(null)
+    notify('Evaluación movida a la papelera')
   }
 
   // Dinamometría sobre el calendario (como el RTS: crear desde un día, marcador,
@@ -253,16 +259,20 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
     if (!dynAction) return
     if (!(await confirm({
       title: 'Borrar dinamometría',
-      message: 'Esto elimina la evaluación de dinamometría completa de forma permanente —no solo su marca en el calendario— y no se puede deshacer.',
+      message: 'Se borra la evaluación de dinamometría completa (no solo su marca en el calendario). Va a la papelera: podés restaurarla por 30 días.',
       danger: true,
       confirmLabel: 'Borrar evaluación',
     }))) return
     setDynDeleting(true)
     const id = dynAction.id
-    await supabaseRef.current.from('dynamometer_results').delete().eq('id', id)
-    setDynList(prev => prev.filter(r => r.id !== id))
+    const { error } = await softDeleteRecord(supabaseRef.current, {
+      table: 'dynamometer_results', id, userId, patientId: plan.patient_id,
+    })
     setDynDeleting(false)
+    if (error) { notify('No se pudo borrar: ' + error, 'error'); return }
+    setDynList(prev => prev.filter(r => r.id !== id))
     setDynAction(null)
+    notify('Evaluación movida a la papelera')
   }
 
   // Cuestionarios sobre el calendario. Como no se editan (son solo-creación en
@@ -277,16 +287,20 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
     if (!qAction) return
     if (!(await confirm({
       title: 'Borrar cuestionario',
-      message: 'Esto elimina el resultado del cuestionario de forma permanente —no solo su marca en el calendario— y no se puede deshacer.',
+      message: 'Se borra el resultado del cuestionario (no solo su marca en el calendario). Va a la papelera: podés restaurarlo por 30 días.',
       danger: true,
       confirmLabel: 'Borrar resultado',
     }))) return
     setQDeleting(true)
     const id = qAction.id
-    await supabaseRef.current.from('questionnaire_results').delete().eq('id', id)
-    setQList(prev => prev.filter(r => r.id !== id))
+    const { error } = await softDeleteRecord(supabaseRef.current, {
+      table: 'questionnaire_results', id, userId, patientId: plan.patient_id,
+    })
     setQDeleting(false)
+    if (error) { notify('No se pudo borrar: ' + error, 'error'); return }
+    setQList(prev => prev.filter(r => r.id !== id))
     setQAction(null)
+    notify('Resultado movido a la papelera')
   }
 
   // ─── Evaluaciones: completar ahora / programar a futuro ──────────────────────
@@ -372,9 +386,15 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
   }
   const deleteEditEvent = async () => {
     if (!editEvent) return
-    setEvents(prev => prev.filter(e => e.id !== editEvent.id))
-    await supabaseRef.current.from('patient_events').delete().eq('id', editEvent.id)
+    const ev = editEvent
+    const { error } = await softDeleteRecord(supabaseRef.current, {
+      table: 'patient_events', id: ev.id, userId, patientId: plan.patient_id,
+      label: `Hito${ev.title ? ` · ${ev.title}` : ''}`,
+    })
+    if (error) { notify('No se pudo borrar: ' + error, 'error'); return }
+    setEvents(prev => prev.filter(e => e.id !== ev.id))
     setEditEvent(null)
+    notify('Hito movido a la papelera')
   }
   const [activeTab, setActiveTab] = useState<'calendar' | 'logs'>('calendar')
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved')
