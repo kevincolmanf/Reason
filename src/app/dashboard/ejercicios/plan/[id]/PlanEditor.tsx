@@ -340,9 +340,20 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
     evalCompleteNow(s.kind, s.protocol_type ?? (s.kind === 'rts' ? 'lca' : ''), s.scheduled_date)
   }
   const deleteSched = async (s: SchedEval) => {
-    await supabaseRef.current.from('scheduled_evaluations').delete().eq('id', s.id)
+    if (!(await confirm({
+      title: 'Borrar evaluación programada',
+      message: 'La programación se moverá a la papelera. Podés restaurarla por 30 días.',
+      danger: true,
+      confirmLabel: 'Borrar',
+    }))) return
+    const { error } = await softDeleteRecord(supabaseRef.current, {
+      table: 'scheduled_evaluations', id: s.id, userId, patientId: plan.patient_id,
+      label: `Evaluación programada${s.protocol_type ? ` · ${s.protocol_type}` : ''}`,
+    })
+    if (error) { notify('No se pudo borrar: ' + error, 'error'); return }
     setSchedList(prev => prev.filter(x => x.id !== s.id))
     setSchedAction(null)
+    notify('Programación movida a la papelera')
   }
 
   // Hitos del tratamiento sobre el calendario, editables (click en la banderita).

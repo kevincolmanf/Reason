@@ -663,6 +663,17 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
       if (Object.keys(patientUpdate).length > 0) {
         await supabaseRef.current.from('patients').update(patientUpdate).eq('id', patientId)
       }
+
+      // Profesional habitual: se captura la PRIMERA vez que se agenda al paciente
+      // con un profesional. El filtro .is(null) hace que solo se setee si todavía
+      // no tiene uno; después, todos sus turnos se predeterminan con ese.
+      if (form.professional_id) {
+        await supabaseRef.current
+          .from('patients')
+          .update({ habitual_professional_id: form.professional_id })
+          .eq('id', patientId)
+          .is('habitual_professional_id', null)
+      }
     }
 
     setSaving(false)

@@ -10,6 +10,7 @@ export type SoftDeletableTable =
   | 'questionnaire_results'
   | 'patient_events'
   | 'load_sessions'
+  | 'scheduled_evaluations'
 
 // Etiqueta legible por tabla, para mostrar en la papelera.
 export const SOFT_DELETE_LABELS: Record<SoftDeletableTable, string> = {
@@ -18,6 +19,7 @@ export const SOFT_DELETE_LABELS: Record<SoftDeletableTable, string> = {
   questionnaire_results:  'Cuestionario',
   patient_events:         'Hito del tratamiento',
   load_sessions:          'Registro de carga',
+  scheduled_evaluations:  'Evaluación programada',
 }
 
 interface SoftDeleteArgs {
