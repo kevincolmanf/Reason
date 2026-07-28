@@ -2,6 +2,23 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname
+
+  // Portales públicos de paciente (acceso por token, sin sesión): solo necesitan
+  // los headers no-cache. Salimos temprano SIN llamar a supabase.auth.getUser()
+  // para ahorrar un viaje de red al servidor de auth en cada carga del portal.
+  if (
+    pathname.startsWith('/paciente/') ||
+    pathname.startsWith('/plan/') ||
+    pathname.startsWith('/turno/')
+  ) {
+    const res = NextResponse.next({ request: { headers: request.headers } })
+    res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+    res.headers.set('Pragma', 'no-cache')
+    res.headers.set('Expires', '0')
+    return res
+  }
+
   let supabaseResponse = NextResponse.next({
     request: {
       headers: request.headers,
@@ -62,8 +79,6 @@ export async function middleware(request: NextRequest) {
   } catch (error) {
     console.error('Middleware Supabase Error:', error)
   }
-
-  const pathname = request.nextUrl.pathname
 
   // Rutas que requieren solo estar logueado
   const authRoutes = ['/dashboard', '/library', '/content', '/account', '/recursos', '/ficha']
@@ -155,25 +170,26 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Portales públicos de paciente — forzar no-cache en todos los browsers
-  if (pathname.startsWith('/paciente/') || pathname.startsWith('/plan/') || pathname.startsWith('/turno/')) {
-    supabaseResponse.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
-    supabaseResponse.headers.set('Pragma', 'no-cache')
-    supabaseResponse.headers.set('Expires', '0')
-  }
-
   return supabaseResponse
 }
 
 export const config = {
+  // Matcher positivo: el middleware solo corre en rutas que realmente lo necesitan
+  // (gating de auth/suscripción y portales con no-cache). El resto —landing, login,
+  // signup, checkout, paywall, /api, /auth, /agenda/share— se sirve sin el costo de
+  // supabase.auth.getUser() en cada navegación. La sesión se refresca igual al entrar
+  // a cualquier ruta protegida (que es donde el usuario realmente trabaja), y el
+  // cliente de navegador de Supabase renueva el token por su cuenta.
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * Feel free to modify this pattern to include more paths.
-     */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/dashboard/:path*',
+    '/library/:path*',
+    '/content/:path*',
+    '/account/:path*',
+    '/recursos/:path*',
+    '/ficha/:path*',
+    '/admin/:path*',
+    '/paciente/:path*',
+    '/plan/:path*',
+    '/turno/:path*',
   ],
 }
