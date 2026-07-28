@@ -25,6 +25,7 @@ interface Patient {
   load_share_token: string | null
   follow_up_mode?: string | null
   plan_mode?: string | null
+  habitual_professional_id?: string | null
   user_id: string
 }
 
@@ -54,7 +55,7 @@ function treatmentDuration(start: string | null): string | null {
   return `Semana ${week} · Mes ${month} de tratamiento`
 }
 
-export default function PacienteDetail({ patient: initialPatient, userId, initialEvents = [], treatmentStart = null }: { patient: Patient; userId: string; initialEvents?: PatientEvent[]; treatmentStart?: string | null }) {
+export default function PacienteDetail({ patient: initialPatient, userId, initialEvents = [], treatmentStart = null, professionals = [] }: { patient: Patient; userId: string; initialEvents?: PatientEvent[]; treatmentStart?: string | null; professionals?: { id: string; full_name: string | null }[] }) {
   const isOwner = initialPatient.user_id === userId
   const { confirm, confirmDialog } = useConfirm()
   const { notify, toast } = useToast()
@@ -69,6 +70,7 @@ export default function PacienteDetail({ patient: initialPatient, userId, initia
     obra_social: initialPatient.obra_social || '',
     occupation: initialPatient.occupation || '',
     source: initialPatient.source || '',
+    habitual_professional_id: initialPatient.habitual_professional_id || '',
   })
   const [sources, setSources] = useState<PatientSource[]>([])
   const [saving, setSaving] = useState(false)
@@ -214,6 +216,7 @@ export default function PacienteDetail({ patient: initialPatient, userId, initia
         obra_social: editForm.obra_social.trim() || null,
         occupation: editForm.occupation.trim() || null,
         source: editForm.source || null,
+        habitual_professional_id: editForm.habitual_professional_id || null,
       })
       .eq('id', patient.id)
       .select()
@@ -281,6 +284,16 @@ export default function PacienteDetail({ patient: initialPatient, userId, initia
                     <option value="">Sin especificar</option>
                     {sources.map(s => <option key={s.id} value={s.label}>{s.label}</option>)}
                   </select>
+                </div>
+              )}
+              {professionals.length > 0 && (
+                <div className="sm:col-span-2">
+                  <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Profesional habitual</label>
+                  <select value={editForm.habitual_professional_id} onChange={e => setEditForm(f => ({ ...f, habitual_professional_id: e.target.value }))} className="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent">
+                    <option value="">Sin asignar</option>
+                    {professionals.map(p => <option key={p.id} value={p.id}>{p.full_name ?? p.id}</option>)}
+                  </select>
+                  <p className="text-[11px] text-text-secondary mt-1">Se cargará por defecto al darle turno a este paciente.</p>
                 </div>
               )}
             </div>
