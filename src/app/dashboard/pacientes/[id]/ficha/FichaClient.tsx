@@ -4,7 +4,6 @@ import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
-import { jsPDF } from 'jspdf'
 import { getResponseItems } from '@/lib/questionnaires'
 import QuickNoteField from '@/components/QuickNoteField'
 import { useConfirm, useToast } from '@/components/Dialogs'
@@ -469,7 +468,8 @@ export default function FichaClient({
 
   // ─── PDF ────────────────────────────────────────────────────────────────────
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
+    const { jsPDF } = await import('jspdf')
     const doc = new jsPDF()
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(16)

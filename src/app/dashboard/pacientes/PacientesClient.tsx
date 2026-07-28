@@ -242,13 +242,13 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
             </button>
           )}
           {atFreeLimit ? (
-            <a href="/paywall" className="bg-accent/10 text-accent border-[0.5px] border-accent/40 px-4 py-2 rounded-lg text-[13px] font-medium hover:bg-accent/20 transition-colors">
+            <Link href="/paywall" className="bg-accent/10 text-accent border-[0.5px] border-accent/40 px-4 py-2 rounded-lg text-[13px] font-medium hover:bg-accent/20 transition-colors">
               Suscribite para agregar más
-            </a>
+            </Link>
           ) : atSubscriberLimit ? (
-            <a href="/paywall" className="bg-accent/10 text-accent border-[0.5px] border-accent/40 px-4 py-2 rounded-lg text-[13px] font-medium hover:bg-accent/20 transition-colors">
+            <Link href="/paywall" className="bg-accent/10 text-accent border-[0.5px] border-accent/40 px-4 py-2 rounded-lg text-[13px] font-medium hover:bg-accent/20 transition-colors">
               Actualizá a Plan Pro
-            </a>
+            </Link>
           ) : !showForm ? (
             <button
               onClick={() => setShowForm(true)}
@@ -267,7 +267,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
             <p className="text-[14px] font-medium mb-0.5">Plan gratuito — 1 paciente</p>
             <p className="text-[13px] text-text-secondary">Suscribite para agregar hasta 20 pacientes.</p>
           </div>
-          <a href="/paywall" className="shrink-0 bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity">Ver planes</a>
+          <Link href="/paywall" className="shrink-0 bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity">Ver planes</Link>
         </div>
       )}
       {atSubscriberLimit && (
@@ -276,7 +276,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
             <p className="text-[14px] font-medium mb-0.5">Límite del plan individual — 20 pacientes</p>
             <p className="text-[13px] text-text-secondary">Con el Plan Pro tenés pacientes ilimitados.</p>
           </div>
-          <a href="/paywall" className="shrink-0 bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity">Ver Plan Pro</a>
+          <Link href="/paywall" className="shrink-0 bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity">Ver Plan Pro</Link>
         </div>
       )}
 
@@ -291,7 +291,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
           {limitError && (
             <div className="mb-4 flex items-center justify-between gap-3 bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3">
               <p className="text-[13px] text-red-400">{limitError}</p>
-              <a href="/paywall" className="text-[12px] font-medium text-accent underline whitespace-nowrap">Ver planes</a>
+              <Link href="/paywall" className="text-[12px] font-medium text-accent underline whitespace-nowrap">Ver planes</Link>
             </div>
           )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
@@ -415,12 +415,12 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
                     <p className="text-[13px] text-text-secondary flex-grow">{(() => { const age = calcAge(p.birth_date) ?? p.age; return [age ? `${age} años` : null, p.occupation || null].filter(Boolean).join(' · ') })()}</p>
                     <p className="text-[12px] text-text-secondary mt-4 pt-4 border-t-[0.5px] border-border">{p.has_plan ? 'Con plan' : 'Sin plan'}</p>
                   </div>
-                  <a href="/paywall" className="absolute inset-0 flex items-center justify-center">
+                  <Link href="/paywall" className="absolute inset-0 flex items-center justify-center">
                     <span className="bg-bg-primary border-[0.5px] border-border rounded-lg px-3 py-1.5 text-[12px] font-medium text-text-secondary flex items-center gap-1.5">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                       Suscribite para acceder
                     </span>
-                  </a>
+                  </Link>
                 </div>
               )
             }

@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/Dialogs'
-import { jsPDF } from 'jspdf'
 
 interface FichaData {
   fecha: string
@@ -74,7 +73,8 @@ export default function PatientFichaEditor({ initialFicha, patientName }: { init
     setFicha(prev => ({ ...prev, [field]: value }))
   }
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
+    const { jsPDF } = await import('jspdf')
     const doc = new jsPDF()
 
     doc.setFont('helvetica', 'bold')

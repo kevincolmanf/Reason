@@ -1,5 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Tree-shaking optimizado para librerías pesadas: solo se incluye lo que se usa,
+  // reduciendo el JS que descarga y ejecuta cada página que las importa.
+  experimental: {
+    optimizePackageImports: ['recharts'],
+  },
   async headers() {
     return [
       {

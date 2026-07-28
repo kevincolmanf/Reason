@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
-import { jsPDF } from 'jspdf'
 
 interface RecomendacionPdf {
   id: string
@@ -172,8 +171,9 @@ Documento generado con Reason — reason.com.ar`
     alert('Texto clínico copiado al portapapeles. Uso registrado.')
   }
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     handleSaveResult()
+    const { jsPDF } = await import('jspdf')
     const doc = new jsPDF()
     
     doc.setFont('helvetica', 'bold')

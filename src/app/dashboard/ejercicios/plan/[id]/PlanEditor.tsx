@@ -4,8 +4,6 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { v4 as uuidv4 } from 'uuid'
-import jsPDF from 'jspdf'
-import QRCode from 'qrcode'
 import { EVENT_TYPES, eventMeta, type PatientEvent } from '@/lib/patientEvents'
 import { groupColor } from '@/lib/exerciseGroups'
 import { useConfirm, useToast } from '@/components/Dialogs'
@@ -997,6 +995,11 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
   // ─── Export PDF ────────────────────────────────────────────────────────────
 
   const handleExportPDF = async () => {
+    // Carga diferida: jspdf y qrcode solo se descargan al exportar
+    const [{ default: jsPDF }, { default: QRCode }] = await Promise.all([
+      import('jspdf'),
+      import('qrcode'),
+    ])
     const doc = new jsPDF()
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(16)

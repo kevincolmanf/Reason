@@ -1,5 +1,6 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import PrintButton from './PrintButton'
 
 export const metadata = { title: 'Instructivo del Equipo | Reason' }
@@ -52,9 +53,9 @@ export default async function InstructivoPage() {
 
       {/* Toolbar — hidden when printing */}
       <div className="print:hidden bg-gray-50 border-b border-gray-200 px-8 py-4 flex justify-between items-center">
-        <a href="/account/equipo" className="text-[13px] text-gray-500 hover:text-gray-800 transition-colors no-underline">
+        <Link href="/account/equipo" className="text-[13px] text-gray-500 hover:text-gray-800 transition-colors no-underline">
           ← Volver al equipo
-        </a>
+        </Link>
         <PrintButton />
       </div>
 
