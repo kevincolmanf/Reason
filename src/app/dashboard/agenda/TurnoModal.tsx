@@ -53,6 +53,7 @@ interface PatientResult {
   affiliate_number?: string | null
   address?: string | null
   occupation: string | null
+  habitual_professional_id?: string | null
 }
 
 interface Props {
@@ -390,7 +391,7 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
       const isNumeric = /^\d+$/.test(trimmed)
       let query = supabaseRef.current
         .from('patients')
-        .select('id, name, dni, age, birth_date, phone, email, obra_social, affiliate_number, address, occupation')
+        .select('id, name, dni, age, birth_date, phone, email, obra_social, affiliate_number, address, occupation, habitual_professional_id')
         .limit(6)
       if (isNumeric) {
         query = query.ilike('dni', `%${trimmed}%`)
@@ -541,10 +542,15 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
 
     if (p.birth_date) applyBirthISO(p.birth_date)
 
-    // Solo predeterminamos el profesional si sigue siendo integrante activo del equipo
-    // (podría haberse ido). Si no hay historial válido, se respeta el que ya estaba.
-    const usualProfessional =
+    // Prioridad para predeterminar el profesional:
+    //   1) el "profesional habitual" fijado en la ficha del paciente
+    //   2) el del último turno del paciente (historial)
+    // En ambos casos, solo si sigue siendo integrante activo del equipo.
+    const habitual =
+      p.habitual_professional_id ? professionals.find(pr => pr.id === p.habitual_professional_id) : undefined
+    const fromHistory =
       lastProfessionalId ? professionals.find(pr => pr.id === lastProfessionalId) : undefined
+    const usualProfessional = habitual ?? fromHistory
     const usualProfessionalId = usualProfessional?.id ?? null
 
     // Avisamos solo si además cambia respecto al que estaba seleccionado por defecto.

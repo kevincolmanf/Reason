@@ -42,6 +42,26 @@ export default async function PacientePage({ params }: { params: { id: string } 
     .limit(1)
     .maybeSingle()
 
+  // Profesionales del equipo, para elegir el profesional habitual del paciente.
+  // Solo aplica a pacientes de una organización (equipos con varios profesionales).
+  let professionals: { id: string; full_name: string | null }[] = []
+  if (patient.org_id) {
+    type MemberRow = { users: { id: string; full_name: string | null; email: string | null } | null }
+    const [{ data: org }, { data: memberRows }] = await Promise.all([
+      supabase.from('organizations').select('owner_id').eq('id', patient.org_id).single(),
+      supabase.from('organization_members').select('users(id, full_name, email)').eq('org_id', patient.org_id),
+    ])
+    professionals = ((memberRows ?? []) as unknown as MemberRow[])
+      .filter(m => m.users)
+      .map(m => ({ id: m.users!.id, full_name: m.users!.full_name ?? m.users!.email }))
+    // Incluir al dueño de la organización si no figura entre los integrantes.
+    if (org?.owner_id && !professionals.some(p => p.id === org.owner_id)) {
+      const { data: ownerUser } = await supabase
+        .from('users').select('id, full_name, email').eq('id', org.owner_id).single()
+      if (ownerUser) professionals.unshift({ id: ownerUser.id, full_name: ownerUser.full_name ?? ownerUser.email })
+    }
+  }
+
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
       <Header />
@@ -52,7 +72,7 @@ export default async function PacientePage({ params }: { params: { id: string } 
           </Link>
         </div>
 
-        <PacienteDetail patient={patient} userId={user.id} initialEvents={events ?? []} treatmentStart={firstPlan?.created_at ?? null} />
+        <PacienteDetail patient={patient} userId={user.id} initialEvents={events ?? []} treatmentStart={firstPlan?.created_at ?? null} professionals={professionals} />
       </main>
     </div>
   )
