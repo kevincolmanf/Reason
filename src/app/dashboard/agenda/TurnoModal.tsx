@@ -320,6 +320,9 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
   })
   const [sameDayTurnos, setSameDayTurnos]     = useState<{ hora: string; area: string }[]>([])
   const [cancelingIds, setCancelingIds]       = useState<Set<string>>(new Set())
+  // Nombre del profesional que se predeterminó desde el historial del paciente
+  // (para avisar al usuario por qué se cargó y que puede cambiarlo). null = no aplica.
+  const [autoProfessionalName, setAutoProfessionalName] = useState<string | null>(null)
 
   const supabaseRef    = useRef(createClient())
   const searchTimeout  = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -509,29 +512,47 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
     let address         = p.address          || ''
     let age             = p.age              ? p.age.toString() : ''
 
-    const needsFallback = !phone || !email || !obraSocial || !age
-    if (needsFallback) {
-      const lastQuery = supabaseRef.current
-        .from('turnos')
-        .select('patient_phone, patient_email, patient_obra_social, patient_affiliate_number, patient_address, patient_age')
-        .eq('patient_id', p.id)
-        .order('start_time', { ascending: false })
-        .limit(10)
-      const { data: lastTurnos } = await (orgId ? lastQuery.eq('org_id', orgId) : lastQuery.eq('created_by', userId))
-      if (lastTurnos) {
-        for (const t of lastTurnos) {
-          if (!phone           && t.patient_phone)            phone           = t.patient_phone
-          if (!email           && t.patient_email)            email           = t.patient_email
-          if (!obraSocial      && t.patient_obra_social)      obraSocial      = t.patient_obra_social
-          if (!affiliateNumber && t.patient_affiliate_number) affiliateNumber = t.patient_affiliate_number
-          if (!address         && t.patient_address)          address         = t.patient_address
-          if (!age             && t.patient_age)              age             = t.patient_age.toString()
-          if (phone && email && obraSocial && age) break
-        }
+    // Siempre traemos los últimos turnos del paciente. Sirven para dos cosas:
+    // (a) completar datos de contacto que falten en la ficha, y
+    // (b) predeterminar el mismo profesional que lo viene atendiendo, así no hay
+    //     que reasignarlo a mano en cada turno (y las analíticas no se van a otro
+    //     profesional por el default de la agenda compartida).
+    let lastProfessionalId: string | null = null
+    const lastQuery = supabaseRef.current
+      .from('turnos')
+      .select('patient_phone, patient_email, patient_obra_social, patient_affiliate_number, patient_address, patient_age, professional_id')
+      .eq('patient_id', p.id)
+      .order('start_time', { ascending: false })
+      .limit(10)
+    const { data: lastTurnos } = await (orgId ? lastQuery.eq('org_id', orgId) : lastQuery.eq('created_by', userId))
+    if (lastTurnos) {
+      for (const t of lastTurnos) {
+        if (!phone           && t.patient_phone)            phone           = t.patient_phone
+        if (!email           && t.patient_email)            email           = t.patient_email
+        if (!obraSocial      && t.patient_obra_social)      obraSocial      = t.patient_obra_social
+        if (!affiliateNumber && t.patient_affiliate_number) affiliateNumber = t.patient_affiliate_number
+        if (!address         && t.patient_address)          address         = t.patient_address
+        if (!age             && t.patient_age)              age             = t.patient_age.toString()
+        // El más reciente con profesional asignado gana (la lista viene desc por fecha).
+        if (!lastProfessionalId && t.professional_id)       lastProfessionalId = t.professional_id
+        if (phone && email && obraSocial && age && lastProfessionalId) break
       }
     }
 
     if (p.birth_date) applyBirthISO(p.birth_date)
+
+    // Solo predeterminamos el profesional si sigue siendo integrante activo del equipo
+    // (podría haberse ido). Si no hay historial válido, se respeta el que ya estaba.
+    const usualProfessional =
+      lastProfessionalId ? professionals.find(pr => pr.id === lastProfessionalId) : undefined
+    const usualProfessionalId = usualProfessional?.id ?? null
+
+    // Avisamos solo si además cambia respecto al que estaba seleccionado por defecto.
+    setAutoProfessionalName(
+      usualProfessional && usualProfessional.id !== form.professional_id
+        ? (usualProfessional.full_name ?? null)
+        : null
+    )
 
     setForm(f => ({
       ...f,
@@ -543,11 +564,13 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
       patient_affiliate_number: affiliateNumber,
       patient_address:          address,
       patient_age:              age,
+      professional_id:          usualProfessionalId ?? f.professional_id,
     }))
   }
 
   const clearPatient = () => {
     setForm(f => ({ ...f, patient_id: null }))
+    setAutoProfessionalName(null)
     setPatientSearch('')
     setPatientDni('')
     setPatientBirthDate('')
@@ -1150,10 +1173,15 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
             {professionals.length > 0 && (
               <div>
                 <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Profesional</label>
-                <select value={form.professional_id ?? ''} onChange={e => setForm(f => ({ ...f, professional_id: e.target.value || null }))} className={inputCls}>
+                <select value={form.professional_id ?? ''} onChange={e => { setAutoProfessionalName(null); setForm(f => ({ ...f, professional_id: e.target.value || null })) }} className={inputCls}>
                   <option value="">Sin asignar</option>
                   {professionals.map(p => <option key={p.id} value={p.id}>{p.full_name ?? p.id}</option>)}
                 </select>
+                {autoProfessionalName && (
+                  <p className="text-[11px] text-accent mt-1">
+                    Se asignó a {autoProfessionalName}, que ya viene atendiendo a este paciente. Podés cambiarlo.
+                  </p>
+                )}
               </div>
             )}
 
