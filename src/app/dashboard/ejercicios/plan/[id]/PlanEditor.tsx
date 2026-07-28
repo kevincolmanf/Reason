@@ -227,6 +227,12 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
   const [rtsDeleting, setRtsDeleting] = useState(false)
   const deleteRtsEval = async () => {
     if (!rtsAction) return
+    if (!(await confirm({
+      title: 'Borrar evaluación RTS',
+      message: 'Esto elimina la evaluación RTS completa de forma permanente —no solo su marca en el calendario— y no se puede deshacer.',
+      danger: true,
+      confirmLabel: 'Borrar evaluación',
+    }))) return
     setRtsDeleting(true)
     const id = rtsAction.id
     await supabaseRef.current.from('rts_evaluations').delete().eq('id', id)
@@ -245,6 +251,12 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
   const openDynFor = (d: string) => router.push(`/recursos/dinamometro?paciente=${plan.patient_id}&date=${d}&from=${planReturn}`)
   const deleteDynEval = async () => {
     if (!dynAction) return
+    if (!(await confirm({
+      title: 'Borrar dinamometría',
+      message: 'Esto elimina la evaluación de dinamometría completa de forma permanente —no solo su marca en el calendario— y no se puede deshacer.',
+      danger: true,
+      confirmLabel: 'Borrar evaluación',
+    }))) return
     setDynDeleting(true)
     const id = dynAction.id
     await supabaseRef.current.from('dynamometer_results').delete().eq('id', id)
@@ -263,6 +275,12 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
   const openQuestFor = (d: string, type?: string) => router.push(`/recursos/cuestionarios?paciente=${plan.patient_id}&date=${d}${type ? `&type=${type}` : ''}&from=${planReturn}`)
   const deleteQEval = async () => {
     if (!qAction) return
+    if (!(await confirm({
+      title: 'Borrar cuestionario',
+      message: 'Esto elimina el resultado del cuestionario de forma permanente —no solo su marca en el calendario— y no se puede deshacer.',
+      danger: true,
+      confirmLabel: 'Borrar resultado',
+    }))) return
     setQDeleting(true)
     const id = qAction.id
     await supabaseRef.current.from('questionnaire_results').delete().eq('id', id)

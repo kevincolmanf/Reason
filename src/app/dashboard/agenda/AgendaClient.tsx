@@ -777,7 +777,10 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
   return (
     <div>
       {/* TOOLBAR */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+      {/* En tablet el título va arriba y los controles ocupan todo el ancho abajo,
+          así se acomodan sin comprimirse contra el título (se veían "pisados").
+          Recién en desktop (lg) van lado a lado. */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-4">
         <div>
           <h1 className="text-[24px] font-medium tracking-[-0.01em]">
             {orgName ? `Agenda — ${orgName}` : 'Agenda'}
