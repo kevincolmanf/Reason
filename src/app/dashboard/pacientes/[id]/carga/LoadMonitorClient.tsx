@@ -3,7 +3,8 @@
 import { useState, useMemo, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import QuickNoteField from '@/components/QuickNoteField'
-import { useConfirm } from '@/components/Dialogs'
+import { useConfirm, useToast } from '@/components/Dialogs'
+import { softDeleteRecord } from '@/lib/softDelete'
 
 interface ActivityLog {
   id: string
@@ -191,6 +192,7 @@ export default function LoadMonitorClient({
 }) {
   const supabaseRef = useRef(createClient())
   const { confirm, confirmDialog } = useConfirm()
+  const { notify, toast } = useToast()
   const [sessions, setSessions] = useState<LoadSession[]>(initialSessions)
   const [activityLogs] = useState<ActivityLog[]>(initialActivityLogs)
   const [expandedSessions, setExpandedSessions] = useState<Set<string>>(new Set())
@@ -568,9 +570,13 @@ export default function LoadMonitorClient({
   }
 
   const handleDeleteSession = async (id: string) => {
-    if (!(await confirm({ title: 'Eliminar sesión', message: '¿Eliminar esta sesión? No se puede deshacer.', danger: true, confirmLabel: 'Eliminar' }))) return
-    const { error } = await supabaseRef.current.from('load_sessions').delete().eq('id', id)
-    if (!error) setSessions(prev => prev.filter(s => s.id !== id))
+    if (!(await confirm({ title: 'Borrar sesión', message: 'La sesión se moverá a la papelera. Podés restaurarla por 30 días.', danger: true, confirmLabel: 'Borrar' }))) return
+    const { error } = await softDeleteRecord(supabaseRef.current, {
+      table: 'load_sessions', id, userId, patientId,
+    })
+    if (error) { notify('No se pudo borrar: ' + error, 'error'); return }
+    setSessions(prev => prev.filter(s => s.id !== id))
+    notify('Sesión movida a la papelera')
   }
 
   const calculatedLoad =
@@ -594,6 +600,7 @@ export default function LoadMonitorClient({
   return (
     <div className="space-y-10">
       {confirmDialog}
+      {toast}
 
       {/* ── 0. Consejo de carga ────────────────────────────────────────────── */}
       {advice ? (

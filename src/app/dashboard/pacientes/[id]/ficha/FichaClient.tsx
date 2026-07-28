@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { getResponseItems } from '@/lib/questionnaires'
 import QuickNoteField from '@/components/QuickNoteField'
 import { useConfirm, useToast } from '@/components/Dialogs'
+import { softDeleteRecord } from '@/lib/softDelete'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -210,6 +211,7 @@ export default function FichaClient({
   patientName,
   questionnaireResults,
   dynamoResults,
+  userId,
 }: {
   ficha: PatientFicha
   patientId: string
@@ -385,15 +387,23 @@ export default function FichaClient({
   // ─── Questionnaire delete ───────────────────────────────────────────────────
 
   const handleDeleteQ = async (id: string) => {
-    if (!(await confirm({ message: '¿Eliminar este resultado?', danger: true, confirmLabel: 'Eliminar' }))) return
-    const { error } = await supabaseRef.current.from('questionnaire_results').delete().eq('id', id)
-    if (!error) setQResults(prev => prev.filter(r => r.id !== id))
+    if (!(await confirm({ message: 'El resultado se moverá a la papelera. Podés restaurarlo por 30 días.', danger: true, confirmLabel: 'Borrar' }))) return
+    const { error } = await softDeleteRecord(supabaseRef.current, {
+      table: 'questionnaire_results', id, userId, patientId,
+    })
+    if (error) { notify('No se pudo borrar: ' + error, 'error'); return }
+    setQResults(prev => prev.filter(r => r.id !== id))
+    notify('Resultado movido a la papelera')
   }
 
   const handleDeleteDynamo = async (id: string) => {
-    if (!(await confirm({ message: '¿Eliminar esta evaluación?', danger: true, confirmLabel: 'Eliminar' }))) return
-    const { error } = await supabaseRef.current.from('dynamometer_results').delete().eq('id', id)
-    if (!error) setDynResults(prev => prev.filter(d => d.id !== id))
+    if (!(await confirm({ message: 'La evaluación se moverá a la papelera. Podés restaurarla por 30 días.', danger: true, confirmLabel: 'Borrar' }))) return
+    const { error } = await softDeleteRecord(supabaseRef.current, {
+      table: 'dynamometer_results', id, userId, patientId,
+    })
+    if (error) { notify('No se pudo borrar: ' + error, 'error'); return }
+    setDynResults(prev => prev.filter(d => d.id !== id))
+    notify('Evaluación movida a la papelera')
   }
 
   const formatScore = (result: QuestionnaireResult): string => {

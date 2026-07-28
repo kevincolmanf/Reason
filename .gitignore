@@ -37,3 +37,5 @@ next-env.d.ts
 
 # claude code worktrees (estado local, no versionar)
 .claude/worktrees/
+# claude code settings locales — pueden contener secretos, NO versionar
+.claude/settings.local*

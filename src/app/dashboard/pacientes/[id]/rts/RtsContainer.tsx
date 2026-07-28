@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
-import { useConfirm } from '@/components/Dialogs'
+import { useConfirm, useToast } from '@/components/Dialogs'
+import { softDeleteRecord } from '@/lib/softDelete'
 import { PROTOCOL_OPTIONS } from './protocols/shared'
 import HamstringProtocol from './protocols/HamstringProtocol'
 import AnkleProtocol from './protocols/AnkleProtocol'
@@ -73,6 +74,7 @@ export default function RtsContainer({ patient, userId, lastDynamo, lastKoos, la
   const [showHistory, setShowHistory] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const { confirm, confirmDialog } = useConfirm()
+  const { notify, toast } = useToast()
   const supabase = useRef(createClient())
 
   // Abrir directo una evaluación cuando se llega desde el calendario (?eval=<id>).
@@ -118,12 +120,16 @@ export default function RtsContainer({ patient, userId, lastDynamo, lastKoos, la
   }
 
   const handleDelete = async (id: string) => {
-    if (!(await confirm({ title: 'Eliminar evaluación', message: '¿Eliminar esta evaluación? Esta acción no se puede deshacer.', danger: true, confirmLabel: 'Eliminar' }))) return
+    if (!(await confirm({ title: 'Borrar evaluación RTS', message: 'La evaluación se moverá a la papelera. Podés restaurarla por 30 días.', danger: true, confirmLabel: 'Borrar' }))) return
     setDeletingId(id)
-    await supabase.current.from('rts_evaluations').delete().eq('id', id)
+    const { error } = await softDeleteRecord(supabase.current, {
+      table: 'rts_evaluations', id, userId, patientId: patient.id, patientName: patient.name,
+    })
+    setDeletingId(null)
+    if (error) { notify('No se pudo borrar: ' + error, 'error'); return }
     setEvalsList(prev => prev.filter(e => e.id !== id))
     if (loadedEval?.id === id) { setLoadedEval(null); setActiveProtocol('') }
-    setDeletingId(null)
+    notify('Evaluación movida a la papelera')
   }
 
   const loadEval = (ev: SavedEval) => {
@@ -137,6 +143,7 @@ export default function RtsContainer({ patient, userId, lastDynamo, lastKoos, la
     return (
       <div>
         {confirmDialog}
+        {toast}
         {/* Previous evaluations */}
         {evalsList.length > 0 && (
           <div className="mb-8">
@@ -204,6 +211,7 @@ export default function RtsContainer({ patient, userId, lastDynamo, lastKoos, la
   const ProtocolHeader = () => (
     <>
     {confirmDialog}
+    {toast}
     <div className="flex items-center gap-3 mb-8">
       <button onClick={handleNewEval} className="text-[12px] text-text-secondary hover:text-text-primary transition-colors">← Protocolos</button>
       <span className="text-text-secondary/30">|</span>
