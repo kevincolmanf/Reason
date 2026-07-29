@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
-import { lsi, n, Criterion } from './shared'
+import { lsi, timedLsi, n, Criterion } from './shared'
 import { Field, NumInput, SelectInput, LsiDisplay, SectionTitle, CriteriaResults } from './ProtocolUI'
 import { GeneralQuestionnaires, QuestionnaireAutofill, LatestQuestionnaires } from './QuestionnaireAutofill'
 
@@ -25,6 +25,8 @@ const INIT = {
   ybal_pm_affected: '', ybal_pm_unaffected: '',
   ybal_pl_affected: '', ybal_pl_unaffected: '',
   single_hop_affected: '', single_hop_unaffected: '',
+  side_hop_affected: '', side_hop_unaffected: '',
+  fig8_affected: '', fig8_unaffected: '',
   heel_rise_affected: '', heel_rise_unaffected: '',
   balance_time_affected: '', balance_time_unaffected: '',
   faam_sport_score: '', lefs_score: '', tampa_score: '', notes: '',
@@ -42,6 +44,8 @@ export default function AnkleProtocol({ patient, userId, initialData, evalId, on
   const dfLsi      = lsi(n(form.dorsiflexion_affected),   n(form.dorsiflexion_unaffected))
   const evLsi      = lsi(n(form.evertor_affected),         n(form.evertor_unaffected))
   const hopLsi     = lsi(n(form.single_hop_affected),      n(form.single_hop_unaffected))
+  const sideHopLsi = timedLsi(n(form.side_hop_affected),   n(form.side_hop_unaffected))
+  const fig8Lsi    = timedLsi(n(form.fig8_affected),       n(form.fig8_unaffected))
   const heelLsi    = lsi(n(form.heel_rise_affected),       n(form.heel_rise_unaffected))
   const balanceLsi = lsi(n(form.balance_time_affected),    n(form.balance_time_unaffected))
 
@@ -60,6 +64,8 @@ export default function AnkleProtocol({ patient, userId, initialData, evalId, on
     { label: 'Single Leg Heel Rise LSI ≥90%', passed: heelLsi !== null ? heelLsi >= 90 : null, detail: heelLsi !== null ? `LSI ${heelLsi.toFixed(1)}%` : undefined },
     { label: 'Balance unipodal LSI ≥90% (ojos abiertos)', passed: balanceLsi !== null ? balanceLsi >= 90 : null, detail: balanceLsi !== null ? `LSI ${balanceLsi.toFixed(1)}%` : undefined },
     { label: 'Single hop LSI ≥90%', passed: hopLsi !== null ? hopLsi >= 90 : null, detail: hopLsi !== null ? `LSI ${hopLsi.toFixed(1)}%` : undefined },
+    { label: 'Side hop test LSI ≥90%', passed: sideHopLsi !== null ? sideHopLsi >= 90 : null, detail: sideHopLsi !== null ? `LSI ${sideHopLsi.toFixed(1)}%` : undefined },
+    { label: 'Figure-8 hop LSI ≥90%', passed: fig8Lsi !== null ? fig8Lsi >= 90 : null, detail: fig8Lsi !== null ? `LSI ${fig8Lsi.toFixed(1)}%` : undefined },
     { label: 'FAAM Sport ≥90%', passed: form.faam_sport_score !== '' ? n(form.faam_sport_score)! >= 90 : null, detail: form.faam_sport_score !== '' ? `${form.faam_sport_score}%` : undefined },
   ]
 
@@ -182,6 +188,24 @@ export default function AnkleProtocol({ patient, userId, initialData, evalId, on
           <Field label="Lado sano"><NumInput value={form.single_hop_unaffected} onChange={v => set('single_hop_unaffected', v)} /></Field>
         </div>
         {hopLsi !== null && <div className="mt-3"><LsiDisplay label="Single Hop LSI" val={hopLsi} /></div>}
+      </div>
+
+      <div>
+        <SectionTitle>Side hop test (segundos, menor = mejor)</SectionTitle>
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Lado afectado (seg)"><NumInput value={form.side_hop_affected} onChange={v => set('side_hop_affected', v)} min="0" placeholder="ej: 12.5" /></Field>
+          <Field label="Lado sano (seg)"><NumInput value={form.side_hop_unaffected} onChange={v => set('side_hop_unaffected', v)} min="0" placeholder="ej: 11.0" /></Field>
+        </div>
+        {sideHopLsi !== null && <div className="mt-3"><LsiDisplay label="Side hop LSI" val={sideHopLsi} /></div>}
+      </div>
+
+      <div>
+        <SectionTitle>Figure-8 hop test (segundos, menor = mejor)</SectionTitle>
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Lado afectado (seg)"><NumInput value={form.fig8_affected} onChange={v => set('fig8_affected', v)} min="0" placeholder="ej: 16.0" /></Field>
+          <Field label="Lado sano (seg)"><NumInput value={form.fig8_unaffected} onChange={v => set('fig8_unaffected', v)} min="0" placeholder="ej: 14.5" /></Field>
+        </div>
+        {fig8Lsi !== null && <div className="mt-3"><LsiDisplay label="Figure-8 hop LSI" val={fig8Lsi} /></div>}
       </div>
 
       <div>

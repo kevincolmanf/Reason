@@ -21,6 +21,7 @@ const INIT = {
   symptom_months: '',
   pain_vas_rest: '', pain_vas_activity: '',
   squeeze_affected: '', squeeze_unaffected: '',
+  long_lever_affected: '', long_lever_unaffected: '',
   hip_abd_affected: '', hip_abd_unaffected: '',
   sprint_pain_free: '', coc_pain_free: '',
   weeks_full_training: '',
@@ -37,6 +38,7 @@ export default function GroinProtocol({ patient, userId, initialData, evalId, on
   const set = (k: keyof FormData, v: string) => setForm(p => ({ ...p, [k]: v }))
 
   const squeezeLsi = lsi(n(form.squeeze_affected), n(form.squeeze_unaffected))
+  const longLeverLsi = lsi(n(form.long_lever_affected), n(form.long_lever_unaffected))
   const abdLsi = lsi(n(form.hip_abd_affected), n(form.hip_abd_unaffected))
 
   const addAbdRatio = (n(form.squeeze_affected) && n(form.hip_abd_affected) && n(form.hip_abd_affected)! > 0)
@@ -45,6 +47,7 @@ export default function GroinProtocol({ patient, userId, initialData, evalId, on
   const criteria: Criterion[] = [
     { label: 'Dolor en actividad ≤2/10', passed: form.pain_vas_activity !== '' ? n(form.pain_vas_activity)! <= 2 : null, detail: form.pain_vas_activity !== '' ? `VAS ${form.pain_vas_activity}/10` : undefined },
     { label: 'LSI squeeze test (aductores) ≥90%', passed: squeezeLsi !== null ? squeezeLsi >= 90 : null, detail: squeezeLsi !== null ? `LSI ${squeezeLsi.toFixed(1)}%` : undefined },
+    { label: 'LSI long-lever squeeze (Copenhagen) ≥90%', passed: longLeverLsi !== null ? longLeverLsi >= 90 : null, detail: longLeverLsi !== null ? `LSI ${longLeverLsi.toFixed(1)}%` : undefined },
     { label: 'Ratio aductores/abductores ≥0.90', passed: addAbdRatio !== null ? addAbdRatio >= 0.90 : null, detail: addAbdRatio !== null ? `Ratio ${addAbdRatio.toFixed(2)}` : undefined },
     { label: 'Sprint máximo sin dolor', passed: form.sprint_pain_free !== '' ? form.sprint_pain_free === 'yes' : null },
     { label: 'Cambio de dirección sin dolor', passed: form.coc_pain_free !== '' ? form.coc_pain_free === 'yes' : null },
@@ -126,6 +129,16 @@ export default function GroinProtocol({ patient, userId, initialData, evalId, on
           <Field label="Lado sano"><NumInput value={form.squeeze_unaffected} onChange={v => set('squeeze_unaffected', v)} /></Field>
         </div>
         {squeezeLsi !== null && <div className="mt-3"><LsiDisplay label="Squeeze LSI" val={squeezeLsi} /></div>}
+      </div>
+
+      <div>
+        <SectionTitle>Fuerza — Long-lever squeeze / Copenhagen (kg o N)</SectionTitle>
+        <p className="text-[12px] text-text-secondary mb-3">Squeeze con palanca larga (tobillos), variante más sensible del test de aductores.</p>
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Lado afectado"><NumInput value={form.long_lever_affected} onChange={v => set('long_lever_affected', v)} /></Field>
+          <Field label="Lado sano"><NumInput value={form.long_lever_unaffected} onChange={v => set('long_lever_unaffected', v)} /></Field>
+        </div>
+        {longLeverLsi !== null && <div className="mt-3"><LsiDisplay label="Long-lever squeeze LSI" val={longLeverLsi} /></div>}
       </div>
 
       <div>

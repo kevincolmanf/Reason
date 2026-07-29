@@ -27,6 +27,8 @@ const INIT = {
   slsquat_quality: '',
   quad_affected: '', quad_unaffected: '',
   single_hop_affected: '', single_hop_unaffected: '',
+  triple_hop_affected: '', triple_hop_unaffected: '',
+  crossover_hop_affected: '', crossover_hop_unaffected: '',
   akps_score: '', lefs_score: '', tampa_score: '', notes: '',
 }
 type FormData = typeof INIT
@@ -41,6 +43,8 @@ export default function PfpProtocol({ patient, userId, initialData, evalId, onSa
 
   const quadLsi         = lsi(n(form.quad_affected), n(form.quad_unaffected))
   const hopLsi          = lsi(n(form.single_hop_affected), n(form.single_hop_unaffected))
+  const tripleHopLsi    = lsi(n(form.triple_hop_affected), n(form.triple_hop_unaffected))
+  const crossoverHopLsi = lsi(n(form.crossover_hop_affected), n(form.crossover_hop_unaffected))
   const lateralStepLsi  = lsi(n(form.lateral_step_down_reps_affected), n(form.lateral_step_down_reps_unaffected))
   const slSquatLsi      = lsi(n(form.slsquat_reps_affected), n(form.slsquat_reps_unaffected))
 
@@ -62,6 +66,8 @@ export default function PfpProtocol({ patient, userId, initialData, evalId, onSa
     { label: 'Lateral step-down LSI ≥90%', passed: lateralStepLsi !== null ? lateralStepLsi >= 90 : null, detail: lateralStepLsi !== null ? `LSI ${lateralStepLsi.toFixed(1)}%` : undefined },
     { label: 'LSI fuerza cuádriceps ≥80%', passed: quadLsi !== null ? quadLsi >= 80 : null, detail: quadLsi !== null ? `LSI ${quadLsi.toFixed(1)}%` : undefined },
     { label: 'Single hop LSI ≥85%', passed: hopLsi !== null ? hopLsi >= 85 : null, detail: hopLsi !== null ? `LSI ${hopLsi.toFixed(1)}%` : undefined },
+    { label: 'Triple hop LSI ≥90%', passed: tripleHopLsi !== null ? tripleHopLsi >= 90 : null, detail: tripleHopLsi !== null ? `LSI ${tripleHopLsi.toFixed(1)}%` : undefined },
+    { label: 'Crossover hop LSI ≥90%', passed: crossoverHopLsi !== null ? crossoverHopLsi >= 90 : null, detail: crossoverHopLsi !== null ? `LSI ${crossoverHopLsi.toFixed(1)}%` : undefined },
     { label: 'AKPS ≥90/100', passed: form.akps_score !== '' ? n(form.akps_score)! >= 90 : null, detail: form.akps_score !== '' ? `${form.akps_score}/100` : undefined },
   ]
 
@@ -200,6 +206,24 @@ export default function PfpProtocol({ patient, userId, initialData, evalId, onSa
           <Field label="Lado sano"><NumInput value={form.single_hop_unaffected} onChange={v => set('single_hop_unaffected', v)} /></Field>
         </div>
         {hopLsi !== null && <div className="mt-3"><LsiDisplay label="Single Hop LSI" val={hopLsi} /></div>}
+      </div>
+
+      <div>
+        <SectionTitle>Triple hop (cm)</SectionTitle>
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Lado afectado"><NumInput value={form.triple_hop_affected} onChange={v => set('triple_hop_affected', v)} /></Field>
+          <Field label="Lado sano"><NumInput value={form.triple_hop_unaffected} onChange={v => set('triple_hop_unaffected', v)} /></Field>
+        </div>
+        {tripleHopLsi !== null && <div className="mt-3"><LsiDisplay label="Triple Hop LSI" val={tripleHopLsi} /></div>}
+      </div>
+
+      <div>
+        <SectionTitle>Crossover hop (cm)</SectionTitle>
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Lado afectado"><NumInput value={form.crossover_hop_affected} onChange={v => set('crossover_hop_affected', v)} /></Field>
+          <Field label="Lado sano"><NumInput value={form.crossover_hop_unaffected} onChange={v => set('crossover_hop_unaffected', v)} /></Field>
+        </div>
+        {crossoverHopLsi !== null && <div className="mt-3"><LsiDisplay label="Crossover Hop LSI" val={crossoverHopLsi} /></div>}
       </div>
 
       <div>
