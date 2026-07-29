@@ -4,12 +4,35 @@ import ConfirmTurnoClient from './ConfirmTurnoClient'
 
 export const dynamic = 'force-dynamic'
 
+// Normaliza un teléfono argentino al formato que espera wa.me (sin +, con 54).
+function formatArgentinePhone(phone: string): string {
+  let n = phone.replace(/\D/g, '')
+  if (n.startsWith('549') || n.startsWith('5411')) return n
+  if (n.startsWith('54')) return n
+  if (n.startsWith('0')) n = n.slice(1)
+  if (n.startsWith('15')) n = n.slice(2)
+  return `54${n}`
+}
+
+// Arma el link de WhatsApp hacia el profesional con un mensaje pre-armado que
+// incluye los datos del turno. El paciente solo completa el motivo.
+function buildWhatsAppUrl(phone: string, patientName: string, start: string): string {
+  const clean = formatArgentinePhone(phone)
+  const fecha = new Date(start).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  const hora = new Date(start).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
+  const msg =
+    `Hola, soy ${patientName}. ` +
+    `Tengo turno el ${fecha} a las ${hora} y no voy a poder asistir. ` +
+    `El motivo es:`
+  return `https://wa.me/${clean}?text=${encodeURIComponent(msg)}`
+}
+
 export default async function ConfirmarTurnoPage({ params }: { params: { token: string } }) {
   const supabase = createAdminClient()
 
   const { data: turno } = await supabase
     .from('turnos')
-    .select('id, patient_name, start_time, end_time, area, status, org_id, is_blocked, confirm_token')
+    .select('id, patient_name, start_time, end_time, area, status, org_id, is_blocked, confirm_token, professional_id, created_by')
     .eq('confirm_token', params.token)
     .single()
 
@@ -23,6 +46,24 @@ export default async function ConfirmarTurnoPage({ params }: { params: { token: 
       .eq('id', turno.org_id)
       .single()
     orgName = org?.name ?? null
+  }
+
+  // WhatsApp destino: el número del profesional del turno; si no tiene, el de
+  // quien lo creó. Si ninguno cargó número (o la columna aún no existe), queda
+  // null y el botón "No voy a poder ir" no se muestra (cae al texto de fallback).
+  let whatsappUrl: string | null = null
+  const candidateIds = [turno.professional_id, turno.created_by].filter(Boolean) as string[]
+  if (candidateIds.length > 0) {
+    const { data: usersData } = await supabase
+      .from('users')
+      .select('id, whatsapp')
+      .in('id', candidateIds)
+    const byId = new Map((usersData ?? []).map(u => [u.id, u.whatsapp as string | null]))
+    const phone =
+      (turno.professional_id && byId.get(turno.professional_id)) ||
+      (turno.created_by && byId.get(turno.created_by)) ||
+      null
+    if (phone) whatsappUrl = buildWhatsAppUrl(phone, turno.patient_name, turno.start_time)
   }
 
   return (
@@ -44,6 +85,7 @@ export default async function ConfirmarTurnoPage({ params }: { params: { token: 
           area={turno.area}
           orgName={orgName}
           initialStatus={turno.status}
+          whatsappUrl={whatsappUrl}
         />
       </main>
     </div>

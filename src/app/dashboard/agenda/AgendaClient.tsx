@@ -56,6 +56,7 @@ interface Props {
   areaDurations: Record<string, number>
   dayStart: number
   dayEnd: number
+  initialWhatsapp: string | null
 }
 
 // Status-based colors (lighter palette for readability)
@@ -393,7 +394,7 @@ function exportDayPdf(turnos: Turno[], date: Date, orgName: string | null, filte
   }, 250)
 }
 
-export default function AgendaClient({ userId, orgId, orgName, professionals, members, areas: initialAreas, isOwner, shareToken, shareEnabled, slotInterval: initialSlotInterval, areaDurations: initialAreaDurations, dayStart: initialDayStart, dayEnd: initialDayEnd }: Props) {
+export default function AgendaClient({ userId, orgId, orgName, professionals, members, areas: initialAreas, isOwner, shareToken, shareEnabled, slotInterval: initialSlotInterval, areaDurations: initialAreaDurations, dayStart: initialDayStart, dayEnd: initialDayEnd, initialWhatsapp }: Props) {
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()))
   const [selectedDay, setSelectedDay] = useState<Date>(() => new Date())
   const [view, setView] = useState<'week' | 'day'>('day')
@@ -1190,6 +1191,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
           initialAreaDurations={areaDurations}
           initialDayStart={dayStart}
           initialDayEnd={dayEnd}
+          initialWhatsapp={initialWhatsapp}
           members={members}
           shareToken={shareToken}
           shareEnabled={shareEnabled}
