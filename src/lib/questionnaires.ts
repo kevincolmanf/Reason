@@ -526,6 +526,64 @@ export const KOOS_SECTIONS: KoosSection[] = [
   },
 ]
 
+// ─── WOSI ───────────────────────────────────────────────────────────────────
+// Western Ontario Shoulder Instability Index. 21 ítems (VAS 0-100) en 4 secciones.
+// Mide calidad de vida específica de inestabilidad de hombro. Crudo 0-2100 (mayor
+// = peor). Se reporta como % de calidad de vida: (2100 - crudo) / 2100 × 100
+// (mayor = mejor). El RTS de hombro usa el corte ≥75%.
+// IMPORTANTE: redacción reconstruida del estándar — verificar contra la fuente
+// oficial (Western Ontario / Kirkley) antes del uso clínico.
+
+export interface WosiSection { key: 'physical' | 'sport' | 'lifestyle' | 'emotions'; title: string; items: string[] }
+
+export const WOSI_SECTIONS: WosiSection[] = [
+  {
+    key: 'physical',
+    title: 'Síntomas físicos',
+    items: [
+      '¿Cuánto dolor sentís en el hombro al realizar actividades por encima de la cabeza?',
+      '¿Cuánto dolor o molestia sentís en el hombro?',
+      '¿Cuánta debilidad o falta de fuerza sentís en el hombro?',
+      '¿Cuánta fatiga o falta de resistencia sentís en el hombro?',
+      '¿Cuántos chasquidos, crujidos o ruidos escuchás en el hombro?',
+      '¿Cuánta rigidez sentís en el hombro?',
+      '¿Cuánta molestia sentís en los músculos del cuello a causa del hombro?',
+      '¿Cuánta sensación de inestabilidad o de que el hombro se “sale” tenés?',
+      '¿Cuánto compensás con otros músculos para proteger el hombro?',
+      '¿Cuánta pérdida de rango de movimiento tenés en el hombro?',
+    ],
+  },
+  {
+    key: 'sport',
+    title: 'Deportes, recreación y trabajo',
+    items: [
+      '¿Cuánto limita tu hombro la cantidad o el nivel de tu actividad deportiva o recreativa?',
+      '¿Cuánto afecta tu hombro la técnica que necesitás para tu deporte o trabajo?',
+      '¿Cuánta necesidad tenés de proteger el brazo durante las actividades?',
+      '¿Cuánta dificultad tenés para levantar objetos pesados?',
+    ],
+  },
+  {
+    key: 'lifestyle',
+    title: 'Estilo de vida',
+    items: [
+      '¿Cuánto miedo tenés de caerte sobre el hombro?',
+      '¿Cuánta dificultad tenés para mantener el nivel de estado físico que querés?',
+      '¿Cuánta dificultad tenés para jugar de forma brusca o física con la familia o amigos?',
+      '¿Cuánta dificultad tenés para dormir a causa del hombro?',
+    ],
+  },
+  {
+    key: 'emotions',
+    title: 'Emociones',
+    items: [
+      '¿Cuán consciente estás de tu hombro?',
+      '¿Cuánta preocupación tenés de que tu hombro empeore?',
+      '¿Cuánta frustración sentís a causa de tu hombro?',
+    ],
+  },
+]
+
 // ─── Respuestas del paciente (para mostrar en la ficha) ─────────────────────
 
 export interface ResponseItem {
@@ -652,6 +710,18 @@ export function getResponseItems(type: string, data: any): ResponseItem[] {
           if (!item || v == null || v < 0) return
           // v = puntaje 0-4 (4 = peor). Ítem a trabajar si es severo/extremo.
           items.push({ text: item.text, detail: item.options[v], tag: sec.title, relevant: v >= 3 })
+        })
+      })
+      break
+    }
+    case 'wosi': {
+      const ans = data.answers ?? {}
+      WOSI_SECTIONS.forEach(sec => {
+        ;(ans[sec.key] ?? []).forEach((v: number, i: number) => {
+          const item = sec.items[i]
+          if (!item || v == null) return
+          // v = VAS 0-100 (100 = peor). Ítem a trabajar si es alto.
+          items.push({ text: item, detail: `${v}/100`, tag: sec.title, relevant: v >= 50 })
         })
       })
       break

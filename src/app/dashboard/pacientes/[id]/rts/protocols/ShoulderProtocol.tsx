@@ -196,6 +196,7 @@ export default function ShoulderProtocol({ patient, userId, initialData, evalId,
           <QuestionnaireAutofill
             available={latestQuestionnaires}
             specs={[
+              { type: 'wosi', label: 'WOSI', formKey: 'wosi_score' },
               { type: 'spadi', label: 'SPADI', formKey: 'spadi_score' },
               { type: 'dash', label: 'DASH', formKey: 'dash_score' },
             ]}

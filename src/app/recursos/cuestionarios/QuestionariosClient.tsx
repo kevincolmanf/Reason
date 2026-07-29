@@ -22,6 +22,8 @@ import {
   ACL_RSI_ITEMS,
   KOOS_SECTIONS,
   KoosSubscale,
+  WOSI_SECTIONS,
+  WosiSection,
 } from '@/lib/questionnaires'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -158,6 +160,15 @@ const QUESTIONNAIRES = [
     range: '0-100 por subescala · Mayor = mejor',
     region: 'Rodilla',
     color: '#0D9488',
+  },
+  {
+    id: 'wosi',
+    name: 'WOSI',
+    fullName: 'Western Ontario Shoulder Instability Index',
+    description: 'Calidad de vida en inestabilidad de hombro. Alimenta el RTS de hombro (corte ≥75%).',
+    range: '0-100% · Mayor = mejor',
+    region: 'Hombro',
+    color: '#0369A1',
   },
 ]
 
@@ -321,6 +332,19 @@ function scoreKOOS(answers: KoosAnswers): { subscales: Record<KoosSubscale, numb
   return { subscales, sport, interpretation, color }
 }
 
+// WOSI: 21 ítems VAS 0-100 (100 = peor). Crudo 0-2100. Se reporta como % de
+// calidad de vida = (2100 - crudo) / 2100 × 100 (mayor = mejor). Corte RTS ≥75%.
+type WosiAnswers = Record<WosiSection['key'], number[]>
+function scoreWOSI(answers: WosiAnswers): { score: number; raw: number; interpretation: string; color: string } {
+  const raw = WOSI_SECTIONS.reduce((sum, sec) => sum + answers[sec.key].reduce((a, b) => a + b, 0), 0)
+  const score = Math.round(((2100 - raw) / 2100) * 100)
+  let interpretation: string, color: string
+  if (score >= 75) { interpretation = 'WOSI ≥75%: buena calidad de vida del hombro para retorno'; color = 'green' }
+  else if (score >= 60) { interpretation = 'WOSI moderado: calidad de vida del hombro en progreso'; color = 'yellow' }
+  else { interpretation = 'WOSI bajo: impacto marcado de la inestabilidad'; color = 'red' }
+  return { score, raw, interpretation, color }
+}
+
 // ─── Color helpers ─────────────────────────────────────────────────────────
 
 function colorClass(c: string) {
@@ -453,6 +477,11 @@ export default function QuestionariosClient({ userId, lockedPatient, initialDate
     KOOS_SECTIONS.reduce((acc, sec) => { acc[sec.key] = Array(sec.items.length).fill(-1); return acc }, {} as KoosAnswers)
   )
 
+  // WOSI: 21 ítems VAS 0-100 por sección, arrancan en 0
+  const [wosiAnswers, setWosiAnswers] = useState<WosiAnswers>(() =>
+    WOSI_SECTIONS.reduce((acc, sec) => { acc[sec.key] = Array(sec.items.length).fill(0); return acc }, {} as WosiAnswers)
+  )
+
   useEffect(() => {
     if (!patientsLoaded) {
       const supabase = createClient()
@@ -541,6 +570,10 @@ export default function QuestionariosClient({ userId, lockedPatient, initialDate
         // El score de cabecera es KOOS-Sport (lo que importa el RTS de LCA vía
         // result_data.sport). Las 5 subescalas quedan en result_data.
         return { questionnaire_type: 'koos', score: sport, interpretation, result_data: { answers: koosAnswers, ...subscales, sport, color } }
+      }
+      case 'wosi': {
+        const { score, raw, interpretation, color } = scoreWOSI(wosiAnswers)
+        return { questionnaire_type: 'wosi', score, interpretation, result_data: { answers: wosiAnswers, raw, color } }
       }
       default:
         return null
@@ -895,6 +928,41 @@ export default function QuestionariosClient({ userId, lockedPatient, initialDate
           </div>
         )
 
+      case 'wosi':
+        return (
+          <div>
+            <p className="text-[13px] text-text-secondary mb-5">
+              Marcá en cada línea cuánto te afectó tu hombro en la <strong>última semana</strong>. 0 = sin problema · 100 = el peor posible. El resultado se expresa como % de calidad de vida (mayor = mejor).
+            </p>
+            {WOSI_SECTIONS.map(sec => (
+              <div key={sec.key} className="mb-8">
+                <h3 className="text-[15px] font-medium mb-4 text-text-secondary uppercase tracking-[0.05em]">{sec.title}</h3>
+                {sec.items.map((item, i) => (
+                  <div key={i} className="mb-4">
+                    <div className="flex justify-between mb-1.5 gap-3">
+                      <span className="text-[13px] text-text-primary">{item}</span>
+                      <span className="text-[13px] font-medium text-text-primary w-8 text-right shrink-0">{wosiAnswers[sec.key][i]}</span>
+                    </div>
+                    <input
+                      type="range" min={0} max={100} value={wosiAnswers[sec.key][i]}
+                      onChange={e => setWosiAnswers(prev => {
+                        const next = { ...prev, [sec.key]: [...prev[sec.key]] }
+                        next[sec.key][i] = Number(e.target.value)
+                        return next
+                      })}
+                      className="w-full accent-accent"
+                    />
+                    <div className="flex justify-between text-[10px] text-text-secondary mt-0.5">
+                      <span>0 — Sin problema</span>
+                      <span>100 — El peor posible</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        )
+
       default:
         return null
     }
@@ -983,7 +1051,7 @@ export default function QuestionariosClient({ userId, lockedPatient, initialDate
             {result.score !== null && (
               <div className="text-center">
                 <div className="text-[40px] font-light tracking-[-0.03em] leading-none">
-                  {result.questionnaire_type === 'oswestry' ? `${result.score}%` : result.score}
+                  {result.questionnaire_type === 'oswestry' || result.questionnaire_type === 'wosi' ? `${result.score}%` : result.score}
                 </div>
                 <div className="text-[11px] text-text-secondary mt-1">Puntuación</div>
               </div>
