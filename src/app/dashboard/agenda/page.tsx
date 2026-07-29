@@ -94,14 +94,17 @@ export default async function AgendaPage() {
     }
   }
 
-  // Lectura defensiva del WhatsApp propio (columna nueva). Si la migración no
-  // corrió aún, la consulta da error y queda null: el input de ajustes aparece vacío.
+  // Lectura defensiva del WhatsApp de contacto (columna nueva). Vive en la org
+  // (un número por clínica) o en el usuario (agenda personal). Si la migración no
+  // corrió aún, la consulta da error y queda null: el input aparece vacío.
   let whatsapp: string | null = null
   {
+    const waTable = orgId ? 'organizations' : 'users'
+    const waId = orgId ?? user.id
     const { data: wa, error: waErr } = await supabase
-      .from('users')
+      .from(waTable)
       .select('whatsapp')
-      .eq('id', user.id)
+      .eq('id', waId)
       .single()
     if (!waErr && wa && typeof wa.whatsapp === 'string') whatsapp = wa.whatsapp
   }

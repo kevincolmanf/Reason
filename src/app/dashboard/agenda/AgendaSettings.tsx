@@ -190,10 +190,11 @@ export default function AgendaSettings({
     // todavía no existen, falla solo esto y el resto de la config igual se guarda.
     const { error: hoursErr } = await supabase.from(table).update({ agenda_day_start: safeStart, agenda_day_end: safeEnd }).eq('id', rowId)
 
-    // WhatsApp: es un dato personal del usuario (no de la org), así que siempre
-    // se guarda en su propia fila de `users`. Best-effort: si la columna todavía
-    // no existe, falla solo esto y el resto de la config igual se guarda.
-    await supabase.from('users').update({ whatsapp: whatsapp.trim() || null }).eq('id', userId)
+    // WhatsApp de contacto para los avisos de ausencia. Se guarda en la misma
+    // tabla que el resto de la config: organizations para el dueño de una clínica
+    // (un solo número por org), users para agendas personales. Best-effort: si la
+    // columna todavía no existe, falla solo esto y el resto igual se guarda.
+    await supabase.from(table).update({ whatsapp: whatsapp.trim() || null }).eq('id', rowId)
 
     setSaving(false)
     // Si no se pudo guardar el horario (migración pendiente), no lo reflejamos en la UI.
@@ -314,11 +315,13 @@ export default function AgendaSettings({
           </div>
         </div>
 
-        {/* WhatsApp del profesional (dato personal) */}
+        {/* WhatsApp de contacto para los avisos de ausencia */}
         <div className="mb-6 border-t-[0.5px] border-border pt-5">
-          <label className="text-[11px] uppercase tracking-[0.05em] text-text-secondary block mb-3">Tu WhatsApp</label>
+          <label className="text-[11px] uppercase tracking-[0.05em] text-text-secondary block mb-3">
+            {orgId && isOwner ? 'WhatsApp de la clínica' : 'Tu WhatsApp'}
+          </label>
           <p className="text-[12px] text-text-secondary mb-3">
-            Cuando un paciente entra al link del recordatorio y toca &quot;No voy a poder ir&quot;, se le abre un chat de WhatsApp hacia este número para que te avise el motivo. Va con código de país (ej: +54 9 221 555 1234).
+            Cuando un paciente entra al link del recordatorio y toca &quot;No voy a poder ir&quot;, se le abre un chat de WhatsApp hacia este número para que avise el motivo. Va con código de país (ej: +54 9 221 555 1234).
           </p>
           <input
             type="tel"

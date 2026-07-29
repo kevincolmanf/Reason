@@ -38,33 +38,38 @@ export default async function ConfirmarTurnoPage({ params }: { params: { token: 
 
   if (!turno || turno.is_blocked) notFound()
 
+  // WhatsApp destino y nombre de la clínica. Para turnos de una organización el
+  // número es el de la clínica (un solo número, cargado por el dueño). Para
+  // agendas personales (sin org) se usa el número del profesional del turno, o
+  // el de quien lo creó. Si no hay número (o la columna aún no existe), queda
+  // null y el botón "No voy a poder ir" no se muestra (cae al texto de fallback).
   let orgName: string | null = null
+  let phone: string | null = null
+
   if (turno.org_id) {
     const { data: org } = await supabase
       .from('organizations')
-      .select('name')
+      .select('name, whatsapp')
       .eq('id', turno.org_id)
       .single()
     orgName = org?.name ?? null
+    phone = (org?.whatsapp as string | null) ?? null
+  } else {
+    const candidateIds = [turno.professional_id, turno.created_by].filter(Boolean) as string[]
+    if (candidateIds.length > 0) {
+      const { data: usersData } = await supabase
+        .from('users')
+        .select('id, whatsapp')
+        .in('id', candidateIds)
+      const byId = new Map((usersData ?? []).map(u => [u.id, u.whatsapp as string | null]))
+      phone =
+        (turno.professional_id && byId.get(turno.professional_id)) ||
+        (turno.created_by && byId.get(turno.created_by)) ||
+        null
+    }
   }
 
-  // WhatsApp destino: el número del profesional del turno; si no tiene, el de
-  // quien lo creó. Si ninguno cargó número (o la columna aún no existe), queda
-  // null y el botón "No voy a poder ir" no se muestra (cae al texto de fallback).
-  let whatsappUrl: string | null = null
-  const candidateIds = [turno.professional_id, turno.created_by].filter(Boolean) as string[]
-  if (candidateIds.length > 0) {
-    const { data: usersData } = await supabase
-      .from('users')
-      .select('id, whatsapp')
-      .in('id', candidateIds)
-    const byId = new Map((usersData ?? []).map(u => [u.id, u.whatsapp as string | null]))
-    const phone =
-      (turno.professional_id && byId.get(turno.professional_id)) ||
-      (turno.created_by && byId.get(turno.created_by)) ||
-      null
-    if (phone) whatsappUrl = buildWhatsAppUrl(phone, turno.patient_name, turno.start_time)
-  }
+  const whatsappUrl = phone ? buildWhatsAppUrl(phone, turno.patient_name, turno.start_time) : null
 
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
