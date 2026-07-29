@@ -4,7 +4,7 @@ import { useState, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { lsi, n, Criterion } from './shared'
 import { Field, NumInput, YesNoInput, SelectInput, LsiDisplay, SectionTitle, CriteriaResults } from './ProtocolUI'
-import { GeneralQuestionnaires, LatestQuestionnaires } from './QuestionnaireAutofill'
+import { GeneralQuestionnaires, QuestionnaireAutofill, LatestQuestionnaires } from './QuestionnaireAutofill'
 
 interface Props {
   patient: { id: string; name: string; age: number | null }
@@ -124,6 +124,16 @@ export default function TendinopathyProtocol({ patient, userId, initialData, eva
 
       <div>
         <SectionTitle>Cuestionario — {visaLabel}</SectionTitle>
+        {latestQuestionnaires && (
+          <QuestionnaireAutofill
+            available={latestQuestionnaires}
+            specs={[
+              { type: 'visa_p', label: 'VISA-P', formKey: 'visa_score' },
+              { type: 'visa_a', label: 'VISA-A', formKey: 'visa_score' },
+            ]}
+            onApply={(k, v) => set(k as keyof FormData, v)}
+          />
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label={`Puntaje ${visaLabel} (0–100)`}>
             <NumInput value={form.visa_score} onChange={v => set('visa_score', v)} min="0" max="100" placeholder="ej: 85" />

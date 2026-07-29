@@ -672,6 +672,78 @@ export const HAGOS_SECTIONS: HagosSection[] = [
   },
 ]
 
+// ─── AKPS (Kujala) ───────────────────────────────────────────────────────────
+// Anterior Knee Pain Scale. 13 ítems con puntaje específico por opción; suma 0-100
+// (mayor = mejor). El RTS de PFP usa el corte ≥90/100.
+// Puntajes verificados contra el estándar de Kujala (1993); ítems escaleras/correr/
+// saltar corroborados por fuentes. IMPORTANTE: verificar redacción y puntajes.
+
+export interface ScoredOption { text: string; points: number }
+export interface ScoredItem { label: string; options: ScoredOption[] }
+
+export const AKPS_ITEMS: ScoredItem[] = [
+  { label: 'Cojera', options: [{ text: 'Ninguna', points: 5 }, { text: 'Leve o periódica', points: 3 }, { text: 'Constante', points: 0 }] },
+  { label: 'Apoyo / soporte', options: [{ text: 'Completo, sin dolor', points: 5 }, { text: 'Doloroso', points: 3 }, { text: 'Imposible cargar peso', points: 0 }] },
+  { label: 'Caminar', options: [{ text: 'Sin límite', points: 5 }, { text: 'Más de 2 km', points: 3 }, { text: '1–2 km', points: 2 }, { text: 'Imposible', points: 0 }] },
+  { label: 'Subir y bajar escaleras', options: [{ text: 'Sin dificultad', points: 10 }, { text: 'Leve dolor al bajar', points: 8 }, { text: 'Dolor al subir y bajar', points: 5 }, { text: 'Imposible', points: 0 }] },
+  { label: 'Ponerse en cuclillas', options: [{ text: 'Sin dificultad', points: 5 }, { text: 'Doloroso al repetir', points: 4 }, { text: 'Doloroso cada vez', points: 3 }, { text: 'Posible con carga parcial', points: 2 }, { text: 'Imposible', points: 0 }] },
+  { label: 'Correr', options: [{ text: 'Sin dificultad', points: 10 }, { text: 'Dolor después de más de 2 km', points: 8 }, { text: 'Leve dolor desde el inicio', points: 6 }, { text: 'Dolor severo', points: 3 }, { text: 'Imposible', points: 0 }] },
+  { label: 'Saltar', options: [{ text: 'Sin dificultad', points: 10 }, { text: 'Leve dificultad', points: 7 }, { text: 'Dolor constante', points: 2 }, { text: 'Imposible', points: 0 }] },
+  { label: 'Estar sentado con las rodillas flexionadas por tiempo prolongado', options: [{ text: 'Sin dificultad', points: 10 }, { text: 'Dolor después del ejercicio', points: 8 }, { text: 'Dolor constante', points: 6 }, { text: 'El dolor obliga a extender la rodilla temporalmente', points: 4 }, { text: 'Imposible', points: 0 }] },
+  { label: 'Dolor', options: [{ text: 'Ninguno', points: 10 }, { text: 'Leve y ocasional', points: 8 }, { text: 'Interfiere con el sueño', points: 6 }, { text: 'Ocasionalmente severo', points: 3 }, { text: 'Constante y severo', points: 0 }] },
+  { label: 'Hinchazón', options: [{ text: 'Ninguna', points: 10 }, { text: 'Después de esfuerzo intenso', points: 8 }, { text: 'Después de actividades diarias', points: 6 }, { text: 'Todas las noches', points: 4 }, { text: 'Constante', points: 0 }] },
+  { label: 'Movimientos anormales dolorosos de la rótula (subluxaciones)', options: [{ text: 'Ninguno', points: 10 }, { text: 'Ocasionalmente en el deporte', points: 6 }, { text: 'Ocasionalmente en actividades diarias', points: 4 }, { text: 'Al menos una luxación documentada', points: 2 }, { text: 'Más de dos luxaciones', points: 0 }] },
+  { label: 'Atrofia del muslo', options: [{ text: 'Ninguna', points: 5 }, { text: 'Leve', points: 3 }, { text: 'Severa', points: 0 }] },
+  { label: 'Limitación de la flexión', options: [{ text: 'Ninguna', points: 5 }, { text: 'Leve', points: 3 }, { text: 'Severa', points: 0 }] },
+]
+
+// ─── VISA-A / VISA-P ─────────────────────────────────────────────────────────
+// Victorian Institute of Sport Assessment (Aquíleo / Rotuliano). 8 preguntas,
+// total 0-100 (mayor = mejor). Q1-Q6: escala 0-10. Q7: nivel deportivo (0/4/7/10).
+// Q8: según situación de dolor en el deporte, se puntúa por duración (0/7/14/21/30).
+// IMPORTANTE: redacción reconstruida — verificar contra la fuente oficial.
+
+export interface VisaSlider { label: string; low: string; high: string }
+
+export const VISA_A_Q16: VisaSlider[] = [
+  { label: 'Al levantarte, ¿por cuántos minutos tenés rigidez en la zona del tendón de Aquiles?', low: '0 = 100 min o más', high: '10 = sin rigidez' },
+  { label: 'Una vez que entraste en calor, ¿tenés dolor al estirar el Aquiles al máximo sobre el borde de un escalón?', low: '0 = dolor intenso', high: '10 = sin dolor' },
+  { label: 'Después de caminar 30 minutos en llano, ¿tenés dolor en las 2 horas siguientes?', low: '0 = dolor intenso', high: '10 = sin dolor' },
+  { label: '¿Tenés dolor al bajar escaleras con marcha normal?', low: '0 = dolor intenso', high: '10 = sin dolor' },
+  { label: '¿Tenés dolor durante o inmediatamente después de hacer 10 elevaciones de talón en una pierna?', low: '0 = dolor intenso', high: '10 = sin dolor' },
+  { label: '¿Cuántos saltos en una pierna podés hacer sin dolor?', low: '0 = ninguno', high: '10 = 10 o más' },
+]
+
+export const VISA_P_Q16: VisaSlider[] = [
+  { label: '¿Por cuántos minutos podés estar sentado sin dolor en la rodilla?', low: '0 = 0 min', high: '10 = 100 min' },
+  { label: '¿Tenés dolor al bajar escaleras con marcha normal?', low: '0 = dolor intenso', high: '10 = sin dolor' },
+  { label: '¿Tenés dolor al extender la rodilla completamente contra resistencia?', low: '0 = dolor intenso', high: '10 = sin dolor' },
+  { label: '¿Tenés dolor al hacer una estocada (lunge) con todo el peso?', low: '0 = dolor intenso', high: '10 = sin dolor' },
+  { label: '¿Tenés problemas al ponerte en cuclillas?', low: '0 = incapaz', high: '10 = sin problema' },
+  { label: '¿Tenés dolor durante o inmediatamente después de 10 saltos en una pierna?', low: '0 = dolor intenso', high: '10 = sin dolor' },
+]
+
+export const VISA_Q7_OPTIONS: ScoredOption[] = [
+  { text: 'No estoy haciendo deporte', points: 0 },
+  { text: 'Entrenamiento modificado ± competencia modificada', points: 4 },
+  { text: 'Entrenamiento completo ± competencia, pero no al nivel de cuando empezaron los síntomas', points: 7 },
+  { text: 'Compitiendo al mismo nivel o superior al de cuando empezaron los síntomas', points: 10 },
+]
+
+// Q8: elegir la situación que corresponde y por cuánto tiempo puede entrenar/competir.
+export const VISA_Q8_SCENARIOS = [
+  'A — Sin dolor al hacer deporte que carga el tendón',
+  'B — Con dolor, pero no me impide completar la actividad',
+  'C — El dolor me obliga a interrumpir la actividad',
+]
+export const VISA_Q8_DURATIONS: ScoredOption[] = [
+  { text: 'Nada', points: 0 },
+  { text: '1–10 min', points: 7 },
+  { text: '11–20 min', points: 14 },
+  { text: '21–30 min', points: 21 },
+  { text: 'Más de 30 min', points: 30 },
+]
+
 // ─── Respuestas del paciente (para mostrar en la ficha) ─────────────────────
 
 export interface ResponseItem {
@@ -836,6 +908,33 @@ export function getResponseItems(type: string, data: any): ResponseItem[] {
           items.push({ text: item.text, detail: item.options[v], tag: sec.title, relevant: v >= 3 })
         })
       })
+      break
+    }
+    case 'akps': {
+      ;(data.answers ?? []).forEach((optIdx: number, i: number) => {
+        const item = AKPS_ITEMS[i]
+        if (!item || optIdx == null || optIdx < 0) return
+        const opt = item.options[optIdx]
+        const maxPts = Math.max(...item.options.map(o => o.points))
+        // A trabajar si la opción elegida está en la mitad baja del puntaje del ítem.
+        items.push({ text: item.label, detail: opt.text, relevant: opt.points <= maxPts / 2 })
+      })
+      break
+    }
+    case 'visa_a':
+    case 'visa_p': {
+      const sliders = type === 'visa_a' ? VISA_A_Q16 : VISA_P_Q16
+      ;(data.q16 ?? []).forEach((v: number, i: number) => {
+        if (!sliders[i] || v == null) return
+        items.push({ text: sliders[i].label, detail: `${v}/10`, tag: 'Dolor/función', relevant: v <= 5 })
+      })
+      if (data.q7 != null && VISA_Q7_OPTIONS[data.q7]) {
+        items.push({ text: 'Nivel deportivo actual', detail: VISA_Q7_OPTIONS[data.q7].text, tag: 'Deporte', relevant: VISA_Q7_OPTIONS[data.q7].points <= 4 })
+      }
+      if (data.q8_duration != null && VISA_Q8_DURATIONS[data.q8_duration]) {
+        const scen = data.q8_scenario != null ? VISA_Q8_SCENARIOS[data.q8_scenario] : ''
+        items.push({ text: `Tiempo de deporte tolerado${scen ? ` (${scen.split(' — ')[0]})` : ''}`, detail: VISA_Q8_DURATIONS[data.q8_duration].text, tag: 'Deporte', relevant: VISA_Q8_DURATIONS[data.q8_duration].points <= 14 })
+      }
       break
     }
   }
