@@ -24,6 +24,7 @@ const INIT = {
   decline_squat_reps: '', decline_squat_pain: '',
   heel_raise_reps: '', heel_raise_pain: '',
   single_hop_affected: '', single_hop_unaffected: '',
+  slcmj_affected: '', slcmj_unaffected: '',
   full_training_weeks: '', lefs_score: '', tampa_score: '', notes: '',
 }
 type FormData = typeof INIT
@@ -37,6 +38,7 @@ export default function TendinopathyProtocol({ patient, userId, initialData, eva
   const set = (k: keyof FormData, v: string) => setForm(p => ({ ...p, [k]: v }))
 
   const hopLsi = lsi(n(form.single_hop_affected), n(form.single_hop_unaffected))
+  const slcmjLsi = lsi(n(form.slcmj_affected), n(form.slcmj_unaffected))
   const isPatellar = form.tendon_type === 'patellar'
   const visaThreshold = isPatellar ? 80 : 90
   const visaLabel = isPatellar ? 'VISA-P' : 'VISA-A'
@@ -49,6 +51,7 @@ export default function TendinopathyProtocol({ patient, userId, initialData, eva
       ? { label: 'Decline squat 3×15 sin aumento de dolor', passed: form.decline_squat_pain !== '' ? form.decline_squat_pain === 'no' : null }
       : { label: 'Single leg heel raise ≥25 repeticiones sin dolor', passed: (form.heel_raise_reps !== '' && form.heel_raise_pain !== '') ? (n(form.heel_raise_reps)! >= 25 && form.heel_raise_pain === 'no') : null, detail: form.heel_raise_reps !== '' ? `${form.heel_raise_reps} reps` : undefined },
     { label: 'Single hop LSI ≥90%', passed: hopLsi !== null ? hopLsi >= 90 : null, detail: hopLsi !== null ? `LSI ${hopLsi.toFixed(1)}%` : undefined },
+    { label: 'Salto vertical unipodal (SL-CMJ) LSI ≥90%', passed: slcmjLsi !== null ? slcmjLsi >= 90 : null, detail: slcmjLsi !== null ? `LSI ${slcmjLsi.toFixed(1)}%` : undefined },
     { label: '≥2 semanas de entrenamiento completo', passed: form.full_training_weeks !== '' ? n(form.full_training_weeks)! >= 2 : null, detail: form.full_training_weeks !== '' ? `${form.full_training_weeks} semanas` : undefined },
   ]
 
@@ -167,6 +170,15 @@ export default function TendinopathyProtocol({ patient, userId, initialData, eva
           <Field label="Lado sano"><NumInput value={form.single_hop_unaffected} onChange={v => set('single_hop_unaffected', v)} /></Field>
         </div>
         {hopLsi !== null && <div className="mt-3"><LsiDisplay label="Single Hop LSI" val={hopLsi} /></div>}
+      </div>
+
+      <div>
+        <SectionTitle>Salto vertical unipodal — SL-CMJ (cm)</SectionTitle>
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Lado afectado"><NumInput value={form.slcmj_affected} onChange={v => set('slcmj_affected', v)} /></Field>
+          <Field label="Lado sano"><NumInput value={form.slcmj_unaffected} onChange={v => set('slcmj_unaffected', v)} /></Field>
+        </div>
+        {slcmjLsi !== null && <div className="mt-3"><LsiDisplay label="SL-CMJ LSI" val={slcmjLsi} /></div>}
       </div>
 
       <div>

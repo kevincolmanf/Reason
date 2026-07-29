@@ -23,7 +23,10 @@ const INIT = {
   ham_eccentric_affected: '', ham_eccentric_unaffected: '',
   quad_affected: '', quad_unaffected: '',
   single_hop_affected: '', single_hop_unaffected: '',
+  triple_hop_affected: '', triple_hop_unaffected: '',
+  crossover_hop_affected: '', crossover_hop_unaffected: '',
   nordic_reps_affected: '', nordic_reps_unaffected: '',
+  slhb_affected: '', slhb_unaffected: '',
   h_test_pain_free: '',
   sprint_pain_free: '', agility_pain_free: '',
   lefs_score: '', tampa_score: '', notes: '',
@@ -43,6 +46,9 @@ export default function HamstringProtocol({ patient, userId, initialData, evalId
   const hamLsi    = lsi(n(form.ham_eccentric_affected), n(form.ham_eccentric_unaffected))
   const nordicLsi = lsi(n(form.nordic_reps_affected), n(form.nordic_reps_unaffected))
   const hopLsi    = lsi(n(form.single_hop_affected), n(form.single_hop_unaffected))
+  const tripleHopLsi    = lsi(n(form.triple_hop_affected), n(form.triple_hop_unaffected))
+  const crossoverHopLsi = lsi(n(form.crossover_hop_affected), n(form.crossover_hop_unaffected))
+  const slhbLsi   = lsi(n(form.slhb_affected), n(form.slhb_unaffected))
   const hqRatio = (n(form.ham_eccentric_affected) && n(form.quad_affected) && n(form.quad_affected)! > 0)
     ? n(form.ham_eccentric_affected)! / n(form.quad_affected)! : null
 
@@ -79,6 +85,21 @@ export default function HamstringProtocol({ patient, userId, initialData, evalId
       label: 'Single hop LSI ≥90%',
       passed: hopLsi !== null ? hopLsi >= 90 : null,
       detail: hopLsi !== null ? `LSI ${hopLsi.toFixed(1)}%` : undefined,
+    },
+    {
+      label: 'Triple hop LSI ≥90%',
+      passed: tripleHopLsi !== null ? tripleHopLsi >= 90 : null,
+      detail: tripleHopLsi !== null ? `LSI ${tripleHopLsi.toFixed(1)}%` : undefined,
+    },
+    {
+      label: 'Crossover hop LSI ≥90%',
+      passed: crossoverHopLsi !== null ? crossoverHopLsi >= 90 : null,
+      detail: crossoverHopLsi !== null ? `LSI ${crossoverHopLsi.toFixed(1)}%` : undefined,
+    },
+    {
+      label: 'Single Leg Hamstring Bridge LSI ≥90%',
+      passed: slhbLsi !== null ? slhbLsi >= 90 : null,
+      detail: slhbLsi !== null ? `LSI ${slhbLsi.toFixed(1)}%` : undefined,
     },
     {
       label: 'Nordic hamstring LSI ≥90%',
@@ -249,6 +270,24 @@ export default function HamstringProtocol({ patient, userId, initialData, evalId
         </div>
         {hopLsi !== null && <div className="mb-4"><LsiDisplay label="Single Hop LSI" val={hopLsi} /></div>}
         <div className="grid grid-cols-2 gap-4 mb-4">
+          <Field label="Triple hop — afectado (cm)">
+            <NumInput value={form.triple_hop_affected} onChange={v => set('triple_hop_affected', v)} />
+          </Field>
+          <Field label="Triple hop — sano (cm)">
+            <NumInput value={form.triple_hop_unaffected} onChange={v => set('triple_hop_unaffected', v)} />
+          </Field>
+        </div>
+        {tripleHopLsi !== null && <div className="mb-4"><LsiDisplay label="Triple Hop LSI" val={tripleHopLsi} /></div>}
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <Field label="Crossover hop — afectado (cm)">
+            <NumInput value={form.crossover_hop_affected} onChange={v => set('crossover_hop_affected', v)} />
+          </Field>
+          <Field label="Crossover hop — sano (cm)">
+            <NumInput value={form.crossover_hop_unaffected} onChange={v => set('crossover_hop_unaffected', v)} />
+          </Field>
+        </div>
+        {crossoverHopLsi !== null && <div className="mb-4"><LsiDisplay label="Crossover Hop LSI" val={crossoverHopLsi} /></div>}
+        <div className="grid grid-cols-2 gap-4 mb-4">
           <Field label="Nordic — reps lado afectado">
             <NumInput value={form.nordic_reps_affected} onChange={v => set('nordic_reps_affected', v)} min="0" max="30" placeholder="ej: 8" />
           </Field>
@@ -257,6 +296,15 @@ export default function HamstringProtocol({ patient, userId, initialData, evalId
           </Field>
         </div>
         {nordicLsi !== null && <div className="mb-4"><LsiDisplay label="Nordic LSI" val={nordicLsi} /></div>}
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <Field label="Single Leg Hamstring Bridge — reps afectado">
+            <NumInput value={form.slhb_affected} onChange={v => set('slhb_affected', v)} min="0" placeholder="ej: 20" />
+          </Field>
+          <Field label="Single Leg Hamstring Bridge — reps sano">
+            <NumInput value={form.slhb_unaffected} onChange={v => set('slhb_unaffected', v)} min="0" placeholder="ej: 24" />
+          </Field>
+        </div>
+        {slhbLsi !== null && <div className="mb-4"><LsiDisplay label="SLHB LSI" val={slhbLsi} /></div>}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="¿H-test de Askling sin dolor?">
             <YesNoInput value={form.h_test_pain_free} onChange={v => set('h_test_pain_free', v)} />
