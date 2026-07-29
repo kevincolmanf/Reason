@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { lsi, n, Criterion } from './shared'
 import { Field, NumInput, YesNoInput, SelectInput, LsiDisplay, SectionTitle, CriteriaResults } from './ProtocolUI'
+import { GeneralQuestionnaires, LatestQuestionnaires } from './QuestionnaireAutofill'
 
 interface Props {
   patient: { id: string; name: string; age: number | null }
@@ -12,6 +13,7 @@ interface Props {
   evalId?: string
   onSaved: (id: string) => void
   onNewEval: () => void
+  latestQuestionnaires?: LatestQuestionnaires
 }
 
 const INIT = {
@@ -24,12 +26,12 @@ const INIT = {
   nordic_reps_affected: '', nordic_reps_unaffected: '',
   h_test_pain_free: '',
   sprint_pain_free: '', agility_pain_free: '',
-  bddq_score: '', notes: '',
+  bddq_score: '', lefs_score: '', tampa_score: '', notes: '',
 }
 
 type FormData = typeof INIT
 
-export default function HamstringProtocol({ patient, userId, initialData, evalId, onSaved, onNewEval }: Props) {
+export default function HamstringProtocol({ patient, userId, initialData, evalId, onSaved, onNewEval, latestQuestionnaires }: Props) {
   const [form, setForm] = useState<FormData>({ ...INIT, ...(initialData as Partial<FormData> ?? {}) })
   const [mode, setMode] = useState<'form' | 'results'>('form')
   const [saving, setSaving] = useState(false)
@@ -285,6 +287,15 @@ export default function HamstringProtocol({ patient, userId, initialData, evalId
       </div>
 
       {/* Notas */}
+      <div>
+        <GeneralQuestionnaires
+          latest={latestQuestionnaires}
+          includeLefs
+          values={{ lefs_score: form.lefs_score, tampa_score: form.tampa_score }}
+          set={(k, v) => set(k as keyof FormData, v)}
+        />
+      </div>
+
       <div>
         <SectionTitle>Observaciones</SectionTitle>
         <textarea

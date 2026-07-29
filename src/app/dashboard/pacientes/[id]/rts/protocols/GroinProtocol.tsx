@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { lsi, n, Criterion } from './shared'
 import { Field, NumInput, YesNoInput, SelectInput, LsiDisplay, SectionTitle, CriteriaResults } from './ProtocolUI'
+import { GeneralQuestionnaires, LatestQuestionnaires } from './QuestionnaireAutofill'
 
 interface Props {
   patient: { id: string; name: string; age: number | null }
@@ -12,6 +13,7 @@ interface Props {
   evalId?: string
   onSaved: (id: string) => void
   onNewEval: () => void
+  latestQuestionnaires?: LatestQuestionnaires
 }
 
 const INIT = {
@@ -22,11 +24,11 @@ const INIT = {
   hip_abd_affected: '', hip_abd_unaffected: '',
   sprint_pain_free: '', coc_pain_free: '',
   weeks_full_training: '',
-  hagos_sport_score: '', notes: '',
+  hagos_sport_score: '', lefs_score: '', tampa_score: '', notes: '',
 }
 type FormData = typeof INIT
 
-export default function GroinProtocol({ patient, userId, initialData, evalId, onSaved, onNewEval }: Props) {
+export default function GroinProtocol({ patient, userId, initialData, evalId, onSaved, onNewEval, latestQuestionnaires }: Props) {
   const [form, setForm] = useState<FormData>({ ...INIT, ...(initialData as Partial<FormData> ?? {}) })
   const [mode, setMode] = useState<'form' | 'results'>('form')
   const [saving, setSaving] = useState(false)
@@ -166,6 +168,15 @@ export default function GroinProtocol({ patient, userId, initialData, evalId, on
           </Field>
         </div>
         <p className="text-[12px] text-text-secondary mt-2">Hip and Groin Outcome Score. Umbral retorno: ≥85%.</p>
+      </div>
+
+      <div>
+        <GeneralQuestionnaires
+          latest={latestQuestionnaires}
+          includeLefs
+          values={{ lefs_score: form.lefs_score, tampa_score: form.tampa_score }}
+          set={(k, v) => set(k as keyof FormData, v)}
+        />
       </div>
 
       <div>
