@@ -27,7 +27,7 @@ const INIT = {
   single_hop_affected: '', single_hop_unaffected: '',
   heel_rise_affected: '', heel_rise_unaffected: '',
   balance_time_affected: '', balance_time_unaffected: '',
-  faam_sport_score: '', cait_score: '', lefs_score: '', tampa_score: '', notes: '',
+  faam_sport_score: '', lefs_score: '', tampa_score: '', notes: '',
 }
 type FormData = typeof INIT
 
@@ -61,7 +61,6 @@ export default function AnkleProtocol({ patient, userId, initialData, evalId, on
     { label: 'Balance unipodal LSI ≥90% (ojos abiertos)', passed: balanceLsi !== null ? balanceLsi >= 90 : null, detail: balanceLsi !== null ? `LSI ${balanceLsi.toFixed(1)}%` : undefined },
     { label: 'Single hop LSI ≥90%', passed: hopLsi !== null ? hopLsi >= 90 : null, detail: hopLsi !== null ? `LSI ${hopLsi.toFixed(1)}%` : undefined },
     { label: 'FAAM Sport ≥90%', passed: form.faam_sport_score !== '' ? n(form.faam_sport_score)! >= 90 : null, detail: form.faam_sport_score !== '' ? `${form.faam_sport_score}%` : undefined },
-    { label: 'CAIT ≥28/30', passed: form.cait_score !== '' ? n(form.cait_score)! >= 28 : null, detail: form.cait_score !== '' ? `${form.cait_score}/30` : undefined },
   ]
 
   const handleAnalyze = async () => {
@@ -198,11 +197,8 @@ export default function AnkleProtocol({ patient, userId, initialData, evalId, on
           <Field label="FAAM Sport (0–100%)">
             <NumInput value={form.faam_sport_score} onChange={v => set('faam_sport_score', v)} min="0" max="100" placeholder="ej: 92" />
           </Field>
-          <Field label="CAIT (0–30)">
-            <NumInput value={form.cait_score} onChange={v => set('cait_score', v)} min="0" max="30" placeholder="ej: 28" />
-          </Field>
         </div>
-        <p className="text-[12px] text-text-secondary mt-2">FAAM Sport umbral ≥90% · CAIT umbral ≥28/30.</p>
+        <p className="text-[12px] text-text-secondary mt-2">FAAM Sport umbral ≥90%.</p>
       </div>
 
       <div>

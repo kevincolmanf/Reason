@@ -26,7 +26,7 @@ const INIT = {
   nordic_reps_affected: '', nordic_reps_unaffected: '',
   h_test_pain_free: '',
   sprint_pain_free: '', agility_pain_free: '',
-  bddq_score: '', lefs_score: '', tampa_score: '', notes: '',
+  lefs_score: '', tampa_score: '', notes: '',
 }
 
 type FormData = typeof INIT
@@ -96,11 +96,6 @@ export default function HamstringProtocol({ patient, userId, initialData, evalId
     {
       label: 'Agilidad sin dolor',
       passed: form.agility_pain_free !== '' ? form.agility_pain_free === 'yes' : null,
-    },
-    {
-      label: 'BDDQ ≥70%',
-      passed: form.bddq_score !== '' ? n(form.bddq_score)! >= 70 : null,
-      detail: form.bddq_score !== '' ? `${form.bddq_score}%` : undefined,
     },
   ]
 
@@ -273,17 +268,6 @@ export default function HamstringProtocol({ patient, userId, initialData, evalId
             <YesNoInput value={form.agility_pain_free} onChange={v => set('agility_pain_free', v)} />
           </Field>
         </div>
-      </div>
-
-      {/* Cuestionario */}
-      <div>
-        <SectionTitle>Cuestionario — BDDQ</SectionTitle>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Puntaje BDDQ (0–100%)">
-            <NumInput value={form.bddq_score} onChange={v => set('bddq_score', v)} min="0" max="100" placeholder="ej: 85" />
-          </Field>
-        </div>
-        <p className="text-[12px] text-text-secondary mt-2">Bayesian Decision framework for Diagnostics Questionnaire. Umbral de retorno: ≥70%.</p>
       </div>
 
       {/* Notas */}
