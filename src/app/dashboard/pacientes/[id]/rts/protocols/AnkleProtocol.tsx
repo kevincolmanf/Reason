@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { lsi, n, Criterion } from './shared'
 import { Field, NumInput, SelectInput, LsiDisplay, SectionTitle, CriteriaResults } from './ProtocolUI'
+import { GeneralQuestionnaires, LatestQuestionnaires } from './QuestionnaireAutofill'
 
 interface Props {
   patient: { id: string; name: string; age: number | null }
@@ -12,6 +13,7 @@ interface Props {
   evalId?: string
   onSaved: (id: string) => void
   onNewEval: () => void
+  latestQuestionnaires?: LatestQuestionnaires
 }
 
 const INIT = {
@@ -25,11 +27,11 @@ const INIT = {
   single_hop_affected: '', single_hop_unaffected: '',
   heel_rise_affected: '', heel_rise_unaffected: '',
   balance_time_affected: '', balance_time_unaffected: '',
-  faam_sport_score: '', cait_score: '', notes: '',
+  faam_sport_score: '', cait_score: '', lefs_score: '', tampa_score: '', notes: '',
 }
 type FormData = typeof INIT
 
-export default function AnkleProtocol({ patient, userId, initialData, evalId, onSaved, onNewEval }: Props) {
+export default function AnkleProtocol({ patient, userId, initialData, evalId, onSaved, onNewEval, latestQuestionnaires }: Props) {
   const [form, setForm] = useState<FormData>({ ...INIT, ...(initialData as Partial<FormData> ?? {}) })
   const [mode, setMode] = useState<'form' | 'results'>('form')
   const [saving, setSaving] = useState(false)
@@ -194,6 +196,15 @@ export default function AnkleProtocol({ patient, userId, initialData, evalId, on
           </Field>
         </div>
         <p className="text-[12px] text-text-secondary mt-2">FAAM Sport umbral ≥90% · CAIT umbral ≥28/30.</p>
+      </div>
+
+      <div>
+        <GeneralQuestionnaires
+          latest={latestQuestionnaires}
+          includeLefs
+          values={{ lefs_score: form.lefs_score, tampa_score: form.tampa_score }}
+          set={(k, v) => set(k as keyof FormData, v)}
+        />
       </div>
 
       <div>

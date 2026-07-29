@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { lsi, n, Criterion } from './shared'
 import { Field, NumInput, YesNoInput, SelectInput, LsiDisplay, SectionTitle, CriteriaResults } from './ProtocolUI'
+import { GeneralQuestionnaires, LatestQuestionnaires } from './QuestionnaireAutofill'
 
 interface Props {
   patient: { id: string; name: string; age: number | null }
@@ -12,6 +13,7 @@ interface Props {
   evalId?: string
   onSaved: (id: string) => void
   onNewEval: () => void
+  latestQuestionnaires?: LatestQuestionnaires
 }
 
 const INIT = {
@@ -22,11 +24,11 @@ const INIT = {
   decline_squat_reps: '', decline_squat_pain: '',
   heel_raise_reps: '', heel_raise_pain: '',
   single_hop_affected: '', single_hop_unaffected: '',
-  full_training_weeks: '', notes: '',
+  full_training_weeks: '', lefs_score: '', tampa_score: '', notes: '',
 }
 type FormData = typeof INIT
 
-export default function TendinopathyProtocol({ patient, userId, initialData, evalId, onSaved, onNewEval }: Props) {
+export default function TendinopathyProtocol({ patient, userId, initialData, evalId, onSaved, onNewEval, latestQuestionnaires }: Props) {
   const [form, setForm] = useState<FormData>({ ...INIT, ...(initialData as Partial<FormData> ?? {}) })
   const [mode, setMode] = useState<'form' | 'results'>('form')
   const [saving, setSaving] = useState(false)
@@ -165,6 +167,15 @@ export default function TendinopathyProtocol({ patient, userId, initialData, eva
           </Field>
         </div>
         <p className="text-[12px] text-text-secondary mt-2">Se requieren al menos 2 semanas de entrenamiento completo sin reacción del tendón.</p>
+      </div>
+
+      <div>
+        <GeneralQuestionnaires
+          latest={latestQuestionnaires}
+          includeLefs
+          values={{ lefs_score: form.lefs_score, tampa_score: form.tampa_score }}
+          set={(k, v) => set(k as keyof FormData, v)}
+        />
       </div>
 
       <div>

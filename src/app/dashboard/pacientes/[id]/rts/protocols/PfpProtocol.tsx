@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { lsi, n, Criterion } from './shared'
 import { Field, NumInput, YesNoInput, SelectInput, LsiDisplay, SectionTitle, CriteriaResults } from './ProtocolUI'
+import { GeneralQuestionnaires, LatestQuestionnaires } from './QuestionnaireAutofill'
 
 interface Props {
   patient: { id: string; name: string; age: number | null }
@@ -12,6 +13,7 @@ interface Props {
   evalId?: string
   onSaved: (id: string) => void
   onNewEval: () => void
+  latestQuestionnaires?: LatestQuestionnaires
 }
 
 const INIT = {
@@ -25,11 +27,11 @@ const INIT = {
   slsquat_quality: '',
   quad_affected: '', quad_unaffected: '',
   single_hop_affected: '', single_hop_unaffected: '',
-  akps_score: '', notes: '',
+  akps_score: '', lefs_score: '', tampa_score: '', notes: '',
 }
 type FormData = typeof INIT
 
-export default function PfpProtocol({ patient, userId, initialData, evalId, onSaved, onNewEval }: Props) {
+export default function PfpProtocol({ patient, userId, initialData, evalId, onSaved, onNewEval, latestQuestionnaires }: Props) {
   const [form, setForm] = useState<FormData>({ ...INIT, ...(initialData as Partial<FormData> ?? {}) })
   const [mode, setMode] = useState<'form' | 'results'>('form')
   const [saving, setSaving] = useState(false)
@@ -208,6 +210,15 @@ export default function PfpProtocol({ patient, userId, initialData, evalId, onSa
           </Field>
         </div>
         <p className="text-[12px] text-text-secondary mt-2">Umbral de retorno al deporte: ≥90/100.</p>
+      </div>
+
+      <div>
+        <GeneralQuestionnaires
+          latest={latestQuestionnaires}
+          includeLefs
+          values={{ lefs_score: form.lefs_score, tampa_score: form.tampa_score }}
+          set={(k, v) => set(k as keyof FormData, v)}
+        />
       </div>
 
       <div>

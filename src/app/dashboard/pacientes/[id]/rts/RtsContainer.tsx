@@ -293,11 +293,11 @@ export default function RtsContainer({ patient, userId, lastDynamo, lastKoos, la
   // se lee al montar).
   const formKey = loadedEval?.id ?? 'nueva'
 
-  if (activeProtocol === 'hamstring') return <div><ProtocolHeader /><ProtocolHistory /><HamstringProtocol key={formKey} {...commonProps} /></div>
-  if (activeProtocol === 'ankle') return <div><ProtocolHeader /><ProtocolHistory /><AnkleProtocol key={formKey} {...commonProps} /></div>
-  if (activeProtocol === 'pfp') return <div><ProtocolHeader /><ProtocolHistory /><PfpProtocol key={formKey} {...commonProps} /></div>
-  if (activeProtocol === 'tendinopathy') return <div><ProtocolHeader /><ProtocolHistory /><TendinopathyProtocol key={formKey} {...commonProps} /></div>
-  if (activeProtocol === 'groin') return <div><ProtocolHeader /><ProtocolHistory /><GroinProtocol key={formKey} {...commonProps} /></div>
+  if (activeProtocol === 'hamstring') return <div><ProtocolHeader /><ProtocolHistory /><HamstringProtocol key={formKey} {...commonProps} latestQuestionnaires={latestQuestionnaires} /></div>
+  if (activeProtocol === 'ankle') return <div><ProtocolHeader /><ProtocolHistory /><AnkleProtocol key={formKey} {...commonProps} latestQuestionnaires={latestQuestionnaires} /></div>
+  if (activeProtocol === 'pfp') return <div><ProtocolHeader /><ProtocolHistory /><PfpProtocol key={formKey} {...commonProps} latestQuestionnaires={latestQuestionnaires} /></div>
+  if (activeProtocol === 'tendinopathy') return <div><ProtocolHeader /><ProtocolHistory /><TendinopathyProtocol key={formKey} {...commonProps} latestQuestionnaires={latestQuestionnaires} /></div>
+  if (activeProtocol === 'groin') return <div><ProtocolHeader /><ProtocolHistory /><GroinProtocol key={formKey} {...commonProps} latestQuestionnaires={latestQuestionnaires} /></div>
   if (activeProtocol === 'shoulder') return <div><ProtocolHeader /><ProtocolHistory /><ShoulderProtocol key={formKey} {...commonProps} latestQuestionnaires={latestQuestionnaires} /></div>
 
   return null

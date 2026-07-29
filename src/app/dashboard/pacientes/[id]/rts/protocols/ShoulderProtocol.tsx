@@ -4,7 +4,7 @@ import { useState, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { lsi, n, Criterion } from './shared'
 import { Field, NumInput, YesNoInput, SelectInput, LsiDisplay, SectionTitle, CriteriaResults } from './ProtocolUI'
-import { QuestionnaireAutofill, LatestQuestionnaires } from './QuestionnaireAutofill'
+import { QuestionnaireAutofill, GeneralQuestionnaires, LatestQuestionnaires } from './QuestionnaireAutofill'
 
 interface Props {
   patient: { id: string; name: string; age: number | null }
@@ -29,7 +29,7 @@ const INIT = {
   belly_press_negative: '',
   ue_ybal_affected: '', ue_ybal_unaffected: '',
   sport_specific_ok: '',
-  wosi_score: '', rowe_score: '', dash_score: '', spadi_score: '',
+  wosi_score: '', rowe_score: '', dash_score: '', spadi_score: '', tampa_score: '',
   notes: '',
 }
 type FormData = typeof INIT
@@ -230,6 +230,15 @@ export default function ShoulderProtocol({ patient, userId, initialData, evalId,
           </div>
         </div>
         <p className="text-[12px] text-text-secondary mt-2">WOSI ≥75% · ROWE ≥75/100 · DASH ≤20/100 · SPADI referencia (menor = mejor).</p>
+      </div>
+
+      <div>
+        <GeneralQuestionnaires
+          latest={latestQuestionnaires}
+          includeLefs={false}
+          values={{ lefs_score: '', tampa_score: form.tampa_score }}
+          set={(k, v) => set(k as keyof FormData, v)}
+        />
       </div>
 
       <div>
