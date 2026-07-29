@@ -10,6 +10,7 @@ interface Props {
   area: string
   orgName: string | null
   initialStatus: string
+  whatsappUrl: string | null
 }
 
 function formatFecha(iso: string): string {
@@ -30,21 +31,25 @@ export default function ConfirmTurnoClient({
   area,
   orgName,
   initialStatus,
+  whatsappUrl,
 }: Props) {
   const [status, setStatus] = useState(initialStatus)
-  const [loading, setLoading] = useState<'confirmar' | 'cancelar' | null>(null)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const alreadyAttended = status === 'presente'
 
-  async function submit(action: 'confirmar' | 'cancelar') {
-    setLoading(action)
+  // Solo confirmar pasa por el sistema (marca el turno como confirmado). Avisar
+  // que no viene NO toca el estado: abre WhatsApp para que el paciente le
+  // escriba directo al profesional y explique el motivo.
+  async function confirmar() {
+    setLoading(true)
     setError(null)
     try {
       const res = await fetch(`/api/turno/${token}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify({ action: 'confirmar' }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -55,7 +60,7 @@ export default function ConfirmTurnoClient({
     } catch {
       setError('No pudimos conectar. Revisá tu conexión e intentá de nuevo.')
     } finally {
-      setLoading(null)
+      setLoading(false)
     }
   }
 
@@ -92,28 +97,15 @@ export default function ConfirmTurnoClient({
           <div className="rounded-2xl border-[0.5px] border-emerald-500/40 bg-emerald-500/10 p-5 text-center">
             <p className="text-[15px] font-medium text-emerald-300">✓ Confirmaste que vas a asistir</p>
             <p className="text-[13px] text-text-secondary mt-1">¡Te esperamos! Nos vemos pronto.</p>
-            {!alreadyAttended && (
-              <button
-                onClick={() => submit('cancelar')}
-                disabled={loading !== null}
-                className="mt-4 text-[13px] text-text-tertiary underline underline-offset-2 hover:text-text-secondary disabled:opacity-50"
+            {!alreadyAttended && whatsappUrl && (
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-4 inline-block text-[13px] text-text-tertiary underline underline-offset-2 hover:text-text-secondary"
               >
-                {loading === 'cancelar' ? 'Guardando…' : 'En realidad no voy a asistir'}
-              </button>
-            )}
-          </div>
-        ) : status === 'ausente' ? (
-          <div className="rounded-2xl border-[0.5px] border-red-500/40 bg-red-500/10 p-5 text-center">
-            <p className="text-[15px] font-medium text-red-300">Avisaste que no vas a asistir</p>
-            <p className="text-[13px] text-text-secondary mt-1">Gracias por avisar con tiempo.</p>
-            {!alreadyAttended && (
-              <button
-                onClick={() => submit('confirmar')}
-                disabled={loading !== null}
-                className="mt-4 text-[13px] text-text-tertiary underline underline-offset-2 hover:text-text-secondary disabled:opacity-50"
-              >
-                {loading === 'confirmar' ? 'Guardando…' : 'En realidad sí voy a asistir'}
-              </button>
+                En realidad no voy a poder ir
+              </a>
             )}
           </div>
         ) : alreadyAttended ? (
@@ -123,19 +115,22 @@ export default function ConfirmTurnoClient({
         ) : (
           <div className="space-y-3">
             <button
-              onClick={() => submit('confirmar')}
-              disabled={loading !== null}
+              onClick={confirmar}
+              disabled={loading}
               className="w-full rounded-xl bg-accent text-white text-[15px] font-medium py-3.5 transition-opacity hover:opacity-90 disabled:opacity-50"
             >
-              {loading === 'confirmar' ? 'Guardando…' : 'Asistiré'}
+              {loading ? 'Guardando…' : 'Confirmo que asistiré'}
             </button>
-            <button
-              onClick={() => submit('cancelar')}
-              disabled={loading !== null}
-              className="w-full rounded-xl border-[0.5px] border-border bg-transparent text-text-secondary text-[15px] py-3.5 transition-colors hover:bg-bg-secondary/60 disabled:opacity-50"
-            >
-              {loading === 'cancelar' ? 'Guardando…' : 'No asistiré'}
-            </button>
+            {whatsappUrl && (
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full block text-center rounded-xl border-[0.5px] border-border bg-transparent text-text-secondary text-[15px] py-3.5 transition-colors hover:bg-bg-secondary/60"
+              >
+                No voy a poder ir
+              </a>
+            )}
           </div>
         )}
 
@@ -143,7 +138,9 @@ export default function ConfirmTurnoClient({
       </div>
 
       <p className="text-[12px] text-text-tertiary mt-8 text-center">
-        Si necesitás reprogramar, respondé el mensaje de WhatsApp y te ayudamos.
+        {whatsappUrl
+          ? 'Si no vas a poder asistir, avisanos con la mayor anticipación posible así liberamos tu turno.'
+          : 'Si no vas a poder asistir o necesitás reprogramar, respondé el mensaje de WhatsApp y te ayudamos.'}
       </p>
     </div>
   )

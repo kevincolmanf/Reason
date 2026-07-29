@@ -32,6 +32,7 @@ interface Props {
   initialAreaDurations: Record<string, number>
   initialDayStart: number
   initialDayEnd: number
+  initialWhatsapp: string | null
   members: Member[]
   shareToken: string | null
   shareEnabled: boolean
@@ -50,6 +51,7 @@ export default function AgendaSettings({
   initialAreaDurations,
   initialDayStart,
   initialDayEnd,
+  initialWhatsapp,
   members,
   shareToken,
   shareEnabled: initialShareEnabled,
@@ -62,6 +64,7 @@ export default function AgendaSettings({
   const [areaDurations, setAreaDurations] = useState<Record<string, number>>(initialAreaDurations)
   const [dayStart, setDayStart] = useState(initialDayStart)
   const [dayEnd, setDayEnd] = useState(initialDayEnd)
+  const [whatsapp, setWhatsapp] = useState(initialWhatsapp ?? '')
   const [newArea, setNewArea] = useState('')
   const [shareEnabled, setShareEnabled] = useState(initialShareEnabled)
   const [memberAccess, setMemberAccess] = useState<Record<string, boolean>>(
@@ -187,6 +190,11 @@ export default function AgendaSettings({
     // todavía no existen, falla solo esto y el resto de la config igual se guarda.
     const { error: hoursErr } = await supabase.from(table).update({ agenda_day_start: safeStart, agenda_day_end: safeEnd }).eq('id', rowId)
 
+    // WhatsApp: es un dato personal del usuario (no de la org), así que siempre
+    // se guarda en su propia fila de `users`. Best-effort: si la columna todavía
+    // no existe, falla solo esto y el resto de la config igual se guarda.
+    await supabase.from('users').update({ whatsapp: whatsapp.trim() || null }).eq('id', userId)
+
     setSaving(false)
     // Si no se pudo guardar el horario (migración pendiente), no lo reflejamos en la UI.
     onSaved(areas, slotInterval, cleanDurations, hoursErr ? initialDayStart : safeStart, hoursErr ? initialDayEnd : safeEnd)
@@ -304,6 +312,22 @@ export default function AgendaSettings({
               </select>
             </div>
           </div>
+        </div>
+
+        {/* WhatsApp del profesional (dato personal) */}
+        <div className="mb-6 border-t-[0.5px] border-border pt-5">
+          <label className="text-[11px] uppercase tracking-[0.05em] text-text-secondary block mb-3">Tu WhatsApp</label>
+          <p className="text-[12px] text-text-secondary mb-3">
+            Cuando un paciente entra al link del recordatorio y toca &quot;No voy a poder ir&quot;, se le abre un chat de WhatsApp hacia este número para que te avise el motivo. Va con código de país (ej: +54 9 221 555 1234).
+          </p>
+          <input
+            type="tel"
+            inputMode="tel"
+            value={whatsapp}
+            onChange={e => setWhatsapp(e.target.value)}
+            placeholder="+54 9 221 555 1234"
+            className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:border-accent"
+          />
         </div>
 
         {/* Sharing — org owners only */}

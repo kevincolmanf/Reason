@@ -94,6 +94,18 @@ export default async function AgendaPage() {
     }
   }
 
+  // Lectura defensiva del WhatsApp propio (columna nueva). Si la migración no
+  // corrió aún, la consulta da error y queda null: el input de ajustes aparece vacío.
+  let whatsapp: string | null = null
+  {
+    const { data: wa, error: waErr } = await supabase
+      .from('users')
+      .select('whatsapp')
+      .eq('id', user.id)
+      .single()
+    if (!waErr && wa && typeof wa.whatsapp === 'string') whatsapp = wa.whatsapp
+  }
+
   // Load org members — check access for non-owners, build professional filter
   let professionals: { id: string; full_name: string | null }[] = []
   let members: { id: string; full_name: string | null; agendaAccess: boolean; agendaAreas: string[] | null }[] = []
@@ -152,6 +164,7 @@ export default async function AgendaPage() {
           areaDurations={areaDurations}
           dayStart={dayStart}
           dayEnd={dayEnd}
+          initialWhatsapp={whatsapp}
         />
       </main>
     </div>
