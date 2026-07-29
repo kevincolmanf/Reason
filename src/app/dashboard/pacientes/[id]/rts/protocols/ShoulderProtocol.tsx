@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { lsi, n, Criterion } from './shared'
 import { Field, NumInput, YesNoInput, SelectInput, LsiDisplay, SectionTitle, CriteriaResults } from './ProtocolUI'
+import { QuestionnaireAutofill, LatestQuestionnaires } from './QuestionnaireAutofill'
 
 interface Props {
   patient: { id: string; name: string; age: number | null }
@@ -12,6 +13,7 @@ interface Props {
   evalId?: string
   onSaved: (id: string) => void
   onNewEval: () => void
+  latestQuestionnaires?: LatestQuestionnaires
 }
 
 const INIT = {
@@ -27,12 +29,12 @@ const INIT = {
   belly_press_negative: '',
   ue_ybal_affected: '', ue_ybal_unaffected: '',
   sport_specific_ok: '',
-  wosi_score: '', rowe_score: '', dash_score: '',
+  wosi_score: '', rowe_score: '', dash_score: '', spadi_score: '',
   notes: '',
 }
 type FormData = typeof INIT
 
-export default function ShoulderProtocol({ patient, userId, initialData, evalId, onSaved, onNewEval }: Props) {
+export default function ShoulderProtocol({ patient, userId, initialData, evalId, onSaved, onNewEval, latestQuestionnaires }: Props) {
   const [form, setForm] = useState<FormData>({ ...INIT, ...(initialData as Partial<FormData> ?? {}) })
   const [mode, setMode] = useState<'form' | 'results'>('form')
   const [saving, setSaving] = useState(false)
@@ -190,6 +192,16 @@ export default function ShoulderProtocol({ patient, userId, initialData, evalId,
 
       <div>
         <SectionTitle>Cuestionarios</SectionTitle>
+        {latestQuestionnaires && (
+          <QuestionnaireAutofill
+            available={latestQuestionnaires}
+            specs={[
+              { type: 'spadi', label: 'SPADI', formKey: 'spadi_score' },
+              { type: 'dash', label: 'DASH', formKey: 'dash_score' },
+            ]}
+            onApply={(k, v) => set(k as keyof FormData, v)}
+          />
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {(isInstability || !form.diagnosis_type) && (
             <>
@@ -206,8 +218,18 @@ export default function ShoulderProtocol({ patient, userId, initialData, evalId,
               <NumInput value={form.dash_score} onChange={v => set('dash_score', v)} min="0" max="100" placeholder="ej: 15" />
             </Field>
           )}
+          <div>
+            <Field label="SPADI (0–100, dolor y discapacidad)">
+              <NumInput value={form.spadi_score} onChange={v => set('spadi_score', v)} min="0" max="100" placeholder="ej: 25" />
+            </Field>
+            {n(form.spadi_score) !== null && (
+              <div className={`mt-1 text-[12px] font-medium ${n(form.spadi_score)! <= 20 ? 'text-[#4ade80]' : n(form.spadi_score)! <= 40 ? 'text-[#fb923c]' : 'text-red-400'}`}>
+                {n(form.spadi_score)! <= 20 ? 'Leve' : n(form.spadi_score)! <= 40 ? 'Moderado' : n(form.spadi_score)! <= 60 ? 'Moderado-severo' : 'Severo'}
+              </div>
+            )}
+          </div>
         </div>
-        <p className="text-[12px] text-text-secondary mt-2">WOSI ≥75% · ROWE ≥75/100 · DASH ≤20/100.</p>
+        <p className="text-[12px] text-text-secondary mt-2">WOSI ≥75% · ROWE ≥75/100 · DASH ≤20/100 · SPADI referencia (menor = mejor).</p>
       </div>
 
       <div>
