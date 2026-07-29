@@ -20,6 +20,8 @@ import {
   LEFS_OPTIONS,
   FABQ_ITEMS,
   ACL_RSI_ITEMS,
+  KOOS_SECTIONS,
+  KoosSubscale,
 } from '@/lib/questionnaires'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -147,6 +149,15 @@ const QUESTIONNAIRES = [
     range: '0-100 · Mayor = mejor',
     region: 'Rodilla / LCA',
     color: '#C27B54',
+  },
+  {
+    id: 'koos',
+    name: 'KOOS',
+    fullName: 'Knee injury and Osteoarthritis Outcome Score',
+    description: 'Dolor, síntomas, función, deporte y calidad de vida de la rodilla. La subescala Deporte alimenta el RTS de LCA.',
+    range: '0-100 por subescala · Mayor = mejor',
+    region: 'Rodilla',
+    color: '#0D9488',
   },
 ]
 
@@ -290,6 +301,26 @@ function scoreACLRSI(answers: number[]): { score: number; interpretation: string
   return { score, interpretation, color }
 }
 
+// KOOS: cada subescala se transforma a 0-100 (100 = sin problemas).
+// score_subescala = 100 - (media de los ítems × 25). El puntaje elegido (índice
+// 0-4) ya es el valor del ítem. El resultado destaca la subescala Deporte, que
+// es la que usa el RTS de LCA (corte ≥89).
+type KoosAnswers = Record<KoosSubscale, number[]>
+function scoreKOOS(answers: KoosAnswers): { subscales: Record<KoosSubscale, number>; sport: number; interpretation: string; color: string } {
+  const subscales = {} as Record<KoosSubscale, number>
+  for (const sec of KOOS_SECTIONS) {
+    const vals = answers[sec.key]
+    const mean = vals.reduce((a, b) => a + b, 0) / vals.length
+    subscales[sec.key] = Math.round(100 - mean * 25)
+  }
+  const sport = subscales.sport
+  let interpretation: string, color: string
+  if (sport >= 89) { interpretation = 'KOOS-Sport ≥89: predice retorno al nivel previo'; color = 'green' }
+  else if (sport >= 70) { interpretation = 'KOOS-Sport moderado: función deportiva en progreso'; color = 'yellow' }
+  else { interpretation = 'KOOS-Sport bajo: función deportiva limitada'; color = 'red' }
+  return { subscales, sport, interpretation, color }
+}
+
 // ─── Color helpers ─────────────────────────────────────────────────────────
 
 function colorClass(c: string) {
@@ -417,6 +448,11 @@ export default function QuestionariosClient({ userId, lockedPatient, initialDate
   // ACL-RSI: 12 ítems 0-10, arrancan en 5 (punto medio neutro)
   const [aclRsiAnswers, setAclRsiAnswers] = useState<number[]>(Array(12).fill(5))
 
+  // KOOS: respuestas por subescala, -1 = sin responder (requiere completar todo)
+  const [koosAnswers, setKoosAnswers] = useState<KoosAnswers>(() =>
+    KOOS_SECTIONS.reduce((acc, sec) => { acc[sec.key] = Array(sec.items.length).fill(-1); return acc }, {} as KoosAnswers)
+  )
+
   useEffect(() => {
     if (!patientsLoaded) {
       const supabase = createClient()
@@ -498,6 +534,13 @@ export default function QuestionariosClient({ userId, lockedPatient, initialDate
       case 'acl_rsi': {
         const { score, interpretation, color } = scoreACLRSI(aclRsiAnswers)
         return { questionnaire_type: 'acl_rsi', score, interpretation, result_data: { answers: aclRsiAnswers, color } }
+      }
+      case 'koos': {
+        if (KOOS_SECTIONS.some(sec => koosAnswers[sec.key].some(a => a === -1))) return null
+        const { subscales, sport, interpretation, color } = scoreKOOS(koosAnswers)
+        // El score de cabecera es KOOS-Sport (lo que importa el RTS de LCA vía
+        // result_data.sport). Las 5 subescalas quedan en result_data.
+        return { questionnaire_type: 'koos', score: sport, interpretation, result_data: { answers: koosAnswers, ...subscales, sport, color } }
       }
       default:
         return null
@@ -823,6 +866,35 @@ export default function QuestionariosClient({ userId, lockedPatient, initialDate
           </div>
         )
 
+      case 'koos':
+        return (
+          <div>
+            <p className="text-[13px] text-text-secondary mb-5">
+              Respondé pensando en tu rodilla durante la <strong>última semana</strong>. Cada subescala se puntúa por separado de 0 a 100 (mayor = mejor).
+            </p>
+            {KOOS_SECTIONS.map(sec => (
+              <div key={sec.key} className="mb-8">
+                <h3 className="text-[15px] font-medium mb-1 text-text-secondary uppercase tracking-[0.05em]">{sec.title}</h3>
+                {sec.hint && <p className="text-[13px] text-text-secondary mb-4">{sec.hint}</p>}
+                {sec.items.map((item, i) => (
+                  <LikertItem
+                    key={i}
+                    index={i}
+                    label={item.text}
+                    options={item.options}
+                    value={koosAnswers[sec.key][i]}
+                    onChange={v => setKoosAnswers(prev => {
+                      const next = { ...prev, [sec.key]: [...prev[sec.key]] }
+                      next[sec.key][i] = v
+                      return next
+                    })}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
+        )
+
       default:
         return null
     }
@@ -970,6 +1042,22 @@ export default function QuestionariosClient({ userId, lockedPatient, initialDate
                 <div className="text-[11px] text-text-secondary">Subescala discapacidad</div>
                 <div className="text-[18px] font-medium">{result.result_data.disability_subscale}<span className="text-[12px] text-text-secondary"> / 100</span></div>
               </div>
+            </div>
+          )}
+          {result.questionnaire_type === 'koos' && (
+            <div className="flex gap-3 mb-4 flex-wrap">
+              {[
+                { label: 'Síntomas', key: 'symptoms' },
+                { label: 'Dolor', key: 'pain' },
+                { label: 'Vida diaria (AVD)', key: 'adl' },
+                { label: 'Deporte', key: 'sport' },
+                { label: 'Calidad de vida', key: 'qol' },
+              ].map(sub => (
+                <div key={sub.key} className={`bg-bg-primary border-[0.5px] rounded-lg px-4 py-2 ${sub.key === 'sport' ? 'border-accent/50' : 'border-border'}`}>
+                  <div className="text-[11px] text-text-secondary">{sub.label}</div>
+                  <div className="text-[18px] font-medium">{result.result_data[sub.key]}<span className="text-[12px] text-text-secondary"> / 100</span></div>
+                </div>
+              ))}
             </div>
           )}
 
