@@ -4,7 +4,7 @@ import { useState, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { lsi, n, Criterion } from './shared'
 import { Field, NumInput, SelectInput, LsiDisplay, SectionTitle, CriteriaResults } from './ProtocolUI'
-import { GeneralQuestionnaires, LatestQuestionnaires } from './QuestionnaireAutofill'
+import { GeneralQuestionnaires, QuestionnaireAutofill, LatestQuestionnaires } from './QuestionnaireAutofill'
 
 interface Props {
   patient: { id: string; name: string; age: number | null }
@@ -187,6 +187,13 @@ export default function AnkleProtocol({ patient, userId, initialData, evalId, on
 
       <div>
         <SectionTitle>Cuestionarios</SectionTitle>
+        {latestQuestionnaires && (
+          <QuestionnaireAutofill
+            available={latestQuestionnaires}
+            specs={[{ type: 'faam', label: 'FAAM Deporte', formKey: 'faam_sport_score' }]}
+            onApply={(k, v) => set(k as keyof FormData, v)}
+          />
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="FAAM Sport (0–100%)">
             <NumInput value={form.faam_sport_score} onChange={v => set('faam_sport_score', v)} min="0" max="100" placeholder="ej: 92" />

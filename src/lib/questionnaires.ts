@@ -584,6 +584,94 @@ export const WOSI_SECTIONS: WosiSection[] = [
   },
 ]
 
+// ─── FAAM ───────────────────────────────────────────────────────────────────
+// Foot and Ankle Ability Measure. Subescala AVD (21 ítems) + Deporte (8 ítems).
+// Cada ítem 0-4 (Sin dificultad = 4 … Incapaz = 0) o "No corresponde" (excluido).
+// Score de subescala = (suma / (4 × ítems respondidos)) × 100 (mayor = mejor).
+// El RTS de tobillo usa FAAM Deporte ≥90%.
+// IMPORTANTE: redacción reconstruida — verificar contra la fuente oficial.
+
+// index 0-4 = dificultad creciente (0 = Sin dificultad → puntúa 4; 4 = Incapaz →
+// puntúa 0). index 5 = No corresponde (se excluye del cálculo).
+export const FAAM_OPTIONS = ['Sin dificultad', 'Dificultad leve', 'Dificultad moderada', 'Dificultad extrema', 'Incapaz de realizar', 'No corresponde']
+
+export const FAAM_ADL_ITEMS = [
+  'Estar de pie', 'Caminar en superficie plana', 'Caminar en superficie plana sin calzado', 'Subir cuestas', 'Bajar cuestas', 'Subir escaleras', 'Bajar escaleras', 'Caminar en terreno desparejo', 'Subir y bajar cordones/veredas', 'Ponerse en cuclillas', 'Pararse en puntas de pie', 'Empezar a caminar', 'Caminar 5 minutos o menos', 'Caminar unos 10 minutos', 'Caminar 15 minutos o más', 'Tareas del hogar', 'Actividades de la vida diaria', 'Cuidado personal', 'Trabajo liviano a moderado (estar de pie, caminar)', 'Trabajo pesado (empujar/tirar, trepar, cargar)', 'Actividades recreativas',
+]
+
+export const FAAM_SPORT_ITEMS = [
+  'Correr', 'Saltar', 'Aterrizar de un salto', 'Arrancar y frenar rápido', 'Hacer cortes / movimientos laterales', 'Actividades de bajo impacto', 'Realizar la actividad con tu técnica habitual', 'Participar de tu deporte todo el tiempo que quieras',
+]
+
+// ─── HAGOS ──────────────────────────────────────────────────────────────────
+// Copenhagen Hip and Groin Outcome Score. 37 ítems en 6 subescalas. Cada ítem
+// 0-4; subescala transformada a 0-100 (100 = sin problemas), score = 100 - media×25.
+// El RTS de ingle usa la subescala Deporte/Recreación.
+// IMPORTANTE: redacción reconstruida — verificar contra la fuente oficial.
+
+export type HagosSubscale = 'symptoms' | 'pain' | 'adl' | 'sport' | 'physical' | 'qol'
+export interface HagosSection { key: HagosSubscale; title: string; hint?: string; items: HagosItem[] }
+export interface HagosItem { text: string; options: string[] }
+
+const HAGOS_FREQ = ['Nunca', 'Rara vez', 'A veces', 'A menudo', 'Siempre']
+const HAGOS_SEV = ['Ninguno', 'Leve', 'Moderado', 'Severo', 'Extremo']
+const HAGOS_SEV_F = ['Ninguna', 'Leve', 'Moderada', 'Severa', 'Extrema']
+
+export const HAGOS_SECTIONS: HagosSection[] = [
+  {
+    key: 'symptoms',
+    title: 'Síntomas',
+    hint: 'Pensá en tus síntomas de cadera/ingle durante la última semana.',
+    items: [
+      { text: '¿Con qué frecuencia sentís molestia en la cadera/ingle?', options: HAGOS_FREQ },
+      { text: '¿Con qué frecuencia el dolor te despierta de noche?', options: HAGOS_FREQ },
+      { text: '¿Sentís chasquidos u otros ruidos en la cadera/ingle?', options: HAGOS_FREQ },
+      { text: '¿Sentís rigidez en la cadera/ingle al despertar?', options: HAGOS_SEV_F },
+      { text: '¿Sentís rigidez en la cadera/ingle más tarde en el día?', options: HAGOS_SEV_F },
+      { text: '¿Cuánta dificultad tenés para abrir las piernas (abducción)?', options: HAGOS_SEV_F },
+      { text: '¿Cuánta dificultad tenés para dar zancadas largas al caminar?', options: HAGOS_SEV_F },
+    ],
+  },
+  {
+    key: 'pain',
+    title: 'Dolor',
+    hint: '¿Cuánto dolor de cadera/ingle sentiste en la última semana al…?',
+    items: ['Girar sobre la pierna apoyada', 'Subir o bajar escaleras', 'Caminar en superficie plana', 'Estar de pie', 'Estar sentado', 'Estar acostado en la cama', 'Levantarte de estar sentado', 'Hacer actividad física intensa', 'Patear', 'Correr'].map(t => ({ text: t, options: HAGOS_SEV })),
+  },
+  {
+    key: 'adl',
+    title: 'Función en la vida diaria',
+    hint: 'Dificultad por tu cadera/ingle en la última semana.',
+    items: ['Subir escaleras', 'Agacharte hasta el piso', 'Entrar o salir de un auto', 'Ponerte las medias / los zapatos', 'Girar o darte vuelta en la cama'].map(t => ({ text: t, options: HAGOS_SEV_F })),
+  },
+  {
+    key: 'sport',
+    title: 'Deporte y recreación',
+    hint: 'Dificultad por tu cadera/ingle en la última semana.',
+    items: ['Ponerte en cuclillas', 'Correr', 'Girar o pivotear sobre la pierna', 'Caminar en terreno desparejo', 'Acelerar al correr', 'Frenar y arrancar', 'Hacer cortes / cambios de dirección', 'Actividad física intensa'].map(t => ({ text: t, options: HAGOS_SEV_F })),
+  },
+  {
+    key: 'physical',
+    title: 'Participación en actividad física',
+    hint: '¿Cuánto limita tu cadera/ingle tu participación?',
+    items: [
+      { text: '¿Podés participar de tu actividad física deseada tanto como querés?', options: HAGOS_SEV_F },
+      { text: '¿Podés rendir en tu actividad física al nivel que querés?', options: HAGOS_SEV_F },
+    ],
+  },
+  {
+    key: 'qol',
+    title: 'Calidad de vida',
+    items: [
+      { text: '¿Con qué frecuencia sos consciente de tu problema de cadera/ingle?', options: HAGOS_FREQ },
+      { text: '¿Modificaste tu estilo de vida para evitar actividades que puedan dañar la cadera/ingle?', options: HAGOS_SEV_F },
+      { text: '¿Cuánta preocupación te genera tu cadera/ingle?', options: HAGOS_SEV_F },
+      { text: '¿Cuánta molestia te genera no poder hacer tu deporte como antes?', options: HAGOS_SEV_F },
+      { text: 'En general, ¿cuánta dificultad tenés con tu cadera/ingle?', options: HAGOS_SEV_F },
+    ],
+  },
+]
+
 // ─── Respuestas del paciente (para mostrar en la ficha) ─────────────────────
 
 export interface ResponseItem {
@@ -722,6 +810,30 @@ export function getResponseItems(type: string, data: any): ResponseItem[] {
           if (!item || v == null) return
           // v = VAS 0-100 (100 = peor). Ítem a trabajar si es alto.
           items.push({ text: item, detail: `${v}/100`, tag: sec.title, relevant: v >= 50 })
+        })
+      })
+      break
+    }
+    case 'faam': {
+      const push = (arr: number[], list: string[], tag: string) => {
+        ;(arr ?? []).forEach((v: number, i: number) => {
+          if (!list[i] || v == null || v < 0 || v === 5) return // 5 = No corresponde
+          // v = índice 0-4 (0 = Sin dificultad … 4 = Incapaz). A trabajar si es alto.
+          items.push({ text: list[i], detail: FAAM_OPTIONS[v], tag, relevant: v >= 3 })
+        })
+      }
+      push(data.adl_answers, FAAM_ADL_ITEMS, 'AVD')
+      push(data.sport_answers, FAAM_SPORT_ITEMS, 'Deporte')
+      break
+    }
+    case 'hagos': {
+      const ans = data.answers ?? {}
+      HAGOS_SECTIONS.forEach(sec => {
+        ;(ans[sec.key] ?? []).forEach((v: number, i: number) => {
+          const item = sec.items[i]
+          if (!item || v == null || v < 0) return
+          // v = puntaje 0-4 (4 = peor). A trabajar si es severo/extremo.
+          items.push({ text: item.text, detail: item.options[v], tag: sec.title, relevant: v >= 3 })
         })
       })
       break

@@ -24,6 +24,11 @@ import {
   KoosSubscale,
   WOSI_SECTIONS,
   WosiSection,
+  FAAM_OPTIONS,
+  FAAM_ADL_ITEMS,
+  FAAM_SPORT_ITEMS,
+  HAGOS_SECTIONS,
+  HagosSubscale,
 } from '@/lib/questionnaires'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -169,6 +174,24 @@ const QUESTIONNAIRES = [
     range: '0-100% · Mayor = mejor',
     region: 'Hombro',
     color: '#0369A1',
+  },
+  {
+    id: 'faam',
+    name: 'FAAM',
+    fullName: 'Foot and Ankle Ability Measure',
+    description: 'Función de pie y tobillo (AVD + Deporte). La subescala Deporte alimenta el RTS de tobillo (≥90%).',
+    range: '0-100% por subescala · Mayor = mejor',
+    region: 'Tobillo',
+    color: '#0891B2',
+  },
+  {
+    id: 'hagos',
+    name: 'HAGOS',
+    fullName: 'Copenhagen Hip and Groin Outcome Score',
+    description: 'Dolor, síntomas, función y deporte de cadera/ingle. La subescala Deporte alimenta el RTS de ingle.',
+    range: '0-100 por subescala · Mayor = mejor',
+    region: 'Ingle / Cadera',
+    color: '#65A30D',
   },
 ]
 
@@ -345,6 +368,44 @@ function scoreWOSI(answers: WosiAnswers): { score: number; raw: number; interpre
   return { score, raw, interpretation, color }
 }
 
+// FAAM: cada subescala % = (suma de ítems respondidos / (4 × n)) × 100.
+// index del ítem: 0 = Sin dificultad (4 pts) … 4 = Incapaz (0 pts); 5 = No corresponde (excluido).
+// -1 = sin responder. El RTS de tobillo usa FAAM Deporte ≥90%.
+function faamSubscale(answers: number[]): number | null {
+  const valid = answers.filter(v => v >= 0 && v <= 4) // excluye No corresponde (5) y sin responder (-1)
+  if (valid.length === 0) return null
+  const sum = valid.reduce((acc, v) => acc + (4 - v), 0) // 4 - index = puntaje
+  return Math.round((sum / (4 * valid.length)) * 100)
+}
+function scoreFAAM(adl: number[], sport: number[]): { adl: number | null; sport: number | null; interpretation: string; color: string } {
+  const adlScore = faamSubscale(adl)
+  const sportScore = faamSubscale(sport)
+  let interpretation: string, color: string
+  if (sportScore === null) { interpretation = 'Completá la subescala Deporte para la lectura de RTS'; color = 'yellow' }
+  else if (sportScore >= 90) { interpretation = 'FAAM Deporte ≥90%: función de tobillo apta para retorno'; color = 'green' }
+  else if (sportScore >= 75) { interpretation = 'FAAM Deporte moderado: función en progreso'; color = 'yellow' }
+  else { interpretation = 'FAAM Deporte bajo: función deportiva limitada'; color = 'red' }
+  return { adl: adlScore, sport: sportScore, interpretation, color }
+}
+
+// HAGOS: cada subescala = 100 - (media de ítems 0-4 × 25). Mayor = mejor.
+// El RTS de ingle usa la subescala Deporte.
+type HagosAnswers = Record<HagosSubscale, number[]>
+function scoreHAGOS(answers: HagosAnswers): { subscales: Record<HagosSubscale, number>; sport: number; interpretation: string; color: string } {
+  const subscales = {} as Record<HagosSubscale, number>
+  for (const sec of HAGOS_SECTIONS) {
+    const vals = answers[sec.key]
+    const mean = vals.reduce((a, b) => a + b, 0) / vals.length
+    subscales[sec.key] = Math.round(100 - mean * 25)
+  }
+  const sport = subscales.sport
+  let interpretation: string, color: string
+  if (sport >= 90) { interpretation = 'HAGOS Deporte alto: función de cadera/ingle apta para retorno'; color = 'green' }
+  else if (sport >= 75) { interpretation = 'HAGOS Deporte moderado: función en progreso'; color = 'yellow' }
+  else { interpretation = 'HAGOS Deporte bajo: función deportiva limitada'; color = 'red' }
+  return { subscales, sport, interpretation, color }
+}
+
 // ─── Color helpers ─────────────────────────────────────────────────────────
 
 function colorClass(c: string) {
@@ -482,6 +543,15 @@ export default function QuestionariosClient({ userId, lockedPatient, initialDate
     WOSI_SECTIONS.reduce((acc, sec) => { acc[sec.key] = Array(sec.items.length).fill(0); return acc }, {} as WosiAnswers)
   )
 
+  // FAAM: AVD (21) + Deporte (8), -1 = sin responder, 5 = No corresponde
+  const [faamAdl, setFaamAdl] = useState<number[]>(Array(FAAM_ADL_ITEMS.length).fill(-1))
+  const [faamSport, setFaamSport] = useState<number[]>(Array(FAAM_SPORT_ITEMS.length).fill(-1))
+
+  // HAGOS: respuestas por subescala, -1 = sin responder
+  const [hagosAnswers, setHagosAnswers] = useState<HagosAnswers>(() =>
+    HAGOS_SECTIONS.reduce((acc, sec) => { acc[sec.key] = Array(sec.items.length).fill(-1); return acc }, {} as HagosAnswers)
+  )
+
   useEffect(() => {
     if (!patientsLoaded) {
       const supabase = createClient()
@@ -574,6 +644,17 @@ export default function QuestionariosClient({ userId, lockedPatient, initialDate
       case 'wosi': {
         const { score, raw, interpretation, color } = scoreWOSI(wosiAnswers)
         return { questionnaire_type: 'wosi', score, interpretation, result_data: { answers: wosiAnswers, raw, color } }
+      }
+      case 'faam': {
+        if (faamAdl.some(a => a === -1) || faamSport.some(a => a === -1)) return null
+        const { adl, sport, interpretation, color } = scoreFAAM(faamAdl, faamSport)
+        // Score de cabecera = FAAM Deporte (lo que mira el RTS de tobillo).
+        return { questionnaire_type: 'faam', score: sport, interpretation, result_data: { adl_answers: faamAdl, sport_answers: faamSport, adl, sport, color } }
+      }
+      case 'hagos': {
+        if (HAGOS_SECTIONS.some(sec => hagosAnswers[sec.key].some(a => a === -1))) return null
+        const { subscales, sport, interpretation, color } = scoreHAGOS(hagosAnswers)
+        return { questionnaire_type: 'hagos', score: sport, interpretation, result_data: { answers: hagosAnswers, ...subscales, sport, color } }
       }
       default:
         return null
@@ -963,6 +1044,52 @@ export default function QuestionariosClient({ userId, lockedPatient, initialDate
           </div>
         )
 
+      case 'faam':
+        return (
+          <div>
+            <p className="text-[13px] text-text-secondary mb-5">
+              Indicá tu nivel de dificultad actual por tu condición de pie/tobillo. Elegí <strong>No corresponde</strong> si no realizás esa actividad por otras razones. Cada subescala se puntúa 0–100% (mayor = mejor).
+            </p>
+            <div className="mb-8">
+              <h3 className="text-[15px] font-medium mb-4 text-text-secondary uppercase tracking-[0.05em]">Actividades de la vida diaria (AVD)</h3>
+              {FAAM_ADL_ITEMS.map((item, i) => (
+                <LikertItem key={i} index={i} label={item} options={FAAM_OPTIONS} value={faamAdl[i]}
+                  onChange={v => { const n = [...faamAdl]; n[i] = v; setFaamAdl(n) }} />
+              ))}
+            </div>
+            <div className="mb-8">
+              <h3 className="text-[15px] font-medium mb-4 text-text-secondary uppercase tracking-[0.05em]">Deporte</h3>
+              {FAAM_SPORT_ITEMS.map((item, i) => (
+                <LikertItem key={i} index={i} label={item} options={FAAM_OPTIONS} value={faamSport[i]}
+                  onChange={v => { const n = [...faamSport]; n[i] = v; setFaamSport(n) }} />
+              ))}
+            </div>
+          </div>
+        )
+
+      case 'hagos':
+        return (
+          <div>
+            <p className="text-[13px] text-text-secondary mb-5">
+              Respondé pensando en tu cadera/ingle durante la <strong>última semana</strong>. Cada subescala se puntúa por separado de 0 a 100 (mayor = mejor).
+            </p>
+            {HAGOS_SECTIONS.map(sec => (
+              <div key={sec.key} className="mb-8">
+                <h3 className="text-[15px] font-medium mb-1 text-text-secondary uppercase tracking-[0.05em]">{sec.title}</h3>
+                {sec.hint && <p className="text-[13px] text-text-secondary mb-4">{sec.hint}</p>}
+                {sec.items.map((item, i) => (
+                  <LikertItem key={i} index={i} label={item.text} options={item.options} value={hagosAnswers[sec.key][i]}
+                    onChange={v => setHagosAnswers(prev => {
+                      const next = { ...prev, [sec.key]: [...prev[sec.key]] }
+                      next[sec.key][i] = v
+                      return next
+                    })} />
+                ))}
+              </div>
+            ))}
+          </div>
+        )
+
       default:
         return null
     }
@@ -1051,7 +1178,7 @@ export default function QuestionariosClient({ userId, lockedPatient, initialDate
             {result.score !== null && (
               <div className="text-center">
                 <div className="text-[40px] font-light tracking-[-0.03em] leading-none">
-                  {result.questionnaire_type === 'oswestry' || result.questionnaire_type === 'wosi' ? `${result.score}%` : result.score}
+                  {result.questionnaire_type === 'oswestry' || result.questionnaire_type === 'wosi' || result.questionnaire_type === 'faam' ? `${result.score}%` : result.score}
                 </div>
                 <div className="text-[11px] text-text-secondary mt-1">Puntuación</div>
               </div>
@@ -1119,6 +1246,36 @@ export default function QuestionariosClient({ userId, lockedPatient, initialDate
                 { label: 'Dolor', key: 'pain' },
                 { label: 'Vida diaria (AVD)', key: 'adl' },
                 { label: 'Deporte', key: 'sport' },
+                { label: 'Calidad de vida', key: 'qol' },
+              ].map(sub => (
+                <div key={sub.key} className={`bg-bg-primary border-[0.5px] rounded-lg px-4 py-2 ${sub.key === 'sport' ? 'border-accent/50' : 'border-border'}`}>
+                  <div className="text-[11px] text-text-secondary">{sub.label}</div>
+                  <div className="text-[18px] font-medium">{result.result_data[sub.key]}<span className="text-[12px] text-text-secondary"> / 100</span></div>
+                </div>
+              ))}
+            </div>
+          )}
+          {result.questionnaire_type === 'faam' && (
+            <div className="flex gap-3 mb-4 flex-wrap">
+              {[
+                { label: 'Vida diaria (AVD)', key: 'adl', unit: '%' },
+                { label: 'Deporte', key: 'sport', unit: '%' },
+              ].map(sub => (
+                <div key={sub.key} className={`bg-bg-primary border-[0.5px] rounded-lg px-4 py-2 ${sub.key === 'sport' ? 'border-accent/50' : 'border-border'}`}>
+                  <div className="text-[11px] text-text-secondary">{sub.label}</div>
+                  <div className="text-[18px] font-medium">{result.result_data[sub.key] ?? '—'}<span className="text-[12px] text-text-secondary">{result.result_data[sub.key] != null ? '%' : ''}</span></div>
+                </div>
+              ))}
+            </div>
+          )}
+          {result.questionnaire_type === 'hagos' && (
+            <div className="flex gap-3 mb-4 flex-wrap">
+              {[
+                { label: 'Síntomas', key: 'symptoms' },
+                { label: 'Dolor', key: 'pain' },
+                { label: 'Vida diaria (AVD)', key: 'adl' },
+                { label: 'Deporte', key: 'sport' },
+                { label: 'Actividad física', key: 'physical' },
                 { label: 'Calidad de vida', key: 'qol' },
               ].map(sub => (
                 <div key={sub.key} className={`bg-bg-primary border-[0.5px] rounded-lg px-4 py-2 ${sub.key === 'sport' ? 'border-accent/50' : 'border-border'}`}>
