@@ -4,7 +4,7 @@ import { useState, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { lsi, n, Criterion } from './shared'
 import { Field, NumInput, YesNoInput, SelectInput, LsiDisplay, SectionTitle, CriteriaResults } from './ProtocolUI'
-import { GeneralQuestionnaires, LatestQuestionnaires } from './QuestionnaireAutofill'
+import { GeneralQuestionnaires, QuestionnaireAutofill, LatestQuestionnaires } from './QuestionnaireAutofill'
 
 interface Props {
   patient: { id: string; name: string; age: number | null }
@@ -204,6 +204,13 @@ export default function PfpProtocol({ patient, userId, initialData, evalId, onSa
 
       <div>
         <SectionTitle>Cuestionario — AKPS (Anterior Knee Pain Scale)</SectionTitle>
+        {latestQuestionnaires && (
+          <QuestionnaireAutofill
+            available={latestQuestionnaires}
+            specs={[{ type: 'akps', label: 'AKPS', formKey: 'akps_score' }]}
+            onApply={(k, v) => set(k as keyof FormData, v)}
+          />
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Puntaje AKPS (0–100)">
             <NumInput value={form.akps_score} onChange={v => set('akps_score', v)} min="0" max="100" placeholder="ej: 92" />

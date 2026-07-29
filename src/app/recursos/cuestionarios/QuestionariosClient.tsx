@@ -29,6 +29,13 @@ import {
   FAAM_SPORT_ITEMS,
   HAGOS_SECTIONS,
   HagosSubscale,
+  AKPS_ITEMS,
+  VISA_A_Q16,
+  VISA_P_Q16,
+  VISA_Q7_OPTIONS,
+  VISA_Q8_SCENARIOS,
+  VISA_Q8_DURATIONS,
+  VisaSlider,
 } from '@/lib/questionnaires'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -192,6 +199,33 @@ const QUESTIONNAIRES = [
     range: '0-100 por subescala · Mayor = mejor',
     region: 'Ingle / Cadera',
     color: '#65A30D',
+  },
+  {
+    id: 'akps',
+    name: 'AKPS (Kujala)',
+    fullName: 'Anterior Knee Pain Scale',
+    description: 'Dolor y función femoropatelar. Alimenta el RTS de PFP (corte ≥90/100).',
+    range: '0-100 · Mayor = mejor',
+    region: 'Rodilla / PFP',
+    color: '#7C3AED',
+  },
+  {
+    id: 'visa_a',
+    name: 'VISA-A',
+    fullName: 'Victorian Institute of Sport Assessment — Aquíleo',
+    description: 'Severidad clínica de la tendinopatía aquílea. Alimenta el RTS de tendinopatía.',
+    range: '0-100 · Mayor = mejor',
+    region: 'Tendinopatía aquílea',
+    color: '#DC2626',
+  },
+  {
+    id: 'visa_p',
+    name: 'VISA-P',
+    fullName: 'Victorian Institute of Sport Assessment — Rotuliano',
+    description: 'Severidad clínica de la tendinopatía rotuliana. Alimenta el RTS de tendinopatía.',
+    range: '0-100 · Mayor = mejor',
+    region: 'Tendinopatía rotuliana',
+    color: '#EA580C',
   },
 ]
 
@@ -406,6 +440,30 @@ function scoreHAGOS(answers: HagosAnswers): { subscales: Record<HagosSubscale, n
   return { subscales, sport, interpretation, color }
 }
 
+// AKPS (Kujala): suma de puntajes de la opción elegida en cada ítem (0-100).
+// answers = índice de opción elegida por ítem. RTS PFP usa ≥90.
+function scoreAKPS(answers: number[]): { score: number; interpretation: string; color: string } {
+  const score = answers.reduce((sum, optIdx, i) => sum + (AKPS_ITEMS[i]?.options[optIdx]?.points ?? 0), 0)
+  let interpretation: string, color: string
+  if (score >= 90) { interpretation = 'AKPS ≥90: función femoropatelar apta para retorno'; color = 'green' }
+  else if (score >= 70) { interpretation = 'AKPS moderado: función en progreso'; color = 'yellow' }
+  else { interpretation = 'AKPS bajo: dolor/disfunción femoropatelar marcada'; color = 'red' }
+  return { score, interpretation, color }
+}
+
+// VISA (Aquíleo/Rotuliano): Q1-6 (0-10) + Q7 (0/4/7/10) + Q8 (duración 0/7/14/21/30) = 0-100.
+function scoreVISA(q16: number[], q7: number, q8Duration: number): { score: number; interpretation: string; color: string } {
+  const sum16 = q16.reduce((a, b) => a + b, 0)
+  const q7pts = VISA_Q7_OPTIONS[q7]?.points ?? 0
+  const q8pts = VISA_Q8_DURATIONS[q8Duration]?.points ?? 0
+  const score = sum16 + q7pts + q8pts
+  let interpretation: string, color: string
+  if (score >= 80) { interpretation = 'VISA alto: baja severidad clínica'; color = 'green' }
+  else if (score >= 60) { interpretation = 'VISA moderado: severidad clínica intermedia'; color = 'yellow' }
+  else { interpretation = 'VISA bajo: severidad clínica marcada'; color = 'red' }
+  return { score, interpretation, color }
+}
+
 // ─── Color helpers ─────────────────────────────────────────────────────────
 
 function colorClass(c: string) {
@@ -552,6 +610,15 @@ export default function QuestionariosClient({ userId, lockedPatient, initialDate
     HAGOS_SECTIONS.reduce((acc, sec) => { acc[sec.key] = Array(sec.items.length).fill(-1); return acc }, {} as HagosAnswers)
   )
 
+  // AKPS: índice de opción elegida por ítem, -1 = sin responder
+  const [akpsAnswers, setAkpsAnswers] = useState<number[]>(Array(AKPS_ITEMS.length).fill(-1))
+
+  // VISA (A y P comparten estado): Q1-6 sliders 0-10, Q7 y Q8 con índices (-1 = sin responder)
+  const [visaQ16, setVisaQ16] = useState<number[]>(Array(6).fill(0))
+  const [visaQ7, setVisaQ7] = useState<number>(-1)
+  const [visaQ8Scenario, setVisaQ8Scenario] = useState<number>(-1)
+  const [visaQ8Duration, setVisaQ8Duration] = useState<number>(-1)
+
   useEffect(() => {
     if (!patientsLoaded) {
       const supabase = createClient()
@@ -655,6 +722,17 @@ export default function QuestionariosClient({ userId, lockedPatient, initialDate
         if (HAGOS_SECTIONS.some(sec => hagosAnswers[sec.key].some(a => a === -1))) return null
         const { subscales, sport, interpretation, color } = scoreHAGOS(hagosAnswers)
         return { questionnaire_type: 'hagos', score: sport, interpretation, result_data: { answers: hagosAnswers, ...subscales, sport, color } }
+      }
+      case 'akps': {
+        if (akpsAnswers.some(a => a === -1)) return null
+        const { score, interpretation, color } = scoreAKPS(akpsAnswers)
+        return { questionnaire_type: 'akps', score, interpretation, result_data: { answers: akpsAnswers, color } }
+      }
+      case 'visa_a':
+      case 'visa_p': {
+        if (visaQ7 === -1 || visaQ8Scenario === -1 || visaQ8Duration === -1) return null
+        const { score, interpretation, color } = scoreVISA(visaQ16, visaQ7, visaQ8Duration)
+        return { questionnaire_type: selected, score, interpretation, result_data: { q16: visaQ16, q7: visaQ7, q8_scenario: visaQ8Scenario, q8_duration: visaQ8Duration, color } }
       }
       default:
         return null
@@ -1089,6 +1167,87 @@ export default function QuestionariosClient({ userId, lockedPatient, initialDate
             ))}
           </div>
         )
+
+      case 'akps':
+        return (
+          <div>
+            <p className="text-[13px] text-text-secondary mb-5">Elegí en cada ítem la opción que mejor describe tu rodilla. Puntaje total 0–100 (mayor = mejor).</p>
+            {AKPS_ITEMS.map((item, i) => (
+              <div key={i} className="mb-4 p-4 bg-bg-secondary border-[0.5px] border-border rounded-xl">
+                <p className="text-[13px] font-medium text-text-primary mb-3"><span className="text-text-secondary mr-1">{i + 1}.</span> {item.label}</p>
+                <div className="flex flex-col gap-1.5">
+                  {item.options.map((opt, j) => (
+                    <button key={j} onClick={() => { const n = [...akpsAnswers]; n[i] = j; setAkpsAnswers(n) }}
+                      className={`text-left px-4 py-2 rounded-lg text-[13px] border-[0.5px] transition-colors ${akpsAnswers[i] === j ? 'bg-accent text-bg-primary border-accent' : 'border-border text-text-secondary hover:border-accent/50'}`}>
+                      {opt.text}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )
+
+      case 'visa_a':
+      case 'visa_p': {
+        const sliders: VisaSlider[] = selected === 'visa_a' ? VISA_A_Q16 : VISA_P_Q16
+        return (
+          <div>
+            <p className="text-[13px] text-text-secondary mb-5">Respondé según cómo estuviste esta semana. Puntaje total 0–100 (mayor = mejor / menos síntomas).</p>
+            {sliders.map((s, i) => (
+              <div key={i} className="mb-4">
+                <div className="flex justify-between mb-1.5 gap-3">
+                  <span className="text-[13px] text-text-primary">{i + 1}. {s.label}</span>
+                  <span className="text-[13px] font-medium text-text-primary w-6 text-right shrink-0">{visaQ16[i]}</span>
+                </div>
+                <input type="range" min={0} max={10} value={visaQ16[i]}
+                  onChange={e => { const n = [...visaQ16]; n[i] = Number(e.target.value); setVisaQ16(n) }}
+                  className="w-full accent-accent" />
+                <div className="flex justify-between text-[10px] text-text-secondary mt-0.5">
+                  <span>{s.low}</span>
+                  <span>{s.high}</span>
+                </div>
+              </div>
+            ))}
+            {/* Q7 */}
+            <div className="mb-4 p-4 bg-bg-secondary border-[0.5px] border-border rounded-xl">
+              <p className="text-[13px] font-medium text-text-primary mb-3"><span className="text-text-secondary mr-1">7.</span> ¿Estás haciendo deporte u otra actividad física?</p>
+              <div className="flex flex-col gap-1.5">
+                {VISA_Q7_OPTIONS.map((opt, j) => (
+                  <button key={j} onClick={() => setVisaQ7(j)}
+                    className={`text-left px-4 py-2 rounded-lg text-[13px] border-[0.5px] transition-colors ${visaQ7 === j ? 'bg-accent text-bg-primary border-accent' : 'border-border text-text-secondary hover:border-accent/50'}`}>
+                    {opt.text}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {/* Q8 */}
+            <div className="mb-4 p-4 bg-bg-secondary border-[0.5px] border-border rounded-xl">
+              <p className="text-[13px] font-medium text-text-primary mb-3"><span className="text-text-secondary mr-1">8.</span> Si estás entrenando/compitiendo, elegí tu situación de dolor y por cuánto tiempo podés hacerlo:</p>
+              <div className="flex flex-col gap-1.5 mb-3">
+                {VISA_Q8_SCENARIOS.map((scen, j) => (
+                  <button key={j} onClick={() => setVisaQ8Scenario(j)}
+                    className={`text-left px-4 py-2 rounded-lg text-[13px] border-[0.5px] transition-colors ${visaQ8Scenario === j ? 'bg-accent text-bg-primary border-accent' : 'border-border text-text-secondary hover:border-accent/50'}`}>
+                    {scen}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[12px] text-text-secondary mb-2">Tiempo que podés entrenar/competir:</p>
+              <div className="flex flex-wrap gap-1.5">
+                {VISA_Q8_DURATIONS.map((opt, j) => (
+                  <button key={j} onClick={() => setVisaQ8Duration(j)}
+                    className={`px-3 py-2 rounded-lg text-[12px] border-[0.5px] transition-colors ${visaQ8Duration === j ? 'bg-accent text-bg-primary border-accent' : 'border-border text-text-secondary hover:border-accent/50'}`}>
+                    {opt.text}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {(visaQ7 === -1 || visaQ8Scenario === -1 || visaQ8Duration === -1) && (
+              <p className="text-[12px] text-warning">Respondé las preguntas 7 y 8 para calcular el resultado.</p>
+            )}
+          </div>
+        )
+      }
 
       default:
         return null
