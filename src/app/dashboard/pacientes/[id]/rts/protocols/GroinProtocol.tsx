@@ -4,7 +4,7 @@ import { useState, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { lsi, n, Criterion } from './shared'
 import { Field, NumInput, YesNoInput, SelectInput, LsiDisplay, SectionTitle, CriteriaResults } from './ProtocolUI'
-import { GeneralQuestionnaires, LatestQuestionnaires } from './QuestionnaireAutofill'
+import { GeneralQuestionnaires, QuestionnaireAutofill, LatestQuestionnaires } from './QuestionnaireAutofill'
 
 interface Props {
   patient: { id: string; name: string; age: number | null }
@@ -162,6 +162,13 @@ export default function GroinProtocol({ patient, userId, initialData, evalId, on
 
       <div>
         <SectionTitle>Cuestionario — HAGOS Sport</SectionTitle>
+        {latestQuestionnaires && (
+          <QuestionnaireAutofill
+            available={latestQuestionnaires}
+            specs={[{ type: 'hagos', label: 'HAGOS Deporte', formKey: 'hagos_sport_score' }]}
+            onApply={(k, v) => set(k as keyof FormData, v)}
+          />
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Subescala Sport/Recreación (0–100%)">
             <NumInput value={form.hagos_sport_score} onChange={v => set('hagos_sport_score', v)} min="0" max="100" placeholder="ej: 88" />
