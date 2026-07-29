@@ -452,6 +452,80 @@ export const ACL_RSI_ITEMS = [
   { text: '¿Te sentís relajado/a al practicar tu deporte?', reverse: false },
 ]
 
+// ─── KOOS ───────────────────────────────────────────────────────────────────
+// Knee injury and Osteoarthritis Outcome Score. 42 ítems en 5 subescalas.
+// Cada ítem se responde 0-4 (0 = sin problema … 4 = extremo). Las opciones de
+// cada ítem están ordenadas de 0 a 4, así que el índice elegido ES el puntaje.
+// Cada subescala se transforma a 0-100 (100 = sin problemas). KOOS-Sport es la
+// subescala usada en el RTS de LCA (corte ≥89).
+// IMPORTANTE: redacción estándar reconstruida — verificar contra la fuente
+// oficial (koos.nu) antes del uso clínico.
+
+const KOOS_FREQ = ['Nunca', 'Rara vez', 'A veces', 'A menudo', 'Siempre']
+const KOOS_SEV = ['Ninguno', 'Leve', 'Moderado', 'Severo', 'Extremo']
+const KOOS_SEV_F = ['Ninguna', 'Leve', 'Moderada', 'Severa', 'Extrema']
+const KOOS_ROM = ['Siempre', 'A menudo', 'A veces', 'Rara vez', 'Nunca']
+const KOOS_PAINFREQ = ['Nunca', 'Mensualmente', 'Semanalmente', 'Diariamente', 'Siempre']
+
+export interface KoosItem { text: string; options: string[] }
+export type KoosSubscale = 'symptoms' | 'pain' | 'adl' | 'sport' | 'qol'
+export interface KoosSection { key: KoosSubscale; title: string; hint?: string; items: KoosItem[] }
+
+export const KOOS_SECTIONS: KoosSection[] = [
+  {
+    key: 'symptoms',
+    title: 'Síntomas y rigidez',
+    hint: 'Pensá en los síntomas de tu rodilla durante la última semana.',
+    items: [
+      { text: '¿Tenés hinchazón en la rodilla?', options: KOOS_FREQ },
+      { text: '¿Sentís que la rodilla cruje, chasquea o hace otros ruidos?', options: KOOS_FREQ },
+      { text: '¿La rodilla se traba o se engancha al moverla?', options: KOOS_FREQ },
+      { text: '¿Podés estirar la rodilla completamente?', options: KOOS_ROM },
+      { text: '¿Podés doblar la rodilla completamente?', options: KOOS_ROM },
+      { text: '¿Qué tan rígida está tu rodilla al despertar a la mañana?', options: KOOS_SEV_F },
+      { text: '¿Qué tan rígida está tu rodilla después de estar sentado, acostado o descansando durante el día?', options: KOOS_SEV_F },
+    ],
+  },
+  {
+    key: 'pain',
+    title: 'Dolor',
+    hint: '¿Con qué frecuencia y cuánto dolor de rodilla tuviste en la última semana?',
+    items: [
+      { text: '¿Con qué frecuencia tenés dolor de rodilla?', options: KOOS_PAINFREQ },
+      { text: 'Al girar o pivotear sobre la rodilla', options: KOOS_SEV },
+      { text: 'Al estirar la rodilla completamente', options: KOOS_SEV },
+      { text: 'Al doblar la rodilla completamente', options: KOOS_SEV },
+      { text: 'Al caminar en superficie plana', options: KOOS_SEV },
+      { text: 'Al subir o bajar escaleras', options: KOOS_SEV },
+      { text: 'A la noche en la cama (dolor que perturba el sueño)', options: KOOS_SEV },
+      { text: 'Al estar sentado o acostado', options: KOOS_SEV },
+      { text: 'Al estar de pie', options: KOOS_SEV },
+    ],
+  },
+  {
+    key: 'adl',
+    title: 'Función en la vida diaria',
+    hint: 'Indicá la dificultad que tuviste por tu rodilla en la última semana.',
+    items: ['Bajar escaleras', 'Subir escaleras', 'Levantarte de estar sentado', 'Estar de pie', 'Agacharte hasta el piso / recoger un objeto', 'Caminar en superficie plana', 'Entrar o salir de un auto', 'Ir de compras', 'Ponerte las medias', 'Levantarte de la cama', 'Quitarte las medias', 'Girar o darte vuelta en la cama', 'Entrar o salir de la bañera', 'Estar sentado', 'Sentarte o levantarte del inodoro', 'Tareas domésticas pesadas', 'Tareas domésticas livianas'].map(t => ({ text: t, options: KOOS_SEV_F })),
+  },
+  {
+    key: 'sport',
+    title: 'Deporte y recreación',
+    hint: 'Dificultad por tu rodilla en la última semana.',
+    items: ['Ponerte en cuclillas', 'Correr', 'Saltar', 'Girar o pivotear sobre la rodilla lesionada', 'Arrodillarte'].map(t => ({ text: t, options: KOOS_SEV_F })),
+  },
+  {
+    key: 'qol',
+    title: 'Calidad de vida',
+    items: [
+      { text: '¿Con qué frecuencia sos consciente de tu problema de rodilla?', options: ['Nunca', 'Mensualmente', 'Semanalmente', 'Diariamente', 'Constantemente'] },
+      { text: '¿Modificaste tu estilo de vida para evitar actividades que puedan dañar la rodilla?', options: ['Para nada', 'Levemente', 'Moderadamente', 'Severamente', 'Totalmente'] },
+      { text: '¿Cuánta desconfianza te genera tu rodilla?', options: KOOS_SEV_F },
+      { text: 'En general, ¿cuánta dificultad tenés con tu rodilla?', options: KOOS_SEV_F },
+    ],
+  },
+]
+
 // ─── Respuestas del paciente (para mostrar en la ficha) ─────────────────────
 
 export interface ResponseItem {
@@ -567,6 +641,18 @@ export function getResponseItems(type: string, data: any): ResponseItem[] {
         // Ajustado: mayor = mejor disposición. Ítem a trabajar si la disposición es baja.
         const adjusted = ACL_RSI_ITEMS[i].reverse ? 10 - v : v
         items.push({ text: ACL_RSI_ITEMS[i].text, detail: `${v}/10`, relevant: adjusted <= 4 })
+      })
+      break
+    }
+    case 'koos': {
+      const ans = data.answers ?? {}
+      KOOS_SECTIONS.forEach(sec => {
+        ;(ans[sec.key] ?? []).forEach((v: number, i: number) => {
+          const item = sec.items[i]
+          if (!item || v == null || v < 0) return
+          // v = puntaje 0-4 (4 = peor). Ítem a trabajar si es severo/extremo.
+          items.push({ text: item.text, detail: item.options[v], tag: sec.title, relevant: v >= 3 })
+        })
       })
       break
     }
