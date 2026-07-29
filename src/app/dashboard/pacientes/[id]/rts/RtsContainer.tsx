@@ -13,6 +13,7 @@ import GroinProtocol from './protocols/GroinProtocol'
 import ShoulderProtocol from './protocols/ShoulderProtocol'
 import RtsEvaluationForm from './RtsEvaluationForm'
 import { RtsEvaluation } from './rtsUtils'
+import { LatestQuestionnaires } from './protocols/QuestionnaireAutofill'
 
 interface SavedEval {
   id: string
@@ -32,6 +33,7 @@ interface Props {
   lastDynamo: { muscle_results: Record<string, { right: string; left: string }>; unit: string; created_at: string } | null
   lastKoos: { score: number | null; result_data: unknown; created_at: string } | null
   lastAclRsi: { score: number | null; created_at: string } | null
+  latestQuestionnaires: LatestQuestionnaires
   previousEvals: SavedEval[]
   initialEvalId?: string | null
   initialProtocol?: string | null
@@ -67,7 +69,7 @@ function byDateDesc(a: SavedEval, b: SavedEval) {
   return effectiveDate(b).getTime() - effectiveDate(a).getTime()
 }
 
-export default function RtsContainer({ patient, userId, lastDynamo, lastKoos, lastAclRsi, previousEvals, initialEvalId, initialProtocol, initialDate }: Props) {
+export default function RtsContainer({ patient, userId, lastDynamo, lastKoos, lastAclRsi, latestQuestionnaires, previousEvals, initialEvalId, initialProtocol, initialDate }: Props) {
   const [activeProtocol, setActiveProtocol] = useState<string>('')
   const [evalsList, setEvalsList] = useState<SavedEval[]>(previousEvals)
   const [loadedEval, setLoadedEval] = useState<SavedEval | null>(null)
@@ -296,7 +298,7 @@ export default function RtsContainer({ patient, userId, lastDynamo, lastKoos, la
   if (activeProtocol === 'pfp') return <div><ProtocolHeader /><ProtocolHistory /><PfpProtocol key={formKey} {...commonProps} /></div>
   if (activeProtocol === 'tendinopathy') return <div><ProtocolHeader /><ProtocolHistory /><TendinopathyProtocol key={formKey} {...commonProps} /></div>
   if (activeProtocol === 'groin') return <div><ProtocolHeader /><ProtocolHistory /><GroinProtocol key={formKey} {...commonProps} /></div>
-  if (activeProtocol === 'shoulder') return <div><ProtocolHeader /><ProtocolHistory /><ShoulderProtocol key={formKey} {...commonProps} /></div>
+  if (activeProtocol === 'shoulder') return <div><ProtocolHeader /><ProtocolHistory /><ShoulderProtocol key={formKey} {...commonProps} latestQuestionnaires={latestQuestionnaires} /></div>
 
   return null
 }

@@ -30,24 +30,25 @@ export default async function RtsPage({ params, searchParams }: { params: { id: 
     .limit(1)
     .single()
 
-  // Traer últimos resultados de cuestionarios KOOS y ACL-RSI
-  const { data: koos } = await supabase
+  // Traer todos los cuestionarios cargados en Recursos para este paciente y
+  // quedarnos con el más reciente de cada tipo. Con ese mapa cada protocolo RTS
+  // puede autocompletar los campos que se solapan (SPADI, DASH, ACL-RSI, KOOS…).
+  const { data: allQuestionnaires } = await supabase
     .from('questionnaire_results')
-    .select('score, result_data, created_at')
+    .select('questionnaire_type, score, result_data, created_at')
     .eq('patient_id', params.id)
-    .eq('questionnaire_type', 'koos')
     .order('created_at', { ascending: false })
-    .limit(1)
-    .single()
 
-  const { data: aclRsi } = await supabase
-    .from('questionnaire_results')
-    .select('score, created_at')
-    .eq('patient_id', params.id)
-    .eq('questionnaire_type', 'acl_rsi')
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single()
+  const latestQuestionnaires: Record<string, { score: number | null; result_data: unknown; created_at: string }> = {}
+  for (const q of allQuestionnaires ?? []) {
+    // Como vienen ordenados por fecha desc, el primero de cada tipo es el más reciente.
+    if (!latestQuestionnaires[q.questionnaire_type]) {
+      latestQuestionnaires[q.questionnaire_type] = { score: q.score, result_data: q.result_data, created_at: q.created_at }
+    }
+  }
+
+  const koos = latestQuestionnaires['koos'] ?? null
+  const aclRsi = latestQuestionnaires['acl_rsi'] ?? null
 
   // Traer evaluaciones RTS previas del paciente
   const { data: previousEvals } = await supabase
@@ -73,6 +74,7 @@ export default async function RtsPage({ params, searchParams }: { params: { id: 
           lastDynamo={lastDynamo ?? null}
           lastKoos={koos ?? null}
           lastAclRsi={aclRsi ?? null}
+          latestQuestionnaires={latestQuestionnaires}
           previousEvals={previousEvals ?? []}
           initialEvalId={searchParams?.eval ?? null}
           initialProtocol={searchParams?.protocol ?? null}
