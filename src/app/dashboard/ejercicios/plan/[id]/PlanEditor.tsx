@@ -8,6 +8,7 @@ import { EVENT_TYPES, eventMeta, type PatientEvent } from '@/lib/patientEvents'
 import { groupColor } from '@/lib/exerciseGroups'
 import { useConfirm, useToast } from '@/components/Dialogs'
 import { softDeleteRecord } from '@/lib/softDelete'
+import PlanPrintSheet from './PlanPrintSheet'
 
 // ─── Interfaces ────────────────────────────────────────────────────────────────
 
@@ -1279,6 +1280,20 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
             >
               Exportar PDF
             </button>
+            {(selectedSession?.session_data?.blocks ?? []).some(b => b.exercises.length > 0) && (
+              <button
+                onClick={() => window.print()}
+                className="bg-bg-primary border-[0.5px] border-border-strong text-text-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:bg-bg-secondary w-full"
+                title="Imprime la sesión seleccionada en una página A4 (Guardar como PDF)"
+              >
+                Imprimir planilla (A4)
+              </button>
+            )}
+            <PlanPrintSheet
+              patientName={patients.find(p => p.id === plan.patient_id)?.name ?? plan.name}
+              planName={plan.name}
+              session={selectedSession}
+            />
           </div>
         </div>
       </div>
