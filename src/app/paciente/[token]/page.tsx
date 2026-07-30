@@ -115,6 +115,18 @@ export default async function PatientPortalPage({ params }: { params: { token: s
   // ── Mi programa: ejercicios de plan_data por sesión (sección separada) ─────
   const planSessions = allPlans.flatMap(p => extractPlanSessions(p.plan_data, p.share_token))
 
+  // ── Cargas reales del paciente (overrides de la carga sugerida) ────────────
+  const loadOverrides: Record<string, string> = {}
+  if (allPlanIds.length > 0) {
+    const { data: overrides } = await supabase
+      .from('plan_load_overrides')
+      .select('session_id, exercise_id, actual_load')
+      .in('plan_id', allPlanIds)
+    for (const o of overrides ?? []) {
+      loadOverrides[`${o.session_id}::${o.exercise_id}`] = o.actual_load
+    }
+  }
+
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
       <header className="pt-6 pb-4 border-b-[0.5px] border-border bg-bg-primary/80 backdrop-blur-md sticky top-0 z-10">
@@ -135,6 +147,7 @@ export default async function PatientPortalPage({ params }: { params: { token: s
           recentSessions={recentSessions ?? []}
           scheduledSessions={scheduledSessions}
           planSessions={planSessions}
+          loadOverrides={loadOverrides}
         />
       </main>
     </div>
