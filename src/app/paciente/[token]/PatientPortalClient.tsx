@@ -35,6 +35,7 @@ interface Props {
   patient: { id: string; name: string; user_id: string; follow_up_mode?: string | null }
   token: string; recentSessions: RecentSession[]; scheduledSessions: ScheduledItem[]
   planSessions: PlanSession[]
+  loadOverrides: Record<string, string>
 }
 type ActivityType = 'rehab' | 'sport' | 'combined'
 
@@ -165,7 +166,7 @@ function groupSessionsByWeek(sessions: ScheduledItem[], today: string): WeekGrou
   return weeks
 }
 
-export default function PatientPortalClient({ patient, token, recentSessions, scheduledSessions, planSessions }: Props) {
+export default function PatientPortalClient({ patient, token, recentSessions, scheduledSessions, planSessions, loadOverrides }: Props) {
   const [showHelp, setShowHelp] = useState(false)
   // Paciente presencial: no se le pide registrar; su kinesiólogo lo hace en el
   // centro. El portal le sirve para ver el plan y los videos.
@@ -393,7 +394,7 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
               </h2>
             </div>
             <div className="p-4">
-              <SessionExercisesInline session={todaySession} portalToken={token} />
+              <SessionExercisesInline session={todaySession} portalToken={token} loadOverrides={loadOverrides} />
             </div>
           </div>
         ) : null}
@@ -574,7 +575,7 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
                       </svg>
                     </button>
                     {expandedSessionId === s.id && (
-                      <SessionExercisesInline session={s} portalToken={token} />
+                      <SessionExercisesInline session={s} portalToken={token} loadOverrides={loadOverrides} />
                     )}
                   </div>
                 ))}
@@ -606,6 +607,7 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
                     <SessionExercisesInline
                       session={{ id: ps.id, scheduled_date: '', session_data: { blocks: ps.blocks }, exercise_plans: ps.shareToken ? [{ share_token: ps.shareToken }] : null } as ScheduledItem}
                       portalToken={token}
+                      loadOverrides={loadOverrides}
                     />
                   </div>
                 )}
@@ -829,9 +831,29 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
   )
 }
 
-function SessionExercisesInline({ session, portalToken }: { session: ScheduledItem; portalToken: string }) {
+function SessionExercisesInline({ session, portalToken, loadOverrides }: { session: ScheduledItem; portalToken: string; loadOverrides: Record<string, string> }) {
   const blocks = (session.session_data?.blocks ?? []).filter(b => b.exercises.length > 0)
   const shareToken = session.exercise_plans?.[0]?.share_token ?? null
+
+  // Carga real que el paciente usó (override de la carga sugerida del kine).
+  // Se inicializa con lo ya guardado; se guarda al salir del campo.
+  const [loads, setLoads] = useState<Record<string, string>>(() => {
+    const init: Record<string, string> = {}
+    ;(session.session_data?.blocks ?? []).forEach(b => b.exercises.forEach(ex => {
+      const ov = loadOverrides[`${session.id}::${ex.exercise_id}`]
+      if (ov != null) init[ex.id] = ov
+    }))
+    return init
+  })
+  const saveLoad = async (ex: SessionExercise, value: string) => {
+    if (!shareToken) return
+    try {
+      await fetch(`/api/plan/${shareToken}/load`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: session.id, exercise_id: ex.exercise_id, actual_load: value, scheduled_date: session.scheduled_date || null }),
+      })
+    } catch { /* silencioso: no bloquea al paciente */ }
+  }
 
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null)
   const [logRpe, setLogRpe] = useState('')
@@ -933,7 +955,19 @@ function SessionExercisesInline({ session, portalToken }: { session: ScheduledIt
                       </div>
                       <div>
                         <div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-0.5">Carga</div>
-                        <div className="text-[13px] font-medium">{load || '–'}</div>
+                        {shareToken ? (
+                          <input
+                            type="text"
+                            value={loads[ex.id] ?? ''}
+                            placeholder={load || '–'}
+                            onChange={e => setLoads(p => ({ ...p, [ex.id]: e.target.value }))}
+                            onBlur={e => saveLoad(ex, e.target.value)}
+                            title="Carga sugerida por tu kine. Podés escribir la que usaste."
+                            className={`w-full bg-transparent border-b-[0.5px] border-border focus:border-accent outline-none text-[13px] font-medium py-0.5 ${loads[ex.id] ? 'text-text-primary' : 'text-text-secondary placeholder:text-text-secondary/50'}`}
+                          />
+                        ) : (
+                          <div className="text-[13px] font-medium">{load || '–'}</div>
+                        )}
                       </div>
                       <div>
                         <div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-0.5">Descanso</div>

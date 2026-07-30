@@ -1755,7 +1755,7 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
                                   {[
                                     { field: 'sets' as const, label: 'Series' },
                                     { field: 'reps' as const, label: 'Reps' },
-                                    { field: 'load' as const, label: 'Carga', placeholder: 'ej: 20kg' },
+                                    { field: 'load' as const, label: 'Carga sugerida', placeholder: 'ej: 20kg' },
                                     { field: 'rest' as const, label: 'Pausa', placeholder: 'ej: 90s' },
                                     { field: 'rpe_obj' as const, label: 'RPE obj.' },
                                     { field: 'eav_obj' as const, label: 'EAV obj.' },
