@@ -162,6 +162,13 @@ const QUESTIONNAIRE_NAMES: Record<string, { label: string; unit: string }> = {
   psfs: { label: 'PSFS', unit: '/ 10' },
   fabq: { label: 'FABQ', unit: '(PA / Trabajo)' },
   acl_rsi: { label: 'ACL-RSI', unit: '/ 100' },
+  koos: { label: 'KOOS', unit: '/ 100 (Deporte)' },
+  wosi: { label: 'WOSI', unit: '%' },
+  faam: { label: 'FAAM', unit: '% (Deporte)' },
+  hagos: { label: 'HAGOS', unit: '/ 100 (Deporte)' },
+  akps: { label: 'AKPS', unit: '/ 100' },
+  visa_a: { label: 'VISA-A', unit: '/ 100' },
+  visa_p: { label: 'VISA-P', unit: '/ 100' },
 }
 
 const MUSCLE_LABELS: Record<string, string> = {

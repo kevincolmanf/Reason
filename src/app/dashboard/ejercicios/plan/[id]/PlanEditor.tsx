@@ -178,6 +178,7 @@ const Q_LABELS: Record<string, string> = {
   spadi: 'SPADI', ndi: 'NDI', roland_morris: 'Roland-Morris', start_back: 'STarT Back',
   tampa: 'TAMPA', catastrofismo: 'PCS', oswestry: 'Oswestry', dash: 'DASH',
   lefs: 'LEFS', psfs: 'PSFS', fabq: 'FABQ', koos: 'KOOS', acl_rsi: 'ACL-RSI',
+  wosi: 'WOSI', faam: 'FAAM', hagos: 'HAGOS', akps: 'AKPS', visa_a: 'VISA-A', visa_p: 'VISA-P',
 }
 
 // Evaluaciones programadas (agendadas a futuro sin completar en el momento)
@@ -190,7 +191,7 @@ const EVAL_META: Record<EvalKind, { label: string; color: string }> = {
 }
 // Tipos de cuestionario elegibles al programar. Solo los que la herramienta
 // (/recursos/cuestionarios) sabe completar, para que la preselección funcione.
-const QUEST_TYPES = ['spadi', 'ndi', 'roland_morris', 'start_back', 'tampa', 'catastrofismo', 'oswestry', 'dash', 'lefs', 'psfs', 'fabq', 'acl_rsi']
+const QUEST_TYPES = ['spadi', 'ndi', 'roland_morris', 'start_back', 'tampa', 'catastrofismo', 'oswestry', 'dash', 'lefs', 'psfs', 'fabq', 'acl_rsi', 'koos', 'wosi', 'faam', 'hagos', 'akps', 'visa_a', 'visa_p']
 const QUEST_OPTIONS = QUEST_TYPES.map(value => ({ value, label: Q_LABELS[value] ?? value }))
 function schedLabel(s: SchedEval): string {
   if (s.kind === 'rts') return `RTS · ${RTS_LABELS[s.protocol_type ?? ''] ?? s.protocol_type ?? ''}`
