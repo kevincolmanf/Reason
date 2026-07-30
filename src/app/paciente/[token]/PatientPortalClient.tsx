@@ -194,7 +194,13 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
   }, [scheduledSessions])
 
   const currentMonday = getMondayOf(todayStr())
-  const [selectedWeekMonday, setSelectedWeekMonday] = useState(currentMonday)
+  const weekGroups = useMemo(() => groupSessionsByWeek(scheduledSessions, todayStr()), [scheduledSessions])
+  // Semana por defecto al abrir el portal: la actual si el paciente la tiene
+  // cargada; si no, la última (más reciente) de las que existan.
+  const defaultWeekMonday = weekGroups.some(w => w.mondayStr === currentMonday)
+    ? currentMonday
+    : (weekGroups[weekGroups.length - 1]?.mondayStr ?? currentMonday)
+  const [selectedWeekMonday, setSelectedWeekMonday] = useState(defaultWeekMonday)
   // Si hay sesión hoy, el hero card ya la muestra — no expandir en "Mi semana"
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(
     scheduledSessions.find(s => s.scheduled_date === todayStr()) ? null : nextUpcomingId
@@ -344,9 +350,9 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
   }
 
   const scrollToTop = useCallback(() => {
-    setSelectedWeekMonday(currentMonday)
+    setSelectedWeekMonday(defaultWeekMonday)
     topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }, [currentMonday])
+  }, [defaultWeekMonday])
 
   return (
     <div className="space-y-8 pb-12">
@@ -513,8 +519,7 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
 
       {/* ── MI SEMANA ──────────────────────────────────────── */}
       {scheduledSessions.length > 0 && (() => {
-        const weekGroups = groupSessionsByWeek(scheduledSessions, todayStr())
-        const activeWeek = weekGroups.find(w => w.mondayStr === selectedWeekMonday) ?? weekGroups[0] ?? null
+        const activeWeek = weekGroups.find(w => w.mondayStr === selectedWeekMonday) ?? weekGroups[weekGroups.length - 1] ?? null
         return (
           <section id="semana" className="scroll-mt-16">
             <h2 className="flex items-center gap-2 text-[20px] font-medium tracking-[-0.01em] mb-3">
