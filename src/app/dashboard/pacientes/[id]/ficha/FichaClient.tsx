@@ -488,71 +488,106 @@ export default function FichaClient({
   const handleExportPDF = async () => {
     const { jsPDF } = await import('jspdf')
     const doc = new jsPDF()
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(16)
-    doc.text('Ficha Clínica', 20, 20)
-    doc.setFontSize(11)
-    doc.setFont('helvetica', 'normal')
-    doc.text(`Paciente: ${patientName}`, 20, 28)
-    doc.text(`Fecha: ${ficha.fecha}`, 20, 34)
+    const margin = 14
+    const maxWidth = 182
+    const pageHeight = 292
+    let y = 14
 
-    let y = 46
-    const margin = 20
-    const pageHeight = 280
-    const maxWidth = 170
+    // Encabezado compacto
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(13)
+    doc.text('Ficha Clínica', margin, y)
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9)
+    doc.text(`${patientName}${ficha.fecha ? `  ·  ${ficha.fecha}` : ''}`, margin, y + 5)
+    y += 10
+    doc.setDrawColor(190); doc.line(margin, y, margin + maxWidth, y); y += 5
 
-    const addSection = (title: string, content: string) => {
-      if (y > pageHeight - 20) { doc.addPage(); y = 20 }
-      doc.setFont('helvetica', 'bold')
-      doc.text(title, margin, y); y += 6
-      doc.setFont('helvetica', 'normal')
-      const lines = doc.splitTextToSize(content || '-', maxWidth)
-      lines.forEach((line: string) => {
-        if (y > pageHeight - 10) { doc.addPage(); y = 20 }
-        doc.text(line, margin, y); y += 5
+    const LH = 3.9
+    // Sección compacta; salta las que están vacías para que entre en una A4.
+    const section = (title: string, content: string) => {
+      if (!content || !content.trim()) return
+      if (y > pageHeight - 10) { doc.addPage(); y = 14 }
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5)
+      doc.text(title, margin, y); y += LH + 0.6
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8)
+      doc.splitTextToSize(content, maxWidth).forEach((line: string) => {
+        if (y > pageHeight - 6) { doc.addPage(); y = 14 }
+        doc.text(line, margin, y); y += LH
       })
-      y += 8
+      y += 2.4
     }
 
-    addSection('1. MOTIVO DE CONSULTA', ficha.motivoConsulta)
-    addSection('2. HISTORIA DE LA ENFERMEDAD ACTUAL', ficha.historiaEnfermedad)
-    addSection('Factores agravantes', ficha.factoresAgravantes)
-    addSection('Factores atenuantes', ficha.factoresAtenuantes)
-    addSection('Caracterización del dolor', [
-      ficha.dolorEva && `EVA: ${ficha.dolorEva}/10`,
+    section('Motivo de consulta', ficha.motivoConsulta)
+    section('Historia de la enfermedad actual', ficha.historiaEnfermedad)
+    section('Factores agravantes', ficha.factoresAgravantes)
+    section('Factores atenuantes', ficha.factoresAtenuantes)
+    section('Caracterización del dolor', [
+      ficha.dolorEva && `EVA ${ficha.dolorEva}/10`,
       ficha.dolorRitmo && `Ritmo: ${ficha.dolorRitmo}`,
       ficha.dolorMomento && `Momento: ${ficha.dolorMomento}`,
       ficha.dolorTipo && `Tipo: ${ficha.dolorTipo}`,
       ficha.dolorIrradiacion && `Irradiación: ${ficha.dolorIrradiacion}`,
     ].filter(Boolean).join('  |  '))
-    addSection('3. ANTECEDENTES', ficha.antecedentes)
-    addSection('4. EXAMEN FÍSICO — Inspección y Palpación', ficha.examenInspeccion)
-    addSection('Fuerza', ficha.examenFuerza)
-    addSection('Test Especiales', ficha.examenTest)
-    addSection('Respuesta al movimiento', (ficha.movimientos ?? [])
+    section('Antecedentes', ficha.antecedentes)
+    section('Examen físico — Inspección y palpación', ficha.examenInspeccion)
+    section('Fuerza', ficha.examenFuerza)
+    section('Tests especiales', ficha.examenTest)
+    section('Respuesta al movimiento', (ficha.movimientos ?? [])
       .filter(m => m.movimiento || m.respuesta)
       .map(m => `${m.movimiento || '—'}: ${m.respuesta || '—'}${m.nota ? ` (${m.nota})` : ''}`)
       .join('\n'))
-    addSection('Preferencia direccional', ficha.preferenciaDireccional)
-    addSection('5. DIAGNÓSTICO KINÉSICO', ficha.diagnostico)
-    addSection('Objetivos y expectativas del paciente', ficha.objetivosPaciente)
-    addSection('Objetivos a corto plazo', ficha.objetivosCortoPlazo)
-    addSection('Objetivos a largo plazo', ficha.objetivosLargoPlazo)
-    addSection('6. PLAN DE TRATAMIENTO', ficha.planTratamiento)
+    section('Preferencia direccional', ficha.preferenciaDireccional)
 
-    const textoRec = ficha.recomendacionesTexto || ''
+    // Goniometría (rangos por región)
+    const gonioRegionLabel: Record<string, string> = {}
+    const gonioMoveLabel: Record<string, string> = {}
+    GONIO_REGIONS.forEach(r => {
+      gonioRegionLabel[r.key] = r.label
+      r.movements.forEach(m => { gonioMoveLabel[m.key] = m.label })
+    })
+    section('Goniometría', (ficha.goniometria ?? []).map(g => {
+      const vals = Object.entries(g.values ?? {})
+        .filter(([, v]) => v !== '' && v != null)
+        .map(([k, v]) => `${gonioMoveLabel[k] ?? k} ${v}°`).join(', ')
+      return `${gonioRegionLabel[g.region] ?? g.region}${g.date ? ` (${g.date})` : ''}: ${vals}${g.pain != null ? ` · dolor ${g.pain}/10` : ''}${g.notes ? ` — ${g.notes}` : ''}`
+    }).join('\n'))
+
+    // Dinamometría (fuerza por músculo)
+    section('Dinamometría', (dynResults ?? []).map(d => {
+      const fecha = new Date(d.created_at).toLocaleDateString('es-AR')
+      const muscles = Object.entries(d.muscle_results ?? {})
+        .filter(([, v]) => v && (v.right || v.left))
+        .map(([k, v]) => `${MUSCLE_LABELS[k] ?? k} D${v.right || '–'}/I${v.left || '–'}`).join(', ')
+      return `${fecha} (${d.unit}): ${muscles}${d.notes ? ` — ${d.notes}` : ''}`
+    }).join('\n'))
+
+    // Cuestionarios completados
+    section('Cuestionarios', (qResults ?? []).map(q => {
+      const meta = QUESTIONNAIRE_NAMES[q.questionnaire_type] ?? { label: q.questionnaire_type, unit: '' }
+      const fecha = new Date(q.created_at).toLocaleDateString('es-AR')
+      const score = q.score != null ? `${q.score} ${meta.unit}` : ''
+      return `${meta.label}: ${score}${q.interpretation ? ` — ${q.interpretation}` : ''} (${fecha})`
+    }).join('\n'))
+
+    section('Diagnóstico kinésico', ficha.diagnostico)
+    section('Objetivos del paciente', ficha.objetivosPaciente)
+    section('Objetivos a corto plazo', ficha.objetivosCortoPlazo)
+    section('Objetivos a largo plazo', ficha.objetivosLargoPlazo)
+    section('Plan de tratamiento', ficha.planTratamiento)
+
     const pdfsRec = ficha.recomendacionesPdfs ?? []
-    if (textoRec || pdfsRec.length > 0) {
-      const contenidoRec = [
-        textoRec,
-        pdfsRec.length > 0 ? `\nArchivos adjuntos:\n${pdfsRec.map(p => `- ${p.nombre}${p.profesional ? ` (${p.profesional})` : ''} — ${p.fecha}`).join('\n')}` : '',
-      ].filter(Boolean).join('\n')
-      addSection('7. RECOMENDACIONES DE OTROS PROFESIONALES', contenidoRec)
-    }
+    section('Recomendaciones de otros profesionales', [
+      ficha.recomendacionesTexto || '',
+      pdfsRec.length > 0 ? `Adjuntos: ${pdfsRec.map(p => `${p.nombre}${p.profesional ? ` (${p.profesional})` : ''}`).join(', ')}` : '',
+    ].filter(Boolean).join('\n'))
 
-    doc.setFontSize(10)
-    doc.setTextColor(150)
-    doc.text('Documento generado con Reason — reason.com.ar', margin, 285)
+    // Actualizaciones / evolución
+    section('Actualizaciones / evolución', (ficha.actualizaciones ?? [])
+      .filter(a => a.texto || a.fecha)
+      .map(a => `${a.fecha ? a.fecha + ': ' : ''}${a.texto || ''}`)
+      .join('\n'))
+
+    doc.setFontSize(7.5); doc.setTextColor(150)
+    doc.text('Documento generado con Reason — reason.com.ar', margin, 296)
     doc.save(`Ficha_${patientName.replace(/\s+/g, '_')}_${ficha.fecha}.pdf`)
   }
 
