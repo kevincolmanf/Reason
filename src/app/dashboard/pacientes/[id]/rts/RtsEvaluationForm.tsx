@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
+import { CollapsibleCard, AddSectionMenu } from './CollapsibleCard'
 import {
   RtsEvaluation,
   computeLSI,
@@ -236,6 +237,16 @@ function PhaseStatus({ value, label, check }: { value: string; label: string; ch
   )
 }
 
+// Secciones opcionales del RTS de LCA (selector "+ Agregar"). Datos de cirugía y
+// criterios de fase previa quedan siempre visibles; el resto se agrega a demanda.
+const LCA_SECTIONS: { id: string; label: string; category: string; fields: string[] }[] = [
+  { id: 'strength', label: 'Evaluación de fuerza', category: 'Fuerza', fields: ['quad_affected', 'quad_unaffected', 'hamstring_affected', 'hamstring_unaffected'] },
+  { id: 'hop', label: 'Hop tests horizontales', category: 'Tests funcionales', fields: ['single_hop_affected', 'single_hop_unaffected', 'triple_hop_affected', 'triple_hop_unaffected', 'crossover_hop_affected', 'crossover_hop_unaffected', 'timed_hop_affected', 'timed_hop_unaffected'] },
+  { id: 'vertical', label: 'Saltos verticales', category: 'Tests funcionales', fields: ['cmj_bilateral', 'slcmj_affected', 'slcmj_unaffected', 'drop_jump_quality'] },
+  { id: 'complementary', label: 'Tests funcionales complementarios', category: 'Tests funcionales', fields: ['sl_bridge_affected', 'sl_bridge_unaffected', 'sl_bridge_quality', 'slsquat_reps_affected', 'slsquat_reps_unaffected', 'slsquat_quality'] },
+  { id: 'questionnaires', label: 'Cuestionarios validados', category: 'Cuestionarios', fields: ['koos_sport', 'acl_rsi', 'grs'] },
+]
+
 export default function RtsEvaluationForm({
   patient,
   userId,
@@ -262,6 +273,7 @@ export default function RtsEvaluationForm({
   const [koosMode, setKoosMode] = useState<'imported' | 'manual'>('imported')
   const [aclRsiMode, setAclRsiMode] = useState<'imported' | 'manual'>('imported')
   const [forceUnit, setForceUnit] = useState<'kg' | 'N'>('kg')
+  const [addedSecs, setAddedSecs] = useState<Set<string>>(new Set())
 
   // Conversion helpers — form state always stores kg internally
   const N_PER_KG = 9.80665
@@ -344,6 +356,23 @@ export default function RtsEvaluationForm({
   const set = useCallback((key: keyof FormData, value: string) => {
     setForm(prev => ({ ...prev, [key]: value }))
   }, [])
+
+  // ── Selector modular de secciones (mostrar solo las que el profesional usa) ──
+  const anyFilled = (keys: string[]) => keys.some(k => (form as Record<string, string>)[k] !== '' && (form as Record<string, string>)[k] != null)
+  const clearFields = (keys: string[]) => setForm(p => ({ ...p, ...Object.fromEntries(keys.map(k => [k, ''])) }))
+  const isShownSec = (s: { id: string; fields: string[] }) => addedSecs.has(s.id) || anyFilled(s.fields)
+  const availableSecs = LCA_SECTIONS.filter(s => !isShownSec(s))
+  const addSec = (id: string) => setAddedSecs(prev => new Set(prev).add(id))
+  const removeSec = (s: { id: string; fields: string[] }) => {
+    clearFields(s.fields)
+    setAddedSecs(prev => { const nx = new Set(prev); nx.delete(s.id); return nx })
+  }
+  // Envuelve una sección en tarjeta colapsable si está visible; si no, la oculta.
+  const sec = (id: string, children: React.ReactNode) => {
+    const s = LCA_SECTIONS.find(m => m.id === id)!
+    if (!isShownSec(s)) return null
+    return <CollapsibleCard label={s.label} category={s.category} onRemove={() => removeSec(s)}>{children}</CollapsibleCard>
+  }
 
   const importDynamoData = useCallback(() => {
     if (!lastDynamo) return
@@ -779,7 +808,10 @@ export default function RtsEvaluationForm({
         </div>
       </section>
 
+      <AddSectionMenu available={availableSecs} onAdd={addSec} />
+
       {/* ============ SECCIÓN 2: EVALUACIÓN DE FUERZA ============ */}
+      {sec('strength', (
       <section>
         <div className="flex items-center justify-between mb-1">
           <h2 className="text-[20px] font-medium">Evaluación de Fuerza Muscular</h2>
@@ -901,8 +933,10 @@ export default function RtsEvaluationForm({
           ⚠ El LSI puede sobreestimar la recuperación si el miembro sano también perdió fuerza durante la rehabilitación. Comparar con valores preoperatorios cuando estén disponibles. (Wellsandt et al., 2017)
         </div>
       </section>
+      ))}
 
       {/* ============ SECCIÓN 3: HOP TESTS ============ */}
+      {sec('hop', (
       <section>
         <h2 className="text-[20px] font-medium mb-1">Hop Tests Horizontales</h2>
 
@@ -949,8 +983,10 @@ export default function RtsEvaluationForm({
           </div>
         </div>
       </section>
+      ))}
 
       {/* ============ SECCIÓN 4: SALTOS VERTICALES ============ */}
+      {sec('vertical', (
       <section>
         <h2 className="text-[20px] font-medium mb-5">Saltos Verticales</h2>
 
@@ -1029,8 +1065,10 @@ export default function RtsEvaluationForm({
           </div>
         </div>
       </section>
+      ))}
 
       {/* ============ SECCIÓN 5: TESTS FUNCIONALES COMPLEMENTARIOS ============ */}
+      {sec('complementary', (
       <section>
         <h2 className="text-[20px] font-medium mb-5">Tests Funcionales Complementarios</h2>
         <div className="space-y-6">
@@ -1099,8 +1137,10 @@ export default function RtsEvaluationForm({
 
         </div>
       </section>
+      ))}
 
       {/* ============ SECCIÓN 6: CUESTIONARIOS ============ */}
+      {sec('questionnaires', (
       <section>
         <h2 className="text-[20px] font-medium mb-5">Cuestionarios Validados</h2>
 
@@ -1194,6 +1234,7 @@ export default function RtsEvaluationForm({
           </div>
         </div>
       </section>
+      ))}
 
       {/* NOTAS */}
       <section>
