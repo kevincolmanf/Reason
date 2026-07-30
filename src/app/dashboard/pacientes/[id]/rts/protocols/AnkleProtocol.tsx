@@ -5,6 +5,7 @@ import { createClient } from '@/utils/supabase/client'
 import { lsi, timedLsi, n, Criterion } from './shared'
 import { Field, NumInput, SelectInput, LsiDisplay, SectionTitle, CriteriaResults } from './ProtocolUI'
 import { GeneralQuestionnaires, QuestionnaireAutofill, LatestQuestionnaires } from './QuestionnaireAutofill'
+import { ModularSections, RtsModule } from './ModularSections'
 
 interface Props {
   patient: { id: string; name: string; age: number | null }
@@ -40,6 +41,8 @@ export default function AnkleProtocol({ patient, userId, initialData, evalId, on
   const [savedId, setSavedId] = useState<string | null>(evalId ?? null)
   const supabase = useRef(createClient())
   const set = (k: keyof FormData, v: string) => setForm(p => ({ ...p, [k]: v }))
+  const clearFields = (keys: (keyof FormData)[]) => setForm(p => ({ ...p, ...Object.fromEntries(keys.map(k => [k, ''])) } as FormData))
+  const anyFilled = (keys: (keyof FormData)[]) => keys.some(k => form[k] !== '')
 
   const dfLsi      = lsi(n(form.dorsiflexion_affected),   n(form.dorsiflexion_unaffected))
   const evLsi      = lsi(n(form.evertor_affected),         n(form.evertor_unaffected))
@@ -103,6 +106,153 @@ export default function AnkleProtocol({ patient, userId, initialData, evalId, on
     )
   }
 
+  const modules: RtsModule[] = [
+    {
+      id: 'df', label: 'ROM Dorsiflexión (wall lunge)', category: 'Movilidad',
+      hasData: anyFilled(['dorsiflexion_affected', 'dorsiflexion_unaffected']),
+      onClear: () => clearFields(['dorsiflexion_affected', 'dorsiflexion_unaffected']),
+      render: () => (
+        <>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Afectado (cm)"><NumInput value={form.dorsiflexion_affected} onChange={v => set('dorsiflexion_affected', v)} /></Field>
+            <Field label="Sano (cm)"><NumInput value={form.dorsiflexion_unaffected} onChange={v => set('dorsiflexion_unaffected', v)} /></Field>
+          </div>
+          {dfLsi !== null && <div className="mt-3"><LsiDisplay label="LSI Dorsiflexión" val={dfLsi} /></div>}
+        </>
+      ),
+    },
+    {
+      id: 'evertor', label: 'Fuerza eversores', category: 'Fuerza',
+      hasData: anyFilled(['evertor_affected', 'evertor_unaffected']),
+      onClear: () => clearFields(['evertor_affected', 'evertor_unaffected']),
+      render: () => (
+        <>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Afectado (kg o N)"><NumInput value={form.evertor_affected} onChange={v => set('evertor_affected', v)} /></Field>
+            <Field label="Sano (kg o N)"><NumInput value={form.evertor_unaffected} onChange={v => set('evertor_unaffected', v)} /></Field>
+          </div>
+          {evLsi !== null && <div className="mt-3"><LsiDisplay label="LSI Eversores" val={evLsi} /></div>}
+        </>
+      ),
+    },
+    {
+      id: 'ybal', label: 'Y-Balance Test', category: 'Tests funcionales',
+      hasData: anyFilled(['ybal_ant_affected', 'ybal_ant_unaffected', 'ybal_pm_affected', 'ybal_pm_unaffected', 'ybal_pl_affected', 'ybal_pl_unaffected']),
+      onClear: () => clearFields(['ybal_ant_affected', 'ybal_ant_unaffected', 'ybal_pm_affected', 'ybal_pm_unaffected', 'ybal_pl_affected', 'ybal_pl_unaffected']),
+      render: () => (
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <Field label="Anterior — afectado"><NumInput value={form.ybal_ant_affected} onChange={v => set('ybal_ant_affected', v)} /></Field>
+            <Field label="Anterior — sano"><NumInput value={form.ybal_ant_unaffected} onChange={v => set('ybal_ant_unaffected', v)} /></Field>
+            <Field label="Posteromedial — afectado"><NumInput value={form.ybal_pm_affected} onChange={v => set('ybal_pm_affected', v)} /></Field>
+            <Field label="Posteromedial — sano"><NumInput value={form.ybal_pm_unaffected} onChange={v => set('ybal_pm_unaffected', v)} /></Field>
+            <Field label="Posterolateral — afectado"><NumInput value={form.ybal_pl_affected} onChange={v => set('ybal_pl_affected', v)} /></Field>
+            <Field label="Posterolateral — sano"><NumInput value={form.ybal_pl_unaffected} onChange={v => set('ybal_pl_unaffected', v)} /></Field>
+          </div>
+          {ybalLsi !== null && <div className="mt-3"><LsiDisplay label="Y-Balance Composite LSI" val={ybalLsi} /></div>}
+        </>
+      ),
+    },
+    {
+      id: 'heelrise', label: 'Single Leg Heel Rise', category: 'Tests funcionales',
+      hasData: anyFilled(['heel_rise_affected', 'heel_rise_unaffected']),
+      onClear: () => clearFields(['heel_rise_affected', 'heel_rise_unaffected']),
+      render: () => (
+        <>
+          <p className="text-[12px] text-text-secondary mb-3">Máximas repeticiones en cada pierna. Ritmo controlado, rango completo.</p>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Afectado (reps)"><NumInput value={form.heel_rise_affected} onChange={v => set('heel_rise_affected', v)} min="0" placeholder="ej: 20" /></Field>
+            <Field label="Sano (reps)"><NumInput value={form.heel_rise_unaffected} onChange={v => set('heel_rise_unaffected', v)} min="0" placeholder="ej: 25" /></Field>
+          </div>
+          {heelLsi !== null && <div className="mt-3"><LsiDisplay label="Heel Rise LSI" val={heelLsi} /></div>}
+        </>
+      ),
+    },
+    {
+      id: 'balance', label: 'Balance unipodal', category: 'Tests funcionales',
+      hasData: anyFilled(['balance_time_affected', 'balance_time_unaffected']),
+      onClear: () => clearFields(['balance_time_affected', 'balance_time_unaffected']),
+      render: () => (
+        <>
+          <p className="text-[12px] text-text-secondary mb-3">Tiempo en equilibrio sobre cada pierna (ojos abiertos), máx 60 seg.</p>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Afectado (seg)"><NumInput value={form.balance_time_affected} onChange={v => set('balance_time_affected', v)} min="0" max="60" placeholder="ej: 45" /></Field>
+            <Field label="Sano (seg)"><NumInput value={form.balance_time_unaffected} onChange={v => set('balance_time_unaffected', v)} min="0" max="60" placeholder="ej: 55" /></Field>
+          </div>
+          {balanceLsi !== null && <div className="mt-3"><LsiDisplay label="Balance LSI" val={balanceLsi} /></div>}
+        </>
+      ),
+    },
+    {
+      id: 'singlehop', label: 'Single hop', category: 'Tests funcionales',
+      hasData: anyFilled(['single_hop_affected', 'single_hop_unaffected']),
+      onClear: () => clearFields(['single_hop_affected', 'single_hop_unaffected']),
+      render: () => (
+        <>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Afectado (cm)"><NumInput value={form.single_hop_affected} onChange={v => set('single_hop_affected', v)} /></Field>
+            <Field label="Sano (cm)"><NumInput value={form.single_hop_unaffected} onChange={v => set('single_hop_unaffected', v)} /></Field>
+          </div>
+          {hopLsi !== null && <div className="mt-3"><LsiDisplay label="Single Hop LSI" val={hopLsi} /></div>}
+        </>
+      ),
+    },
+    {
+      id: 'sidehop', label: 'Side hop test', category: 'Tests funcionales',
+      hasData: anyFilled(['side_hop_affected', 'side_hop_unaffected']),
+      onClear: () => clearFields(['side_hop_affected', 'side_hop_unaffected']),
+      render: () => (
+        <>
+          <p className="text-[12px] text-text-secondary mb-3">Tiempo en completar la serie (menor = mejor).</p>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Afectado (seg)"><NumInput value={form.side_hop_affected} onChange={v => set('side_hop_affected', v)} min="0" placeholder="ej: 12.5" /></Field>
+            <Field label="Sano (seg)"><NumInput value={form.side_hop_unaffected} onChange={v => set('side_hop_unaffected', v)} min="0" placeholder="ej: 11.0" /></Field>
+          </div>
+          {sideHopLsi !== null && <div className="mt-3"><LsiDisplay label="Side hop LSI" val={sideHopLsi} /></div>}
+        </>
+      ),
+    },
+    {
+      id: 'fig8', label: 'Figure-8 hop test', category: 'Tests funcionales',
+      hasData: anyFilled(['fig8_affected', 'fig8_unaffected']),
+      onClear: () => clearFields(['fig8_affected', 'fig8_unaffected']),
+      render: () => (
+        <>
+          <p className="text-[12px] text-text-secondary mb-3">Tiempo en completar el recorrido (menor = mejor).</p>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Afectado (seg)"><NumInput value={form.fig8_affected} onChange={v => set('fig8_affected', v)} min="0" placeholder="ej: 16.0" /></Field>
+            <Field label="Sano (seg)"><NumInput value={form.fig8_unaffected} onChange={v => set('fig8_unaffected', v)} min="0" placeholder="ej: 14.5" /></Field>
+          </div>
+          {fig8Lsi !== null && <div className="mt-3"><LsiDisplay label="Figure-8 hop LSI" val={fig8Lsi} /></div>}
+        </>
+      ),
+    },
+    {
+      id: 'faam', label: 'FAAM Deporte', category: 'Cuestionarios',
+      hasData: anyFilled(['faam_sport_score']),
+      onClear: () => clearFields(['faam_sport_score']),
+      render: () => (
+        <>
+          {latestQuestionnaires && (
+            <QuestionnaireAutofill available={latestQuestionnaires} specs={[{ type: 'faam', label: 'FAAM Deporte', formKey: 'faam_sport_score' }]} onApply={(k, v) => set(k as keyof FormData, v)} />
+          )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="FAAM Sport (0–100%)"><NumInput value={form.faam_sport_score} onChange={v => set('faam_sport_score', v)} min="0" max="100" placeholder="ej: 92" /></Field>
+          </div>
+          <p className="text-[12px] text-text-secondary mt-2">FAAM Sport umbral ≥90%.</p>
+        </>
+      ),
+    },
+    {
+      id: 'general', label: 'Cuestionarios (LEFS / Tampa)', category: 'Cuestionarios',
+      hasData: anyFilled(['lefs_score', 'tampa_score']),
+      onClear: () => clearFields(['lefs_score', 'tampa_score']),
+      render: () => (
+        <GeneralQuestionnaires latest={latestQuestionnaires} includeLefs values={{ lefs_score: form.lefs_score, tampa_score: form.tampa_score }} set={(k, v) => set(k as keyof FormData, v)} />
+      ),
+    },
+  ]
+
   return (
     <div className="space-y-8">
       <div>
@@ -130,109 +280,7 @@ export default function AnkleProtocol({ patient, userId, initialData, evalId, on
         </div>
       </div>
 
-      <div>
-        <SectionTitle>ROM — Dorsiflexión (Wall lunge test, cm)</SectionTitle>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Lado afectado (cm)"><NumInput value={form.dorsiflexion_affected} onChange={v => set('dorsiflexion_affected', v)} /></Field>
-          <Field label="Lado sano (cm)"><NumInput value={form.dorsiflexion_unaffected} onChange={v => set('dorsiflexion_unaffected', v)} /></Field>
-        </div>
-        {dfLsi !== null && <div className="mt-3"><LsiDisplay label="LSI Dorsiflexión" val={dfLsi} /></div>}
-      </div>
-
-      <div>
-        <SectionTitle>Fuerza eversores (kg o N)</SectionTitle>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Lado afectado"><NumInput value={form.evertor_affected} onChange={v => set('evertor_affected', v)} /></Field>
-          <Field label="Lado sano"><NumInput value={form.evertor_unaffected} onChange={v => set('evertor_unaffected', v)} /></Field>
-        </div>
-        {evLsi !== null && <div className="mt-3"><LsiDisplay label="LSI Eversores" val={evLsi} /></div>}
-      </div>
-
-      <div>
-        <SectionTitle>Y-Balance Test (cm)</SectionTitle>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-          <Field label="Anterior — afectado"><NumInput value={form.ybal_ant_affected} onChange={v => set('ybal_ant_affected', v)} /></Field>
-          <Field label="Anterior — sano"><NumInput value={form.ybal_ant_unaffected} onChange={v => set('ybal_ant_unaffected', v)} /></Field>
-          <Field label="Posteromedial — afectado"><NumInput value={form.ybal_pm_affected} onChange={v => set('ybal_pm_affected', v)} /></Field>
-          <Field label="Posteromedial — sano"><NumInput value={form.ybal_pm_unaffected} onChange={v => set('ybal_pm_unaffected', v)} /></Field>
-          <Field label="Posterolateral — afectado"><NumInput value={form.ybal_pl_affected} onChange={v => set('ybal_pl_affected', v)} /></Field>
-          <Field label="Posterolateral — sano"><NumInput value={form.ybal_pl_unaffected} onChange={v => set('ybal_pl_unaffected', v)} /></Field>
-        </div>
-        {ybalLsi !== null && <div className="mt-3"><LsiDisplay label="Y-Balance Composite LSI" val={ybalLsi} /></div>}
-      </div>
-
-      <div>
-        <SectionTitle>Single Leg Heel Rise (reps)</SectionTitle>
-        <p className="text-[12px] text-text-secondary mb-3">Máximas repeticiones en cada pierna. Ritmo controlado, rango completo.</p>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Lado afectado"><NumInput value={form.heel_rise_affected} onChange={v => set('heel_rise_affected', v)} min="0" placeholder="ej: 20" /></Field>
-          <Field label="Lado sano"><NumInput value={form.heel_rise_unaffected} onChange={v => set('heel_rise_unaffected', v)} min="0" placeholder="ej: 25" /></Field>
-        </div>
-        {heelLsi !== null && <div className="mt-3"><LsiDisplay label="Heel Rise LSI" val={heelLsi} /></div>}
-      </div>
-
-      <div>
-        <SectionTitle>Balance unipodal (segundos, ojos abiertos)</SectionTitle>
-        <p className="text-[12px] text-text-secondary mb-3">Tiempo en equilibrio sobre cada pierna, máx 60 seg.</p>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Lado afectado (seg)"><NumInput value={form.balance_time_affected} onChange={v => set('balance_time_affected', v)} min="0" max="60" placeholder="ej: 45" /></Field>
-          <Field label="Lado sano (seg)"><NumInput value={form.balance_time_unaffected} onChange={v => set('balance_time_unaffected', v)} min="0" max="60" placeholder="ej: 55" /></Field>
-        </div>
-        {balanceLsi !== null && <div className="mt-3"><LsiDisplay label="Balance LSI" val={balanceLsi} /></div>}
-      </div>
-
-      <div>
-        <SectionTitle>Test funcional — Single hop (cm)</SectionTitle>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Lado afectado"><NumInput value={form.single_hop_affected} onChange={v => set('single_hop_affected', v)} /></Field>
-          <Field label="Lado sano"><NumInput value={form.single_hop_unaffected} onChange={v => set('single_hop_unaffected', v)} /></Field>
-        </div>
-        {hopLsi !== null && <div className="mt-3"><LsiDisplay label="Single Hop LSI" val={hopLsi} /></div>}
-      </div>
-
-      <div>
-        <SectionTitle>Side hop test (segundos, menor = mejor)</SectionTitle>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Lado afectado (seg)"><NumInput value={form.side_hop_affected} onChange={v => set('side_hop_affected', v)} min="0" placeholder="ej: 12.5" /></Field>
-          <Field label="Lado sano (seg)"><NumInput value={form.side_hop_unaffected} onChange={v => set('side_hop_unaffected', v)} min="0" placeholder="ej: 11.0" /></Field>
-        </div>
-        {sideHopLsi !== null && <div className="mt-3"><LsiDisplay label="Side hop LSI" val={sideHopLsi} /></div>}
-      </div>
-
-      <div>
-        <SectionTitle>Figure-8 hop test (segundos, menor = mejor)</SectionTitle>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Lado afectado (seg)"><NumInput value={form.fig8_affected} onChange={v => set('fig8_affected', v)} min="0" placeholder="ej: 16.0" /></Field>
-          <Field label="Lado sano (seg)"><NumInput value={form.fig8_unaffected} onChange={v => set('fig8_unaffected', v)} min="0" placeholder="ej: 14.5" /></Field>
-        </div>
-        {fig8Lsi !== null && <div className="mt-3"><LsiDisplay label="Figure-8 hop LSI" val={fig8Lsi} /></div>}
-      </div>
-
-      <div>
-        <SectionTitle>Cuestionarios</SectionTitle>
-        {latestQuestionnaires && (
-          <QuestionnaireAutofill
-            available={latestQuestionnaires}
-            specs={[{ type: 'faam', label: 'FAAM Deporte', formKey: 'faam_sport_score' }]}
-            onApply={(k, v) => set(k as keyof FormData, v)}
-          />
-        )}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="FAAM Sport (0–100%)">
-            <NumInput value={form.faam_sport_score} onChange={v => set('faam_sport_score', v)} min="0" max="100" placeholder="ej: 92" />
-          </Field>
-        </div>
-        <p className="text-[12px] text-text-secondary mt-2">FAAM Sport umbral ≥90%.</p>
-      </div>
-
-      <div>
-        <GeneralQuestionnaires
-          latest={latestQuestionnaires}
-          includeLefs
-          values={{ lefs_score: form.lefs_score, tampa_score: form.tampa_score }}
-          set={(k, v) => set(k as keyof FormData, v)}
-        />
-      </div>
+      <ModularSections modules={modules} />
 
       <div>
         <SectionTitle>Observaciones</SectionTitle>

@@ -5,6 +5,7 @@ import { createClient } from '@/utils/supabase/client'
 import { lsi, n, Criterion } from './shared'
 import { Field, NumInput, YesNoInput, SelectInput, LsiDisplay, SectionTitle, CriteriaResults } from './ProtocolUI'
 import { GeneralQuestionnaires, LatestQuestionnaires } from './QuestionnaireAutofill'
+import { ModularSections, RtsModule } from './ModularSections'
 
 interface Props {
   patient: { id: string; name: string; age: number | null }
@@ -42,6 +43,8 @@ export default function HamstringProtocol({ patient, userId, initialData, evalId
   const supabase = useRef(createClient())
 
   const set = (k: keyof FormData, v: string) => setForm(p => ({ ...p, [k]: v }))
+  const clearFields = (keys: (keyof FormData)[]) => setForm(p => ({ ...p, ...Object.fromEntries(keys.map(k => [k, ''])) } as FormData))
+  const anyFilled = (keys: (keyof FormData)[]) => keys.some(k => form[k] !== '')
 
   const hamLsi    = lsi(n(form.ham_eccentric_affected), n(form.ham_eccentric_unaffected))
   const nordicLsi = lsi(n(form.nordic_reps_affected), n(form.nordic_reps_unaffected))
@@ -175,6 +178,139 @@ export default function HamstringProtocol({ patient, userId, initialData, evalId
     )
   }
 
+  const modules: RtsModule[] = [
+    {
+      id: 'clinica', label: 'Evaluación clínica', category: 'Clínica',
+      hasData: anyFilled(['palpation_pain', 'rom_full']),
+      onClear: () => clearFields(['palpation_pain', 'rom_full']),
+      render: () => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label="¿Dolor a la palpación del vientre muscular?"><YesNoInput value={form.palpation_pain} onChange={v => set('palpation_pain', v)} /></Field>
+          <Field label="¿ROM completo de cadera y rodilla?"><YesNoInput value={form.rom_full} onChange={v => set('rom_full', v)} /></Field>
+        </div>
+      ),
+    },
+    {
+      id: 'strength', label: 'Fuerza muscular (Isq / Cuád)', category: 'Fuerza',
+      hasData: anyFilled(['ham_eccentric_affected', 'ham_eccentric_unaffected', 'quad_affected', 'quad_unaffected']),
+      onClear: () => clearFields(['ham_eccentric_affected', 'ham_eccentric_unaffected', 'quad_affected', 'quad_unaffected']),
+      render: () => (
+        <>
+          <div className="flex gap-2 mb-4">
+            {(['kg', 'N'] as const).map(u => (
+              <button key={u} type="button" onClick={() => set('strength_unit', u)}
+                className={`px-3 py-1 rounded-full text-[12px] border-[0.5px] transition-colors ${form.strength_unit === u ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-primary border-border text-text-secondary'}`}>{u}</button>
+            ))}
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <Field label={`Isq. excéntrico — afectado (${form.strength_unit})`}><NumInput value={form.ham_eccentric_affected} onChange={v => set('ham_eccentric_affected', v)} /></Field>
+            <Field label={`Isq. excéntrico — sano (${form.strength_unit})`}><NumInput value={form.ham_eccentric_unaffected} onChange={v => set('ham_eccentric_unaffected', v)} /></Field>
+            <Field label={`Cuád. — afectado (${form.strength_unit})`}><NumInput value={form.quad_affected} onChange={v => set('quad_affected', v)} /></Field>
+            <Field label={`Cuád. — sano (${form.strength_unit})`}><NumInput value={form.quad_unaffected} onChange={v => set('quad_unaffected', v)} /></Field>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-3">
+            <LsiDisplay label="LSI Excéntrico" val={hamLsi} />
+            <LsiDisplay label="LSI Cuádriceps" val={lsi(n(form.quad_affected), n(form.quad_unaffected))} />
+            <div className="bg-bg-primary rounded-lg p-3 border-[0.5px] border-border text-center">
+              <div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-1">H/Q Ratio</div>
+              <div className={`text-[18px] font-medium ${hqRatio === null ? 'text-text-secondary' : hqRatio >= 0.6 ? 'text-[#4ade80]' : 'text-red-400'}`}>{hqRatio !== null ? hqRatio.toFixed(2) : '—'}</div>
+            </div>
+          </div>
+        </>
+      ),
+    },
+    {
+      id: 'singlehop', label: 'Single hop', category: 'Tests funcionales',
+      hasData: anyFilled(['single_hop_affected', 'single_hop_unaffected']),
+      onClear: () => clearFields(['single_hop_affected', 'single_hop_unaffected']),
+      render: () => (
+        <>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Afectado (cm)"><NumInput value={form.single_hop_affected} onChange={v => set('single_hop_affected', v)} /></Field>
+            <Field label="Sano (cm)"><NumInput value={form.single_hop_unaffected} onChange={v => set('single_hop_unaffected', v)} /></Field>
+          </div>
+          {hopLsi !== null && <div className="mt-3"><LsiDisplay label="Single Hop LSI" val={hopLsi} /></div>}
+        </>
+      ),
+    },
+    {
+      id: 'triplehop', label: 'Triple hop', category: 'Tests funcionales',
+      hasData: anyFilled(['triple_hop_affected', 'triple_hop_unaffected']),
+      onClear: () => clearFields(['triple_hop_affected', 'triple_hop_unaffected']),
+      render: () => (
+        <>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Afectado (cm)"><NumInput value={form.triple_hop_affected} onChange={v => set('triple_hop_affected', v)} /></Field>
+            <Field label="Sano (cm)"><NumInput value={form.triple_hop_unaffected} onChange={v => set('triple_hop_unaffected', v)} /></Field>
+          </div>
+          {tripleHopLsi !== null && <div className="mt-3"><LsiDisplay label="Triple Hop LSI" val={tripleHopLsi} /></div>}
+        </>
+      ),
+    },
+    {
+      id: 'crossoverhop', label: 'Crossover hop', category: 'Tests funcionales',
+      hasData: anyFilled(['crossover_hop_affected', 'crossover_hop_unaffected']),
+      onClear: () => clearFields(['crossover_hop_affected', 'crossover_hop_unaffected']),
+      render: () => (
+        <>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Afectado (cm)"><NumInput value={form.crossover_hop_affected} onChange={v => set('crossover_hop_affected', v)} /></Field>
+            <Field label="Sano (cm)"><NumInput value={form.crossover_hop_unaffected} onChange={v => set('crossover_hop_unaffected', v)} /></Field>
+          </div>
+          {crossoverHopLsi !== null && <div className="mt-3"><LsiDisplay label="Crossover Hop LSI" val={crossoverHopLsi} /></div>}
+        </>
+      ),
+    },
+    {
+      id: 'nordic', label: 'Nordic hamstring', category: 'Tests funcionales',
+      hasData: anyFilled(['nordic_reps_affected', 'nordic_reps_unaffected']),
+      onClear: () => clearFields(['nordic_reps_affected', 'nordic_reps_unaffected']),
+      render: () => (
+        <>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Reps afectado"><NumInput value={form.nordic_reps_affected} onChange={v => set('nordic_reps_affected', v)} min="0" max="30" placeholder="ej: 8" /></Field>
+            <Field label="Reps sano"><NumInput value={form.nordic_reps_unaffected} onChange={v => set('nordic_reps_unaffected', v)} min="0" max="30" placeholder="ej: 10" /></Field>
+          </div>
+          {nordicLsi !== null && <div className="mt-3"><LsiDisplay label="Nordic LSI" val={nordicLsi} /></div>}
+        </>
+      ),
+    },
+    {
+      id: 'slhb', label: 'Single Leg Hamstring Bridge', category: 'Tests funcionales',
+      hasData: anyFilled(['slhb_affected', 'slhb_unaffected']),
+      onClear: () => clearFields(['slhb_affected', 'slhb_unaffected']),
+      render: () => (
+        <>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Reps afectado"><NumInput value={form.slhb_affected} onChange={v => set('slhb_affected', v)} min="0" placeholder="ej: 20" /></Field>
+            <Field label="Reps sano"><NumInput value={form.slhb_unaffected} onChange={v => set('slhb_unaffected', v)} min="0" placeholder="ej: 24" /></Field>
+          </div>
+          {slhbLsi !== null && <div className="mt-3"><LsiDisplay label="SLHB LSI" val={slhbLsi} /></div>}
+        </>
+      ),
+    },
+    {
+      id: 'field', label: 'Tests de campo (H-test / sprint / agilidad)', category: 'Tests funcionales',
+      hasData: anyFilled(['h_test_pain_free', 'sprint_pain_free', 'agility_pain_free']),
+      onClear: () => clearFields(['h_test_pain_free', 'sprint_pain_free', 'agility_pain_free']),
+      render: () => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label="¿H-test de Askling sin dolor?"><YesNoInput value={form.h_test_pain_free} onChange={v => set('h_test_pain_free', v)} /></Field>
+          <Field label="¿Sprint máximo sin dolor?"><YesNoInput value={form.sprint_pain_free} onChange={v => set('sprint_pain_free', v)} /></Field>
+          <Field label="¿Agilidad (T-test / figure-8) sin dolor?"><YesNoInput value={form.agility_pain_free} onChange={v => set('agility_pain_free', v)} /></Field>
+        </div>
+      ),
+    },
+    {
+      id: 'general', label: 'Cuestionarios (LEFS / Tampa)', category: 'Cuestionarios',
+      hasData: anyFilled(['lefs_score', 'tampa_score']),
+      onClear: () => clearFields(['lefs_score', 'tampa_score']),
+      render: () => (
+        <GeneralQuestionnaires latest={latestQuestionnaires} includeLefs values={{ lefs_score: form.lefs_score, tampa_score: form.tampa_score }} set={(k, v) => set(k as keyof FormData, v)} />
+      ),
+    },
+  ]
+
   return (
     <div className="space-y-8">
       {/* Contexto */}
@@ -208,125 +344,7 @@ export default function HamstringProtocol({ patient, userId, initialData, evalId
         </div>
       </div>
 
-      {/* Clínica */}
-      <div>
-        <SectionTitle>Evaluación clínica</SectionTitle>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="¿Dolor a la palpación del vientre muscular?">
-            <YesNoInput value={form.palpation_pain} onChange={v => set('palpation_pain', v)} />
-          </Field>
-          <Field label="¿ROM completo de cadera y rodilla?">
-            <YesNoInput value={form.rom_full} onChange={v => set('rom_full', v)} />
-          </Field>
-        </div>
-      </div>
-
-      {/* Fuerza */}
-      <div>
-        <SectionTitle>Fuerza muscular</SectionTitle>
-        <div className="flex gap-2 mb-4">
-          {(['kg', 'N'] as const).map(u => (
-            <button key={u} type="button" onClick={() => set('strength_unit', u)}
-              className={`px-3 py-1 rounded-full text-[12px] border-[0.5px] transition-colors ${form.strength_unit === u ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-primary border-border text-text-secondary'}`}
-            >{u}</button>
-          ))}
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <Field label={`Isq. excéntrico — lado afectado (${form.strength_unit})`}>
-            <NumInput value={form.ham_eccentric_affected} onChange={v => set('ham_eccentric_affected', v)} />
-          </Field>
-          <Field label={`Isq. excéntrico — lado sano (${form.strength_unit})`}>
-            <NumInput value={form.ham_eccentric_unaffected} onChange={v => set('ham_eccentric_unaffected', v)} />
-          </Field>
-          <Field label={`Cuád. — lado afectado (${form.strength_unit})`}>
-            <NumInput value={form.quad_affected} onChange={v => set('quad_affected', v)} />
-          </Field>
-          <Field label={`Cuád. — lado sano (${form.strength_unit})`}>
-            <NumInput value={form.quad_unaffected} onChange={v => set('quad_unaffected', v)} />
-          </Field>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-3">
-          <LsiDisplay label="LSI Excéntrico" val={hamLsi} />
-          <LsiDisplay label="LSI Cuádriceps" val={lsi(n(form.quad_affected), n(form.quad_unaffected))} />
-          <div className="bg-bg-primary rounded-lg p-3 border-[0.5px] border-border text-center">
-            <div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-1">H/Q Ratio</div>
-            <div className={`text-[18px] font-medium ${hqRatio === null ? 'text-text-secondary' : hqRatio >= 0.6 ? 'text-[#4ade80]' : 'text-red-400'}`}>
-              {hqRatio !== null ? hqRatio.toFixed(2) : '—'}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Tests funcionales */}
-      <div>
-        <SectionTitle>Tests funcionales</SectionTitle>
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <Field label="Single hop — lado afectado (cm)">
-            <NumInput value={form.single_hop_affected} onChange={v => set('single_hop_affected', v)} />
-          </Field>
-          <Field label="Single hop — lado sano (cm)">
-            <NumInput value={form.single_hop_unaffected} onChange={v => set('single_hop_unaffected', v)} />
-          </Field>
-        </div>
-        {hopLsi !== null && <div className="mb-4"><LsiDisplay label="Single Hop LSI" val={hopLsi} /></div>}
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <Field label="Triple hop — afectado (cm)">
-            <NumInput value={form.triple_hop_affected} onChange={v => set('triple_hop_affected', v)} />
-          </Field>
-          <Field label="Triple hop — sano (cm)">
-            <NumInput value={form.triple_hop_unaffected} onChange={v => set('triple_hop_unaffected', v)} />
-          </Field>
-        </div>
-        {tripleHopLsi !== null && <div className="mb-4"><LsiDisplay label="Triple Hop LSI" val={tripleHopLsi} /></div>}
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <Field label="Crossover hop — afectado (cm)">
-            <NumInput value={form.crossover_hop_affected} onChange={v => set('crossover_hop_affected', v)} />
-          </Field>
-          <Field label="Crossover hop — sano (cm)">
-            <NumInput value={form.crossover_hop_unaffected} onChange={v => set('crossover_hop_unaffected', v)} />
-          </Field>
-        </div>
-        {crossoverHopLsi !== null && <div className="mb-4"><LsiDisplay label="Crossover Hop LSI" val={crossoverHopLsi} /></div>}
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <Field label="Nordic — reps lado afectado">
-            <NumInput value={form.nordic_reps_affected} onChange={v => set('nordic_reps_affected', v)} min="0" max="30" placeholder="ej: 8" />
-          </Field>
-          <Field label="Nordic — reps lado sano">
-            <NumInput value={form.nordic_reps_unaffected} onChange={v => set('nordic_reps_unaffected', v)} min="0" max="30" placeholder="ej: 10" />
-          </Field>
-        </div>
-        {nordicLsi !== null && <div className="mb-4"><LsiDisplay label="Nordic LSI" val={nordicLsi} /></div>}
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <Field label="Single Leg Hamstring Bridge — reps afectado">
-            <NumInput value={form.slhb_affected} onChange={v => set('slhb_affected', v)} min="0" placeholder="ej: 20" />
-          </Field>
-          <Field label="Single Leg Hamstring Bridge — reps sano">
-            <NumInput value={form.slhb_unaffected} onChange={v => set('slhb_unaffected', v)} min="0" placeholder="ej: 24" />
-          </Field>
-        </div>
-        {slhbLsi !== null && <div className="mb-4"><LsiDisplay label="SLHB LSI" val={slhbLsi} /></div>}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="¿H-test de Askling sin dolor?">
-            <YesNoInput value={form.h_test_pain_free} onChange={v => set('h_test_pain_free', v)} />
-          </Field>
-          <Field label="¿Sprint máximo sin dolor?">
-            <YesNoInput value={form.sprint_pain_free} onChange={v => set('sprint_pain_free', v)} />
-          </Field>
-          <Field label="¿Agilidad (T-test / figure-8) sin dolor?">
-            <YesNoInput value={form.agility_pain_free} onChange={v => set('agility_pain_free', v)} />
-          </Field>
-        </div>
-      </div>
-
-      {/* Notas */}
-      <div>
-        <GeneralQuestionnaires
-          latest={latestQuestionnaires}
-          includeLefs
-          values={{ lefs_score: form.lefs_score, tampa_score: form.tampa_score }}
-          set={(k, v) => set(k as keyof FormData, v)}
-        />
-      </div>
+      <ModularSections modules={modules} />
 
       <div>
         <SectionTitle>Observaciones</SectionTitle>
