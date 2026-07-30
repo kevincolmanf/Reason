@@ -846,9 +846,10 @@ function SessionExercisesInline({ session, portalToken, loadOverrides }: { sessi
     return init
   })
   const saveLoad = async (ex: SessionExercise, value: string) => {
-    if (!shareToken) return
+    // Con token del plan si lo hay; si no, con el token de paciente del portal.
+    const url = shareToken ? `/api/plan/${shareToken}/load` : `/api/paciente/${portalToken}/load`
     try {
-      await fetch(`/api/plan/${shareToken}/load`, {
+      await fetch(url, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id: session.id, exercise_id: ex.exercise_id, actual_load: value, scheduled_date: session.scheduled_date || null }),
       })
@@ -955,19 +956,15 @@ function SessionExercisesInline({ session, portalToken, loadOverrides }: { sessi
                       </div>
                       <div>
                         <div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-0.5">Carga</div>
-                        {shareToken ? (
-                          <input
-                            type="text"
-                            value={loads[ex.id] ?? ''}
-                            placeholder={load || '–'}
-                            onChange={e => setLoads(p => ({ ...p, [ex.id]: e.target.value }))}
-                            onBlur={e => saveLoad(ex, e.target.value)}
-                            title="Carga sugerida por tu kine. Podés escribir la que usaste."
-                            className={`w-full bg-transparent border-b-[0.5px] border-border focus:border-accent outline-none text-[13px] font-medium py-0.5 ${loads[ex.id] ? 'text-text-primary' : 'text-text-secondary placeholder:text-text-secondary/50'}`}
-                          />
-                        ) : (
-                          <div className="text-[13px] font-medium">{load || '–'}</div>
-                        )}
+                        <input
+                          type="text"
+                          value={loads[ex.id] ?? ''}
+                          placeholder={load || '–'}
+                          onChange={e => setLoads(p => ({ ...p, [ex.id]: e.target.value }))}
+                          onBlur={e => saveLoad(ex, e.target.value)}
+                          title="Carga sugerida por tu kine. Podés escribir la que usaste."
+                          className={`w-full bg-transparent border-b-[0.5px] border-border focus:border-accent outline-none text-[13px] font-medium py-0.5 ${loads[ex.id] ? 'text-text-primary' : 'text-text-secondary placeholder:text-text-secondary/50'}`}
+                        />
                       </div>
                       <div>
                         <div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-0.5">Descanso</div>
