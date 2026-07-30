@@ -5,6 +5,7 @@ import { createClient } from '@/utils/supabase/client'
 import { lsi, n, Criterion } from './shared'
 import { Field, NumInput, YesNoInput, SelectInput, LsiDisplay, SectionTitle, CriteriaResults } from './ProtocolUI'
 import { QuestionnaireAutofill, GeneralQuestionnaires, LatestQuestionnaires } from './QuestionnaireAutofill'
+import { ModularSections, RtsModule } from './ModularSections'
 
 interface Props {
   patient: { id: string; name: string; age: number | null }
@@ -43,6 +44,8 @@ export default function ShoulderProtocol({ patient, userId, initialData, evalId,
   const [savedId, setSavedId] = useState<string | null>(evalId ?? null)
   const supabase = useRef(createClient())
   const set = (k: keyof FormData, v: string) => setForm(p => ({ ...p, [k]: v }))
+  const clearFields = (keys: (keyof FormData)[]) => setForm(p => ({ ...p, ...Object.fromEntries(keys.map(k => [k, ''])) } as FormData))
+  const anyFilled = (keys: (keyof FormData)[]) => keys.some(k => form[k] !== '')
 
   const erLsi = lsi(n(form.er_strength_affected), n(form.er_strength_unaffected))
   const irLsi = lsi(n(form.ir_strength_affected), n(form.ir_strength_unaffected))
@@ -114,6 +117,163 @@ export default function ShoulderProtocol({ patient, userId, initialData, evalId,
     )
   }
 
+  const modules: RtsModule[] = [
+    {
+      id: 'rom', label: 'ROM rotación (a 90° abd.)', category: 'Movilidad',
+      hasData: anyFilled(['er_rom_affected', 'er_rom_unaffected', 'ir_rom_affected', 'ir_rom_unaffected']),
+      onClear: () => clearFields(['er_rom_affected', 'er_rom_unaffected', 'ir_rom_affected', 'ir_rom_unaffected']),
+      render: () => (
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <Field label="RE — afectado (°)"><NumInput value={form.er_rom_affected} onChange={v => set('er_rom_affected', v)} min="0" max="120" /></Field>
+            <Field label="RE — sano (°)"><NumInput value={form.er_rom_unaffected} onChange={v => set('er_rom_unaffected', v)} min="0" max="120" /></Field>
+            <Field label="RI — afectado (°)"><NumInput value={form.ir_rom_affected} onChange={v => set('ir_rom_affected', v)} min="0" max="90" /></Field>
+            <Field label="RI — sano (°)"><NumInput value={form.ir_rom_unaffected} onChange={v => set('ir_rom_unaffected', v)} min="0" max="90" /></Field>
+          </div>
+          {erRomDiff !== null && (
+            <div className="mt-3 bg-bg-primary rounded-lg p-3 border-[0.5px] border-border text-center inline-block min-w-[140px]">
+              <div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-1">Déficit RE</div>
+              <div className={`text-[18px] font-medium ${erRomDiff <= 5 ? 'text-[#4ade80]' : 'text-red-400'}`}>{erRomDiff.toFixed(0)}°</div>
+            </div>
+          )}
+        </>
+      ),
+    },
+    {
+      id: 'strength', label: 'Fuerza rotadores', category: 'Fuerza',
+      hasData: anyFilled(['er_strength_affected', 'er_strength_unaffected', 'ir_strength_affected', 'ir_strength_unaffected']),
+      onClear: () => clearFields(['er_strength_affected', 'er_strength_unaffected', 'ir_strength_affected', 'ir_strength_unaffected']),
+      render: () => (
+        <>
+          <div className="flex gap-2 mb-4">
+            {(['kg', 'N'] as const).map(u => (
+              <button key={u} type="button" onClick={() => set('strength_unit', u)}
+                className={`px-3 py-1 rounded-full text-[12px] border-[0.5px] transition-colors ${form.strength_unit === u ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-primary border-border text-text-secondary'}`}>{u}</button>
+            ))}
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <Field label={`RE afectado (${form.strength_unit})`}><NumInput value={form.er_strength_affected} onChange={v => set('er_strength_affected', v)} /></Field>
+            <Field label={`RE sano (${form.strength_unit})`}><NumInput value={form.er_strength_unaffected} onChange={v => set('er_strength_unaffected', v)} /></Field>
+            <Field label={`RI afectado (${form.strength_unit})`}><NumInput value={form.ir_strength_affected} onChange={v => set('ir_strength_affected', v)} /></Field>
+            <Field label={`RI sano (${form.strength_unit})`}><NumInput value={form.ir_strength_unaffected} onChange={v => set('ir_strength_unaffected', v)} /></Field>
+          </div>
+          <div className="grid grid-cols-3 gap-3 mt-3">
+            <LsiDisplay label="ER Fuerza LSI" val={erLsi} />
+            <LsiDisplay label="IR Fuerza LSI" val={irLsi} />
+            <div className="bg-bg-primary rounded-lg p-3 border-[0.5px] border-border text-center">
+              <div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-1">ER/IR Ratio</div>
+              <div className={`text-[18px] font-medium ${erIrRatio === null ? 'text-text-secondary' : erIrRatio >= 0.75 ? 'text-[#4ade80]' : 'text-red-400'}`}>{erIrRatio !== null ? erIrRatio.toFixed(2) : '—'}</div>
+            </div>
+          </div>
+        </>
+      ),
+    },
+    {
+      id: 'uybal', label: 'UE Y-Balance', category: 'Tests funcionales',
+      hasData: anyFilled(['ue_ybal_affected', 'ue_ybal_unaffected']),
+      onClear: () => clearFields(['ue_ybal_affected', 'ue_ybal_unaffected']),
+      render: () => (
+        <>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Afectado (cm)"><NumInput value={form.ue_ybal_affected} onChange={v => set('ue_ybal_affected', v)} /></Field>
+            <Field label="Sano (cm)"><NumInput value={form.ue_ybal_unaffected} onChange={v => set('ue_ybal_unaffected', v)} /></Field>
+          </div>
+          {ybalLsi !== null && <div className="mt-3"><LsiDisplay label="UE Y-Balance LSI" val={ybalLsi} /></div>}
+        </>
+      ),
+    },
+    {
+      id: 'ckcuest', label: 'CKCUEST', category: 'Tests funcionales',
+      hasData: anyFilled(['ckcuest_touches']),
+      onClear: () => clearFields(['ckcuest_touches']),
+      render: () => (
+        <Field label="Promedio de toques (3 intentos, 15 s)"><NumInput value={form.ckcuest_touches} onChange={v => set('ckcuest_touches', v)} min="0" placeholder="ej: 21" /></Field>
+      ),
+    },
+    {
+      id: 'shotput', label: 'Seated shot-put', category: 'Tests funcionales',
+      hasData: anyFilled(['shotput_affected', 'shotput_unaffected']),
+      onClear: () => clearFields(['shotput_affected', 'shotput_unaffected']),
+      render: () => (
+        <>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Afectado (cm)"><NumInput value={form.shotput_affected} onChange={v => set('shotput_affected', v)} /></Field>
+            <Field label="Sano (cm)"><NumInput value={form.shotput_unaffected} onChange={v => set('shotput_unaffected', v)} /></Field>
+          </div>
+          {shotputLsi !== null && <div className="mt-3"><LsiDisplay label="Seated shot-put LSI" val={shotputLsi} /></div>}
+        </>
+      ),
+    },
+    {
+      id: 'clinical', label: 'Tests clínicos de hombro', category: 'Tests funcionales',
+      hasData: anyFilled(['apprehension_negative', 'empty_can_negative', 'belly_press_negative', 'sport_specific_ok']),
+      onClear: () => clearFields(['apprehension_negative', 'empty_can_negative', 'belly_press_negative', 'sport_specific_ok']),
+      render: () => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label="Test de aprensión — ¿negativo?"><YesNoInput value={form.apprehension_negative} onChange={v => set('apprehension_negative', v)} /></Field>
+          <Field label="Empty Can (Jobe) — ¿negativo?"><YesNoInput value={form.empty_can_negative} onChange={v => set('empty_can_negative', v)} /></Field>
+          <Field label="Belly Press / IR lag sign — ¿negativo?"><YesNoInput value={form.belly_press_negative} onChange={v => set('belly_press_negative', v)} /></Field>
+          <Field label="¿Gesto deportivo específico sin dolor/aprensión?"><YesNoInput value={form.sport_specific_ok} onChange={v => set('sport_specific_ok', v)} /></Field>
+        </div>
+      ),
+    },
+    {
+      id: 'quest', label: 'Cuestionarios (WOSI / ROWE / DASH / SPADI)', category: 'Cuestionarios',
+      hasData: anyFilled(['wosi_score', 'rowe_score', 'dash_score', 'spadi_score']),
+      onClear: () => clearFields(['wosi_score', 'rowe_score', 'dash_score', 'spadi_score']),
+      render: () => (
+        <>
+          {latestQuestionnaires && (
+            <QuestionnaireAutofill
+              available={latestQuestionnaires}
+              specs={[
+                { type: 'wosi', label: 'WOSI', formKey: 'wosi_score' },
+                { type: 'spadi', label: 'SPADI', formKey: 'spadi_score' },
+                { type: 'dash', label: 'DASH', formKey: 'dash_score' },
+              ]}
+              onApply={(k, v) => set(k as keyof FormData, v)}
+            />
+          )}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Field label="WOSI (0–100%, inestabilidad)">
+              <NumInput value={form.wosi_score} onChange={v => set('wosi_score', v)} min="0" max="100" placeholder="ej: 80" />
+            </Field>
+            <Field label="ROWE (0–100, inestabilidad)">
+              <NumInput value={form.rowe_score} onChange={v => set('rowe_score', v)} min="0" max="100" placeholder="ej: 85" />
+            </Field>
+            <Field label="DASH (0–100, manguito)">
+              <NumInput value={form.dash_score} onChange={v => set('dash_score', v)} min="0" max="100" placeholder="ej: 15" />
+            </Field>
+            <div>
+              <Field label="SPADI (0–100, dolor y discapacidad)">
+                <NumInput value={form.spadi_score} onChange={v => set('spadi_score', v)} min="0" max="100" placeholder="ej: 25" />
+              </Field>
+              {n(form.spadi_score) !== null && (
+                <div className={`mt-1 text-[12px] font-medium ${n(form.spadi_score)! <= 20 ? 'text-[#4ade80]' : n(form.spadi_score)! <= 40 ? 'text-[#fb923c]' : 'text-red-400'}`}>
+                  {n(form.spadi_score)! <= 20 ? 'Leve' : n(form.spadi_score)! <= 40 ? 'Moderado' : n(form.spadi_score)! <= 60 ? 'Moderado-severo' : 'Severo'}
+                </div>
+              )}
+            </div>
+          </div>
+          <p className="text-[12px] text-text-secondary mt-2">WOSI ≥75% · ROWE ≥75/100 · DASH ≤20/100 · SPADI referencia (menor = mejor).</p>
+        </>
+      ),
+    },
+    {
+      id: 'tampa', label: 'Kinesiofobia (Tampa)', category: 'Cuestionarios',
+      hasData: anyFilled(['tampa_score']),
+      onClear: () => clearFields(['tampa_score']),
+      render: () => (
+        <GeneralQuestionnaires
+          latest={latestQuestionnaires}
+          includeLefs={false}
+          values={{ lefs_score: '', tampa_score: form.tampa_score }}
+          set={(k, v) => set(k as keyof FormData, v)}
+        />
+      ),
+    },
+  ]
+
   return (
     <div className="space-y-8">
       <div>
@@ -140,120 +300,7 @@ export default function ShoulderProtocol({ patient, userId, initialData, evalId,
         </div>
       </div>
 
-      <div>
-        <SectionTitle>ROM (grados, a 90° abducción)</SectionTitle>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <Field label="RE — lado afectado (°)"><NumInput value={form.er_rom_affected} onChange={v => set('er_rom_affected', v)} min="0" max="120" /></Field>
-          <Field label="RE — lado sano (°)"><NumInput value={form.er_rom_unaffected} onChange={v => set('er_rom_unaffected', v)} min="0" max="120" /></Field>
-          <Field label="RI — lado afectado (°)"><NumInput value={form.ir_rom_affected} onChange={v => set('ir_rom_affected', v)} min="0" max="90" /></Field>
-          <Field label="RI — lado sano (°)"><NumInput value={form.ir_rom_unaffected} onChange={v => set('ir_rom_unaffected', v)} min="0" max="90" /></Field>
-        </div>
-        {erRomDiff !== null && (
-          <div className="mt-3 bg-bg-primary rounded-lg p-3 border-[0.5px] border-border text-center inline-block min-w-[140px]">
-            <div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-1">Déficit RE</div>
-            <div className={`text-[18px] font-medium ${erRomDiff <= 5 ? 'text-[#4ade80]' : 'text-red-400'}`}>{erRomDiff.toFixed(0)}°</div>
-          </div>
-        )}
-      </div>
-
-      <div>
-        <SectionTitle>Fuerza rotadores</SectionTitle>
-        <div className="flex gap-2 mb-4">
-          {(['kg', 'N'] as const).map(u => (
-            <button key={u} type="button" onClick={() => set('strength_unit', u)}
-              className={`px-3 py-1 rounded-full text-[12px] border-[0.5px] transition-colors ${form.strength_unit === u ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-primary border-border text-text-secondary'}`}>{u}</button>
-          ))}
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <Field label={`RE afectado (${form.strength_unit})`}><NumInput value={form.er_strength_affected} onChange={v => set('er_strength_affected', v)} /></Field>
-          <Field label={`RE sano (${form.strength_unit})`}><NumInput value={form.er_strength_unaffected} onChange={v => set('er_strength_unaffected', v)} /></Field>
-          <Field label={`RI afectado (${form.strength_unit})`}><NumInput value={form.ir_strength_affected} onChange={v => set('ir_strength_affected', v)} /></Field>
-          <Field label={`RI sano (${form.strength_unit})`}><NumInput value={form.ir_strength_unaffected} onChange={v => set('ir_strength_unaffected', v)} /></Field>
-        </div>
-        <div className="grid grid-cols-3 gap-3 mt-3">
-          <LsiDisplay label="ER Fuerza LSI" val={erLsi} />
-          <LsiDisplay label="IR Fuerza LSI" val={irLsi} />
-          <div className="bg-bg-primary rounded-lg p-3 border-[0.5px] border-border text-center">
-            <div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-1">ER/IR Ratio</div>
-            <div className={`text-[18px] font-medium ${erIrRatio === null ? 'text-text-secondary' : erIrRatio >= 0.75 ? 'text-[#4ade80]' : 'text-red-400'}`}>{erIrRatio !== null ? erIrRatio.toFixed(2) : '—'}</div>
-          </div>
-        </div>
-      </div>
-
-      <div>
-        <SectionTitle>Tests funcionales</SectionTitle>
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <Field label="UE Y-Balance — afectado (cm)"><NumInput value={form.ue_ybal_affected} onChange={v => set('ue_ybal_affected', v)} /></Field>
-          <Field label="UE Y-Balance — sano (cm)"><NumInput value={form.ue_ybal_unaffected} onChange={v => set('ue_ybal_unaffected', v)} /></Field>
-        </div>
-        {ybalLsi !== null && <div className="mb-4"><LsiDisplay label="UE Y-Balance LSI" val={ybalLsi} /></div>}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-          <Field label="CKCUEST — promedio de toques (3 intentos, 15 s)"><NumInput value={form.ckcuest_touches} onChange={v => set('ckcuest_touches', v)} min="0" placeholder="ej: 21" /></Field>
-        </div>
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <Field label="Seated shot-put — afectado (cm)"><NumInput value={form.shotput_affected} onChange={v => set('shotput_affected', v)} /></Field>
-          <Field label="Seated shot-put — sano (cm)"><NumInput value={form.shotput_unaffected} onChange={v => set('shotput_unaffected', v)} /></Field>
-        </div>
-        {shotputLsi !== null && <div className="mb-4"><LsiDisplay label="Seated shot-put LSI" val={shotputLsi} /></div>}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Test de aprensión — ¿negativo?"><YesNoInput value={form.apprehension_negative} onChange={v => set('apprehension_negative', v)} /></Field>
-          <Field label="Empty Can (Jobe) — ¿negativo?"><YesNoInput value={form.empty_can_negative} onChange={v => set('empty_can_negative', v)} /></Field>
-          <Field label="Belly Press / IR lag sign — ¿negativo?"><YesNoInput value={form.belly_press_negative} onChange={v => set('belly_press_negative', v)} /></Field>
-          <Field label="¿Gesto deportivo específico sin dolor/aprensión?"><YesNoInput value={form.sport_specific_ok} onChange={v => set('sport_specific_ok', v)} /></Field>
-        </div>
-      </div>
-
-      <div>
-        <SectionTitle>Cuestionarios</SectionTitle>
-        {latestQuestionnaires && (
-          <QuestionnaireAutofill
-            available={latestQuestionnaires}
-            specs={[
-              { type: 'wosi', label: 'WOSI', formKey: 'wosi_score' },
-              { type: 'spadi', label: 'SPADI', formKey: 'spadi_score' },
-              { type: 'dash', label: 'DASH', formKey: 'dash_score' },
-            ]}
-            onApply={(k, v) => set(k as keyof FormData, v)}
-          />
-        )}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {(isInstability || !form.diagnosis_type) && (
-            <>
-              <Field label="WOSI (0–100%, inestabilidad)">
-                <NumInput value={form.wosi_score} onChange={v => set('wosi_score', v)} min="0" max="100" placeholder="ej: 80" />
-              </Field>
-              <Field label="ROWE (0–100, inestabilidad)">
-                <NumInput value={form.rowe_score} onChange={v => set('rowe_score', v)} min="0" max="100" placeholder="ej: 85" />
-              </Field>
-            </>
-          )}
-          {(isRotatorCuff || !form.diagnosis_type) && (
-            <Field label="DASH (0–100, manguito)">
-              <NumInput value={form.dash_score} onChange={v => set('dash_score', v)} min="0" max="100" placeholder="ej: 15" />
-            </Field>
-          )}
-          <div>
-            <Field label="SPADI (0–100, dolor y discapacidad)">
-              <NumInput value={form.spadi_score} onChange={v => set('spadi_score', v)} min="0" max="100" placeholder="ej: 25" />
-            </Field>
-            {n(form.spadi_score) !== null && (
-              <div className={`mt-1 text-[12px] font-medium ${n(form.spadi_score)! <= 20 ? 'text-[#4ade80]' : n(form.spadi_score)! <= 40 ? 'text-[#fb923c]' : 'text-red-400'}`}>
-                {n(form.spadi_score)! <= 20 ? 'Leve' : n(form.spadi_score)! <= 40 ? 'Moderado' : n(form.spadi_score)! <= 60 ? 'Moderado-severo' : 'Severo'}
-              </div>
-            )}
-          </div>
-        </div>
-        <p className="text-[12px] text-text-secondary mt-2">WOSI ≥75% · ROWE ≥75/100 · DASH ≤20/100 · SPADI referencia (menor = mejor).</p>
-      </div>
-
-      <div>
-        <GeneralQuestionnaires
-          latest={latestQuestionnaires}
-          includeLefs={false}
-          values={{ lefs_score: '', tampa_score: form.tampa_score }}
-          set={(k, v) => set(k as keyof FormData, v)}
-        />
-      </div>
+      <ModularSections modules={modules} />
 
       <div>
         <SectionTitle>Observaciones</SectionTitle>
