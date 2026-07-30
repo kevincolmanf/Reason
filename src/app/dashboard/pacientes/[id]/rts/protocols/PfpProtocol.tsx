@@ -5,6 +5,7 @@ import { createClient } from '@/utils/supabase/client'
 import { lsi, n, Criterion } from './shared'
 import { Field, NumInput, YesNoInput, SelectInput, LsiDisplay, SectionTitle, CriteriaResults } from './ProtocolUI'
 import { GeneralQuestionnaires, QuestionnaireAutofill, LatestQuestionnaires } from './QuestionnaireAutofill'
+import { ModularSections, RtsModule } from './ModularSections'
 
 interface Props {
   patient: { id: string; name: string; age: number | null }
@@ -40,6 +41,8 @@ export default function PfpProtocol({ patient, userId, initialData, evalId, onSa
   const [savedId, setSavedId] = useState<string | null>(evalId ?? null)
   const supabase = useRef(createClient())
   const set = (k: keyof FormData, v: string) => setForm(p => ({ ...p, [k]: v }))
+  const clearFields = (keys: (keyof FormData)[]) => setForm(p => ({ ...p, ...Object.fromEntries(keys.map(k => [k, ''])) } as FormData))
+  const anyFilled = (keys: (keyof FormData)[]) => keys.some(k => form[k] !== '')
 
   const quadLsi         = lsi(n(form.quad_affected), n(form.quad_unaffected))
   const hopLsi          = lsi(n(form.single_hop_affected), n(form.single_hop_unaffected))
@@ -110,6 +113,145 @@ export default function PfpProtocol({ patient, userId, initialData, evalId, onSa
     )
   }
 
+  const modules: RtsModule[] = [
+    {
+      id: 'funcional', label: 'Evaluación funcional (step-down / squat)', category: 'Tests funcionales',
+      hasData: anyFilled(['step_down_quality', 'step_down_pain', 'squat_full_depth', 'squat_pain', 'lateral_step_down_reps_affected', 'lateral_step_down_reps_unaffected']),
+      onClear: () => clearFields(['step_down_quality', 'step_down_pain', 'squat_full_depth', 'squat_pain', 'lateral_step_down_reps_affected', 'lateral_step_down_reps_unaffected']),
+      render: () => (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="Step-down — calidad">
+              <SelectInput value={form.step_down_quality} onChange={v => set('step_down_quality', v)} options={[
+                { value: 'good', label: 'Buena (sin compensación)' },
+                { value: 'compensated', label: 'Compensada' },
+                { value: 'poor', label: 'Deficiente' },
+              ]} />
+            </Field>
+            <Field label="¿Dolor durante step-down?"><YesNoInput value={form.step_down_pain} onChange={v => set('step_down_pain', v)} /></Field>
+            <Field label="¿Squat profundo completo?"><YesNoInput value={form.squat_full_depth} onChange={v => set('squat_full_depth', v)} /></Field>
+            <Field label="¿Dolor durante squat?"><YesNoInput value={form.squat_pain} onChange={v => set('squat_pain', v)} /></Field>
+            <Field label="Lateral step-down — reps afectado"><NumInput value={form.lateral_step_down_reps_affected} onChange={v => set('lateral_step_down_reps_affected', v)} min="0" max="30" placeholder="ej: 15" /></Field>
+            <Field label="Lateral step-down — reps sano"><NumInput value={form.lateral_step_down_reps_unaffected} onChange={v => set('lateral_step_down_reps_unaffected', v)} min="0" max="30" placeholder="ej: 20" /></Field>
+          </div>
+          {lateralStepLsi !== null && <div className="mt-3"><LsiDisplay label="Lateral Step-Down LSI" val={lateralStepLsi} /></div>}
+        </>
+      ),
+    },
+    {
+      id: 'slsquat', label: 'Single Leg Squat', category: 'Tests funcionales',
+      hasData: anyFilled(['slsquat_reps_affected', 'slsquat_reps_unaffected', 'slsquat_quality']),
+      onClear: () => clearFields(['slsquat_reps_affected', 'slsquat_reps_unaffected', 'slsquat_quality']),
+      render: () => (
+        <>
+          <p className="text-[12px] text-text-secondary mb-3">Máximas repeticiones a profundidad controlada en cada pierna, observando control de valgus, pelvis y tronco.</p>
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <Field label="Reps lado afectado"><NumInput value={form.slsquat_reps_affected} onChange={v => set('slsquat_reps_affected', v)} min="0" max="50" placeholder="ej: 5" /></Field>
+            <Field label="Reps lado sano"><NumInput value={form.slsquat_reps_unaffected} onChange={v => set('slsquat_reps_unaffected', v)} min="0" max="50" placeholder="ej: 8" /></Field>
+          </div>
+          {slSquatLsi !== null && <div className="mb-4"><LsiDisplay label="Single Leg Squat LSI" val={slSquatLsi} /></div>}
+          <div className="space-y-2">
+            {[
+              { val: 'good', label: 'Buena', desc: 'Rodilla sobre el pie, tronco erguido, pelvis estable' },
+              { val: 'acceptable', label: 'Aceptable', desc: 'Leve valgo o inclinación de tronco compensables' },
+              { val: 'poor', label: 'Deficiente', desc: 'Valgo marcado, caída pélvica o inclinación excesiva de tronco' },
+            ].map(opt => (
+              <button key={opt.val} type="button" onClick={() => set('slsquat_quality', opt.val)}
+                className={`w-full text-left px-4 py-2.5 rounded-lg border-[0.5px] text-[13px] transition-colors ${
+                  form.slsquat_quality === opt.val
+                    ? opt.val === 'good' ? 'bg-[#4ade8020] border-[#4ade80]' : opt.val === 'acceptable' ? 'bg-[#fb923c20] border-[#fb923c]' : 'bg-[#f8717120] border-[#f87171]'
+                    : 'bg-bg-primary border-border hover:border-border-strong'
+                }`}>
+                <span className="font-medium mr-2">{opt.label}</span>
+                <span className="text-text-secondary">{opt.desc}</span>
+              </button>
+            ))}
+          </div>
+        </>
+      ),
+    },
+    {
+      id: 'quad', label: 'Fuerza cuádriceps', category: 'Fuerza',
+      hasData: anyFilled(['quad_affected', 'quad_unaffected']),
+      onClear: () => clearFields(['quad_affected', 'quad_unaffected']),
+      render: () => (
+        <>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Afectado (kg o N)"><NumInput value={form.quad_affected} onChange={v => set('quad_affected', v)} /></Field>
+            <Field label="Sano (kg o N)"><NumInput value={form.quad_unaffected} onChange={v => set('quad_unaffected', v)} /></Field>
+          </div>
+          {quadLsi !== null && <div className="mt-3"><LsiDisplay label="LSI Cuádriceps" val={quadLsi} /></div>}
+        </>
+      ),
+    },
+    {
+      id: 'singlehop', label: 'Single hop', category: 'Tests funcionales',
+      hasData: anyFilled(['single_hop_affected', 'single_hop_unaffected']),
+      onClear: () => clearFields(['single_hop_affected', 'single_hop_unaffected']),
+      render: () => (
+        <>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Afectado (cm)"><NumInput value={form.single_hop_affected} onChange={v => set('single_hop_affected', v)} /></Field>
+            <Field label="Sano (cm)"><NumInput value={form.single_hop_unaffected} onChange={v => set('single_hop_unaffected', v)} /></Field>
+          </div>
+          {hopLsi !== null && <div className="mt-3"><LsiDisplay label="Single Hop LSI" val={hopLsi} /></div>}
+        </>
+      ),
+    },
+    {
+      id: 'triplehop', label: 'Triple hop', category: 'Tests funcionales',
+      hasData: anyFilled(['triple_hop_affected', 'triple_hop_unaffected']),
+      onClear: () => clearFields(['triple_hop_affected', 'triple_hop_unaffected']),
+      render: () => (
+        <>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Afectado (cm)"><NumInput value={form.triple_hop_affected} onChange={v => set('triple_hop_affected', v)} /></Field>
+            <Field label="Sano (cm)"><NumInput value={form.triple_hop_unaffected} onChange={v => set('triple_hop_unaffected', v)} /></Field>
+          </div>
+          {tripleHopLsi !== null && <div className="mt-3"><LsiDisplay label="Triple Hop LSI" val={tripleHopLsi} /></div>}
+        </>
+      ),
+    },
+    {
+      id: 'crossoverhop', label: 'Crossover hop', category: 'Tests funcionales',
+      hasData: anyFilled(['crossover_hop_affected', 'crossover_hop_unaffected']),
+      onClear: () => clearFields(['crossover_hop_affected', 'crossover_hop_unaffected']),
+      render: () => (
+        <>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Afectado (cm)"><NumInput value={form.crossover_hop_affected} onChange={v => set('crossover_hop_affected', v)} /></Field>
+            <Field label="Sano (cm)"><NumInput value={form.crossover_hop_unaffected} onChange={v => set('crossover_hop_unaffected', v)} /></Field>
+          </div>
+          {crossoverHopLsi !== null && <div className="mt-3"><LsiDisplay label="Crossover Hop LSI" val={crossoverHopLsi} /></div>}
+        </>
+      ),
+    },
+    {
+      id: 'akps', label: 'AKPS (Anterior Knee Pain Scale)', category: 'Cuestionarios',
+      hasData: anyFilled(['akps_score']),
+      onClear: () => clearFields(['akps_score']),
+      render: () => (
+        <>
+          {latestQuestionnaires && (
+            <QuestionnaireAutofill available={latestQuestionnaires} specs={[{ type: 'akps', label: 'AKPS', formKey: 'akps_score' }]} onApply={(k, v) => set(k as keyof FormData, v)} />
+          )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="Puntaje AKPS (0–100)"><NumInput value={form.akps_score} onChange={v => set('akps_score', v)} min="0" max="100" placeholder="ej: 92" /></Field>
+          </div>
+          <p className="text-[12px] text-text-secondary mt-2">Umbral de retorno al deporte: ≥90/100.</p>
+        </>
+      ),
+    },
+    {
+      id: 'general', label: 'Cuestionarios (LEFS / Tampa)', category: 'Cuestionarios',
+      hasData: anyFilled(['lefs_score', 'tampa_score']),
+      onClear: () => clearFields(['lefs_score', 'tampa_score']),
+      render: () => (
+        <GeneralQuestionnaires latest={latestQuestionnaires} includeLefs values={{ lefs_score: form.lefs_score, tampa_score: form.tampa_score }} set={(k, v) => set(k as keyof FormData, v)} />
+      ),
+    },
+  ]
+
   return (
     <div className="space-y-8">
       <div>
@@ -134,123 +276,7 @@ export default function PfpProtocol({ patient, userId, initialData, evalId, onSa
         </div>
       </div>
 
-      <div>
-        <SectionTitle>Evaluación funcional</SectionTitle>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Step-down — calidad">
-            <SelectInput value={form.step_down_quality} onChange={v => set('step_down_quality', v)} options={[
-              { value: 'good', label: 'Buena (sin compensación)' },
-              { value: 'compensated', label: 'Compensada' },
-              { value: 'poor', label: 'Deficiente' },
-            ]} />
-          </Field>
-          <Field label="¿Dolor durante step-down?">
-            <YesNoInput value={form.step_down_pain} onChange={v => set('step_down_pain', v)} />
-          </Field>
-          <Field label="¿Squat profundo completo?">
-            <YesNoInput value={form.squat_full_depth} onChange={v => set('squat_full_depth', v)} />
-          </Field>
-          <Field label="¿Dolor durante squat?">
-            <YesNoInput value={form.squat_pain} onChange={v => set('squat_pain', v)} />
-          </Field>
-          <Field label="Lateral step-down — reps afectado">
-            <NumInput value={form.lateral_step_down_reps_affected} onChange={v => set('lateral_step_down_reps_affected', v)} min="0" max="30" placeholder="ej: 15" />
-          </Field>
-          <Field label="Lateral step-down — reps sano">
-            <NumInput value={form.lateral_step_down_reps_unaffected} onChange={v => set('lateral_step_down_reps_unaffected', v)} min="0" max="30" placeholder="ej: 20" />
-          </Field>
-        </div>
-        {lateralStepLsi !== null && <div className="mt-3"><LsiDisplay label="Lateral Step-Down LSI" val={lateralStepLsi} /></div>}
-      </div>
-
-      <div>
-        <SectionTitle>Single Leg Squat — Calidad (lado afectado)</SectionTitle>
-        <p className="text-[12px] text-text-secondary mb-3">Máximas repeticiones a profundidad controlada en cada pierna, observando control de valgus, pelvis y tronco.</p>
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <Field label="Reps lado afectado"><NumInput value={form.slsquat_reps_affected} onChange={v => set('slsquat_reps_affected', v)} min="0" max="50" placeholder="ej: 5" /></Field>
-          <Field label="Reps lado sano"><NumInput value={form.slsquat_reps_unaffected} onChange={v => set('slsquat_reps_unaffected', v)} min="0" max="50" placeholder="ej: 8" /></Field>
-        </div>
-        {slSquatLsi !== null && <div className="mb-4"><LsiDisplay label="Single Leg Squat LSI" val={slSquatLsi} /></div>}
-        <div className="space-y-2">
-          {[
-            { val: 'good',       label: 'Buena',       desc: 'Rodilla sobre el pie, tronco erguido, pelvis estable' },
-            { val: 'acceptable', label: 'Aceptable',   desc: 'Leve valgo o inclinación de tronco compensables' },
-            { val: 'poor',       label: 'Deficiente',  desc: 'Valgo marcado, caída pélvica o inclinación excesiva de tronco' },
-          ].map(opt => (
-            <button key={opt.val} type="button" onClick={() => set('slsquat_quality', opt.val)}
-              className={`w-full text-left px-4 py-2.5 rounded-lg border-[0.5px] text-[13px] transition-colors ${
-                form.slsquat_quality === opt.val
-                  ? opt.val === 'good' ? 'bg-[#4ade8020] border-[#4ade80]' : opt.val === 'acceptable' ? 'bg-[#fb923c20] border-[#fb923c]' : 'bg-[#f8717120] border-[#f87171]'
-                  : 'bg-bg-primary border-border hover:border-border-strong'
-              }`}>
-              <span className="font-medium mr-2">{opt.label}</span>
-              <span className="text-text-secondary">{opt.desc}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <SectionTitle>Fuerza cuádriceps (kg o N)</SectionTitle>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Lado afectado"><NumInput value={form.quad_affected} onChange={v => set('quad_affected', v)} /></Field>
-          <Field label="Lado sano"><NumInput value={form.quad_unaffected} onChange={v => set('quad_unaffected', v)} /></Field>
-        </div>
-        {quadLsi !== null && <div className="mt-3"><LsiDisplay label="LSI Cuádriceps" val={quadLsi} /></div>}
-      </div>
-
-      <div>
-        <SectionTitle>Single hop (cm)</SectionTitle>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Lado afectado"><NumInput value={form.single_hop_affected} onChange={v => set('single_hop_affected', v)} /></Field>
-          <Field label="Lado sano"><NumInput value={form.single_hop_unaffected} onChange={v => set('single_hop_unaffected', v)} /></Field>
-        </div>
-        {hopLsi !== null && <div className="mt-3"><LsiDisplay label="Single Hop LSI" val={hopLsi} /></div>}
-      </div>
-
-      <div>
-        <SectionTitle>Triple hop (cm)</SectionTitle>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Lado afectado"><NumInput value={form.triple_hop_affected} onChange={v => set('triple_hop_affected', v)} /></Field>
-          <Field label="Lado sano"><NumInput value={form.triple_hop_unaffected} onChange={v => set('triple_hop_unaffected', v)} /></Field>
-        </div>
-        {tripleHopLsi !== null && <div className="mt-3"><LsiDisplay label="Triple Hop LSI" val={tripleHopLsi} /></div>}
-      </div>
-
-      <div>
-        <SectionTitle>Crossover hop (cm)</SectionTitle>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Lado afectado"><NumInput value={form.crossover_hop_affected} onChange={v => set('crossover_hop_affected', v)} /></Field>
-          <Field label="Lado sano"><NumInput value={form.crossover_hop_unaffected} onChange={v => set('crossover_hop_unaffected', v)} /></Field>
-        </div>
-        {crossoverHopLsi !== null && <div className="mt-3"><LsiDisplay label="Crossover Hop LSI" val={crossoverHopLsi} /></div>}
-      </div>
-
-      <div>
-        <SectionTitle>Cuestionario — AKPS (Anterior Knee Pain Scale)</SectionTitle>
-        {latestQuestionnaires && (
-          <QuestionnaireAutofill
-            available={latestQuestionnaires}
-            specs={[{ type: 'akps', label: 'AKPS', formKey: 'akps_score' }]}
-            onApply={(k, v) => set(k as keyof FormData, v)}
-          />
-        )}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Puntaje AKPS (0–100)">
-            <NumInput value={form.akps_score} onChange={v => set('akps_score', v)} min="0" max="100" placeholder="ej: 92" />
-          </Field>
-        </div>
-        <p className="text-[12px] text-text-secondary mt-2">Umbral de retorno al deporte: ≥90/100.</p>
-      </div>
-
-      <div>
-        <GeneralQuestionnaires
-          latest={latestQuestionnaires}
-          includeLefs
-          values={{ lefs_score: form.lefs_score, tampa_score: form.tampa_score }}
-          set={(k, v) => set(k as keyof FormData, v)}
-        />
-      </div>
+      <ModularSections modules={modules} />
 
       <div>
         <SectionTitle>Observaciones</SectionTitle>

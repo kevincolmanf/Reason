@@ -5,6 +5,7 @@ import { createClient } from '@/utils/supabase/client'
 import { lsi, n, Criterion } from './shared'
 import { Field, NumInput, YesNoInput, SelectInput, LsiDisplay, SectionTitle, CriteriaResults } from './ProtocolUI'
 import { GeneralQuestionnaires, QuestionnaireAutofill, LatestQuestionnaires } from './QuestionnaireAutofill'
+import { ModularSections, RtsModule } from './ModularSections'
 
 interface Props {
   patient: { id: string; name: string; age: number | null }
@@ -36,6 +37,8 @@ export default function GroinProtocol({ patient, userId, initialData, evalId, on
   const [savedId, setSavedId] = useState<string | null>(evalId ?? null)
   const supabase = useRef(createClient())
   const set = (k: keyof FormData, v: string) => setForm(p => ({ ...p, [k]: v }))
+  const clearFields = (keys: (keyof FormData)[]) => setForm(p => ({ ...p, ...Object.fromEntries(keys.map(k => [k, ''])) } as FormData))
+  const anyFilled = (keys: (keyof FormData)[]) => keys.some(k => form[k] !== '')
 
   const squeezeLsi = lsi(n(form.squeeze_affected), n(form.squeeze_unaffected))
   const longLeverLsi = lsi(n(form.long_lever_affected), n(form.long_lever_unaffected))
@@ -93,6 +96,106 @@ export default function GroinProtocol({ patient, userId, initialData, evalId, on
     )
   }
 
+  const modules: RtsModule[] = [
+    {
+      id: 'squeeze', label: 'Squeeze test isométrico', category: 'Fuerza',
+      hasData: anyFilled(['squeeze_affected', 'squeeze_unaffected']),
+      onClear: () => clearFields(['squeeze_affected', 'squeeze_unaffected']),
+      render: () => (
+        <>
+          <p className="text-[12px] text-text-secondary mb-3">Squeeze test a 0°, 45° o 90°. Registrar el valor máximo obtenido bilateralmente.</p>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Afectado (kg o N)"><NumInput value={form.squeeze_affected} onChange={v => set('squeeze_affected', v)} /></Field>
+            <Field label="Sano (kg o N)"><NumInput value={form.squeeze_unaffected} onChange={v => set('squeeze_unaffected', v)} /></Field>
+          </div>
+          {squeezeLsi !== null && <div className="mt-3"><LsiDisplay label="Squeeze LSI" val={squeezeLsi} /></div>}
+        </>
+      ),
+    },
+    {
+      id: 'longlever', label: 'Long-lever squeeze (Copenhagen)', category: 'Fuerza',
+      hasData: anyFilled(['long_lever_affected', 'long_lever_unaffected']),
+      onClear: () => clearFields(['long_lever_affected', 'long_lever_unaffected']),
+      render: () => (
+        <>
+          <p className="text-[12px] text-text-secondary mb-3">Squeeze con palanca larga (tobillos), variante más sensible del test de aductores.</p>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Afectado (kg o N)"><NumInput value={form.long_lever_affected} onChange={v => set('long_lever_affected', v)} /></Field>
+            <Field label="Sano (kg o N)"><NumInput value={form.long_lever_unaffected} onChange={v => set('long_lever_unaffected', v)} /></Field>
+          </div>
+          {longLeverLsi !== null && <div className="mt-3"><LsiDisplay label="Long-lever squeeze LSI" val={longLeverLsi} /></div>}
+        </>
+      ),
+    },
+    {
+      id: 'abd', label: 'Fuerza abductores de cadera', category: 'Fuerza',
+      hasData: anyFilled(['hip_abd_affected', 'hip_abd_unaffected']),
+      onClear: () => clearFields(['hip_abd_affected', 'hip_abd_unaffected']),
+      render: () => (
+        <>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Afectado (kg o N)"><NumInput value={form.hip_abd_affected} onChange={v => set('hip_abd_affected', v)} /></Field>
+            <Field label="Sano (kg o N)"><NumInput value={form.hip_abd_unaffected} onChange={v => set('hip_abd_unaffected', v)} /></Field>
+          </div>
+          {addAbdRatio !== null && (
+            <div className="mt-3 bg-bg-primary rounded-lg p-3 border-[0.5px] border-border text-center inline-block min-w-[140px]">
+              <div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-1">Ratio Add/Abd</div>
+              <div className={`text-[18px] font-medium ${addAbdRatio >= 0.9 ? 'text-[#4ade80]' : 'text-red-400'}`}>{addAbdRatio.toFixed(2)}</div>
+            </div>
+          )}
+        </>
+      ),
+    },
+    {
+      id: 'funcional', label: 'Tests funcionales (sprint / cambio de dirección)', category: 'Tests funcionales',
+      hasData: anyFilled(['sprint_pain_free', 'coc_pain_free']),
+      onClear: () => clearFields(['sprint_pain_free', 'coc_pain_free']),
+      render: () => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label="¿Sprint máximo sin dolor?"><YesNoInput value={form.sprint_pain_free} onChange={v => set('sprint_pain_free', v)} /></Field>
+          <Field label="¿Cambio de dirección sin dolor?"><YesNoInput value={form.coc_pain_free} onChange={v => set('coc_pain_free', v)} /></Field>
+        </div>
+      ),
+    },
+    {
+      id: 'loadtol', label: 'Tolerancia a la carga', category: 'Tests funcionales',
+      hasData: anyFilled(['weeks_full_training']),
+      onClear: () => clearFields(['weeks_full_training']),
+      render: () => (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="Semanas de entrenamiento progresivo completo"><NumInput value={form.weeks_full_training} onChange={v => set('weeks_full_training', v)} min="0" max="52" placeholder="ej: 12" /></Field>
+          </div>
+          <p className="text-[12px] text-text-secondary mt-2">El dolor inguinal requiere al menos 12 semanas de carga progresiva sin síntomas antes del retorno completo.</p>
+        </>
+      ),
+    },
+    {
+      id: 'hagos', label: 'HAGOS Sport', category: 'Cuestionarios',
+      hasData: anyFilled(['hagos_sport_score']),
+      onClear: () => clearFields(['hagos_sport_score']),
+      render: () => (
+        <>
+          {latestQuestionnaires && (
+            <QuestionnaireAutofill available={latestQuestionnaires} specs={[{ type: 'hagos', label: 'HAGOS Deporte', formKey: 'hagos_sport_score' }]} onApply={(k, v) => set(k as keyof FormData, v)} />
+          )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="Subescala Sport/Recreación (0–100%)"><NumInput value={form.hagos_sport_score} onChange={v => set('hagos_sport_score', v)} min="0" max="100" placeholder="ej: 88" /></Field>
+          </div>
+          <p className="text-[12px] text-text-secondary mt-2">Hip and Groin Outcome Score. Umbral retorno: ≥85%.</p>
+        </>
+      ),
+    },
+    {
+      id: 'general', label: 'Cuestionarios (LEFS / Tampa)', category: 'Cuestionarios',
+      hasData: anyFilled(['lefs_score', 'tampa_score']),
+      onClear: () => clearFields(['lefs_score', 'tampa_score']),
+      render: () => (
+        <GeneralQuestionnaires latest={latestQuestionnaires} includeLefs values={{ lefs_score: form.lefs_score, tampa_score: form.tampa_score }} set={(k, v) => set(k as keyof FormData, v)} />
+      ),
+    },
+  ]
+
   return (
     <div className="space-y-8">
       <div>
@@ -121,83 +224,7 @@ export default function GroinProtocol({ patient, userId, initialData, evalId, on
         </div>
       </div>
 
-      <div>
-        <SectionTitle>Fuerza — Squeeze test isométrico (kg o N)</SectionTitle>
-        <p className="text-[12px] text-text-secondary mb-3">Squeeze test a 0°, 45° o 90°. Registrar el valor máximo obtenido bilateralmente.</p>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Lado afectado"><NumInput value={form.squeeze_affected} onChange={v => set('squeeze_affected', v)} /></Field>
-          <Field label="Lado sano"><NumInput value={form.squeeze_unaffected} onChange={v => set('squeeze_unaffected', v)} /></Field>
-        </div>
-        {squeezeLsi !== null && <div className="mt-3"><LsiDisplay label="Squeeze LSI" val={squeezeLsi} /></div>}
-      </div>
-
-      <div>
-        <SectionTitle>Fuerza — Long-lever squeeze / Copenhagen (kg o N)</SectionTitle>
-        <p className="text-[12px] text-text-secondary mb-3">Squeeze con palanca larga (tobillos), variante más sensible del test de aductores.</p>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Lado afectado"><NumInput value={form.long_lever_affected} onChange={v => set('long_lever_affected', v)} /></Field>
-          <Field label="Lado sano"><NumInput value={form.long_lever_unaffected} onChange={v => set('long_lever_unaffected', v)} /></Field>
-        </div>
-        {longLeverLsi !== null && <div className="mt-3"><LsiDisplay label="Long-lever squeeze LSI" val={longLeverLsi} /></div>}
-      </div>
-
-      <div>
-        <SectionTitle>Fuerza — Abductores de cadera (kg o N)</SectionTitle>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Lado afectado"><NumInput value={form.hip_abd_affected} onChange={v => set('hip_abd_affected', v)} /></Field>
-          <Field label="Lado sano"><NumInput value={form.hip_abd_unaffected} onChange={v => set('hip_abd_unaffected', v)} /></Field>
-        </div>
-        {addAbdRatio !== null && (
-          <div className="mt-3 bg-bg-primary rounded-lg p-3 border-[0.5px] border-border text-center inline-block min-w-[140px]">
-            <div className="text-[10px] text-text-secondary uppercase tracking-[0.05em] mb-1">Ratio Add/Abd</div>
-            <div className={`text-[18px] font-medium ${addAbdRatio >= 0.9 ? 'text-[#4ade80]' : 'text-red-400'}`}>{addAbdRatio.toFixed(2)}</div>
-          </div>
-        )}
-      </div>
-
-      <div>
-        <SectionTitle>Tests funcionales</SectionTitle>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="¿Sprint máximo sin dolor?"><YesNoInput value={form.sprint_pain_free} onChange={v => set('sprint_pain_free', v)} /></Field>
-          <Field label="¿Cambio de dirección sin dolor?"><YesNoInput value={form.coc_pain_free} onChange={v => set('coc_pain_free', v)} /></Field>
-        </div>
-      </div>
-
-      <div>
-        <SectionTitle>Tolerancia a la carga</SectionTitle>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Semanas de entrenamiento progresivo completo">
-            <NumInput value={form.weeks_full_training} onChange={v => set('weeks_full_training', v)} min="0" max="52" placeholder="ej: 12" />
-          </Field>
-        </div>
-        <p className="text-[12px] text-text-secondary mt-2">El dolor inguinal requiere al menos 12 semanas de carga progresiva sin síntomas antes del retorno completo.</p>
-      </div>
-
-      <div>
-        <SectionTitle>Cuestionario — HAGOS Sport</SectionTitle>
-        {latestQuestionnaires && (
-          <QuestionnaireAutofill
-            available={latestQuestionnaires}
-            specs={[{ type: 'hagos', label: 'HAGOS Deporte', formKey: 'hagos_sport_score' }]}
-            onApply={(k, v) => set(k as keyof FormData, v)}
-          />
-        )}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Subescala Sport/Recreación (0–100%)">
-            <NumInput value={form.hagos_sport_score} onChange={v => set('hagos_sport_score', v)} min="0" max="100" placeholder="ej: 88" />
-          </Field>
-        </div>
-        <p className="text-[12px] text-text-secondary mt-2">Hip and Groin Outcome Score. Umbral retorno: ≥85%.</p>
-      </div>
-
-      <div>
-        <GeneralQuestionnaires
-          latest={latestQuestionnaires}
-          includeLefs
-          values={{ lefs_score: form.lefs_score, tampa_score: form.tampa_score }}
-          set={(k, v) => set(k as keyof FormData, v)}
-        />
-      </div>
+      <ModularSections modules={modules} />
 
       <div>
         <SectionTitle>Observaciones</SectionTitle>

@@ -5,6 +5,7 @@ import { createClient } from '@/utils/supabase/client'
 import { lsi, n, Criterion } from './shared'
 import { Field, NumInput, YesNoInput, SelectInput, LsiDisplay, SectionTitle, CriteriaResults } from './ProtocolUI'
 import { GeneralQuestionnaires, QuestionnaireAutofill, LatestQuestionnaires } from './QuestionnaireAutofill'
+import { ModularSections, RtsModule } from './ModularSections'
 
 interface Props {
   patient: { id: string; name: string; age: number | null }
@@ -36,6 +37,8 @@ export default function TendinopathyProtocol({ patient, userId, initialData, eva
   const [savedId, setSavedId] = useState<string | null>(evalId ?? null)
   const supabase = useRef(createClient())
   const set = (k: keyof FormData, v: string) => setForm(p => ({ ...p, [k]: v }))
+  const clearFields = (keys: (keyof FormData)[]) => setForm(p => ({ ...p, ...Object.fromEntries(keys.map(k => [k, ''])) } as FormData))
+  const anyFilled = (keys: (keyof FormData)[]) => keys.some(k => form[k] !== '')
 
   const hopLsi = lsi(n(form.single_hop_affected), n(form.single_hop_unaffected))
   const slcmjLsi = lsi(n(form.slcmj_affected), n(form.slcmj_unaffected))
@@ -96,6 +99,93 @@ export default function TendinopathyProtocol({ patient, userId, initialData, eva
     )
   }
 
+  const modules: RtsModule[] = [
+    {
+      id: 'visa', label: `Cuestionario ${visaLabel}`, category: 'Cuestionarios',
+      hasData: anyFilled(['visa_score']),
+      onClear: () => clearFields(['visa_score']),
+      render: () => (
+        <>
+          {latestQuestionnaires && (
+            <QuestionnaireAutofill available={latestQuestionnaires} specs={[
+              { type: 'visa_p', label: 'VISA-P', formKey: 'visa_score' },
+              { type: 'visa_a', label: 'VISA-A', formKey: 'visa_score' },
+            ]} onApply={(k, v) => set(k as keyof FormData, v)} />
+          )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label={`Puntaje ${visaLabel} (0–100)`}><NumInput value={form.visa_score} onChange={v => set('visa_score', v)} min="0" max="100" placeholder="ej: 85" /></Field>
+          </div>
+          <p className="text-[12px] text-text-secondary mt-2">Umbral: VISA-P ≥80 / VISA-A ≥90.</p>
+        </>
+      ),
+    },
+    {
+      id: 'loadtest', label: isPatellar ? 'Test de carga — Decline squat' : 'Test de carga — Single leg heel raise', category: 'Tests funcionales',
+      hasData: anyFilled(['decline_squat_reps', 'decline_squat_pain', 'heel_raise_reps', 'heel_raise_pain']),
+      onClear: () => clearFields(['decline_squat_reps', 'decline_squat_pain', 'heel_raise_reps', 'heel_raise_pain']),
+      render: () => isPatellar ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label="Repeticiones completadas (3×15)"><NumInput value={form.decline_squat_reps} onChange={v => set('decline_squat_reps', v)} min="0" max="45" placeholder="ej: 45" /></Field>
+          <Field label="¿Aumento de dolor durante el test?"><YesNoInput value={form.decline_squat_pain} onChange={v => set('decline_squat_pain', v)} /></Field>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label="Repeticiones completadas"><NumInput value={form.heel_raise_reps} onChange={v => set('heel_raise_reps', v)} min="0" max="100" placeholder="ej: 25" /></Field>
+          <Field label="¿Dolor durante el test?"><YesNoInput value={form.heel_raise_pain} onChange={v => set('heel_raise_pain', v)} /></Field>
+        </div>
+      ),
+    },
+    {
+      id: 'singlehop', label: 'Single hop', category: 'Tests funcionales',
+      hasData: anyFilled(['single_hop_affected', 'single_hop_unaffected']),
+      onClear: () => clearFields(['single_hop_affected', 'single_hop_unaffected']),
+      render: () => (
+        <>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Afectado (cm)"><NumInput value={form.single_hop_affected} onChange={v => set('single_hop_affected', v)} /></Field>
+            <Field label="Sano (cm)"><NumInput value={form.single_hop_unaffected} onChange={v => set('single_hop_unaffected', v)} /></Field>
+          </div>
+          {hopLsi !== null && <div className="mt-3"><LsiDisplay label="Single Hop LSI" val={hopLsi} /></div>}
+        </>
+      ),
+    },
+    {
+      id: 'slcmj', label: 'Salto vertical unipodal (SL-CMJ)', category: 'Tests funcionales',
+      hasData: anyFilled(['slcmj_affected', 'slcmj_unaffected']),
+      onClear: () => clearFields(['slcmj_affected', 'slcmj_unaffected']),
+      render: () => (
+        <>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Afectado (cm)"><NumInput value={form.slcmj_affected} onChange={v => set('slcmj_affected', v)} /></Field>
+            <Field label="Sano (cm)"><NumInput value={form.slcmj_unaffected} onChange={v => set('slcmj_unaffected', v)} /></Field>
+          </div>
+          {slcmjLsi !== null && <div className="mt-3"><LsiDisplay label="SL-CMJ LSI" val={slcmjLsi} /></div>}
+        </>
+      ),
+    },
+    {
+      id: 'loadtol', label: 'Tolerancia a la carga', category: 'Tests funcionales',
+      hasData: anyFilled(['full_training_weeks']),
+      onClear: () => clearFields(['full_training_weeks']),
+      render: () => (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="Semanas consecutivas de entrenamiento completo"><NumInput value={form.full_training_weeks} onChange={v => set('full_training_weeks', v)} min="0" max="52" placeholder="ej: 3" /></Field>
+          </div>
+          <p className="text-[12px] text-text-secondary mt-2">Se requieren al menos 2 semanas de entrenamiento completo sin reacción del tendón.</p>
+        </>
+      ),
+    },
+    {
+      id: 'general', label: 'Cuestionarios (LEFS / Tampa)', category: 'Cuestionarios',
+      hasData: anyFilled(['lefs_score', 'tampa_score']),
+      onClear: () => clearFields(['lefs_score', 'tampa_score']),
+      render: () => (
+        <GeneralQuestionnaires latest={latestQuestionnaires} includeLefs values={{ lefs_score: form.lefs_score, tampa_score: form.tampa_score }} set={(k, v) => set(k as keyof FormData, v)} />
+      ),
+    },
+  ]
+
   return (
     <div className="space-y-8">
       <div>
@@ -125,80 +215,7 @@ export default function TendinopathyProtocol({ patient, userId, initialData, eva
         </div>
       </div>
 
-      <div>
-        <SectionTitle>Cuestionario — {visaLabel}</SectionTitle>
-        {latestQuestionnaires && (
-          <QuestionnaireAutofill
-            available={latestQuestionnaires}
-            specs={[
-              { type: 'visa_p', label: 'VISA-P', formKey: 'visa_score' },
-              { type: 'visa_a', label: 'VISA-A', formKey: 'visa_score' },
-            ]}
-            onApply={(k, v) => set(k as keyof FormData, v)}
-          />
-        )}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label={`Puntaje ${visaLabel} (0–100)`}>
-            <NumInput value={form.visa_score} onChange={v => set('visa_score', v)} min="0" max="100" placeholder="ej: 85" />
-          </Field>
-        </div>
-        <p className="text-[12px] text-text-secondary mt-2">Umbral: VISA-P ≥80 / VISA-A ≥90.</p>
-      </div>
-
-      {isPatellar ? (
-        <div>
-          <SectionTitle>Test de carga — Decline squat (3×15)</SectionTitle>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Repeticiones completadas"><NumInput value={form.decline_squat_reps} onChange={v => set('decline_squat_reps', v)} min="0" max="45" placeholder="ej: 45" /></Field>
-            <Field label="¿Aumento de dolor durante el test?"><YesNoInput value={form.decline_squat_pain} onChange={v => set('decline_squat_pain', v)} /></Field>
-          </div>
-        </div>
-      ) : (
-        <div>
-          <SectionTitle>Test de carga — Single leg heel raise</SectionTitle>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Repeticiones completadas"><NumInput value={form.heel_raise_reps} onChange={v => set('heel_raise_reps', v)} min="0" max="100" placeholder="ej: 25" /></Field>
-            <Field label="¿Dolor durante el test?"><YesNoInput value={form.heel_raise_pain} onChange={v => set('heel_raise_pain', v)} /></Field>
-          </div>
-        </div>
-      )}
-
-      <div>
-        <SectionTitle>Test funcional — Single hop (cm)</SectionTitle>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Lado afectado"><NumInput value={form.single_hop_affected} onChange={v => set('single_hop_affected', v)} /></Field>
-          <Field label="Lado sano"><NumInput value={form.single_hop_unaffected} onChange={v => set('single_hop_unaffected', v)} /></Field>
-        </div>
-        {hopLsi !== null && <div className="mt-3"><LsiDisplay label="Single Hop LSI" val={hopLsi} /></div>}
-      </div>
-
-      <div>
-        <SectionTitle>Salto vertical unipodal — SL-CMJ (cm)</SectionTitle>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Lado afectado"><NumInput value={form.slcmj_affected} onChange={v => set('slcmj_affected', v)} /></Field>
-          <Field label="Lado sano"><NumInput value={form.slcmj_unaffected} onChange={v => set('slcmj_unaffected', v)} /></Field>
-        </div>
-        {slcmjLsi !== null && <div className="mt-3"><LsiDisplay label="SL-CMJ LSI" val={slcmjLsi} /></div>}
-      </div>
-
-      <div>
-        <SectionTitle>Tolerancia a la carga</SectionTitle>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Semanas consecutivas de entrenamiento completo">
-            <NumInput value={form.full_training_weeks} onChange={v => set('full_training_weeks', v)} min="0" max="52" placeholder="ej: 3" />
-          </Field>
-        </div>
-        <p className="text-[12px] text-text-secondary mt-2">Se requieren al menos 2 semanas de entrenamiento completo sin reacción del tendón.</p>
-      </div>
-
-      <div>
-        <GeneralQuestionnaires
-          latest={latestQuestionnaires}
-          includeLefs
-          values={{ lefs_score: form.lefs_score, tampa_score: form.tampa_score }}
-          set={(k, v) => set(k as keyof FormData, v)}
-        />
-      </div>
+      <ModularSections modules={modules} />
 
       <div>
         <SectionTitle>Observaciones</SectionTitle>
