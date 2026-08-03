@@ -486,10 +486,11 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
 
     const [byIdRes, byNameRes] = await Promise.all([byIdQ, byNameQ])
     const merged = [...(byIdRes.data ?? []), ...(byNameRes?.data ?? [])] as HistorialTurno[]
-    // Dedup por id y excluir el turno que se está editando.
+    // Dedup por id. Incluimos el turno que se está editando: forma parte del
+    // historial del paciente y debe verse y contabilizarse como el resto.
     const seen = new Set<string>()
     const rows = merged
-      .filter(t => t.id !== (isEdit ? turno!.id : '') && !seen.has(t.id) && seen.add(t.id))
+      .filter(t => !seen.has(t.id) && seen.add(t.id))
       .sort((a, b) => b.start_time.localeCompare(a.start_time))
     setHistorial(rows)
     setHistorialLoaded(true)
@@ -722,6 +723,8 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
   const pastTurnos   = historial.filter(t => t.start_time < now)
   const futureTurnos = historial.filter(t => t.start_time >= now).reverse()
   const ausentismoCount = pastTurnos.filter(t => t.status === 'ausente').length
+  // Turnos efectivamente realizados hasta hoy = sesiones marcadas "Presente".
+  const realizadosCount = historial.filter(t => t.status === 'presente').length
 
   const inputCls = 'w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[13px] focus:outline-none focus:border-accent'
 
@@ -1231,6 +1234,12 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
             </div>
             {historialLoaded && (
               <div className="space-y-3">
+                {realizadosCount > 0 && (
+                  <div className="flex items-baseline gap-2 rounded-lg bg-emerald-500/10 px-3 py-2">
+                    <span className="text-[18px] font-semibold tabular-nums text-emerald-400">{realizadosCount}</span>
+                    <span className="text-[12px] text-text-secondary">turno{realizadosCount !== 1 ? 's' : ''} realizado{realizadosCount !== 1 ? 's' : ''} hasta hoy</span>
+                  </div>
+                )}
                 {pastTurnos.length > 0 && (
                   <div>
                     <p className="text-[11px] text-text-tertiary mb-2">
