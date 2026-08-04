@@ -40,6 +40,44 @@ function calcAge(birth_date: string | null): number | null {
 
 interface PatientSource { id: string; label: string }
 
+// ── Historial de turnos ──────────────────────────────────────────────────────
+interface TurnoHist {
+  id: string
+  start_time: string
+  end_time: string
+  area: string | null
+  status: string
+  professional_name: string | null
+}
+
+// Etiqueta + color por estado, alineado con los colores de la agenda.
+const TURNO_STATUS: Record<string, { label: string; color: string }> = {
+  presente:   { label: 'Presente',   color: '#4ade80' },
+  confirmado: { label: 'Confirmado', color: '#38bdf8' },
+  programado: { label: 'Programado', color: '#94a3b8' },
+  ausente:    { label: 'Ausente',    color: '#f87171' },
+  cancelado:  { label: 'Cancelado',  color: '#9ca3af' },
+  sobreturno: { label: 'Sobreturno', color: '#fbbf24' },
+}
+
+// Diferencia en días calendario (positivo = en el pasado). Para el "hace X días".
+function dayDiff(dateStr: string): number {
+  const d = new Date(dateStr)
+  const now = new Date()
+  const d0 = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+  const n0 = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  return Math.round((n0.getTime() - d0.getTime()) / 86400000)
+}
+
+function relativeDay(dateStr: string): string {
+  const diff = dayDiff(dateStr)
+  if (diff === 0) return 'hoy'
+  if (diff === 1) return 'ayer'
+  if (diff > 1) return `hace ${diff} días`
+  if (diff === -1) return 'mañana'
+  return `en ${-diff} días`
+}
+
 // Tiempo de tratamiento desde el día en que se cargó el primer plan. Contamos
 // desde el día 1: recién cargado muestra "Semana 1 · Mes 1".
 function treatmentDuration(start: string | null): string | null {
@@ -112,6 +150,30 @@ export default function PacienteDetail({ patient: initialPatient, userId, initia
     if (error) { notify('No se pudo borrar: ' + error, 'error'); return }
     setEvents(prev => prev.filter(e => e.id !== id))
     notify('Hito movido a la papelera')
+  }
+
+  // ── Historial de turnos ────────────────────────────────────────────────────
+  // Se carga bajo demanda al abrir la sección para no pesar la carga del perfil.
+  const [showTurnos, setShowTurnos] = useState(false)
+  const [turnos, setTurnos] = useState<TurnoHist[] | null>(null) // null = aún no cargado
+  const [loadingTurnos, setLoadingTurnos] = useState(false)
+
+  const loadTurnos = async () => {
+    setLoadingTurnos(true)
+    const { data } = await supabaseRef.current
+      .from('turnos')
+      .select('id, start_time, end_time, area, status, professional_name')
+      .eq('patient_id', patient.id)
+      .order('start_time', { ascending: false })
+      .limit(200)
+    setTurnos((data ?? []) as TurnoHist[])
+    setLoadingTurnos(false)
+  }
+
+  const toggleTurnos = () => {
+    const next = !showTurnos
+    setShowTurnos(next)
+    if (next && turnos === null && !loadingTurnos) loadTurnos()
   }
 
   const router = useRouter()
@@ -487,6 +549,87 @@ export default function PacienteDetail({ patient: initialPatient, userId, initia
               )
             })}
           </div>
+        )}
+      </div>
+
+      {/* HISTORIAL DE TURNOS */}
+      <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-5 mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <h2 className="text-[16px] font-medium">Historial de turnos</h2>
+            {turnos !== null && <span className="text-[12px] text-text-secondary">({turnos.length})</span>}
+          </div>
+          <button onClick={toggleTurnos} className="text-[13px] font-medium text-accent hover:opacity-80">
+            {showTurnos ? 'Ocultar' : 'Ver'}
+          </button>
+        </div>
+
+        {showTurnos && (
+          loadingTurnos ? (
+            <p className="text-[13px] text-text-secondary bg-bg-secondary border-[0.5px] border-dashed border-border rounded-xl px-4 py-5 text-center">
+              Cargando turnos…
+            </p>
+          ) : !turnos || turnos.length === 0 ? (
+            <p className="text-[13px] text-text-secondary bg-bg-secondary border-[0.5px] border-dashed border-border rounded-xl px-4 py-5 text-center">
+              Este paciente no tiene turnos registrados en la agenda.
+            </p>
+          ) : (() => {
+            const nowIso = new Date().toISOString()
+            // Última visita: el turno pasado más reciente al que asistió (no ausente/cancelado).
+            const lastVisit = turnos.find(t => t.start_time <= nowIso && t.status !== 'cancelado' && t.status !== 'ausente')
+            // Próximo turno: el futuro más cercano que no esté cancelado.
+            const upcoming = turnos.filter(t => t.start_time > nowIso && t.status !== 'cancelado')
+            const nextTurno = upcoming.length ? upcoming[upcoming.length - 1] : null
+            return (
+              <>
+                {(lastVisit || nextTurno) && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                    <div className="bg-bg-secondary border-[0.5px] border-border rounded-xl px-4 py-3">
+                      <div className="text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Última visita</div>
+                      {lastVisit ? (
+                        <div className="text-[14px] font-medium">
+                          {new Date(lastVisit.start_time).toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                          <span className="text-[13px] text-text-secondary font-normal"> · {relativeDay(lastVisit.start_time)}</span>
+                        </div>
+                      ) : <div className="text-[14px] text-text-secondary">Sin visitas registradas</div>}
+                    </div>
+                    <div className="bg-bg-secondary border-[0.5px] border-border rounded-xl px-4 py-3">
+                      <div className="text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Próximo turno</div>
+                      {nextTurno ? (
+                        <div className="text-[14px] font-medium">
+                          {new Date(nextTurno.start_time).toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                          <span className="text-[13px] text-text-secondary font-normal"> · {relativeDay(nextTurno.start_time)}</span>
+                        </div>
+                      ) : <div className="text-[14px] text-text-secondary">Sin turnos agendados</div>}
+                    </div>
+                  </div>
+                )}
+
+                <div className="border-[0.5px] border-border rounded-xl overflow-hidden divide-y-[0.5px] divide-border">
+                  {turnos.map(t => {
+                    const meta = TURNO_STATUS[t.status] ?? { label: t.status, color: '#94a3b8' }
+                    const past = t.start_time <= nowIso
+                    const start = new Date(t.start_time)
+                    return (
+                      <div key={t.id} className={`flex items-center gap-3 px-4 py-3 ${past ? 'opacity-70' : ''}`}>
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: meta.color }} />
+                        <div className="w-[132px] shrink-0 text-[12px] text-text-secondary tabular-nums">
+                          {start.toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: '2-digit' })}
+                          {' · '}
+                          {start.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <span className="text-[13px] text-text-primary">{t.area || 'Turno'}</span>
+                          {t.professional_name && <span className="text-[12px] text-text-secondary"> · {t.professional_name}</span>}
+                        </div>
+                        <span className="text-[11px] font-medium shrink-0" style={{ color: meta.color }}>{meta.label}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </>
+            )
+          })()
         )}
       </div>
 
