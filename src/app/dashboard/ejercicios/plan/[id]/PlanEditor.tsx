@@ -1479,8 +1479,8 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
           {/* Editor de sesión del día seleccionado */}
           {selectedDate && (
             <div className="mt-8 border-t-[0.5px] border-border pt-6">
-              <div className="flex flex-wrap items-center gap-3 mb-6">
-                <h2 className="text-[18px] font-medium tracking-[-0.01em] flex-1 min-w-0">
+              <div className="flex flex-col gap-3 mb-6 xl:flex-row xl:flex-wrap xl:items-center">
+                <h2 className="text-[18px] font-medium tracking-[-0.01em] min-w-0 xl:flex-1">
                   {formatDateHeader(new Date(selectedDate + 'T00:00:00'))}
                 </h2>
 
