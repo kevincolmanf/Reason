@@ -18,7 +18,10 @@ type AllTurnoRow = { patient_id: string | null; start_time: string; professional
 // lo que hacía que las analíticas mostraran muchos menos turnos de los reales.
 // Paginamos en bloques de 1000 con orden explícito para traer todo.
 const PAGE_SIZE = 1000
-async function fetchAllRows<T>(buildQuery: () => any): Promise<T[]> {
+type PagedQuery<T> = {
+  range: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>
+}
+async function fetchAllRows<T>(buildQuery: () => PagedQuery<T>): Promise<T[]> {
   const all: T[] = []
   for (let from = 0; ; from += PAGE_SIZE) {
     const { data, error } = await buildQuery().range(from, from + PAGE_SIZE - 1)
