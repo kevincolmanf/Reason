@@ -12,6 +12,24 @@ type TurnoRow = { status: string; appointment_type: string | null; professional_
 type PatientRow = { id: string; name: string | null; age: number | null; birth_date: string | null; dni: string | null; phone: string | null; email: string | null; obra_social: string | null; occupation: string | null; source: string | null; user_id: string }
 type AllTurnoRow = { patient_id: string | null; start_time: string; professional_name: string | null; patient_phone: string | null; patient_email: string | null; patient_age: number | null; area: string | null }
 
+// Supabase corta las respuestas en 1000 filas por defecto. Estas consultas
+// (12 meses de turnos, o todos los turnos históricos) superan ese tope en
+// organizaciones con volumen, y sin paginar se pierden filas en silencio —
+// lo que hacía que las analíticas mostraran muchos menos turnos de los reales.
+// Paginamos en bloques de 1000 con orden explícito para traer todo.
+const PAGE_SIZE = 1000
+async function fetchAllRows<T>(buildQuery: () => any): Promise<T[]> {
+  const all: T[] = []
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await buildQuery().range(from, from + PAGE_SIZE - 1)
+    if (error) throw error
+    if (!data || data.length === 0) break
+    all.push(...(data as T[]))
+    if (data.length < PAGE_SIZE) break
+  }
+  return all
+}
+
 function calcAge(birth_date: string | null, fallback: number | null): number | null {
   if (birth_date) {
     const today = new Date(); const dob = new Date(birth_date)
@@ -45,34 +63,38 @@ export default async function CRMPage() {
   const twelveMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 11, 1)
 
   const [
-    { data: patientsRaw },
-    { data: turnosAll },
-    { data: turnosUpcoming },
-    { data: allTurnos },
+    patientsRaw,
+    turnosAll,
+    { count: upcomingCount },
+    allTurnos,
   ] = await Promise.all([
-    admin.from('patients').select('*').eq('org_id', orgRow.id).order('name'),
+    fetchAllRows<PatientRow>(() =>
+      admin.from('patients').select('*').eq('org_id', orgRow.id).order('name').order('id')),
+    fetchAllRows<TurnoRow>(() =>
+      admin.from('turnos')
+        .select('professional_name, start_time, end_time, area, status, appointment_type')
+        .eq('org_id', orgRow.id)
+        .not('is_blocked', 'is', true)
+        .gte('start_time', twelveMonthsAgo.toISOString())
+        .lt('start_time', nextMonthStart.toISOString())
+        .order('start_time', { ascending: true }).order('id')),
     admin.from('turnos')
-      .select('professional_name, start_time, end_time, area, status, appointment_type')
-      .eq('org_id', orgRow.id)
-      .not('is_blocked', 'is', true)
-      .gte('start_time', twelveMonthsAgo.toISOString())
-      .lt('start_time', nextMonthStart.toISOString()),
-    admin.from('turnos')
-      .select('id')
+      .select('id', { count: 'exact', head: true })
       .eq('org_id', orgRow.id)
       .not('is_blocked', 'is', true)
       .gt('start_time', now.toISOString())
       .lt('start_time', nextMonthStart.toISOString()),
-    admin.from('turnos')
-      .select('patient_id, start_time, professional_name, patient_phone, patient_email, patient_age, area')
-      .eq('org_id', orgRow.id)
-      .not('is_blocked', 'is', true)
-      .order('start_time', { ascending: false }),
+    fetchAllRows<AllTurnoRow>(() =>
+      admin.from('turnos')
+        .select('patient_id, start_time, professional_name, patient_phone, patient_email, patient_age, area')
+        .eq('org_id', orgRow.id)
+        .not('is_blocked', 'is', true)
+        .order('start_time', { ascending: false }).order('id')),
   ])
 
   // Last turno per patient (already sorted desc, first match wins)
   const lastTurnoMap = new Map<string, { date: string; phone: string | null; email: string | null; age: number | null; professionalName: string | null; area: string | null }>()
-  ;(allTurnos as AllTurnoRow[] ?? []).forEach((t) => {
+  allTurnos.forEach((t) => {
     if (t.patient_id && !lastTurnoMap.has(t.patient_id)) {
       lastTurnoMap.set(t.patient_id, {
         date: t.start_time,
@@ -85,7 +107,7 @@ export default async function CRMPage() {
     }
   })
 
-  const patients = (patientsRaw as PatientRow[] ?? []).map((p) => {
+  const patients = patientsRaw.map((p) => {
     const lt = lastTurnoMap.get(p.id)
     const active = lt ? new Date(lt.date) > sixtyDaysAgo : false
     return {
@@ -138,8 +160,8 @@ export default async function CRMPage() {
             lastMonthLabel,
             thisMonthKey: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`,
             lastMonthKey: `${lastMonthStart.getFullYear()}-${String(lastMonthStart.getMonth() + 1).padStart(2, '0')}`,
-            rawTurnos: (turnosAll ?? []) as TurnoRow[],
-            upcoming: turnosUpcoming?.length ?? 0,
+            rawTurnos: turnosAll,
+            upcoming: upcomingCount ?? 0,
             totalPatients: patients.length,
             activePatients: patients.filter(p => p.active).length,
             sourceDist,
