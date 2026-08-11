@@ -463,10 +463,10 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
   // Patients state
   const [patients, setPatients] = useState<{ id: string; name: string; load_share_token: string | null }[]>([])
 
-  // Cantidad de columnas semanales en blanco de la planilla imprimible
-  const [printWeeks, setPrintWeeks] = useState(4)
-  // Imprimir la carga planificada de cada semana (true) o dejar en blanco (false)
-  const [printWithLoads, setPrintWithLoads] = useState(false)
+  // Opciones de la planilla imprimible
+  const [printWeekCount, setPrintWeekCount] = useState<number | 'all'>(6) // columnas: 4/6/8 o todas
+  const [printWithLoads, setPrintWithLoads] = useState(false)             // imprimir carga del plan vs en blanco
+  const [printAllDays, setPrintAllDays] = useState(false)                 // una hoja por cada día de la semana
 
   const supabaseRef = useRef(createClient())
   const planSaveRef = useRef<NodeJS.Timeout | null>(null)
@@ -478,18 +478,39 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
     ? scheduledSessions.find(s => s.scheduled_date === selectedDate) ?? null
     : null
 
-  // Sesiones del mismo día (weekday) a lo largo del plan, ordenadas por fecha.
-  // Sirven para que las columnas de la planilla imprimible cuadren 1:1 con las
-  // semanas del calendario, y para poder imprimir la carga planificada de cada
-  // semana (modo "con cargas").
-  const printWeekSessions = (() => {
-    if (!selectedSession) return [] as { date: string; blocks: SessionBlock[] }[]
-    const dow = new Date(selectedSession.scheduled_date + 'T00:00:00').getDay()
-    return scheduledSessions
+  // Serie de fechas del mismo día (weekday) a lo largo del plan, empezando en
+  // la sesión dada y acotada a printWeekCount. Así las columnas de la planilla
+  // cuadran 1:1 con las semanas del calendario, sin desbordar la hoja.
+  const seriesFor = (fromSession: ScheduledSession) => {
+    const dow = new Date(fromSession.scheduled_date + 'T00:00:00').getDay()
+    const all = scheduledSessions
       .filter(s => new Date(s.scheduled_date + 'T00:00:00').getDay() === dow)
       .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date))
-      .map(s => ({ date: s.scheduled_date, blocks: s.session_data?.blocks ?? [] }))
+    const startIdx = Math.max(0, all.findIndex(s => s.scheduled_date === fromSession.scheduled_date))
+    const sliced = printWeekCount === 'all' ? all.slice(startIdx) : all.slice(startIdx, startIdx + printWeekCount)
+    return sliced.map(s => ({ date: s.scheduled_date, blocks: s.session_data?.blocks ?? [] }))
+  }
+
+  // Días con ejercicios en la semana del día seleccionado (Lun→Dom).
+  const daysInSelectedWeek = (() => {
+    if (!selectedDate) return [] as ScheduledSession[]
+    const mon = toDateStr(getMondayOfWeek(new Date(selectedDate + 'T00:00:00')))
+    const sun = toDateStr(addDays(getMondayOfWeek(new Date(selectedDate + 'T00:00:00')), 6))
+    return scheduledSessions
+      .filter(s => s.scheduled_date >= mon && s.scheduled_date <= sun && (s.session_data?.blocks ?? []).some(b => b.exercises.length > 0))
+      .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date))
   })()
+
+  // Hojas a imprimir: una por día (si printAllDays) o solo el día seleccionado.
+  const printSheets = (() => {
+    if (!selectedSession) return [] as { session: ScheduledSession; weekSessions: { date: string; blocks: SessionBlock[] }[] }[]
+    const days = printAllDays && daysInSelectedWeek.length > 0 ? daysInSelectedWeek : [selectedSession]
+    return days.map(d => ({ session: d, weekSessions: seriesFor(d) }))
+  })()
+
+  const printFallbackWeeks = typeof printWeekCount === 'number' ? printWeekCount : 6
+  const selectedHasWeeks = !!selectedSession && seriesFor(selectedSession).length > 1
+  const multiDayAvailable = daysInSelectedWeek.length > 1
 
   const importablePlanSessions = ((plan.plan_data?.sessions ?? []) as PlanDataSession[])
     .filter(s => (s.blocks ?? []).some(b => b.exercises?.length > 0))
@@ -1061,102 +1082,6 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
     setCreating(false)
   }
 
-  // ─── Export PDF ────────────────────────────────────────────────────────────
-
-  const handleExportPDF = async () => {
-    // Carga diferida: jspdf y qrcode solo se descargan al exportar
-    const [{ default: jsPDF }, { default: QRCode }] = await Promise.all([
-      import('jspdf'),
-      import('qrcode'),
-    ])
-    const doc = new jsPDF()
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(16)
-    const patientName = patients.find(p => p.id === plan.patient_id)?.name ?? 'Plan de Ejercicio'
-    doc.text(patientName, 20, 20)
-
-    doc.setFontSize(10)
-    doc.setFont('helvetica', 'normal')
-    if (plan.start_date) {
-      doc.text(`Fecha de inicio: ${new Date(plan.start_date).toLocaleDateString('es-AR')}`, 20, 28)
-    }
-    if (plan.notes) {
-      doc.text(`Observaciones: ${plan.notes}`, 20, 34)
-    }
-
-    let y = plan.notes ? 45 : 35
-    const pageHeight = 280
-
-    for (const session of scheduledSessions) {
-      if (!session.session_data?.blocks?.length) continue
-      const hasExercises = session.session_data.blocks.some(b => b.exercises.length > 0)
-      if (!hasExercises) continue
-
-      if (y > pageHeight - 30) { doc.addPage(); y = 20 }
-
-      // Fecha de la sesión
-      const dateObj = new Date(session.scheduled_date + 'T00:00:00')
-      const dateLabel = dateObj.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })
-
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(12)
-      doc.text(`${dateLabel}${session.session_name ? ' — ' + session.session_name : ''}`, 20, y)
-      y += 8
-
-      for (const block of session.session_data.blocks) {
-        if (block.exercises.length === 0) continue
-        if (y > pageHeight - 20) { doc.addPage(); y = 20 }
-
-        doc.setFont('helvetica', 'bold')
-        doc.setFontSize(10)
-        doc.text(block.name, 20, y)
-        y += 6
-
-        for (const ex of block.exercises) {
-          if (y > pageHeight - 25) { doc.addPage(); y = 20 }
-
-          doc.setFont('helvetica', 'bold')
-          doc.setFontSize(10)
-          doc.text(`- ${ex.exercise_name}`, 20, y)
-
-          if (ex.youtube_url) {
-            try {
-              const qrDataUrl = await QRCode.toDataURL(ex.youtube_url, { margin: 1, width: 64 })
-              doc.addImage(qrDataUrl, 'PNG', 170, y - 5, 20, 20)
-            } catch (err) {
-              console.error('QR Error', err)
-            }
-          }
-          y += 6
-
-          doc.setFont('helvetica', 'normal')
-          doc.setFontSize(8)
-          const doseStr = [
-            ex.sets ? `${ex.sets} series` : '',
-            ex.reps ? `${ex.reps} reps` : '',
-            ex.load ? `Carga: ${ex.load}` : '',
-            ex.rest ? `Pausa: ${ex.rest}` : '',
-          ].filter(Boolean).join(' · ')
-          if (doseStr) {
-            doc.text(doseStr, 25, y)
-            y += 5
-          }
-          y += 3
-        }
-        y += 4
-      }
-      y += 8
-    }
-
-    if (y > pageHeight - 10) { doc.addPage(); y = 20 }
-    doc.setFontSize(9)
-    doc.setTextColor(150)
-    doc.text('Documento generado con Reason — reason.com.ar', 20, 285)
-
-    const pdfPatientName = patients.find(p => p.id === plan.patient_id)?.name ?? 'Plan'
-    doc.save(`Plan_${pdfPatientName.replace(/\s+/g, '_')}.pdf`)
-  }
-
   // ─── Calendar helpers ──────────────────────────────────────────────────────
 
   const calendarDays: Date[] = []
@@ -1293,44 +1218,40 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
                 Cargar plan al calendario
               </button>
             )}
-            <button
-              onClick={handleExportPDF}
-              className="bg-bg-primary border-[0.5px] border-border-strong text-text-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:bg-bg-secondary w-full"
-              title="PDF vertical con un QR al video por ejercicio (todo el plan). Usa más hojas y tinta."
-            >
-              Exportar PDF con videos (QR)
-            </button>
             {(selectedSession?.session_data?.blocks ?? []).some(b => b.exercises.length > 0) && (
-              <div className="flex flex-col gap-2">
-                {printWeekSessions.length > 1 ? (
-                  <>
-                    <div className="text-[12px] text-text-secondary">
-                      {printWeekSessions.length} semanas detectadas del calendario · las columnas van con la fecha real de cada semana.
-                    </div>
-                    <label className="flex items-center gap-2 text-[12px] text-text-secondary cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={printWithLoads}
-                        onChange={e => setPrintWithLoads(e.target.checked)}
-                        className="accent-accent"
-                      />
-                      Imprimir con las cargas del plan (si no, quedan en blanco para anotar)
-                    </label>
-                  </>
-                ) : (
-                  <div className="flex items-center justify-between gap-2">
-                    <label htmlFor="print-weeks" className="text-[12px] text-text-secondary">Semanas a registrar</label>
-                    <input
-                      id="print-weeks"
-                      type="number"
-                      min={1}
-                      max={10}
-                      value={printWeeks}
-                      onChange={e => setPrintWeeks(Math.max(1, Math.min(10, Number(e.target.value) || 1)))}
-                      className="w-16 bg-bg-primary border-[0.5px] border-border rounded-lg px-2 py-1 text-[13px] text-text-primary focus:outline-none focus:border-accent text-center"
-                    />
+              <div className="flex flex-col gap-3 border-[0.5px] border-border rounded-lg p-3">
+                <div className="text-[11px] uppercase tracking-[0.05em] text-text-secondary">Planilla imprimible</div>
+
+                {/* Cantidad de semanas (columnas) */}
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[12px] text-text-secondary">Semanas</span>
+                  <div className="flex gap-1">
+                    {([4, 6, 8, 'all'] as const).map(opt => (
+                      <button
+                        key={opt}
+                        onClick={() => setPrintWeekCount(opt)}
+                        className={`px-2.5 py-1 rounded-md text-[12px] border-[0.5px] transition-colors ${printWeekCount === opt ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-primary border-border text-text-secondary hover:text-text-primary'}`}
+                      >
+                        {opt === 'all' ? 'Todas' : opt}
+                      </button>
+                    ))}
                   </div>
+                </div>
+
+                {selectedHasWeeks && (
+                  <label className="flex items-center gap-2 text-[12px] text-text-secondary cursor-pointer">
+                    <input type="checkbox" checked={printWithLoads} onChange={e => setPrintWithLoads(e.target.checked)} className="accent-accent" />
+                    Imprimir con las cargas del plan (si no, quedan en blanco para anotar)
+                  </label>
                 )}
+
+                {multiDayAvailable && (
+                  <label className="flex items-center gap-2 text-[12px] text-text-secondary cursor-pointer">
+                    <input type="checkbox" checked={printAllDays} onChange={e => setPrintAllDays(e.target.checked)} className="accent-accent" />
+                    Una hoja por cada día de la semana ({daysInSelectedWeek.length} días)
+                  </label>
+                )}
+
                 <button
                   onClick={() => window.print()}
                   className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 w-full"
@@ -1343,9 +1264,8 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
             <PlanPrintSheet
               patientName={patients.find(p => p.id === plan.patient_id)?.name ?? plan.name}
               planName={plan.name}
-              session={selectedSession}
-              weeks={printWeeks}
-              weekSessions={printWeekSessions.length > 1 ? printWeekSessions : undefined}
+              sheets={printSheets}
+              weeks={printFallbackWeeks}
               showLoads={printWithLoads}
             />
           </div>
