@@ -466,7 +466,7 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
   // Opciones de la planilla imprimible
   const [printWeekCount, setPrintWeekCount] = useState<number | 'all'>(6) // columnas: 4/6/8 o todas
   const [printWithLoads, setPrintWithLoads] = useState(false)             // imprimir carga del plan vs en blanco
-  const [printAllDays, setPrintAllDays] = useState(false)                 // una hoja por cada día de la semana
+  const [printDays, setPrintDays] = useState<Set<number> | null>(null)    // weekdays a imprimir (null = solo el día seleccionado)
 
   const supabaseRef = useRef(createClient())
   const planSaveRef = useRef<NodeJS.Timeout | null>(null)
@@ -478,39 +478,49 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
     ? scheduledSessions.find(s => s.scheduled_date === selectedDate) ?? null
     : null
 
-  // Serie de fechas del mismo día (weekday) a lo largo del plan, empezando en
-  // la sesión dada y acotada a printWeekCount. Así las columnas de la planilla
-  // cuadran 1:1 con las semanas del calendario, sin desbordar la hoja.
-  const seriesFor = (fromSession: ScheduledSession) => {
-    const dow = new Date(fromSession.scheduled_date + 'T00:00:00').getDay()
-    const all = scheduledSessions
-      .filter(s => new Date(s.scheduled_date + 'T00:00:00').getDay() === dow)
+  // Todas las sesiones del mismo día (weekday) a lo largo del plan, desde la
+  // semana 1, ordenadas. Las columnas de la planilla cuadran 1:1 con estas.
+  const seriesFor = (weekday: number) =>
+    scheduledSessions
+      .filter(s => new Date(s.scheduled_date + 'T00:00:00').getDay() === weekday)
       .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date))
-    const startIdx = Math.max(0, all.findIndex(s => s.scheduled_date === fromSession.scheduled_date))
-    const sliced = printWeekCount === 'all' ? all.slice(startIdx) : all.slice(startIdx, startIdx + printWeekCount)
-    return sliced.map(s => ({ date: s.scheduled_date, blocks: s.session_data?.blocks ?? [] }))
+      .map(s => ({ date: s.scheduled_date, blocks: s.session_data?.blocks ?? [] }))
+
+  // Días-plantilla del plan: cada weekday con ejercicios, una vez (primera
+  // aparición). Sirven para el selector "qué entrenamientos imprimir".
+  const dayTemplates = (() => {
+    const map = new Map<number, ScheduledSession>()
+    scheduledSessions
+      .filter(s => (s.session_data?.blocks ?? []).some(b => b.exercises.length > 0))
+      .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date))
+      .forEach(s => {
+        const dow = new Date(s.scheduled_date + 'T00:00:00').getDay()
+        if (!map.has(dow)) map.set(dow, s)
+      })
+    return Array.from(map.entries())
+      .map(([dow, session]) => ({ dow, session }))
+      .sort((a, b) => ((a.dow + 6) % 7) - ((b.dow + 6) % 7)) // Lun primero
+  })()
+
+  const selectedWeekday = selectedSession ? new Date(selectedSession.scheduled_date + 'T00:00:00').getDay() : null
+  const effectiveDays = printDays ?? (selectedWeekday !== null ? new Set([selectedWeekday]) : new Set<number>())
+
+  // Hojas a imprimir: una por weekday seleccionado.
+  const printSheets = dayTemplates
+    .filter(dt => effectiveDays.has(dt.dow))
+    .map(dt => ({ session: dt.session, weekSessions: seriesFor(dt.dow) }))
+
+  // Cantidad de columnas: 4/6/8 fijas, o "todas" = el máximo real disponible.
+  const maxAvailableWeeks = Math.max(1, ...printSheets.map(s => s.weekSessions.length))
+  const resolvedWeeks = printWeekCount === 'all' ? maxAvailableWeeks : printWeekCount
+
+  const togglePrintDay = (dow: number) => {
+    setPrintDays(prev => {
+      const base = new Set(prev ?? (selectedWeekday !== null ? [selectedWeekday] : []))
+      if (base.has(dow)) base.delete(dow); else base.add(dow)
+      return base
+    })
   }
-
-  // Días con ejercicios en la semana del día seleccionado (Lun→Dom).
-  const daysInSelectedWeek = (() => {
-    if (!selectedDate) return [] as ScheduledSession[]
-    const mon = toDateStr(getMondayOfWeek(new Date(selectedDate + 'T00:00:00')))
-    const sun = toDateStr(addDays(getMondayOfWeek(new Date(selectedDate + 'T00:00:00')), 6))
-    return scheduledSessions
-      .filter(s => s.scheduled_date >= mon && s.scheduled_date <= sun && (s.session_data?.blocks ?? []).some(b => b.exercises.length > 0))
-      .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date))
-  })()
-
-  // Hojas a imprimir: una por día (si printAllDays) o solo el día seleccionado.
-  const printSheets = (() => {
-    if (!selectedSession) return [] as { session: ScheduledSession; weekSessions: { date: string; blocks: SessionBlock[] }[] }[]
-    const days = printAllDays && daysInSelectedWeek.length > 0 ? daysInSelectedWeek : [selectedSession]
-    return days.map(d => ({ session: d, weekSessions: seriesFor(d) }))
-  })()
-
-  const printFallbackWeeks = typeof printWeekCount === 'number' ? printWeekCount : 6
-  const selectedHasWeeks = !!selectedSession && seriesFor(selectedSession).length > 1
-  const multiDayAvailable = daysInSelectedWeek.length > 1
 
   const importablePlanSessions = ((plan.plan_data?.sessions ?? []) as PlanDataSession[])
     .filter(s => (s.blocks ?? []).some(b => b.exercises?.length > 0))
@@ -1218,9 +1228,22 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
                 Cargar plan al calendario
               </button>
             )}
-            {(selectedSession?.session_data?.blocks ?? []).some(b => b.exercises.length > 0) && (
+            {dayTemplates.length > 0 && (
               <div className="flex flex-col gap-3 border-[0.5px] border-border rounded-lg p-3">
                 <div className="text-[11px] uppercase tracking-[0.05em] text-text-secondary">Planilla imprimible</div>
+
+                {/* Días a imprimir (una hoja por día) */}
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-[12px] text-text-secondary">Días a imprimir ({printSheets.length} {printSheets.length === 1 ? 'hoja' : 'hojas'})</span>
+                  <div className="flex flex-col gap-1">
+                    {dayTemplates.map(dt => (
+                      <label key={dt.dow} className="flex items-center gap-2 text-[12px] text-text-primary cursor-pointer">
+                        <input type="checkbox" checked={effectiveDays.has(dt.dow)} onChange={() => togglePrintDay(dt.dow)} className="accent-accent" />
+                        {DAY_NAMES[(dt.dow + 6) % 7]}{dt.session.session_name ? ` · ${dt.session.session_name}` : ''}
+                      </label>
+                    ))}
+                  </div>
+                </div>
 
                 {/* Cantidad de semanas (columnas) */}
                 <div className="flex items-center justify-between gap-2">
@@ -1238,23 +1261,17 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
                   </div>
                 </div>
 
-                {selectedHasWeeks && (
+                {printSheets.some(s => s.weekSessions.length > 1) && (
                   <label className="flex items-center gap-2 text-[12px] text-text-secondary cursor-pointer">
                     <input type="checkbox" checked={printWithLoads} onChange={e => setPrintWithLoads(e.target.checked)} className="accent-accent" />
                     Imprimir con las cargas del plan (si no, quedan en blanco para anotar)
                   </label>
                 )}
 
-                {multiDayAvailable && (
-                  <label className="flex items-center gap-2 text-[12px] text-text-secondary cursor-pointer">
-                    <input type="checkbox" checked={printAllDays} onChange={e => setPrintAllDays(e.target.checked)} className="accent-accent" />
-                    Una hoja por cada día de la semana ({daysInSelectedWeek.length} días)
-                  </label>
-                )}
-
                 <button
                   onClick={() => window.print()}
-                  className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 w-full"
+                  disabled={printSheets.length === 0}
+                  className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 w-full disabled:opacity-40 disabled:cursor-not-allowed"
                   title="Planilla A4 apaisada con columnas por semana para anotar cargas. Ahorra tinta y hojas (Guardar como PDF)."
                 >
                   Imprimir planilla semanal (A4)
@@ -1265,7 +1282,7 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
               patientName={patients.find(p => p.id === plan.patient_id)?.name ?? plan.name}
               planName={plan.name}
               sheets={printSheets}
-              weeks={printFallbackWeeks}
+              weeks={resolvedWeeks}
               showLoads={printWithLoads}
             />
           </div>
