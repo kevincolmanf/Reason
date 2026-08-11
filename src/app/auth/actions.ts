@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 import { createClient } from '@/utils/supabase/server'
 
 export async function login(formData: FormData) {
@@ -77,7 +78,13 @@ export async function resetPassword(formData: FormData) {
   const supabase = createClient()
   const email = (formData.get('email') as string || '').trim()
 
-  const base = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+  // Base robusta para el link del mail: preferimos NEXT_PUBLIC_SITE_URL, pero si
+  // no está seteada (p. ej. faltó en Vercel) tomamos el host real del request en
+  // vez de caer a localhost, que rompía el link de recuperación en producción.
+  const h = headers()
+  const host = h.get('x-forwarded-host') ?? h.get('host')
+  const proto = h.get('x-forwarded-proto') ?? 'https'
+  const base = process.env.NEXT_PUBLIC_SITE_URL || (host ? `${proto}://${host}` : 'http://localhost:3000')
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${base}/auth/callback?next=/reset-password`,
   })

@@ -37,6 +37,7 @@ interface FichaData {
   dolorTipo: string
   dolorIrradiacion: string
   antecedentes: string
+  estudiosComplementarios: string
   examenInspeccion: string
   examenFuerza: string
   examenTest: string
@@ -194,6 +195,7 @@ const emptyFicha: FichaData = {
   dolorTipo: '',
   dolorIrradiacion: '',
   antecedentes: '',
+  estudiosComplementarios: '',
   examenInspeccion: '',
   examenFuerza: '',
   examenTest: '',
@@ -251,6 +253,32 @@ export default function FichaClient({
   const [previewPdf, setPreviewPdf] = useState<{ url: string; nombre: string } | null>(null)
   const [nuevaActFecha, setNuevaActFecha] = useState(new Date().toISOString().split('T')[0])
   const [nuevaActTexto, setNuevaActTexto] = useState('')
+
+  // Notitas (frases rápidas) propias del plan de tratamiento: agregar / borrar.
+  // Se guardan por equipo (o personal) reusando la API de frases del equipo.
+  const [planPhrases, setPlanPhrases] = useState<{ id: string; label: string }[]>([])
+  useEffect(() => {
+    let active = true
+    fetch(`/api/sesiones/frases?patientId=${patientId}`)
+      .then(r => (r.ok ? r.json() : []))
+      .then(d => { if (active && Array.isArray(d)) setPlanPhrases(d) })
+      .catch(() => {})
+    return () => { active = false }
+  }, [patientId])
+  const addPlanPhrase = async (label: string) => {
+    const res = await fetch('/api/sesiones/frases', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId, label }),
+    })
+    if (res.ok) { const p = await res.json(); setPlanPhrases(prev => [...prev, p]) }
+  }
+  const deletePlanPhrase = async (id: string) => {
+    const res = await fetch('/api/sesiones/frases', {
+      method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, patientId }),
+    })
+    if (res.ok) setPlanPhrases(prev => prev.filter(p => p.id !== id))
+  }
 
   const supabaseRef = useRef(createClient())
   const router = useRouter()
@@ -516,6 +544,7 @@ export default function FichaClient({
       y += 2.4
     }
 
+    section('Diagnóstico kinésico', ficha.diagnostico)
     section('Motivo de consulta', ficha.motivoConsulta)
     section('Historia de la enfermedad actual', ficha.historiaEnfermedad)
     section('Factores agravantes', ficha.factoresAgravantes)
@@ -528,6 +557,7 @@ export default function FichaClient({
       ficha.dolorIrradiacion && `Irradiación: ${ficha.dolorIrradiacion}`,
     ].filter(Boolean).join('  |  '))
     section('Antecedentes', ficha.antecedentes)
+    section('Estudios complementarios', ficha.estudiosComplementarios)
     section('Examen físico — Inspección y palpación', ficha.examenInspeccion)
     section('Fuerza', ficha.examenFuerza)
     section('Tests especiales', ficha.examenTest)
@@ -568,7 +598,6 @@ export default function FichaClient({
       return `${meta.label}: ${score}${q.interpretation ? ` — ${q.interpretation}` : ''} (${fecha})`
     }).join('\n'))
 
-    section('Diagnóstico kinésico', ficha.diagnostico)
     section('Objetivos del paciente', ficha.objetivosPaciente)
     section('Objetivos a corto plazo', ficha.objetivosCortoPlazo)
     section('Objetivos a largo plazo', ficha.objetivosLargoPlazo)
@@ -728,12 +757,17 @@ export default function FichaClient({
         </div>
 
         <div>
-          <label className="block text-[12px] uppercase tracking-[0.05em] text-accent mb-2 font-medium">1. Motivo de Consulta</label>
+          <label className="block text-[12px] uppercase tracking-[0.05em] text-accent mb-2 font-medium">Diagnóstico Kinésico</label>
+          <textarea rows={3} value={ficha.diagnostico} onChange={e => handleChange('diagnostico', e.target.value)} placeholder="Conclusión de los hallazgos y diagnóstico de movimiento. (Se puede completar/editar en cualquier momento.)" className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y" />
+        </div>
+
+        <div>
+          <label className="block text-[12px] uppercase tracking-[0.05em] text-accent mb-2 font-medium">Motivo de Consulta</label>
           <textarea rows={2} value={ficha.motivoConsulta} onChange={e => handleChange('motivoConsulta', e.target.value)} placeholder="Ej: Dolor lumbar bajo que le impide agacharse..." className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y" />
         </div>
 
         <div>
-          <label className="block text-[12px] uppercase tracking-[0.05em] text-accent mb-2 font-medium">2. Historia de la Enfermedad Actual</label>
+          <label className="block text-[12px] uppercase tracking-[0.05em] text-accent mb-2 font-medium">Historia de la Enfermedad Actual</label>
           <textarea rows={4} value={ficha.historiaEnfermedad} onChange={e => handleChange('historiaEnfermedad', e.target.value)} placeholder="Cómo inició, evolución, irradiación..." className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y" />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
             <div>
@@ -747,9 +781,10 @@ export default function FichaClient({
           </div>
         </div>
 
-        {/* Caracterización del dolor */}
-        <div className="bg-bg-secondary p-6 rounded-lg border-[0.5px] border-border space-y-5">
-          <h3 className="text-[14px] uppercase tracking-[0.05em] text-text-primary font-medium border-b-[0.5px] border-border pb-2">Caracterización del dolor</h3>
+        {/* Caracterización del dolor (colapsable para no saturar la ficha) */}
+        <details className="bg-bg-secondary p-6 rounded-lg border-[0.5px] border-border">
+          <summary className="text-[14px] uppercase tracking-[0.05em] text-text-primary font-medium cursor-pointer select-none">Caracterización del dolor <span className="normal-case text-[11px] text-text-tertiary">(desplegar)</span></summary>
+          <div className="space-y-5 mt-4">
 
           <div>
             <label className="block text-[12px] text-text-secondary mb-2">Intensidad (EVA 0–10)</label>
@@ -803,15 +838,22 @@ export default function FichaClient({
               <input type="text" value={ficha.dolorIrradiacion} onChange={e => handleChange('dolorIrradiacion', e.target.value)} placeholder="Ej: irradia a cara posterior de muslo hasta rodilla..." className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent" />
             </div>
           </div>
-        </div>
+          </div>
+        </details>
 
         <div>
-          <label className="block text-[12px] uppercase tracking-[0.05em] text-accent mb-2 font-medium">3. Antecedentes</label>
+          <label className="block text-[12px] uppercase tracking-[0.05em] text-accent mb-2 font-medium">Antecedentes</label>
           <textarea rows={3} value={ficha.antecedentes} onChange={e => handleChange('antecedentes', e.target.value)} placeholder="Médicos, quirúrgicos, medicación actual..." className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y" />
         </div>
 
+        <div>
+          <label className="block text-[12px] uppercase tracking-[0.05em] text-accent mb-2 font-medium">Estudios Complementarios</label>
+          <textarea rows={2} value={ficha.estudiosComplementarios} onChange={e => handleChange('estudiosComplementarios', e.target.value)} placeholder="Imágenes y estudios: RX, RMN, ecografía, TAC, laboratorio, EMG... (hallazgos relevantes)" className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y" />
+          <p className="text-[11px] text-text-tertiary mt-1">Los PDF de imágenes/estudios se pueden adjuntar más abajo, en “Recomendaciones de otros profesionales”.</p>
+        </div>
+
         <div className="bg-bg-secondary p-6 rounded-lg border-[0.5px] border-border space-y-6">
-          <h3 className="text-[13px] uppercase tracking-[0.05em] text-text-primary font-medium border-b-[0.5px] border-border pb-2">4. Examen Físico</h3>
+          <h3 className="text-[13px] uppercase tracking-[0.05em] text-text-primary font-medium border-b-[0.5px] border-border pb-2">Examen Físico</h3>
           <div>
             <label className="block text-[12px] text-text-secondary mb-1">Inspección y Palpación</label>
             <textarea rows={2} value={ficha.examenInspeccion} onChange={e => handleChange('examenInspeccion', e.target.value)} className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y" />
@@ -867,11 +909,6 @@ export default function FichaClient({
           </div>
         </div>
 
-        <div>
-          <label className="block text-[12px] uppercase tracking-[0.05em] text-accent mb-2 font-medium">5. Diagnóstico Kinésico</label>
-          <textarea rows={3} value={ficha.diagnostico} onChange={e => handleChange('diagnostico', e.target.value)} placeholder="Conclusión de los hallazgos y diagnóstico de movimiento..." className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y" />
-        </div>
-
         {/* Objetivos */}
         <div className="bg-bg-secondary p-6 rounded-lg border-[0.5px] border-border space-y-5">
           <h3 className="text-[14px] uppercase tracking-[0.05em] text-text-primary font-medium border-b-[0.5px] border-border pb-2">Objetivos</h3>
@@ -892,19 +929,23 @@ export default function FichaClient({
         </div>
 
         <div>
-          <label className="block text-[12px] uppercase tracking-[0.05em] text-accent mb-2 font-medium">6. Plan de Tratamiento</label>
+          <label className="block text-[12px] uppercase tracking-[0.05em] text-accent mb-2 font-medium">Plan de Tratamiento</label>
           <QuickNoteField
             value={ficha.planTratamiento}
             onChange={v => handleChange('planTratamiento', v)}
             rows={4}
             placeholder="Intervenciones, técnicas, frecuencia, pautas de ejercicio..."
             phrases={['Terapia manual', 'Ejercicio terapéutico', 'Educación y pautas', 'Progresión de carga', 'Control en 1 semana', 'Reevaluar en 2 semanas']}
+            presetHideKey="plan_tratamiento"
+            customPhrases={planPhrases}
+            onAddPhrase={addPlanPhrase}
+            onDeletePhrase={deletePlanPhrase}
           />
         </div>
 
         {/* 7. RECOMENDACIONES DE OTROS PROFESIONALES */}
         <div>
-          <label className="block text-[12px] uppercase tracking-[0.05em] text-accent mb-2 font-medium">7. Recomendaciones de Otros Profesionales</label>
+          <label className="block text-[12px] uppercase tracking-[0.05em] text-accent mb-2 font-medium">Recomendaciones de Otros Profesionales</label>
           <textarea
             rows={3}
             value={ficha.recomendacionesTexto}
