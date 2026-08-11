@@ -463,6 +463,11 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
   // Patients state
   const [patients, setPatients] = useState<{ id: string; name: string; load_share_token: string | null }[]>([])
 
+  // Opciones de la planilla imprimible
+  const [printWeekCount, setPrintWeekCount] = useState<number | 'all'>(6) // columnas: 4/6/8 o todas
+  const [printWithLoads, setPrintWithLoads] = useState(false)             // imprimir carga del plan vs en blanco
+  const [printDays, setPrintDays] = useState<Set<number> | null>(null)    // weekdays a imprimir (null = solo el día seleccionado)
+
   const supabaseRef = useRef(createClient())
   const planSaveRef = useRef<NodeJS.Timeout | null>(null)
   const sessionSaveRef = useRef<NodeJS.Timeout | null>(null)
@@ -472,6 +477,50 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
   const selectedSession = selectedDate
     ? scheduledSessions.find(s => s.scheduled_date === selectedDate) ?? null
     : null
+
+  // Todas las sesiones del mismo día (weekday) a lo largo del plan, desde la
+  // semana 1, ordenadas. Las columnas de la planilla cuadran 1:1 con estas.
+  const seriesFor = (weekday: number) =>
+    scheduledSessions
+      .filter(s => new Date(s.scheduled_date + 'T00:00:00').getDay() === weekday)
+      .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date))
+      .map(s => ({ date: s.scheduled_date, blocks: s.session_data?.blocks ?? [] }))
+
+  // Días-plantilla del plan: cada weekday con ejercicios, una vez (primera
+  // aparición). Sirven para el selector "qué entrenamientos imprimir".
+  const dayTemplates = (() => {
+    const map = new Map<number, ScheduledSession>()
+    scheduledSessions
+      .filter(s => (s.session_data?.blocks ?? []).some(b => b.exercises.length > 0))
+      .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date))
+      .forEach(s => {
+        const dow = new Date(s.scheduled_date + 'T00:00:00').getDay()
+        if (!map.has(dow)) map.set(dow, s)
+      })
+    return Array.from(map.entries())
+      .map(([dow, session]) => ({ dow, session }))
+      .sort((a, b) => ((a.dow + 6) % 7) - ((b.dow + 6) % 7)) // Lun primero
+  })()
+
+  const selectedWeekday = selectedSession ? new Date(selectedSession.scheduled_date + 'T00:00:00').getDay() : null
+  const effectiveDays = printDays ?? (selectedWeekday !== null ? new Set([selectedWeekday]) : new Set<number>())
+
+  // Hojas a imprimir: una por weekday seleccionado.
+  const printSheets = dayTemplates
+    .filter(dt => effectiveDays.has(dt.dow))
+    .map(dt => ({ session: dt.session, weekSessions: seriesFor(dt.dow) }))
+
+  // Cantidad de columnas: 4/6/8 fijas, o "todas" = el máximo real disponible.
+  const maxAvailableWeeks = Math.max(1, ...printSheets.map(s => s.weekSessions.length))
+  const resolvedWeeks = printWeekCount === 'all' ? maxAvailableWeeks : printWeekCount
+
+  const togglePrintDay = (dow: number) => {
+    setPrintDays(prev => {
+      const base = new Set(prev ?? (selectedWeekday !== null ? [selectedWeekday] : []))
+      if (base.has(dow)) base.delete(dow); else base.add(dow)
+      return base
+    })
+  }
 
   const importablePlanSessions = ((plan.plan_data?.sessions ?? []) as PlanDataSession[])
     .filter(s => (s.blocks ?? []).some(b => b.exercises?.length > 0))
@@ -1043,102 +1092,6 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
     setCreating(false)
   }
 
-  // ─── Export PDF ────────────────────────────────────────────────────────────
-
-  const handleExportPDF = async () => {
-    // Carga diferida: jspdf y qrcode solo se descargan al exportar
-    const [{ default: jsPDF }, { default: QRCode }] = await Promise.all([
-      import('jspdf'),
-      import('qrcode'),
-    ])
-    const doc = new jsPDF()
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(16)
-    const patientName = patients.find(p => p.id === plan.patient_id)?.name ?? 'Plan de Ejercicio'
-    doc.text(patientName, 20, 20)
-
-    doc.setFontSize(10)
-    doc.setFont('helvetica', 'normal')
-    if (plan.start_date) {
-      doc.text(`Fecha de inicio: ${new Date(plan.start_date).toLocaleDateString('es-AR')}`, 20, 28)
-    }
-    if (plan.notes) {
-      doc.text(`Observaciones: ${plan.notes}`, 20, 34)
-    }
-
-    let y = plan.notes ? 45 : 35
-    const pageHeight = 280
-
-    for (const session of scheduledSessions) {
-      if (!session.session_data?.blocks?.length) continue
-      const hasExercises = session.session_data.blocks.some(b => b.exercises.length > 0)
-      if (!hasExercises) continue
-
-      if (y > pageHeight - 30) { doc.addPage(); y = 20 }
-
-      // Fecha de la sesión
-      const dateObj = new Date(session.scheduled_date + 'T00:00:00')
-      const dateLabel = dateObj.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })
-
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(12)
-      doc.text(`${dateLabel}${session.session_name ? ' — ' + session.session_name : ''}`, 20, y)
-      y += 8
-
-      for (const block of session.session_data.blocks) {
-        if (block.exercises.length === 0) continue
-        if (y > pageHeight - 20) { doc.addPage(); y = 20 }
-
-        doc.setFont('helvetica', 'bold')
-        doc.setFontSize(10)
-        doc.text(block.name, 20, y)
-        y += 6
-
-        for (const ex of block.exercises) {
-          if (y > pageHeight - 25) { doc.addPage(); y = 20 }
-
-          doc.setFont('helvetica', 'bold')
-          doc.setFontSize(10)
-          doc.text(`- ${ex.exercise_name}`, 20, y)
-
-          if (ex.youtube_url) {
-            try {
-              const qrDataUrl = await QRCode.toDataURL(ex.youtube_url, { margin: 1, width: 64 })
-              doc.addImage(qrDataUrl, 'PNG', 170, y - 5, 20, 20)
-            } catch (err) {
-              console.error('QR Error', err)
-            }
-          }
-          y += 6
-
-          doc.setFont('helvetica', 'normal')
-          doc.setFontSize(8)
-          const doseStr = [
-            ex.sets ? `${ex.sets} series` : '',
-            ex.reps ? `${ex.reps} reps` : '',
-            ex.load ? `Carga: ${ex.load}` : '',
-            ex.rest ? `Pausa: ${ex.rest}` : '',
-          ].filter(Boolean).join(' · ')
-          if (doseStr) {
-            doc.text(doseStr, 25, y)
-            y += 5
-          }
-          y += 3
-        }
-        y += 4
-      }
-      y += 8
-    }
-
-    if (y > pageHeight - 10) { doc.addPage(); y = 20 }
-    doc.setFontSize(9)
-    doc.setTextColor(150)
-    doc.text('Documento generado con Reason — reason.com.ar', 20, 285)
-
-    const pdfPatientName = patients.find(p => p.id === plan.patient_id)?.name ?? 'Plan'
-    doc.save(`Plan_${pdfPatientName.replace(/\s+/g, '_')}.pdf`)
-  }
-
   // ─── Calendar helpers ──────────────────────────────────────────────────────
 
   const calendarDays: Date[] = []
@@ -1275,25 +1228,62 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
                 Cargar plan al calendario
               </button>
             )}
-            <button
-              onClick={handleExportPDF}
-              className="bg-bg-primary border-[0.5px] border-border-strong text-text-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:bg-bg-secondary w-full"
-            >
-              Exportar PDF
-            </button>
-            {(selectedSession?.session_data?.blocks ?? []).some(b => b.exercises.length > 0) && (
-              <button
-                onClick={() => window.print()}
-                className="bg-bg-primary border-[0.5px] border-border-strong text-text-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:bg-bg-secondary w-full"
-                title="Imprime la sesión seleccionada en una página A4 (Guardar como PDF)"
-              >
-                Imprimir planilla (A4)
-              </button>
+            {dayTemplates.length > 0 && (
+              <div className="flex flex-col gap-3 border-[0.5px] border-border rounded-lg p-3">
+                <div className="text-[11px] uppercase tracking-[0.05em] text-text-secondary">Planilla imprimible</div>
+
+                {/* Días a imprimir (una hoja por día) */}
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-[12px] text-text-secondary">Días a imprimir ({printSheets.length} {printSheets.length === 1 ? 'hoja' : 'hojas'})</span>
+                  <div className="flex flex-col gap-1">
+                    {dayTemplates.map(dt => (
+                      <label key={dt.dow} className="flex items-center gap-2 text-[12px] text-text-primary cursor-pointer">
+                        <input type="checkbox" checked={effectiveDays.has(dt.dow)} onChange={() => togglePrintDay(dt.dow)} className="accent-accent" />
+                        {DAY_NAMES[(dt.dow + 6) % 7]}{dt.session.session_name ? ` · ${dt.session.session_name}` : ''}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Cantidad de semanas (columnas) */}
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[12px] text-text-secondary">Semanas</span>
+                  <div className="flex gap-1">
+                    {([4, 6, 8, 'all'] as const).map(opt => (
+                      <button
+                        key={opt}
+                        onClick={() => setPrintWeekCount(opt)}
+                        className={`px-2.5 py-1 rounded-md text-[12px] border-[0.5px] transition-colors ${printWeekCount === opt ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-primary border-border text-text-secondary hover:text-text-primary'}`}
+                      >
+                        {opt === 'all' ? 'Todas' : opt}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {printSheets.some(s => s.weekSessions.length > 1) && (
+                  <label className="flex items-center gap-2 text-[12px] text-text-secondary cursor-pointer">
+                    <input type="checkbox" checked={printWithLoads} onChange={e => setPrintWithLoads(e.target.checked)} className="accent-accent" />
+                    Imprimir con las cargas del plan (si no, quedan en blanco para anotar)
+                  </label>
+                )}
+
+                <button
+                  onClick={() => window.print()}
+                  disabled={printSheets.length === 0}
+                  className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 w-full disabled:opacity-40 disabled:cursor-not-allowed"
+                  title="Planilla A4 apaisada con columnas por semana para anotar cargas. Ahorra tinta y hojas (Guardar como PDF)."
+                >
+                  Imprimir planilla semanal (A4)
+                </button>
+              </div>
             )}
             <PlanPrintSheet
               patientName={patients.find(p => p.id === plan.patient_id)?.name ?? plan.name}
               planName={plan.name}
-              session={selectedSession}
+              sheets={printSheets}
+              weeks={resolvedWeeks}
+              showLoads={printWithLoads}
             />
           </div>
         </div>
