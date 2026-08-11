@@ -463,6 +463,9 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
   // Patients state
   const [patients, setPatients] = useState<{ id: string; name: string; load_share_token: string | null }[]>([])
 
+  // Cantidad de columnas semanales en blanco de la planilla imprimible
+  const [printWeeks, setPrintWeeks] = useState(4)
+
   const supabaseRef = useRef(createClient())
   const planSaveRef = useRef<NodeJS.Timeout | null>(null)
   const sessionSaveRef = useRef<NodeJS.Timeout | null>(null)
@@ -1282,18 +1285,33 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
               Exportar PDF
             </button>
             {(selectedSession?.session_data?.blocks ?? []).some(b => b.exercises.length > 0) && (
-              <button
-                onClick={() => window.print()}
-                className="bg-bg-primary border-[0.5px] border-border-strong text-text-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:bg-bg-secondary w-full"
-                title="Imprime la sesión seleccionada en una página A4 (Guardar como PDF)"
-              >
-                Imprimir planilla (A4)
-              </button>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between gap-2">
+                  <label htmlFor="print-weeks" className="text-[12px] text-text-secondary">Semanas a registrar</label>
+                  <input
+                    id="print-weeks"
+                    type="number"
+                    min={1}
+                    max={10}
+                    value={printWeeks}
+                    onChange={e => setPrintWeeks(Math.max(1, Math.min(10, Number(e.target.value) || 1)))}
+                    className="w-16 bg-bg-primary border-[0.5px] border-border rounded-lg px-2 py-1 text-[13px] text-text-primary focus:outline-none focus:border-accent text-center"
+                  />
+                </div>
+                <button
+                  onClick={() => window.print()}
+                  className="bg-bg-primary border-[0.5px] border-border-strong text-text-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:bg-bg-secondary w-full"
+                  title="Imprime la sesión seleccionada en A4 apaisado con columnas en blanco por semana (Guardar como PDF)"
+                >
+                  Imprimir planilla (A4)
+                </button>
+              </div>
             )}
             <PlanPrintSheet
               patientName={patients.find(p => p.id === plan.patient_id)?.name ?? plan.name}
               planName={plan.name}
               session={selectedSession}
+              weeks={printWeeks}
             />
           </div>
         </div>
