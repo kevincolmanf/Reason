@@ -465,6 +465,8 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
 
   // Cantidad de columnas semanales en blanco de la planilla imprimible
   const [printWeeks, setPrintWeeks] = useState(4)
+  // Imprimir la carga planificada de cada semana (true) o dejar en blanco (false)
+  const [printWithLoads, setPrintWithLoads] = useState(false)
 
   const supabaseRef = useRef(createClient())
   const planSaveRef = useRef<NodeJS.Timeout | null>(null)
@@ -476,15 +478,17 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
     ? scheduledSessions.find(s => s.scheduled_date === selectedDate) ?? null
     : null
 
-  // Fechas reales del mismo día (weekday) a lo largo del plan, para que las
-  // columnas de la planilla imprimible cuadren 1:1 con las semanas del calendario.
-  const printWeekDates = (() => {
-    if (!selectedSession) return [] as string[]
+  // Sesiones del mismo día (weekday) a lo largo del plan, ordenadas por fecha.
+  // Sirven para que las columnas de la planilla imprimible cuadren 1:1 con las
+  // semanas del calendario, y para poder imprimir la carga planificada de cada
+  // semana (modo "con cargas").
+  const printWeekSessions = (() => {
+    if (!selectedSession) return [] as { date: string; blocks: SessionBlock[] }[]
     const dow = new Date(selectedSession.scheduled_date + 'T00:00:00').getDay()
     return scheduledSessions
       .filter(s => new Date(s.scheduled_date + 'T00:00:00').getDay() === dow)
-      .map(s => s.scheduled_date)
-      .sort((a, b) => a.localeCompare(b))
+      .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date))
+      .map(s => ({ date: s.scheduled_date, blocks: s.session_data?.blocks ?? [] }))
   })()
 
   const importablePlanSessions = ((plan.plan_data?.sessions ?? []) as PlanDataSession[])
@@ -1297,10 +1301,21 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
             </button>
             {(selectedSession?.session_data?.blocks ?? []).some(b => b.exercises.length > 0) && (
               <div className="flex flex-col gap-2">
-                {printWeekDates.length > 1 ? (
-                  <div className="text-[12px] text-text-secondary">
-                    {printWeekDates.length} semanas detectadas del calendario · las columnas van con la fecha real de cada semana.
-                  </div>
+                {printWeekSessions.length > 1 ? (
+                  <>
+                    <div className="text-[12px] text-text-secondary">
+                      {printWeekSessions.length} semanas detectadas del calendario · las columnas van con la fecha real de cada semana.
+                    </div>
+                    <label className="flex items-center gap-2 text-[12px] text-text-secondary cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={printWithLoads}
+                        onChange={e => setPrintWithLoads(e.target.checked)}
+                        className="accent-accent"
+                      />
+                      Imprimir con las cargas del plan (si no, quedan en blanco para anotar)
+                    </label>
+                  </>
                 ) : (
                   <div className="flex items-center justify-between gap-2">
                     <label htmlFor="print-weeks" className="text-[12px] text-text-secondary">Semanas a registrar</label>
@@ -1329,7 +1344,8 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
               planName={plan.name}
               session={selectedSession}
               weeks={printWeeks}
-              weekDates={printWeekDates.length > 1 ? printWeekDates : undefined}
+              weekSessions={printWeekSessions.length > 1 ? printWeekSessions : undefined}
+              showLoads={printWithLoads}
             />
           </div>
         </div>

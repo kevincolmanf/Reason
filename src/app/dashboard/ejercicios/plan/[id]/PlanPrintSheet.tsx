@@ -6,12 +6,14 @@ import { Fragment } from 'react'
 // Se renderiza fuera de pantalla y solo se vuelve visible al imprimir
 // (window.print → "Guardar como PDF"). Blanco y negro, tabla densa.
 //
-// Formato "para usar durante semanas": a la izquierda va la prescripción
-// (series×reps, RPE/EAV objetivo, carga sugerida) y a la derecha hay una
-// columna por semana para que el alumno anote a lapicera la carga (kg) que
-// usó. Si el día está duplicado en el calendario, las columnas llevan la
-// FECHA real de cada semana (así la hoja cuadra 1:1 con el plan digital);
-// si no, quedan columnas "Sem N" en blanco. Sin rellenos grises.
+// Formato "para usar durante semanas": a la izquierda la prescripción
+// (series×reps, RPE/EAV), y a la derecha una columna por semana. Si el día
+// está duplicado en el calendario, las columnas llevan la FECHA real de cada
+// semana (la hoja cuadra 1:1 con el plan digital). Dos modos de impresión:
+//   · en blanco → el alumno anota la carga (kg) a lapicera.
+//   · con cargas → se imprime la carga planificada de cada semana (entrena
+//     leyendo la hoja, sin celular).
+// Sin rellenos grises: solo texto y filas finas.
 
 interface PrintExercise {
   exercise_name: string
@@ -28,6 +30,7 @@ interface PrintSession {
   scheduled_date: string
   session_data: { blocks: PrintBlock[] } | null
 }
+interface WeekSession { date: string; blocks: PrintBlock[] }
 
 const DOW = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
 
@@ -38,7 +41,6 @@ function effort(ex: PrintExercise): string {
   return parts.join(' · ') || '—'
 }
 
-// "2026-08-11" → { dow: "Lun", dm: "11/8" }
 function fmtDate(iso: string): { dow: string; dm: string } {
   const d = new Date(iso + 'T00:00:00')
   return { dow: DOW[d.getDay()], dm: `${d.getDate()}/${d.getMonth() + 1}` }
@@ -53,13 +55,15 @@ export default function PlanPrintSheet({
   planName,
   session,
   weeks = 4,
-  weekDates,
+  weekSessions,
+  showLoads = false,
 }: {
   patientName: string
   planName: string
   session: PrintSession | null
   weeks?: number
-  weekDates?: string[]
+  weekSessions?: WeekSession[]
+  showLoads?: boolean
 }) {
   const blocks = (session?.session_data?.blocks ?? []).filter(b => b.exercises.length > 0)
   const dateLabel = session
@@ -67,13 +71,17 @@ export default function PlanPrintSheet({
     : ''
 
   // Columnas semanales: fechas reales del plan si las hay; si no, blanco "Sem N".
-  const dated = (weekDates ?? []).filter(Boolean)
-  const useDates = dated.length > 0
+  const weeksArr = weekSessions ?? []
+  const useDates = weeksArr.length > 1
+  const withLoads = useDates && showLoads
   const cols = useDates
-    ? dated.map((iso, i) => ({ key: iso, week: i + 1, ...fmtDate(iso) }))
-    : Array.from({ length: Math.max(1, Math.min(10, Math.round(weeks))) }, (_, i) => ({ key: `w${i + 1}`, week: i + 1, dow: '', dm: '' }))
+    ? weeksArr.map((ws, i) => ({ key: ws.date, week: i + 1, blocks: ws.blocks, ...fmtDate(ws.date) }))
+    : Array.from({ length: Math.max(1, Math.min(10, Math.round(weeks))) }, (_, i) => ({ key: `w${i + 1}`, week: i + 1, dow: '', dm: '', blocks: [] as PrintBlock[] }))
   const colCount = cols.length
-  const weekColWidth = `${Math.max(6, Math.round(43 / colCount))}%`
+  const weekColWidth = `${Math.max(6, Math.round((withLoads ? 54 : 43) / colCount))}%`
+  // En modo "con cargas" la columna Sug. es redundante (cada semana ya la muestra).
+  const showSug = !withLoads
+  const fixedCount = showSug ? 4 : 3
 
   return (
     <>
@@ -113,7 +121,7 @@ export default function PlanPrintSheet({
             <Wordmark />
             <div className="pp-meta" style={{ marginTop: '4px' }}>
               {dateLabel ? <>Inicio: {dateLabel}<br /></> : <>Inicio: __ /__ /____<br /></>}
-              {colCount} {colCount === 1 ? 'semana' : 'semanas'}
+              {colCount} {colCount === 1 ? 'semana' : 'semanas'}{withLoads ? ' · con cargas' : ''}
             </div>
           </div>
         </div>
@@ -123,10 +131,10 @@ export default function PlanPrintSheet({
         ) : (
           <table>
             <colgroup>
-              <col style={{ width: '24%' }} />
+              <col style={{ width: showSug ? '24%' : '28%' }} />
               <col style={{ width: '9%' }} />
               <col style={{ width: '13%' }} />
-              <col style={{ width: '11%' }} />
+              {showSug ? <col style={{ width: '11%' }} /> : null}
               {cols.map(c => <col key={c.key} style={{ width: weekColWidth }} />)}
             </colgroup>
             <thead>
@@ -134,7 +142,7 @@ export default function PlanPrintSheet({
                 <th>Ejercicio</th>
                 <th className="pp-c">Ser × Rep</th>
                 <th className="pp-c">RPE / EAV</th>
-                <th className="pp-c">Sug.</th>
+                {showSug ? <th className="pp-c">Sug.</th> : null}
                 {cols.map(c => (
                   <th key={c.key} className="pp-c">
                     <div className="pp-wk-dow">{useDates ? `${c.dow} ${c.dm}` : `Sem ${c.week}`}</div>
@@ -147,7 +155,7 @@ export default function PlanPrintSheet({
               {blocks.map((block, bi) => (
                 <Fragment key={`b${bi}`}>
                   <tr className="pp-block">
-                    <td colSpan={4 + colCount}>{block.name}</td>
+                    <td colSpan={fixedCount + colCount}>{block.name}</td>
                   </tr>
                   {block.exercises.map((ex, ei) => (
                     <tr key={`b${bi}e${ei}`} style={{ height: '30px' }}>
@@ -157,8 +165,12 @@ export default function PlanPrintSheet({
                       </td>
                       <td className="pp-c">{(ex.sets || '–')} × {(ex.reps || '–')}</td>
                       <td className="pp-c">{effort(ex)}</td>
-                      <td className="pp-c">{ex.load || '—'}</td>
-                      {cols.map(c => <td key={c.key} />)}
+                      {showSug ? <td className="pp-c">{ex.load || '—'}</td> : null}
+                      {cols.map(c => (
+                        <td key={c.key} className="pp-c">
+                          {withLoads ? (c.blocks[bi]?.exercises[ei]?.load || '—') : ''}
+                        </td>
+                      ))}
                     </tr>
                   ))}
                 </Fragment>
@@ -168,7 +180,7 @@ export default function PlanPrintSheet({
         )}
 
         <div className="pp-foot">
-          <span>En cada columna de semana anotá la carga usada (kg). PC = peso corporal.</span>
+          <span>{withLoads ? 'Cargas planificadas por semana (kg). PC = peso corporal.' : 'En cada columna de semana anotá la carga usada (kg). PC = peso corporal.'}</span>
           <span>Generado desde <Wordmark /> · {new Date().toLocaleDateString('es-AR')}</span>
         </div>
       </div>
