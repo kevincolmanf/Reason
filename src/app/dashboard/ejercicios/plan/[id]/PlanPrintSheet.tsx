@@ -86,9 +86,10 @@ export default function PlanPrintSheet({
   return (
     <>
       <style>{`
-        #plan-print-sheet { position: fixed; left: -99999px; top: 0; }
+        #plan-print-sheet { display: none; }
         @media print {
           body * { visibility: hidden !important; }
+          #plan-print-sheet { display: block !important; }
           #plan-print-sheet, #plan-print-sheet * { visibility: visible !important; }
           #plan-print-sheet {
             position: absolute !important; left: 0 !important; top: 0 !important;
