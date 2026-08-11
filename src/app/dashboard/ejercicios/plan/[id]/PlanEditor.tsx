@@ -1296,8 +1296,9 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
             <button
               onClick={handleExportPDF}
               className="bg-bg-primary border-[0.5px] border-border-strong text-text-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:bg-bg-secondary w-full"
+              title="PDF vertical con un QR al video por ejercicio (todo el plan). Usa más hojas y tinta."
             >
-              Exportar PDF
+              Exportar PDF con videos (QR)
             </button>
             {(selectedSession?.session_data?.blocks ?? []).some(b => b.exercises.length > 0) && (
               <div className="flex flex-col gap-2">
@@ -1332,10 +1333,10 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
                 )}
                 <button
                   onClick={() => window.print()}
-                  className="bg-bg-primary border-[0.5px] border-border-strong text-text-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:bg-bg-secondary w-full"
-                  title="Imprime la sesión seleccionada en A4 apaisado con columnas en blanco por semana (Guardar como PDF)"
+                  className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 w-full"
+                  title="Planilla A4 apaisada con columnas por semana para anotar cargas. Ahorra tinta y hojas (Guardar como PDF)."
                 >
-                  Imprimir planilla (A4)
+                  Imprimir planilla semanal (A4)
                 </button>
               </div>
             )}
