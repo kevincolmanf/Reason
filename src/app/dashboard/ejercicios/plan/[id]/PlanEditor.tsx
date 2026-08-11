@@ -476,6 +476,17 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
     ? scheduledSessions.find(s => s.scheduled_date === selectedDate) ?? null
     : null
 
+  // Fechas reales del mismo día (weekday) a lo largo del plan, para que las
+  // columnas de la planilla imprimible cuadren 1:1 con las semanas del calendario.
+  const printWeekDates = (() => {
+    if (!selectedSession) return [] as string[]
+    const dow = new Date(selectedSession.scheduled_date + 'T00:00:00').getDay()
+    return scheduledSessions
+      .filter(s => new Date(s.scheduled_date + 'T00:00:00').getDay() === dow)
+      .map(s => s.scheduled_date)
+      .sort((a, b) => a.localeCompare(b))
+  })()
+
   const importablePlanSessions = ((plan.plan_data?.sessions ?? []) as PlanDataSession[])
     .filter(s => (s.blocks ?? []).some(b => b.exercises?.length > 0))
 
@@ -1286,18 +1297,24 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
             </button>
             {(selectedSession?.session_data?.blocks ?? []).some(b => b.exercises.length > 0) && (
               <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between gap-2">
-                  <label htmlFor="print-weeks" className="text-[12px] text-text-secondary">Semanas a registrar</label>
-                  <input
-                    id="print-weeks"
-                    type="number"
-                    min={1}
-                    max={10}
-                    value={printWeeks}
-                    onChange={e => setPrintWeeks(Math.max(1, Math.min(10, Number(e.target.value) || 1)))}
-                    className="w-16 bg-bg-primary border-[0.5px] border-border rounded-lg px-2 py-1 text-[13px] text-text-primary focus:outline-none focus:border-accent text-center"
-                  />
-                </div>
+                {printWeekDates.length > 1 ? (
+                  <div className="text-[12px] text-text-secondary">
+                    {printWeekDates.length} semanas detectadas del calendario · las columnas van con la fecha real de cada semana.
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between gap-2">
+                    <label htmlFor="print-weeks" className="text-[12px] text-text-secondary">Semanas a registrar</label>
+                    <input
+                      id="print-weeks"
+                      type="number"
+                      min={1}
+                      max={10}
+                      value={printWeeks}
+                      onChange={e => setPrintWeeks(Math.max(1, Math.min(10, Number(e.target.value) || 1)))}
+                      className="w-16 bg-bg-primary border-[0.5px] border-border rounded-lg px-2 py-1 text-[13px] text-text-primary focus:outline-none focus:border-accent text-center"
+                    />
+                  </div>
+                )}
                 <button
                   onClick={() => window.print()}
                   className="bg-bg-primary border-[0.5px] border-border-strong text-text-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:bg-bg-secondary w-full"
@@ -1312,6 +1329,7 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
               planName={plan.name}
               session={selectedSession}
               weeks={printWeeks}
+              weekDates={printWeekDates.length > 1 ? printWeekDates : undefined}
             />
           </div>
         </div>
