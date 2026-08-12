@@ -238,7 +238,6 @@ export default function FichaClient({
   })
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [hasChanges, setHasChanges] = useState(false)
-  const [expandedSection, setExpandedSection] = useState<'goniometria' | 'cuestionarios' | 'dinamometria' | null>(null)
   const [showGonioForm, setShowGonioForm] = useState(false)
   const [gonioRegion, setGonioRegion] = useState(GONIO_REGIONS[0].key)
   const [gonioValues, setGonioValues] = useState<Record<string, string>>({})
@@ -544,11 +543,20 @@ export default function FichaClient({
       y += 2.4
     }
 
+    // ── Bloque 1 · Anamnesis y diagnóstico ──
     section('Diagnóstico kinésico', ficha.diagnostico)
     section('Motivo de consulta', ficha.motivoConsulta)
     section('Historia de la enfermedad actual', ficha.historiaEnfermedad)
-    section('Factores agravantes', ficha.factoresAgravantes)
-    section('Factores atenuantes', ficha.factoresAtenuantes)
+    section('Antecedentes', ficha.antecedentes)
+    section('Estudios complementarios', ficha.estudiosComplementarios)
+
+    // ── Bloque 2 · Interrogatorio ──
+    section('Cuestionarios', (qResults ?? []).map(q => {
+      const meta = QUESTIONNAIRE_NAMES[q.questionnaire_type] ?? { label: q.questionnaire_type, unit: '' }
+      const fecha = new Date(q.created_at).toLocaleDateString('es-AR')
+      const score = q.score != null ? `${q.score} ${meta.unit}` : ''
+      return `${meta.label}: ${score}${q.interpretation ? ` — ${q.interpretation}` : ''} (${fecha})`
+    }).join('\n'))
     section('Caracterización del dolor', [
       ficha.dolorEva && `EVA ${ficha.dolorEva}/10`,
       ficha.dolorRitmo && `Ritmo: ${ficha.dolorRitmo}`,
@@ -556,16 +564,18 @@ export default function FichaClient({
       ficha.dolorTipo && `Tipo: ${ficha.dolorTipo}`,
       ficha.dolorIrradiacion && `Irradiación: ${ficha.dolorIrradiacion}`,
     ].filter(Boolean).join('  |  '))
-    section('Antecedentes', ficha.antecedentes)
-    section('Estudios complementarios', ficha.estudiosComplementarios)
+    section('Factores agravantes', ficha.factoresAgravantes)
+    section('Factores atenuantes', ficha.factoresAtenuantes)
+    section('Objetivos del paciente', ficha.objetivosPaciente)
+    section('Objetivos a corto plazo', ficha.objetivosCortoPlazo)
+    section('Objetivos a largo plazo', ficha.objetivosLargoPlazo)
+
+    // ── Bloque 3 · Examen físico ──
     section('Examen físico — Inspección y palpación', ficha.examenInspeccion)
-    section('Fuerza', ficha.examenFuerza)
-    section('Tests especiales', ficha.examenTest)
-    section('Respuesta al movimiento', (ficha.movimientos ?? [])
+    section('Movilidad', (ficha.movimientos ?? [])
       .filter(m => m.movimiento || m.respuesta)
       .map(m => `${m.movimiento || '—'}: ${m.respuesta || '—'}${m.nota ? ` (${m.nota})` : ''}`)
       .join('\n'))
-    section('Preferencia direccional', ficha.preferenciaDireccional)
 
     // Goniometría (rangos por región)
     const gonioRegionLabel: Record<string, string> = {}
@@ -581,6 +591,9 @@ export default function FichaClient({
       return `${gonioRegionLabel[g.region] ?? g.region}${g.date ? ` (${g.date})` : ''}: ${vals}${g.pain != null ? ` · dolor ${g.pain}/10` : ''}${g.notes ? ` — ${g.notes}` : ''}`
     }).join('\n'))
 
+    section('Tests especiales', ficha.examenTest)
+    section('Fuerza', ficha.examenFuerza)
+
     // Dinamometría (fuerza por músculo)
     section('Dinamometría', (dynResults ?? []).map(d => {
       const fecha = new Date(d.created_at).toLocaleDateString('es-AR')
@@ -590,17 +603,9 @@ export default function FichaClient({
       return `${fecha} (${d.unit}): ${muscles}${d.notes ? ` — ${d.notes}` : ''}`
     }).join('\n'))
 
-    // Cuestionarios completados
-    section('Cuestionarios', (qResults ?? []).map(q => {
-      const meta = QUESTIONNAIRE_NAMES[q.questionnaire_type] ?? { label: q.questionnaire_type, unit: '' }
-      const fecha = new Date(q.created_at).toLocaleDateString('es-AR')
-      const score = q.score != null ? `${q.score} ${meta.unit}` : ''
-      return `${meta.label}: ${score}${q.interpretation ? ` — ${q.interpretation}` : ''} (${fecha})`
-    }).join('\n'))
+    section('Preferencia direccional', ficha.preferenciaDireccional)
 
-    section('Objetivos del paciente', ficha.objetivosPaciente)
-    section('Objetivos a corto plazo', ficha.objetivosCortoPlazo)
-    section('Objetivos a largo plazo', ficha.objetivosLargoPlazo)
+    // ── Bloque 4 · Plan y seguimiento ──
     section('Plan de tratamiento', ficha.planTratamiento)
 
     const pdfsRec = ficha.recomendacionesPdfs ?? []
@@ -609,7 +614,6 @@ export default function FichaClient({
       pdfsRec.length > 0 ? `Adjuntos: ${pdfsRec.map(p => `${p.nombre}${p.profesional ? ` (${p.profesional})` : ''}`).join(', ')}` : '',
     ].filter(Boolean).join('\n'))
 
-    // Actualizaciones / evolución
     section('Actualizaciones / evolución', (ficha.actualizaciones ?? [])
       .filter(a => a.texto || a.fecha)
       .map(a => `${a.fecha ? a.fecha + ': ' : ''}${a.texto || ''}`)
@@ -743,8 +747,12 @@ export default function FichaClient({
         </div>
       </div>
 
-      {/* ── DATOS CLÍNICOS ─────────────────────────────────────────────────── */}
+      {/* ══════════ BLOQUE 1 · ANAMNESIS Y DIAGNÓSTICO ══════════ */}
       <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-8 mb-6 space-y-8">
+        <div className="flex items-baseline gap-2 border-b-[0.5px] border-border pb-3">
+          <span className="text-[11px] font-semibold text-accent tabular-nums">1</span>
+          <h2 className="text-[15px] font-medium tracking-[-0.01em]">Anamnesis y diagnóstico</h2>
+        </div>
 
         <div>
           <label className="block text-[12px] uppercase tracking-[0.05em] text-text-secondary mb-2 font-medium">Fecha de primera consulta</label>
@@ -761,25 +769,86 @@ export default function FichaClient({
           <textarea rows={3} value={ficha.diagnostico} onChange={e => handleChange('diagnostico', e.target.value)} placeholder="Conclusión de los hallazgos y diagnóstico de movimiento. (Se puede completar/editar en cualquier momento.)" className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y" />
         </div>
 
-        <div>
-          <label className="block text-[12px] uppercase tracking-[0.05em] text-accent mb-2 font-medium">Motivo de Consulta</label>
-          <textarea rows={2} value={ficha.motivoConsulta} onChange={e => handleChange('motivoConsulta', e.target.value)} placeholder="Ej: Dolor lumbar bajo que le impide agacharse..." className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y" />
+        {/* Motivo de consulta + Historia de la enfermedad actual (agrupados) */}
+        <div className="space-y-4">
+          <div>
+            <label className="block text-[12px] uppercase tracking-[0.05em] text-accent mb-2 font-medium">Motivo de Consulta</label>
+            <textarea rows={2} value={ficha.motivoConsulta} onChange={e => handleChange('motivoConsulta', e.target.value)} placeholder="Ej: Dolor lumbar bajo que le impide agacharse..." className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y" />
+          </div>
+          <div>
+            <label className="block text-[12px] uppercase tracking-[0.05em] text-accent mb-2 font-medium">Historia de la Enfermedad Actual</label>
+            <textarea rows={4} value={ficha.historiaEnfermedad} onChange={e => handleChange('historiaEnfermedad', e.target.value)} placeholder="Cómo inició, evolución, irradiación..." className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y" />
+          </div>
         </div>
 
         <div>
-          <label className="block text-[12px] uppercase tracking-[0.05em] text-accent mb-2 font-medium">Historia de la Enfermedad Actual</label>
-          <textarea rows={4} value={ficha.historiaEnfermedad} onChange={e => handleChange('historiaEnfermedad', e.target.value)} placeholder="Cómo inició, evolución, irradiación..." className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-            <div>
-              <label className="block text-[12px] text-text-secondary mb-1">Factores agravantes <span className="text-text-tertiary normal-case">(qué empeora el dolor)</span></label>
-              <textarea rows={3} value={ficha.factoresAgravantes} onChange={e => handleChange('factoresAgravantes', e.target.value)} placeholder="Ej: flexión de tronco, estar sentado, cargar peso, tos..." className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y" />
-            </div>
-            <div>
-              <label className="block text-[12px] text-text-secondary mb-1">Factores atenuantes <span className="text-text-tertiary normal-case">(qué lo alivia)</span></label>
-              <textarea rows={3} value={ficha.factoresAtenuantes} onChange={e => handleChange('factoresAtenuantes', e.target.value)} placeholder="Ej: reposo, calor, cambiar de posición, analgésicos..." className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y" />
-            </div>
-          </div>
+          <label className="block text-[12px] uppercase tracking-[0.05em] text-accent mb-2 font-medium">Antecedentes</label>
+          <textarea rows={3} value={ficha.antecedentes} onChange={e => handleChange('antecedentes', e.target.value)} placeholder="Médicos, quirúrgicos, medicación actual..." className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y" />
         </div>
+
+        <div>
+          <label className="block text-[12px] uppercase tracking-[0.05em] text-accent mb-2 font-medium">Estudios Complementarios</label>
+          <textarea rows={2} value={ficha.estudiosComplementarios} onChange={e => handleChange('estudiosComplementarios', e.target.value)} placeholder="Imágenes y estudios: RX, RMN, ecografía, TAC, laboratorio, EMG... (hallazgos relevantes)" className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y" />
+          <p className="text-[11px] text-text-tertiary mt-1">Los PDF de imágenes/estudios se pueden adjuntar más abajo, en “Recomendaciones de otros profesionales”.</p>
+        </div>
+      </div>
+
+      {/* ══════════ BLOQUE 2 · INTERROGATORIO ══════════ */}
+      <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-8 mb-6 space-y-6">
+        <div className="flex items-baseline gap-2 border-b-[0.5px] border-border pb-3">
+          <span className="text-[11px] font-semibold text-accent tabular-nums">2</span>
+          <h2 className="text-[15px] font-medium tracking-[-0.01em]">Interrogatorio</h2>
+          <span className="text-[11px] text-text-tertiary">datos subjetivos</span>
+        </div>
+
+        {/* Cuestionarios (colapsable) */}
+        <details className="bg-bg-secondary p-6 rounded-lg border-[0.5px] border-border">
+          <summary className="text-[14px] uppercase tracking-[0.05em] text-text-primary font-medium cursor-pointer select-none">Cuestionarios <span className="normal-case text-[11px] text-text-tertiary">({qResults.length} · desplegar)</span></summary>
+          <div className="mt-4">
+            <div className="flex justify-end mb-3">
+              <Link href={`/recursos/cuestionarios?paciente=${patientId}`} className="text-accent text-[13px] font-medium hover:opacity-80 no-underline">
+                + Completar cuestionario
+              </Link>
+            </div>
+            {qResults.length === 0 ? (
+              <div className="text-center py-8 bg-bg-primary rounded-xl border-[0.5px] border-dashed border-border">
+                <p className="text-[14px] text-text-secondary mb-3">Sin cuestionarios todavía.</p>
+                <Link href={`/recursos/cuestionarios?paciente=${patientId}`} className="text-accent text-[13px] font-medium hover:opacity-80 no-underline">
+                  Ir a Cuestionarios →
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {qResults.map(result => {
+                  const meta = QUESTIONNAIRE_NAMES[result.questionnaire_type] ?? { label: result.questionnaire_type, unit: '' }
+                  const flaggedCount = getResponseItems(result.questionnaire_type, result.result_data).filter(r => r.relevant).length
+                  return (
+                    <div key={result.id} className="flex items-center justify-between bg-bg-primary border-[0.5px] border-border rounded-xl px-5 py-4 group hover:border-accent/40 transition-colors">
+                      <button onClick={() => setOpenQ(result)} className="flex-1 min-w-0 text-left">
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <span className="text-[14px] font-medium">{meta.label}</span>
+                          <span className="text-[14px] text-text-secondary">{formatScore(result)} <span className="text-[12px] opacity-70">{meta.unit}</span></span>
+                          {result.interpretation && (
+                            <span className="text-[12px] bg-bg-secondary border-[0.5px] border-border rounded-full px-2.5 py-0.5 text-text-secondary">{result.interpretation}</span>
+                          )}
+                          {flaggedCount > 0 && (
+                            <span className="text-[11px] text-accent font-medium">{flaggedCount} {flaggedCount === 1 ? 'ítem' : 'ítems'} a trabajar</span>
+                          )}
+                        </div>
+                        <div className="text-[12px] text-text-secondary mt-1">
+                          {new Date(result.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })} · <span className="text-accent">Abrir cuestionario →</span>
+                        </div>
+                      </button>
+                      <button onClick={() => handleDeleteQ(result.id)} className="text-text-secondary hover:text-warning text-[12px] opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity ml-4 shrink-0">
+                        Eliminar
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </details>
 
         {/* Caracterización del dolor (colapsable para no saturar la ficha) */}
         <details className="bg-bg-secondary p-6 rounded-lg border-[0.5px] border-border">
@@ -841,77 +910,24 @@ export default function FichaClient({
           </div>
         </details>
 
+        {/* Factores agravantes y atenuantes */}
         <div>
-          <label className="block text-[12px] uppercase tracking-[0.05em] text-accent mb-2 font-medium">Antecedentes</label>
-          <textarea rows={3} value={ficha.antecedentes} onChange={e => handleChange('antecedentes', e.target.value)} placeholder="Médicos, quirúrgicos, medicación actual..." className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y" />
-        </div>
-
-        <div>
-          <label className="block text-[12px] uppercase tracking-[0.05em] text-accent mb-2 font-medium">Estudios Complementarios</label>
-          <textarea rows={2} value={ficha.estudiosComplementarios} onChange={e => handleChange('estudiosComplementarios', e.target.value)} placeholder="Imágenes y estudios: RX, RMN, ecografía, TAC, laboratorio, EMG... (hallazgos relevantes)" className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y" />
-          <p className="text-[11px] text-text-tertiary mt-1">Los PDF de imágenes/estudios se pueden adjuntar más abajo, en “Recomendaciones de otros profesionales”.</p>
-        </div>
-
-        <div className="bg-bg-secondary p-6 rounded-lg border-[0.5px] border-border space-y-6">
-          <h3 className="text-[13px] uppercase tracking-[0.05em] text-text-primary font-medium border-b-[0.5px] border-border pb-2">Examen Físico</h3>
-          <div>
-            <label className="block text-[12px] text-text-secondary mb-1">Inspección y Palpación</label>
-            <textarea rows={2} value={ficha.examenInspeccion} onChange={e => handleChange('examenInspeccion', e.target.value)} className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y" />
-          </div>
-          <div>
-            <label className="block text-[12px] text-text-secondary mb-1">Fuerza muscular</label>
-            <textarea rows={2} value={ficha.examenFuerza} onChange={e => handleChange('examenFuerza', e.target.value)} className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y" />
-          </div>
-          <div>
-            <label className="block text-[12px] text-text-secondary mb-1">Test Especiales</label>
-            <textarea rows={2} value={ficha.examenTest} onChange={e => handleChange('examenTest', e.target.value)} placeholder="Ej: Lasègue positivo a 45° pierna derecha..." className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y" />
-          </div>
-
-          {/* Respuesta al movimiento — lista rápida, sin goniometrar */}
-          <div>
-            <div className="flex items-center justify-between mb-2 gap-2">
-              <label className="block text-[12px] text-text-secondary">Respuesta al movimiento <span className="text-text-tertiary normal-case">(qué genera dolor, alivia o centraliza — sin medir grados)</span></label>
-              <button onClick={addMovimiento} className="text-[12px] text-accent font-medium hover:opacity-80 transition-opacity shrink-0">+ Agregar</button>
+          <label className="block text-[12px] uppercase tracking-[0.05em] text-accent mb-2 font-medium">Factores agravantes y atenuantes</label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[12px] text-text-secondary mb-1">Factores agravantes <span className="text-text-tertiary normal-case">(qué empeora el dolor)</span></label>
+              <textarea rows={3} value={ficha.factoresAgravantes} onChange={e => handleChange('factoresAgravantes', e.target.value)} placeholder="Ej: flexión de tronco, estar sentado, cargar peso, tos..." className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y" />
             </div>
-            {(ficha.movimientos?.length ?? 0) === 0 ? (
-              <p className="text-[12px] text-text-tertiary">Sin registros. Tocá “Agregar” para anotar un movimiento y su respuesta.</p>
-            ) : (
-              <div className="space-y-2">
-                <datalist id="mov-suggestions">
-                  {['Flexión', 'Extensión', 'Rotación derecha', 'Rotación izquierda', 'Inclinación derecha', 'Inclinación izquierda', 'Abducción', 'Aducción', 'Flexión lumbar', 'Extensión lumbar'].map(o => <option key={o} value={o} />)}
-                </datalist>
-                {(ficha.movimientos ?? []).map(m => (
-                  <div key={m.id} className="bg-bg-primary border-[0.5px] border-border rounded-lg p-3 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <input list="mov-suggestions" value={m.movimiento} onChange={e => updateMovimiento(m.id, 'movimiento', e.target.value)} placeholder="Movimiento (ej: Extensión lumbar)" className="flex-1 bg-bg-secondary border-[0.5px] border-border-strong rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:border-accent" />
-                      <button onClick={() => removeMovimiento(m.id)} aria-label="Eliminar movimiento" className="text-text-tertiary hover:text-warning text-[18px] leading-none shrink-0 w-6 h-6 flex items-center justify-center">×</button>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {[{ key: 'Dolor', tone: 'bad' }, { key: 'Alivia', tone: 'good' }, { key: 'Centraliza', tone: 'good' }, { key: 'Periferaliza', tone: 'bad' }, { key: 'Limita ROM', tone: 'bad' }, { key: 'Sin cambios', tone: 'neutral' }].map(({ key, tone }) => {
-                        const sel = m.respuesta === key
-                        const selCls = tone === 'bad' ? 'bg-red-500 text-white border-red-500' : tone === 'good' ? 'bg-green-500 text-white border-green-500' : 'bg-accent text-bg-primary border-accent'
-                        return (
-                          <button key={key} onClick={() => updateMovimiento(m.id, 'respuesta', sel ? '' : key)} className={`px-2.5 py-1 rounded-md text-[12px] border-[0.5px] transition-colors ${sel ? selCls : 'bg-bg-secondary border-border-strong text-text-secondary hover:text-text-primary'}`}>{key}</button>
-                        )
-                      })}
-                    </div>
-                    <input value={m.nota} onChange={e => updateMovimiento(m.id, 'nota', e.target.value)} placeholder="Nota (opcional)" className="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded-lg px-3 py-2 text-[12px] focus:outline-none focus:border-accent" />
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Preferencia direccional (McKenzie/MDT) */}
-          <div>
-            <label className="block text-[12px] text-text-secondary mb-1">Preferencia direccional / movimiento preferente <span className="text-text-tertiary normal-case">(dirección que alivia o centraliza)</span></label>
-            <input type="text" value={ficha.preferenciaDireccional} onChange={e => handleChange('preferenciaDireccional', e.target.value)} placeholder="Ej: extensión lumbar (centraliza y reduce el dolor)" className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent" />
+            <div>
+              <label className="block text-[12px] text-text-secondary mb-1">Factores atenuantes <span className="text-text-tertiary normal-case">(qué lo alivia)</span></label>
+              <textarea rows={3} value={ficha.factoresAtenuantes} onChange={e => handleChange('factoresAtenuantes', e.target.value)} placeholder="Ej: reposo, calor, cambiar de posición, analgésicos..." className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y" />
+            </div>
           </div>
         </div>
 
-        {/* Objetivos */}
+        {/* Objetivos y expectativas */}
         <div className="bg-bg-secondary p-6 rounded-lg border-[0.5px] border-border space-y-5">
-          <h3 className="text-[14px] uppercase tracking-[0.05em] text-text-primary font-medium border-b-[0.5px] border-border pb-2">Objetivos</h3>
+          <h3 className="text-[14px] uppercase tracking-[0.05em] text-text-primary font-medium border-b-[0.5px] border-border pb-2">Objetivos y expectativas</h3>
           <div>
             <label className="block text-[12px] text-text-secondary mb-1">Objetivos y expectativas del paciente</label>
             <textarea rows={2} value={ficha.objetivosPaciente} onChange={e => handleChange('objetivosPaciente', e.target.value)} placeholder="Qué espera lograr el paciente. Ej: volver a correr, dormir sin dolor, cargar a su hijo..." className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y" />
@@ -927,7 +943,290 @@ export default function FichaClient({
             </div>
           </div>
         </div>
+      </div>
 
+      {/* ══════════ BLOQUE 3 · EXAMEN FÍSICO ══════════ */}
+      <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-8 mb-6 space-y-6">
+        <div className="flex items-baseline gap-2 border-b-[0.5px] border-border pb-3">
+          <span className="text-[11px] font-semibold text-accent tabular-nums">3</span>
+          <h2 className="text-[15px] font-medium tracking-[-0.01em]">Examen físico</h2>
+          <span className="text-[11px] text-text-tertiary">datos objetivos</span>
+        </div>
+
+        <div>
+          <label className="block text-[12px] text-text-secondary mb-1">Inspección y Palpación</label>
+          <textarea rows={2} value={ficha.examenInspeccion} onChange={e => handleChange('examenInspeccion', e.target.value)} className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y" />
+        </div>
+
+        {/* Movilidad — lista rápida, sin goniometrar */}
+        <div>
+          <div className="flex items-center justify-between mb-2 gap-2">
+            <label className="block text-[12px] text-text-secondary">Movilidad <span className="text-text-tertiary normal-case">(qué genera dolor, alivia o centraliza — sin medir grados)</span></label>
+            <button onClick={addMovimiento} className="text-[12px] text-accent font-medium hover:opacity-80 transition-opacity shrink-0">+ Agregar</button>
+          </div>
+          {(ficha.movimientos?.length ?? 0) === 0 ? (
+            <p className="text-[12px] text-text-tertiary">Sin registros. Tocá “Agregar” para anotar un movimiento y su respuesta.</p>
+          ) : (
+            <div className="space-y-2">
+              <datalist id="mov-suggestions">
+                {['Flexión', 'Extensión', 'Rotación derecha', 'Rotación izquierda', 'Inclinación derecha', 'Inclinación izquierda', 'Abducción', 'Aducción', 'Flexión lumbar', 'Extensión lumbar'].map(o => <option key={o} value={o} />)}
+              </datalist>
+              {(ficha.movimientos ?? []).map(m => (
+                <div key={m.id} className="bg-bg-secondary border-[0.5px] border-border rounded-lg p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <input list="mov-suggestions" value={m.movimiento} onChange={e => updateMovimiento(m.id, 'movimiento', e.target.value)} placeholder="Movimiento (ej: Extensión lumbar)" className="flex-1 bg-bg-primary border-[0.5px] border-border-strong rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:border-accent" />
+                    <button onClick={() => removeMovimiento(m.id)} aria-label="Eliminar movimiento" className="text-text-tertiary hover:text-warning text-[18px] leading-none shrink-0 w-6 h-6 flex items-center justify-center">×</button>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[{ key: 'Dolor', tone: 'bad' }, { key: 'Alivia', tone: 'good' }, { key: 'Centraliza', tone: 'good' }, { key: 'Periferaliza', tone: 'bad' }, { key: 'Limita ROM', tone: 'bad' }, { key: 'Sin cambios', tone: 'neutral' }].map(({ key, tone }) => {
+                      const sel = m.respuesta === key
+                      const selCls = tone === 'bad' ? 'bg-red-500 text-white border-red-500' : tone === 'good' ? 'bg-green-500 text-white border-green-500' : 'bg-accent text-bg-primary border-accent'
+                      return (
+                        <button key={key} onClick={() => updateMovimiento(m.id, 'respuesta', sel ? '' : key)} className={`px-2.5 py-1 rounded-md text-[12px] border-[0.5px] transition-colors ${sel ? selCls : 'bg-bg-primary border-border-strong text-text-secondary hover:text-text-primary'}`}>{key}</button>
+                      )
+                    })}
+                  </div>
+                  <input value={m.nota} onChange={e => updateMovimiento(m.id, 'nota', e.target.value)} placeholder="Nota (opcional)" className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg px-3 py-2 text-[12px] focus:outline-none focus:border-accent" />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Goniometría / Inclinómetro (colapsable) */}
+        <details className="bg-bg-secondary p-6 rounded-lg border-[0.5px] border-border">
+          <summary className="text-[14px] uppercase tracking-[0.05em] text-text-primary font-medium cursor-pointer select-none">Goniometría / Inclinómetro <span className="normal-case text-[11px] text-text-tertiary">({ficha.goniometria?.length ?? 0} · desplegar)</span></summary>
+          <div className="mt-4">
+            <div className="flex justify-end mb-4">
+              <button
+                onClick={() => { setShowGonioForm(v => !v); setGonioValues({}) }}
+                className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90"
+              >
+                {showGonioForm ? 'Cancelar' : '+ Nueva medición'}
+              </button>
+            </div>
+
+            {showGonioForm && (
+              <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-5 mb-5 space-y-4">
+                <div className="flex flex-wrap gap-3">
+                  <div>
+                    <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Fecha</label>
+                    <input
+                      type="date"
+                      value={gonioDate}
+                      onChange={e => setGonioDate(e.target.value)}
+                      className="bg-bg-primary border-[0.5px] border-border-strong rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:border-accent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Región</label>
+                    <select
+                      value={gonioRegion}
+                      onChange={e => { setGonioRegion(e.target.value); setGonioValues({}) }}
+                      className="bg-bg-primary border-[0.5px] border-border-strong rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:border-accent"
+                    >
+                      {GONIO_REGIONS.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {selectedRegion.movements.map(mv => {
+                    const painKey = (side: string) => side ? `${mv.key}_${side}_pain` : `${mv.key}_pain`
+                    const PainSelector = ({ side }: { side: string }) => {
+                      const pk = painKey(side)
+                      const val = gonioValues[pk] !== undefined ? parseInt(gonioValues[pk]) : null
+                      return (
+                        <div className="flex gap-1 mt-1 flex-wrap">
+                          {Array.from({ length: 11 }, (_, i) => {
+                            const active = val === i
+                            const cls = i === 0
+                              ? active ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                              : i <= 3
+                                ? active ? 'bg-yellow-500 text-white border-yellow-500' : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400'
+                                : i <= 6
+                                  ? active ? 'bg-orange-500 text-white border-orange-500' : 'bg-orange-500/10 border-orange-500/30 text-orange-400'
+                                  : active ? 'bg-red-500 text-white border-red-500' : 'bg-red-500/10 border-red-500/30 text-red-400'
+                            return (
+                              <button key={i} type="button"
+                                onClick={() => handleGonioValueChange(pk, active ? '' : i.toString())}
+                                className={`w-6 h-6 rounded text-[10px] font-medium border-[0.5px] transition-colors ${cls}`}
+                              >{i}</button>
+                            )
+                          })}
+                        </div>
+                      )
+                    }
+                    return selectedRegion.bilateral ? (
+                      <div key={mv.key} className="space-y-1.5 bg-bg-secondary border-[0.5px] border-border rounded-lg p-3">
+                        <div className="text-[11px] font-medium text-text-secondary uppercase tracking-wide">{mv.label}</div>
+                        <div className="flex gap-2">
+                          <div className="flex-1">
+                            <div className="text-[10px] text-text-secondary mb-1">Der °</div>
+                            <input type="number" placeholder="°" value={gonioValues[`${mv.key}_der`] ?? ''} onChange={e => handleGonioValueChange(`${mv.key}_der`, e.target.value)} className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded px-2 py-1.5 text-[13px] focus:outline-none focus:border-accent" />
+                            <PainSelector side="der" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="text-[10px] text-text-secondary mb-1">Izq °</div>
+                            <input type="number" placeholder="°" value={gonioValues[`${mv.key}_izq`] ?? ''} onChange={e => handleGonioValueChange(`${mv.key}_izq`, e.target.value)} className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded px-2 py-1.5 text-[13px] focus:outline-none focus:border-accent" />
+                            <PainSelector side="izq" />
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div key={mv.key} className="space-y-1.5 bg-bg-secondary border-[0.5px] border-border rounded-lg p-3">
+                        <div className="text-[11px] font-medium text-text-secondary uppercase tracking-wide">{mv.label}</div>
+                        <input type="number" placeholder="°" value={gonioValues[mv.key] ?? ''} onChange={e => handleGonioValueChange(mv.key, e.target.value)} className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded px-2 py-1.5 text-[13px] focus:outline-none focus:border-accent" />
+                        <PainSelector side="" />
+                      </div>
+                    )
+                  })}
+                </div>
+
+                <div>
+                  <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Notas</label>
+                  <input
+                    type="text"
+                    value={gonioNotes}
+                    onChange={e => setGonioNotes(e.target.value)}
+                    placeholder="Observaciones..."
+                    className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:border-accent"
+                  />
+                </div>
+
+                <button onClick={handleSaveGonio} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90">
+                  Guardar medición
+                </button>
+              </div>
+            )}
+
+            {(ficha.goniometria ?? []).length === 0 ? (
+              <div className="text-center py-8 bg-bg-primary rounded-xl border-[0.5px] border-dashed border-border">
+                <p className="text-[14px] text-text-secondary">Sin mediciones todavía.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {(ficha.goniometria ?? []).map(rec => {
+                  const region = GONIO_REGIONS.find(r => r.key === rec.region)
+                  const filledValues = Object.entries(rec.values).filter(([, v]) => v !== '')
+                  return (
+                    <div key={rec.id} className="flex items-start justify-between bg-bg-primary border-[0.5px] border-border rounded-xl px-5 py-4 group">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3 flex-wrap mb-1">
+                          <span className="text-[14px] font-medium">{region?.label ?? rec.region}</span>
+                          <span className="text-[12px] text-text-secondary">
+                            {new Date(rec.date + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                          </span>
+                        </div>
+                        {filledValues.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-1">
+                            {filledValues.filter(([k]) => !k.endsWith('_pain')).map(([k, v]) => {
+                              const mvKey = k.replace(/_der$|_izq$/, '')
+                              const mv = region?.movements.find(m => m.key === mvKey)
+                              const side = k.endsWith('_der') ? ' D' : k.endsWith('_izq') ? ' I' : ''
+                              const painKey = k + '_pain'
+                              const pain = rec.values[painKey] !== undefined ? parseInt(rec.values[painKey]) : null
+                              const painCls = pain == null ? '' : pain === 0 ? 'text-emerald-400' : pain <= 3 ? 'text-yellow-400' : pain <= 6 ? 'text-orange-400' : 'text-red-400'
+                              return (
+                                <span key={k} className="text-[11px] bg-bg-secondary border-[0.5px] border-border rounded-full px-2 py-0.5 text-text-secondary">
+                                  {mv?.label ?? k}{side}: {v}°{pain != null && <span className={` font-medium ${painCls}`}> · {pain}/10</span>}
+                                </span>
+                              )
+                            })}
+                          </div>
+                        )}
+                        {rec.notes && <div className="text-[12px] text-text-secondary mt-1">{rec.notes}</div>}
+                      </div>
+                      <button onClick={() => handleDeleteGonio(rec.id)} className="text-text-secondary hover:text-warning text-[12px] opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity ml-4 shrink-0">
+                        Eliminar
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </details>
+
+        <div>
+          <label className="block text-[12px] text-text-secondary mb-1">Test Especiales</label>
+          <textarea rows={2} value={ficha.examenTest} onChange={e => handleChange('examenTest', e.target.value)} placeholder="Ej: Lasègue positivo a 45° pierna derecha..." className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y" />
+        </div>
+
+        <div>
+          <label className="block text-[12px] text-text-secondary mb-1">Fuerza muscular</label>
+          <textarea rows={2} value={ficha.examenFuerza} onChange={e => handleChange('examenFuerza', e.target.value)} className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y" />
+        </div>
+
+        {/* Dinamometría (colapsable) */}
+        <details className="bg-bg-secondary p-6 rounded-lg border-[0.5px] border-border">
+          <summary className="text-[14px] uppercase tracking-[0.05em] text-text-primary font-medium cursor-pointer select-none">Dinamometría <span className="normal-case text-[11px] text-text-tertiary">({dynResults.length} · desplegar)</span></summary>
+          <div className="mt-4">
+            <div className="flex justify-end mb-3">
+              <Link href="/recursos/dinamometro" className="text-accent text-[13px] font-medium hover:opacity-80 no-underline">
+                + Nueva evaluación
+              </Link>
+            </div>
+            {dynResults.length === 0 ? (
+              <div className="text-center py-8 bg-bg-primary rounded-xl border-[0.5px] border-dashed border-border">
+                <p className="text-[14px] text-text-secondary mb-3">Sin evaluaciones todavía.</p>
+                <Link href="/recursos/dinamometro" className="text-accent text-[13px] font-medium hover:opacity-80 no-underline">
+                  Ir a Dinamómetro →
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {dynResults.map(d => {
+                  const muscles = Object.keys(d.muscle_results ?? {}).filter(k => {
+                    const v = d.muscle_results[k]
+                    return (v.right && parseFloat(v.right) > 0) || (v.left && parseFloat(v.left) > 0)
+                  })
+                  return (
+                    <div key={d.id} className="flex items-center justify-between bg-bg-primary border-[0.5px] border-border rounded-xl px-5 py-4 group">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <span className="text-[14px] font-medium">
+                            {new Date(d.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                          </span>
+                          <span className="text-[12px] text-text-secondary">{muscles.length} grupos · {d.unit}</span>
+                        </div>
+                        {muscles.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mt-2">
+                            {muscles.map(k => (
+                              <span key={k} className="text-[11px] bg-bg-secondary border-[0.5px] border-border rounded-full px-2 py-0.5 text-text-secondary">
+                                {MUSCLE_LABELS[k] ?? k}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {d.notes && <div className="text-[12px] text-text-secondary mt-1 truncate max-w-[400px]">{d.notes}</div>}
+                      </div>
+                      <button onClick={() => handleDeleteDynamo(d.id)} className="text-text-secondary hover:text-warning text-[12px] opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity ml-4 shrink-0">
+                        Eliminar
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </details>
+
+        {/* Preferencia direccional (McKenzie/MDT) */}
+        <div>
+          <label className="block text-[12px] text-text-secondary mb-1">Preferencia direccional / movimiento preferente <span className="text-text-tertiary normal-case">(dirección que alivia o centraliza)</span></label>
+          <input type="text" value={ficha.preferenciaDireccional} onChange={e => handleChange('preferenciaDireccional', e.target.value)} placeholder="Ej: extensión lumbar (centraliza y reduce el dolor)" className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent" />
+        </div>
+      </div>
+
+      {/* ══════════ BLOQUE 4 · PLAN Y SEGUIMIENTO ══════════ */}
+      <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-8 mb-6 space-y-8">
+        <div className="flex items-baseline gap-2 border-b-[0.5px] border-border pb-3">
+          <span className="text-[11px] font-semibold text-accent tabular-nums">4</span>
+          <h2 className="text-[15px] font-medium tracking-[-0.01em]">Plan y seguimiento</h2>
+        </div>
+
+        {/* Plan de tratamiento */}
         <div>
           <label className="block text-[12px] uppercase tracking-[0.05em] text-accent mb-2 font-medium">Plan de Tratamiento</label>
           <QuickNoteField
@@ -943,7 +1242,7 @@ export default function FichaClient({
           />
         </div>
 
-        {/* 7. RECOMENDACIONES DE OTROS PROFESIONALES */}
+        {/* Recomendaciones de otros profesionales + archivos adjuntos */}
         <div>
           <label className="block text-[12px] uppercase tracking-[0.05em] text-accent mb-2 font-medium">Recomendaciones de Otros Profesionales</label>
           <textarea
@@ -956,7 +1255,7 @@ export default function FichaClient({
 
           {/* PDF adjuntos */}
           <div className="bg-bg-secondary border-[0.5px] border-border rounded-xl p-4 space-y-3">
-            <p className="text-[12px] text-text-secondary font-medium uppercase tracking-[0.05em]">Archivos PDF adjuntos</p>
+            <p className="text-[12px] text-text-secondary font-medium uppercase tracking-[0.05em]">Archivos adjuntos</p>
 
             {(ficha.recomendacionesPdfs ?? []).length === 0 ? (
               <p className="text-[13px] text-text-secondary">Sin archivos adjuntos todavía.</p>
@@ -1010,12 +1309,10 @@ export default function FichaClient({
             {pdfUploadError && <p className="text-[12px] text-warning">{pdfUploadError}</p>}
           </div>
         </div>
-      </div>
 
-      {/* ── ACTUALIZACIONES ────────────────────────────────────────────────── */}
-      <div className="mb-6">
-        <h2 className="text-[14px] uppercase tracking-[0.05em] text-text-secondary mb-3">Actualizaciones</h2>
-        <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 space-y-5">
+        {/* Actualizaciones del tratamiento */}
+        <div className="bg-bg-secondary p-6 rounded-lg border-[0.5px] border-border space-y-5">
+          <h3 className="text-[14px] uppercase tracking-[0.05em] text-text-primary font-medium border-b-[0.5px] border-border pb-2">Actualizaciones del tratamiento</h3>
 
           {/* Formulario nueva actualización */}
           <div className="space-y-3">
@@ -1026,7 +1323,7 @@ export default function FichaClient({
                   type="date"
                   value={nuevaActFecha}
                   onChange={e => setNuevaActFecha(e.target.value)}
-                  className="bg-bg-secondary border-[0.5px] border-border-strong rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:border-accent"
+                  className="bg-bg-primary border-[0.5px] border-border-strong rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:border-accent"
                 />
               </div>
             </div>
@@ -1035,7 +1332,7 @@ export default function FichaClient({
               value={nuevaActTexto}
               onChange={e => setNuevaActTexto(e.target.value)}
               placeholder="Ej: Paciente refiere mejoría del 60% en dolor lumbar. Incorpora extensiones en decúbito..."
-              className="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y"
+              className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y"
             />
             <button
               onClick={handleAddActualizacion}
@@ -1068,291 +1365,6 @@ export default function FichaClient({
             <p className="text-[13px] text-text-secondary pt-2 border-t-[0.5px] border-border">Sin actualizaciones todavía.</p>
           )}
         </div>
-      </div>
-
-      {/* ── EVALUACIONES ───────────────────────────────────────────────────── */}
-      <div className="mb-6">
-        <h2 className="text-[14px] uppercase tracking-[0.05em] text-text-secondary mb-3">Evaluaciones</h2>
-
-        {/* Cards */}
-        <div className="grid grid-cols-3 gap-3 mb-4">
-          {([
-            { key: 'goniometria', label: 'Goniometría', count: ficha.goniometria?.length ?? 0 },
-            { key: 'cuestionarios', label: 'Cuestionarios', count: qResults.length },
-            { key: 'dinamometria', label: 'Dinamometría', count: dynResults.length },
-          ] as const).map(item => (
-            <button
-              key={item.key}
-              onClick={() => setExpandedSection(prev => prev === item.key ? null : item.key)}
-              className={`text-left px-4 py-3 rounded-xl border-[0.5px] transition-colors ${
-                expandedSection === item.key
-                  ? 'bg-bg-primary border-accent'
-                  : 'bg-bg-secondary border-border hover:border-border-strong'
-              }`}
-            >
-              <div className="text-[13px] font-medium mb-0.5">{item.label}</div>
-              <div className="text-[11px] text-text-secondary">{item.count} registro{item.count !== 1 ? 's' : ''}</div>
-            </button>
-          ))}
-        </div>
-
-        {/* ── Goniometría ─────────────────────────────────────────────────── */}
-        {expandedSection === 'goniometria' && (
-          <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-[16px] font-medium">Goniometría / Inclinómetro</h3>
-              <button
-                onClick={() => { setShowGonioForm(v => !v); setGonioValues({}) }}
-                className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90"
-              >
-                {showGonioForm ? 'Cancelar' : '+ Nueva medición'}
-              </button>
-            </div>
-
-            {showGonioForm && (
-              <div className="bg-bg-secondary border-[0.5px] border-border rounded-xl p-5 mb-5 space-y-4">
-                <div className="flex flex-wrap gap-3">
-                  <div>
-                    <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Fecha</label>
-                    <input
-                      type="date"
-                      value={gonioDate}
-                      onChange={e => setGonioDate(e.target.value)}
-                      className="bg-bg-primary border-[0.5px] border-border-strong rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:border-accent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Región</label>
-                    <select
-                      value={gonioRegion}
-                      onChange={e => { setGonioRegion(e.target.value); setGonioValues({}) }}
-                      className="bg-bg-primary border-[0.5px] border-border-strong rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:border-accent"
-                    >
-                      {GONIO_REGIONS.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {selectedRegion.movements.map(mv => {
-                    const painKey = (side: string) => side ? `${mv.key}_${side}_pain` : `${mv.key}_pain`
-                    const PainSelector = ({ side }: { side: string }) => {
-                      const pk = painKey(side)
-                      const val = gonioValues[pk] !== undefined ? parseInt(gonioValues[pk]) : null
-                      return (
-                        <div className="flex gap-1 mt-1 flex-wrap">
-                          {Array.from({ length: 11 }, (_, i) => {
-                            const active = val === i
-                            const cls = i === 0
-                              ? active ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                              : i <= 3
-                                ? active ? 'bg-yellow-500 text-white border-yellow-500' : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400'
-                                : i <= 6
-                                  ? active ? 'bg-orange-500 text-white border-orange-500' : 'bg-orange-500/10 border-orange-500/30 text-orange-400'
-                                  : active ? 'bg-red-500 text-white border-red-500' : 'bg-red-500/10 border-red-500/30 text-red-400'
-                            return (
-                              <button key={i} type="button"
-                                onClick={() => handleGonioValueChange(pk, active ? '' : i.toString())}
-                                className={`w-6 h-6 rounded text-[10px] font-medium border-[0.5px] transition-colors ${cls}`}
-                              >{i}</button>
-                            )
-                          })}
-                        </div>
-                      )
-                    }
-                    return selectedRegion.bilateral ? (
-                      <div key={mv.key} className="space-y-1.5 bg-bg-primary border-[0.5px] border-border rounded-lg p-3">
-                        <div className="text-[11px] font-medium text-text-secondary uppercase tracking-wide">{mv.label}</div>
-                        <div className="flex gap-2">
-                          <div className="flex-1">
-                            <div className="text-[10px] text-text-secondary mb-1">Der °</div>
-                            <input type="number" placeholder="°" value={gonioValues[`${mv.key}_der`] ?? ''} onChange={e => handleGonioValueChange(`${mv.key}_der`, e.target.value)} className="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded px-2 py-1.5 text-[13px] focus:outline-none focus:border-accent" />
-                            <PainSelector side="der" />
-                          </div>
-                          <div className="flex-1">
-                            <div className="text-[10px] text-text-secondary mb-1">Izq °</div>
-                            <input type="number" placeholder="°" value={gonioValues[`${mv.key}_izq`] ?? ''} onChange={e => handleGonioValueChange(`${mv.key}_izq`, e.target.value)} className="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded px-2 py-1.5 text-[13px] focus:outline-none focus:border-accent" />
-                            <PainSelector side="izq" />
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div key={mv.key} className="space-y-1.5 bg-bg-primary border-[0.5px] border-border rounded-lg p-3">
-                        <div className="text-[11px] font-medium text-text-secondary uppercase tracking-wide">{mv.label}</div>
-                        <input type="number" placeholder="°" value={gonioValues[mv.key] ?? ''} onChange={e => handleGonioValueChange(mv.key, e.target.value)} className="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded px-2 py-1.5 text-[13px] focus:outline-none focus:border-accent" />
-                        <PainSelector side="" />
-                      </div>
-                    )
-                  })}
-                </div>
-
-                <div>
-                  <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Notas</label>
-                  <input
-                    type="text"
-                    value={gonioNotes}
-                    onChange={e => setGonioNotes(e.target.value)}
-                    placeholder="Observaciones..."
-                    className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:border-accent"
-                  />
-                </div>
-
-                <button onClick={handleSaveGonio} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90">
-                  Guardar medición
-                </button>
-              </div>
-            )}
-
-            {(ficha.goniometria ?? []).length === 0 ? (
-              <div className="text-center py-8 bg-bg-secondary rounded-xl border-[0.5px] border-dashed border-border">
-                <p className="text-[14px] text-text-secondary">Sin mediciones todavía.</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {(ficha.goniometria ?? []).map(rec => {
-                  const region = GONIO_REGIONS.find(r => r.key === rec.region)
-                  const filledValues = Object.entries(rec.values).filter(([, v]) => v !== '')
-                  return (
-                    <div key={rec.id} className="flex items-start justify-between bg-bg-secondary border-[0.5px] border-border rounded-xl px-5 py-4 group">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 flex-wrap mb-1">
-                          <span className="text-[14px] font-medium">{region?.label ?? rec.region}</span>
-                          <span className="text-[12px] text-text-secondary">
-                            {new Date(rec.date + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })}
-                          </span>
-                        </div>
-                        {filledValues.length > 0 && (
-                          <div className="flex flex-wrap gap-2 mt-1">
-                            {filledValues.filter(([k]) => !k.endsWith('_pain')).map(([k, v]) => {
-                              const mvKey = k.replace(/_der$|_izq$/, '')
-                              const mv = region?.movements.find(m => m.key === mvKey)
-                              const side = k.endsWith('_der') ? ' D' : k.endsWith('_izq') ? ' I' : ''
-                              const painKey = k + '_pain'
-                              const pain = rec.values[painKey] !== undefined ? parseInt(rec.values[painKey]) : null
-                              const painCls = pain == null ? '' : pain === 0 ? 'text-emerald-400' : pain <= 3 ? 'text-yellow-400' : pain <= 6 ? 'text-orange-400' : 'text-red-400'
-                              return (
-                                <span key={k} className="text-[11px] bg-bg-primary border-[0.5px] border-border rounded-full px-2 py-0.5 text-text-secondary">
-                                  {mv?.label ?? k}{side}: {v}°{pain != null && <span className={` font-medium ${painCls}`}> · {pain}/10</span>}
-                                </span>
-                              )
-                            })}
-                          </div>
-                        )}
-                        {rec.notes && <div className="text-[12px] text-text-secondary mt-1">{rec.notes}</div>}
-                      </div>
-                      <button onClick={() => handleDeleteGonio(rec.id)} className="text-text-secondary hover:text-warning text-[12px] opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity ml-4 shrink-0">
-                        Eliminar
-                      </button>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── Cuestionarios ───────────────────────────────────────────────── */}
-        {expandedSection === 'cuestionarios' && (
-          <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-[16px] font-medium">Cuestionarios</h3>
-              <Link href={`/recursos/cuestionarios?paciente=${patientId}`} className="text-accent text-[13px] font-medium hover:opacity-80 no-underline">
-                + Completar cuestionario
-              </Link>
-            </div>
-            {qResults.length === 0 ? (
-              <div className="text-center py-8 bg-bg-secondary rounded-xl border-[0.5px] border-dashed border-border">
-                <p className="text-[14px] text-text-secondary mb-3">Sin cuestionarios todavía.</p>
-                <Link href={`/recursos/cuestionarios?paciente=${patientId}`} className="text-accent text-[13px] font-medium hover:opacity-80 no-underline">
-                  Ir a Cuestionarios →
-                </Link>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {qResults.map(result => {
-                  const meta = QUESTIONNAIRE_NAMES[result.questionnaire_type] ?? { label: result.questionnaire_type, unit: '' }
-                  const flaggedCount = getResponseItems(result.questionnaire_type, result.result_data).filter(r => r.relevant).length
-                  return (
-                    <div key={result.id} className="flex items-center justify-between bg-bg-secondary border-[0.5px] border-border rounded-xl px-5 py-4 group hover:border-accent/40 transition-colors">
-                      <button onClick={() => setOpenQ(result)} className="flex-1 min-w-0 text-left">
-                        <div className="flex items-center gap-3 flex-wrap">
-                          <span className="text-[14px] font-medium">{meta.label}</span>
-                          <span className="text-[14px] text-text-secondary">{formatScore(result)} <span className="text-[12px] opacity-70">{meta.unit}</span></span>
-                          {result.interpretation && (
-                            <span className="text-[12px] bg-bg-primary border-[0.5px] border-border rounded-full px-2.5 py-0.5 text-text-secondary">{result.interpretation}</span>
-                          )}
-                          {flaggedCount > 0 && (
-                            <span className="text-[11px] text-accent font-medium">{flaggedCount} {flaggedCount === 1 ? 'ítem' : 'ítems'} a trabajar</span>
-                          )}
-                        </div>
-                        <div className="text-[12px] text-text-secondary mt-1">
-                          {new Date(result.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })} · <span className="text-accent">Abrir cuestionario →</span>
-                        </div>
-                      </button>
-                      <button onClick={() => handleDeleteQ(result.id)} className="text-text-secondary hover:text-warning text-[12px] opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity ml-4 shrink-0">
-                        Eliminar
-                      </button>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── Dinamometría ────────────────────────────────────────────────── */}
-        {expandedSection === 'dinamometria' && (
-          <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-[16px] font-medium">Dinamometría</h3>
-              <Link href="/recursos/dinamometro" className="text-accent text-[13px] font-medium hover:opacity-80 no-underline">
-                + Nueva evaluación
-              </Link>
-            </div>
-            {dynResults.length === 0 ? (
-              <div className="text-center py-8 bg-bg-secondary rounded-xl border-[0.5px] border-dashed border-border">
-                <p className="text-[14px] text-text-secondary mb-3">Sin evaluaciones todavía.</p>
-                <Link href="/recursos/dinamometro" className="text-accent text-[13px] font-medium hover:opacity-80 no-underline">
-                  Ir a Dinamómetro →
-                </Link>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {dynResults.map(d => {
-                  const muscles = Object.keys(d.muscle_results ?? {}).filter(k => {
-                    const v = d.muscle_results[k]
-                    return (v.right && parseFloat(v.right) > 0) || (v.left && parseFloat(v.left) > 0)
-                  })
-                  return (
-                    <div key={d.id} className="flex items-center justify-between bg-bg-secondary border-[0.5px] border-border rounded-xl px-5 py-4 group">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 flex-wrap">
-                          <span className="text-[14px] font-medium">
-                            {new Date(d.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })}
-                          </span>
-                          <span className="text-[12px] text-text-secondary">{muscles.length} grupos · {d.unit}</span>
-                        </div>
-                        {muscles.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5 mt-2">
-                            {muscles.map(k => (
-                              <span key={k} className="text-[11px] bg-bg-primary border-[0.5px] border-border rounded-full px-2 py-0.5 text-text-secondary">
-                                {MUSCLE_LABELS[k] ?? k}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                        {d.notes && <div className="text-[12px] text-text-secondary mt-1 truncate max-w-[400px]">{d.notes}</div>}
-                      </div>
-                      <button onClick={() => handleDeleteDynamo(d.id)} className="text-text-secondary hover:text-warning text-[12px] opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity ml-4 shrink-0">
-                        Eliminar
-                      </button>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       {/* ── Footer ─────────────────────────────────────────────────────────── */}
