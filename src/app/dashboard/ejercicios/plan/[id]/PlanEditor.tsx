@@ -465,6 +465,7 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
 
   // Opciones de la planilla imprimible
   const [printWeekCount, setPrintWeekCount] = useState<number | 'all'>(6) // columnas: 4/6/8 o todas
+  const [printStartWeek, setPrintStartWeek] = useState(1)                 // desde qué semana arranca la ventana a imprimir (1-indexed)
   const [printWithLoads, setPrintWithLoads] = useState(false)             // imprimir carga del plan vs en blanco
   const [printDays, setPrintDays] = useState<Set<number> | null>(null)    // weekdays a imprimir (null = solo el día seleccionado)
 
@@ -505,14 +506,29 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
   const selectedWeekday = selectedSession ? new Date(selectedSession.scheduled_date + 'T00:00:00').getDay() : null
   const effectiveDays = printDays ?? (selectedWeekday !== null ? new Set([selectedWeekday]) : new Set<number>())
 
-  // Hojas a imprimir: una por weekday seleccionado.
-  const printSheets = dayTemplates
+  // Hojas a imprimir: una por weekday seleccionado, con TODAS sus semanas.
+  const printSheetsFull = dayTemplates
     .filter(dt => effectiveDays.has(dt.dow))
     .map(dt => ({ session: dt.session, weekSessions: seriesFor(dt.dow) }))
 
   // Cantidad de columnas: 4/6/8 fijas, o "todas" = el máximo real disponible.
-  const maxAvailableWeeks = Math.max(1, ...printSheets.map(s => s.weekSessions.length))
+  // Las fijas NO se clampan: en modo "en blanco" pueden pedirse más columnas que
+  // semanas cargadas para dejar espacio a futuro.
+  const maxAvailableWeeks = Math.max(1, ...printSheetsFull.map(s => s.weekSessions.length))
   const resolvedWeeks = printWeekCount === 'all' ? maxAvailableWeeks : printWeekCount
+
+  // Ventana de semanas a imprimir: desde `startWeek` (1-indexed) y `resolvedWeeks`
+  // columnas. "Todas" arranca siempre en la semana 1. El inicio se clampa para
+  // que la ventana no se pase del rango real (así, al elegir p. ej. las últimas
+  // 6 de un plan de 12, se imprimen las semanas 7–12 y no las primeras 6).
+  const maxStartWeek = Math.max(1, maxAvailableWeeks - resolvedWeeks + 1)
+  const startWeek = printWeekCount === 'all' ? 1 : Math.min(Math.max(1, printStartWeek), maxStartWeek)
+  const startIdx = startWeek - 1
+
+  const printSheets = printSheetsFull.map(s => ({
+    session: s.session,
+    weekSessions: s.weekSessions.slice(startIdx, startIdx + resolvedWeeks),
+  }))
 
   const togglePrintDay = (dow: number) => {
     setPrintDays(prev => {
@@ -1261,6 +1277,24 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
                   </div>
                 </div>
 
+                {/* Desde qué semana arranca la ventana (solo si hay más semanas que columnas) */}
+                {printWeekCount !== 'all' && maxAvailableWeeks > resolvedWeeks && (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[12px] text-text-secondary">Desde</span>
+                    <select
+                      value={startWeek}
+                      onChange={e => setPrintStartWeek(Number(e.target.value))}
+                      className="bg-bg-primary border-[0.5px] border-border rounded-md text-[12px] text-text-primary px-2 py-1"
+                    >
+                      {Array.from({ length: maxStartWeek }, (_, i) => i + 1).map(s => (
+                        <option key={s} value={s}>
+                          Sem {s}–{s + resolvedWeeks - 1}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
                 {printSheets.some(s => s.weekSessions.length > 1) && (
                   <label className="flex items-center gap-2 text-[12px] text-text-secondary cursor-pointer">
                     <input type="checkbox" checked={printWithLoads} onChange={e => setPrintWithLoads(e.target.checked)} className="accent-accent" />
@@ -1283,6 +1317,7 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
               planName={plan.name}
               sheets={printSheets}
               weeks={resolvedWeeks}
+              startWeek={startWeek}
               showLoads={printWithLoads}
             />
           </div>

@@ -41,12 +41,13 @@ function Wordmark() {
   return <span style={{ fontSize: '15px', fontWeight: 700, letterSpacing: '-0.02em' }}>reason<span style={{ fontWeight: 400 }}>.</span></span>
 }
 
-function SheetBody({ patientName, planName, session, weekSessions, weeks, showLoads, isLast }: {
+function SheetBody({ patientName, planName, session, weekSessions, weeks, startWeek, showLoads, isLast }: {
   patientName: string
   planName: string
   session: PrintSession
   weekSessions?: WeekSession[]
   weeks: number
+  startWeek: number
   showLoads: boolean
   isLast: boolean
 }) {
@@ -58,9 +59,10 @@ function SheetBody({ patientName, planName, session, weekSessions, weeks, showLo
   const N = Math.max(1, Math.min(16, Math.round(weeks)))
   const cols = Array.from({ length: N }, (_, i) => {
     const ws = weeksArr[i]
+    const week = startWeek + i
     return ws
-      ? { key: ws.date, week: i + 1, dated: true, blocks: ws.blocks, ...fmtDate(ws.date) }
-      : { key: `w${i + 1}`, week: i + 1, dated: false, blocks: [] as PrintBlock[], dow: '', dm: '' }
+      ? { key: ws.date, week, dated: true, blocks: ws.blocks, ...fmtDate(ws.date) }
+      : { key: `w${week}`, week, dated: false, blocks: [] as PrintBlock[], dow: '', dm: '' }
   })
   const colCount = cols.length
   const weekColWidth = `${Math.max(6, Math.round((withLoads ? 52 : 42) / colCount))}%`
@@ -142,12 +144,14 @@ export default function PlanPrintSheet({
   planName,
   sheets,
   weeks = 6,
+  startWeek = 1,
   showLoads = false,
 }: {
   patientName: string
   planName: string
   sheets: Sheet[]
   weeks?: number
+  startWeek?: number
   showLoads?: boolean
 }) {
   const [mounted, setMounted] = useState(false)
@@ -191,6 +195,7 @@ export default function PlanPrintSheet({
             session={sh.session}
             weekSessions={sh.weekSessions}
             weeks={weeks}
+            startWeek={startWeek}
             showLoads={showLoads}
             isLast={i === sheets.length - 1}
           />
