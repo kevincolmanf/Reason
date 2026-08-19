@@ -465,7 +465,7 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
 
   // Opciones de la planilla imprimible
   const [printWeekCount, setPrintWeekCount] = useState<number | 'all'>(6) // columnas: 4/6/8 o todas
-  const [printStartWeek, setPrintStartWeek] = useState(1)                 // desde qué semana arranca la ventana a imprimir (1-indexed)
+  const [printStartMonday, setPrintStartMonday] = useState<string | null>(null) // lunes ISO de la semana de inicio de la planilla (null = auto)
   const [printWithLoads, setPrintWithLoads] = useState(false)             // imprimir carga del plan vs en blanco
   const [printDays, setPrintDays] = useState<Set<number> | null>(null)    // weekdays a imprimir (null = solo el día seleccionado)
 
@@ -479,19 +479,46 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
     ? scheduledSessions.find(s => s.scheduled_date === selectedDate) ?? null
     : null
 
-  // Todas las sesiones del mismo día (weekday) a lo largo del plan, desde la
-  // semana 1, ordenadas. Las columnas de la planilla cuadran 1:1 con estas.
-  const seriesFor = (weekday: number) =>
-    scheduledSessions
-      .filter(s => new Date(s.scheduled_date + 'T00:00:00').getDay() === weekday)
-      .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date))
-      .map(s => ({ date: s.scheduled_date, blocks: s.session_data?.blocks ?? [] }))
+  // ─── Planilla imprimible: semana de inicio + N semanas hacia adelante ────────
+  // La planilla arranca en una semana REAL del calendario (lunes–domingo) que
+  // elige el kine. Muestra los ejercicios y cargas DE ESA semana en la primera
+  // columna, y proyecta N columnas hacia adelante (+7 días cada una): si existe
+  // la sesión en esa fecha usa su carga, si no queda en blanco para completar.
 
-  // Días-plantilla del plan: cada weekday con ejercicios, una vez (primera
-  // aparición). Sirven para el selector "qué entrenamientos imprimir".
+  // Semanas del plan con ejercicios cargados, por lunes (ISO, orden cronológico).
+  const planWeekMondays = (() => {
+    const set = new Set<string>()
+    scheduledSessions
+      .filter(s => (s.session_data?.blocks ?? []).some(b => b.exercises.length > 0))
+      .forEach(s => set.add(toDateStr(getMondayOfWeek(new Date(s.scheduled_date + 'T00:00:00')))))
+    return Array.from(set).sort()
+  })()
+
+  const weekRangeLabel = (mondayStr: string) => {
+    const m = new Date(mondayStr + 'T00:00:00')
+    const e = addDays(m, 6)
+    return `${m.getDate()} ${MONTH_NAMES[m.getMonth()].slice(0, 3)} – ${e.getDate()} ${MONTH_NAMES[e.getMonth()].slice(0, 3)}`
+  }
+
+  // Semana de inicio: la elegida por el kine si sigue siendo válida; si no, la
+  // del día seleccionado en el calendario; si no, la primera semana del plan.
+  const selectedDateMonday = selectedDate ? toDateStr(getMondayOfWeek(new Date(selectedDate + 'T00:00:00'))) : null
+  const defaultStartMonday = (selectedDateMonday && planWeekMondays.includes(selectedDateMonday))
+    ? selectedDateMonday
+    : (planWeekMondays[0] ?? null)
+  const startMonday = (printStartMonday && planWeekMondays.includes(printStartMonday))
+    ? printStartMonday
+    : defaultStartMonday
+  const startMondayDate = startMonday ? new Date(startMonday + 'T00:00:00') : null
+
+  // Días-plantilla: cada weekday de la semana de inicio que tenga ejercicios.
+  // De acá salen los renglones (ejercicios, series×reps, carga sugerida).
   const dayTemplates = (() => {
+    if (!startMonday || !startMondayDate) return [] as { dow: number; session: ScheduledSession }[]
+    const weekEnd = toDateStr(addDays(startMondayDate, 6))
     const map = new Map<number, ScheduledSession>()
     scheduledSessions
+      .filter(s => s.scheduled_date >= startMonday && s.scheduled_date <= weekEnd)
       .filter(s => (s.session_data?.blocks ?? []).some(b => b.exercises.length > 0))
       .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date))
       .forEach(s => {
@@ -503,36 +530,44 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
       .sort((a, b) => ((a.dow + 6) % 7) - ((b.dow + 6) % 7)) // Lun primero
   })()
 
-  const selectedWeekday = selectedSession ? new Date(selectedSession.scheduled_date + 'T00:00:00').getDay() : null
-  const effectiveDays = printDays ?? (selectedWeekday !== null ? new Set([selectedWeekday]) : new Set<number>())
+  const anchorDows = new Set(dayTemplates.map(dt => dt.dow))
+  const effectiveDays = printDays ?? anchorDows
 
-  // Hojas a imprimir: una por weekday seleccionado, con TODAS sus semanas.
-  const printSheetsFull = dayTemplates
-    .filter(dt => effectiveDays.has(dt.dow))
-    .map(dt => ({ session: dt.session, weekSessions: seriesFor(dt.dow) }))
+  // Serie de un weekday hacia adelante desde la semana de inicio: N columnas
+  // fechadas (+7 días), con la carga real si esa sesión existe, o en blanco.
+  const seriesFrom = (weekday: number, count: number) => {
+    if (!startMondayDate) return [] as { date: string; blocks: SessionData['blocks'] }[]
+    const offset = weekday === 0 ? 6 : weekday - 1 // Lun=0 … Dom=6
+    const baseDate = addDays(startMondayDate, offset)
+    return Array.from({ length: count }, (_, c) => {
+      const dateStr = toDateStr(addDays(baseDate, 7 * c))
+      const sess = scheduledSessions.find(s => s.scheduled_date === dateStr)
+      return { date: dateStr, blocks: sess?.session_data?.blocks ?? [] }
+    })
+  }
 
-  // Cantidad de columnas: 4/6/8 fijas, o "todas" = el máximo real disponible.
-  // Las fijas NO se clampan: en modo "en blanco" pueden pedirse más columnas que
-  // semanas cargadas para dejar espacio a futuro.
-  const maxAvailableWeeks = Math.max(1, ...printSheetsFull.map(s => s.weekSessions.length))
+  // Cantidad de columnas: 4/6/8, o "todas" = de la semana de inicio a la última
+  // semana cargada del plan (mínimo 1).
+  const lastPlanMonday = planWeekMondays[planWeekMondays.length - 1]
+  const weeksToLastLoaded = (startMondayDate && lastPlanMonday)
+    ? Math.round((new Date(lastPlanMonday + 'T00:00:00').getTime() - startMondayDate.getTime()) / (7 * 86_400_000)) + 1
+    : 1
+  const maxAvailableWeeks = Math.max(1, weeksToLastLoaded)
   const resolvedWeeks = printWeekCount === 'all' ? maxAvailableWeeks : printWeekCount
 
-  // Ventana de semanas a imprimir: desde `startWeek` (1-indexed) y `resolvedWeeks`
-  // columnas. "Todas" arranca siempre en la semana 1. El inicio se clampa para
-  // que la ventana no se pase del rango real (así, al elegir p. ej. las últimas
-  // 6 de un plan de 12, se imprimen las semanas 7–12 y no las primeras 6).
-  const maxStartWeek = Math.max(1, maxAvailableWeeks - resolvedWeeks + 1)
-  const startWeek = printWeekCount === 'all' ? 1 : Math.min(Math.max(1, printStartWeek), maxStartWeek)
-  const startIdx = startWeek - 1
+  // Nº de semana absoluto del plan para etiquetar las columnas (Sem N).
+  const firstPlanMondayDate = planWeekMondays[0] ? new Date(planWeekMondays[0] + 'T00:00:00') : startMondayDate
+  const startWeekNumber = (firstPlanMondayDate && startMondayDate)
+    ? Math.round((startMondayDate.getTime() - firstPlanMondayDate.getTime()) / (7 * 86_400_000)) + 1
+    : 1
 
-  const printSheets = printSheetsFull.map(s => ({
-    session: s.session,
-    weekSessions: s.weekSessions.slice(startIdx, startIdx + resolvedWeeks),
-  }))
+  const printSheets = dayTemplates
+    .filter(dt => effectiveDays.has(dt.dow))
+    .map(dt => ({ session: dt.session, weekSessions: seriesFrom(dt.dow, resolvedWeeks) }))
 
   const togglePrintDay = (dow: number) => {
     setPrintDays(prev => {
-      const base = new Set(prev ?? (selectedWeekday !== null ? [selectedWeekday] : []))
+      const base = new Set(prev ?? anchorDows)
       if (base.has(dow)) base.delete(dow); else base.add(dow)
       return base
     })
@@ -1248,6 +1283,24 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
               <div className="flex flex-col gap-3 border-[0.5px] border-border rounded-lg p-3">
                 <div className="text-[11px] uppercase tracking-[0.05em] text-text-secondary">Planilla imprimible</div>
 
+                {/* Semana de inicio: desde acá salen los ejercicios/cargas y arrancan las columnas */}
+                {planWeekMondays.length > 0 && (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[12px] text-text-secondary">Semana de inicio</span>
+                    <select
+                      value={startMonday ?? ''}
+                      onChange={e => setPrintStartMonday(e.target.value)}
+                      className="bg-bg-primary border-[0.5px] border-border rounded-md text-[12px] text-text-primary px-2 py-1 max-w-[60%]"
+                    >
+                      {planWeekMondays.map((m, i) => (
+                        <option key={m} value={m}>
+                          Sem {i + 1} · {weekRangeLabel(m)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
                 {/* Días a imprimir (una hoja por día) */}
                 <div className="flex flex-col gap-1.5">
                   <span className="text-[12px] text-text-secondary">Días a imprimir ({printSheets.length} {printSheets.length === 1 ? 'hoja' : 'hojas'})</span>
@@ -1277,24 +1330,6 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
                   </div>
                 </div>
 
-                {/* Desde qué semana arranca la ventana (solo si hay más semanas que columnas) */}
-                {printWeekCount !== 'all' && maxAvailableWeeks > resolvedWeeks && (
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[12px] text-text-secondary">Desde</span>
-                    <select
-                      value={startWeek}
-                      onChange={e => setPrintStartWeek(Number(e.target.value))}
-                      className="bg-bg-primary border-[0.5px] border-border rounded-md text-[12px] text-text-primary px-2 py-1"
-                    >
-                      {Array.from({ length: maxStartWeek }, (_, i) => i + 1).map(s => (
-                        <option key={s} value={s}>
-                          Sem {s}–{s + resolvedWeeks - 1}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
                 {printSheets.some(s => s.weekSessions.length > 1) && (
                   <label className="flex items-center gap-2 text-[12px] text-text-secondary cursor-pointer">
                     <input type="checkbox" checked={printWithLoads} onChange={e => setPrintWithLoads(e.target.checked)} className="accent-accent" />
@@ -1317,7 +1352,7 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
               planName={plan.name}
               sheets={printSheets}
               weeks={resolvedWeeks}
-              startWeek={startWeek}
+              startWeek={startWeekNumber}
               showLoads={printWithLoads}
             />
           </div>
