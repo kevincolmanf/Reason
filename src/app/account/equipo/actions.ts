@@ -103,7 +103,7 @@ export async function addMember(orgId: string, formData: FormData): Promise<{ er
     email,
     password: tempPassword,
     email_confirm: true,
-    user_metadata: { full_name: fullName },
+    user_metadata: { full_name: fullName, created_by_org: orgId },
   })
 
   if (authError || !authData.user) return { error: 'Error al crear la cuenta del miembro' }
@@ -124,6 +124,64 @@ export async function addMember(orgId: string, formData: FormData): Promise<{ er
   })
 
   return { tempPassword, email }
+}
+
+// Regenera una contraseña temporal para un integrante y la devuelve para que el
+// admin se la comparta. Pensado para quien todavía no ingresó (perdió el mensaje
+// inicial, nunca lo recibió, etc.). Si el integrante YA ingresó alguna vez,
+// significa que tiene su propia contraseña: no la pisamos para no dejarlo afuera,
+// salvo que el admin lo fuerce explícitamente (force = true).
+export async function resetMemberAccess(
+  orgId: string,
+  memberUserId: string,
+  force = false,
+): Promise<{ error?: string; email?: string; tempPassword?: string; alreadyLoggedIn?: boolean }> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const { data: membership } = await supabase
+    .from('organization_members')
+    .select('role')
+    .eq('org_id', orgId)
+    .eq('user_id', user.id)
+    .single()
+
+  if (membership?.role !== 'admin') return { error: 'Solo el administrador puede reenviar accesos' }
+
+  const adminClient = createAdminClient()
+
+  // El objetivo tiene que ser realmente un integrante de ESTE equipo.
+  const { data: targetMembership } = await adminClient
+    .from('organization_members')
+    .select('user_id')
+    .eq('org_id', orgId)
+    .eq('user_id', memberUserId)
+    .single()
+
+  if (!targetMembership) return { error: 'Ese integrante no pertenece a tu equipo' }
+
+  // Traemos el usuario de auth para conocer email y si alguna vez ingresó.
+  const { data: authUser, error: getErr } = await adminClient.auth.admin.getUserById(memberUserId)
+  if (getErr || !authUser?.user) return { error: 'No se pudo encontrar la cuenta del integrante' }
+
+  const email = authUser.user.email ?? undefined
+  const hasLoggedIn = !!authUser.user.last_sign_in_at
+
+  // Protección: si ya ingresó, no le pisamos su contraseña salvo confirmación
+  // explícita (podría ser una cuenta propia que usa por fuera del equipo).
+  if (hasLoggedIn && !force) {
+    return { alreadyLoggedIn: true, email }
+  }
+
+  const tempPassword = generateTempPassword()
+  const { error: updErr } = await adminClient.auth.admin.updateUserById(memberUserId, {
+    password: tempPassword,
+  })
+
+  if (updErr) return { error: 'No se pudo generar la contraseña' }
+
+  return { email, tempPassword }
 }
 
 export async function updateMemberName(orgId: string, memberUserId: string, newName: string): Promise<{ error?: string }> {

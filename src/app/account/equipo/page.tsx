@@ -1,4 +1,5 @@
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { redirect } from 'next/navigation'
 import Header from '@/components/Header'
 import Link from 'next/link'
@@ -29,7 +30,7 @@ export default async function EquipoPage() {
 
   const org = orgRows?.[0] || null
 
-  let members: { id: string; user_id: string; role: string; users: { full_name: string | null; email: string } }[] = []
+  let members: { id: string; user_id: string; role: string; hasLoggedIn: boolean; users: { full_name: string | null; email: string } }[] = []
 
   if (org) {
     const { data: membersData } = await supabase
@@ -38,7 +39,25 @@ export default async function EquipoPage() {
       .eq('org_id', org.id)
       .order('created_at', { ascending: true })
 
-    members = (membersData as unknown as typeof members) || []
+    const baseMembers = (membersData as unknown as Omit<typeof members[number], 'hasLoggedIn'>[]) || []
+
+    // Averiguamos quién ya ingresó al menos una vez (last_sign_in_at). Sirve para
+    // mostrar el estado y para saber a quién le podemos reenviar el acceso sin
+    // pisarle una contraseña que ya está usando.
+    const admin = createAdminClient()
+    const signInInfo = await Promise.all(
+      baseMembers.map(async (m) => {
+        try {
+          const { data } = await admin.auth.admin.getUserById(m.user_id)
+          return { user_id: m.user_id, hasLoggedIn: !!data?.user?.last_sign_in_at }
+        } catch {
+          return { user_id: m.user_id, hasLoggedIn: false }
+        }
+      })
+    )
+    const loggedInMap = new Map(signInInfo.map(s => [s.user_id, s.hasLoggedIn]))
+
+    members = baseMembers.map(m => ({ ...m, hasLoggedIn: loggedInMap.get(m.user_id) ?? false }))
   }
 
   return (
