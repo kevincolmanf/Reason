@@ -251,8 +251,15 @@ export default function AnalyticsClient({ analytics }: { analytics: Analytics })
     return Array.from(names)
   }, [monthlyTrend])
 
-  const ausenteRate = t.total > 0 ? Math.round((t.ausentes / t.total) * 100) : 0
-  const prevAusenteRate = l.total > 0 ? Math.round((l.ausentes / l.total) * 100) : 0
+  // % de ausencia sobre turnos ya resueltos (presentes + ausentes). Excluimos los
+  // que todavía no ocurrieron (programado/confirmado/sobreturno sin marcar) para
+  // que el número sea estable y comparable entre meses; si dividiéramos por el
+  // total, en el mes en curso aparecería diluido y subiría solo con el correr de
+  // los días.
+  const resolvedThis = t.presentes + t.ausentes
+  const resolvedLast = l.presentes + l.ausentes
+  const ausenteRate = resolvedThis > 0 ? Math.round((t.ausentes / resolvedThis) * 100) : 0
+  const prevAusenteRate = resolvedLast > 0 ? Math.round((l.ausentes / resolvedLast) * 100) : 0
 
   const cargadosThis = t.total - t.cancelados
   const cargadosLast = l.total - l.cancelados
@@ -347,7 +354,7 @@ export default function AnalyticsClient({ analytics }: { analytics: Analytics })
             </div>
           </div>
           <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">
-            <div className="text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em] mb-3">% Ausencia del mes</div>
+            <div className="text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em] mb-3">% Ausencia del mes<span className="normal-case tracking-normal text-text-tertiary"> · sobre turnos realizados</span></div>
             <div className={`font-mono text-[32px] font-medium tracking-[-0.02em] ${ausenteRate > 20 ? 'text-red-400' : 'text-text-primary'}`}>{ausenteRate}%</div>
             <div className={`text-[12px] mt-2 ${ausenteRate > prevAusenteRate ? 'text-red-400' : 'text-emerald-400'}`}>
               {delta(ausenteRate, prevAusenteRate)} <span className="text-text-tertiary">vs {prevMonthLabel}</span>
@@ -360,7 +367,7 @@ export default function AnalyticsClient({ analytics }: { analytics: Analytics })
       {selectedArea !== 'all' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">
-            <div className="text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em] mb-3">% Ausencia del mes</div>
+            <div className="text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em] mb-3">% Ausencia del mes<span className="normal-case tracking-normal text-text-tertiary"> · sobre turnos realizados</span></div>
             <div className={`font-mono text-[32px] font-medium tracking-[-0.02em] ${ausenteRate > 20 ? 'text-red-400' : 'text-text-primary'}`}>{ausenteRate}%</div>
             <div className={`text-[12px] mt-2 ${ausenteRate > prevAusenteRate ? 'text-red-400' : 'text-emerald-400'}`}>
               {delta(ausenteRate, prevAusenteRate)} <span className="text-text-tertiary">vs {prevMonthLabel}</span>
@@ -485,7 +492,8 @@ export default function AnalyticsClient({ analytics }: { analytics: Analytics })
               </thead>
               <tbody>
                 {byProfessional.map((p, i) => {
-                  const ausenciaPct = p.cargados > 0 ? Math.round((p.ausentes / p.cargados) * 100) : 0
+                  const resueltos = p.presentes + p.ausentes
+                  const ausenciaPct = resueltos > 0 ? Math.round((p.ausentes / resueltos) * 100) : 0
                   const overThreshold = p.avgPerHour >= threshold
                   return (
                     <tr key={i} className={`border-b-[0.5px] border-border last:border-b-0 ${overThreshold ? 'bg-amber-500/5' : ''}`}>
