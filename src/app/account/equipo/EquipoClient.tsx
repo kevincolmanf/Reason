@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createOrganization, addMember, removeMember, updateMemberName } from './actions'
+import { createOrganization, addMember, removeMember, updateMemberName, resetMemberAccess } from './actions'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
@@ -9,6 +9,7 @@ interface Member {
   id: string
   user_id: string
   role: string
+  hasLoggedIn: boolean
   users: { full_name: string | null; email: string }
 }
 
@@ -62,6 +63,12 @@ export default function EquipoClient({ userId, org: initialOrg, members: initial
 
   const [removing, setRemoving] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+
+  const [resettingId, setResettingId] = useState<string | null>(null)
+  const [resetError, setResetError] = useState('')
+  // Cuando el integrante ya ingresó alguna vez, pedimos confirmación antes de
+  // pisarle la contraseña (guardamos su user_id acá para el diálogo de confirm).
+  const [confirmResetMember, setConfirmResetMember] = useState<Member | null>(null)
 
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
@@ -148,6 +155,31 @@ export default function EquipoClient({ userId, org: initialOrg, members: initial
     await removeMember(org.id, memberUserId)
     setMembers(prev => prev.filter(m => m.id !== memberId))
     setRemoving(null)
+  }
+
+  const handleResetAccess = async (member: Member, force = false) => {
+    if (!org || resettingId) return
+    setResetError('')
+    setResettingId(member.id)
+    try {
+      const res = await resetMemberAccess(org.id, member.user_id, force)
+      if (res?.error) {
+        setResetError(res.error)
+      } else if (res?.alreadyLoggedIn) {
+        // Ya ingresó: pedimos confirmación explícita antes de pisar su contraseña.
+        setConfirmResetMember(member)
+      } else if (res?.tempPassword) {
+        setConfirmResetMember(null)
+        setNewCredentials({ email: res.email!, tempPassword: res.tempPassword })
+        setCopied(false)
+        // Llevamos el banner de credenciales a la vista.
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      }
+    } catch (e) {
+      setResetError(`Error inesperado: ${(e as Error).message}`)
+    } finally {
+      setResettingId(null)
+    }
   }
 
   const buildShareMessage = (email?: string, password?: string) => {
@@ -295,7 +327,7 @@ Cualquier duda, avisame.`
       {newCredentials && (
         <div className="bg-[#1a2e1a] border-[0.5px] border-[#2E7D32]/40 rounded-xl p-6">
           <p className="text-[13px] font-medium text-[#66BB6A] mb-4">
-            Integrante agregado. Compartí estos datos de acceso:
+            Datos de acceso listos. Compartilos con el integrante (por WhatsApp, mail, etc.):
           </p>
           <div className="space-y-2 font-mono text-[13px] mb-4">
             <div className="flex justify-between items-center bg-black/20 rounded-lg px-4 py-2.5">
@@ -344,6 +376,12 @@ Cualquier duda, avisame.`
             </button>
           )}
         </div>
+
+        {resetError && (
+          <div className="px-6 py-3 border-b-[0.5px] border-border bg-red-500/5">
+            <p className="text-[13px] text-red-400">{resetError}</p>
+          </div>
+        )}
 
         {showAddForm && (
           <div className="p-6 border-b-[0.5px] border-border bg-bg-primary/40">
@@ -431,17 +469,35 @@ Cualquier duda, avisame.`
                       </button>
                     </div>
                   ) : (
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
                       <div>
                         <p className="text-[14px] font-medium">{m.users?.full_name || m.users?.email || '(sin nombre)'}</p>
                         <p className="text-[12px] text-text-secondary">{m.users?.email || '—'}</p>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-[11px] text-text-secondary bg-bg-primary border-[0.5px] border-border rounded-full px-2.5 py-0.5 capitalize">
-                          {isCurrentUser ? 'Vos · Admin' : 'Integrante'}
-                        </span>
+                      <div className="flex items-center gap-3 flex-wrap">
+                        {isCurrentUser ? (
+                          <span className="text-[11px] text-text-secondary bg-bg-primary border-[0.5px] border-border rounded-full px-2.5 py-0.5">
+                            Vos · Admin
+                          </span>
+                        ) : m.hasLoggedIn ? (
+                          <span className="text-[11px] text-emerald-400 bg-emerald-500/10 border-[0.5px] border-emerald-500/20 rounded-full px-2.5 py-0.5">
+                            Ya ingresó
+                          </span>
+                        ) : (
+                          <span className="text-[11px] text-amber-400 bg-amber-500/10 border-[0.5px] border-amber-500/20 rounded-full px-2.5 py-0.5">
+                            Todavía no ingresó
+                          </span>
+                        )}
                         {!isCurrentUser && (
                           <>
+                            <button
+                              onClick={() => handleResetAccess(m)}
+                              disabled={resettingId === m.id}
+                              className={`text-[12px] transition-colors disabled:opacity-40 ${m.hasLoggedIn ? 'text-text-secondary hover:text-accent' : 'text-accent hover:opacity-80 font-medium'}`}
+                              title={m.hasLoggedIn ? 'Generar una nueva contraseña temporal' : 'Generar y compartir los datos de acceso'}
+                            >
+                              {resettingId === m.id ? '...' : m.hasLoggedIn ? 'Restablecer contraseña' : 'Reenviar acceso'}
+                            </button>
                             <button
                               onClick={() => handleStartEdit(m)}
                               className="text-[12px] text-text-secondary hover:text-accent transition-colors"
@@ -470,9 +526,47 @@ Cualquier duda, avisame.`
         )}
       </div>
 
-      <p className="text-[12px] text-text-tertiary">
-        Podés agregar o quitar integrantes en cualquier momento desde esta página.
-      </p>
+      <div className="text-[12px] text-text-tertiary space-y-1">
+        <p>Podés agregar o quitar integrantes en cualquier momento desde esta página.</p>
+        <p>
+          ¿Un integrante no puede entrar o perdió sus datos? Usá <span className="text-text-secondary">Reenviar acceso</span> para
+          generar una contraseña nueva y compartírsela.
+        </p>
+      </div>
+
+      {/* Confirmación: el integrante ya ingresó alguna vez */}
+      {confirmResetMember && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setConfirmResetMember(null)}>
+          <div
+            className="bg-bg-secondary border-[0.5px] border-border rounded-xl p-6 max-w-[420px] w-full"
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 className="text-[16px] font-medium mb-2">Restablecer contraseña</h3>
+            <p className="text-[13px] text-text-secondary mb-1">
+              {confirmResetMember.users?.full_name || confirmResetMember.users?.email} ya ingresó al menos una vez, así que
+              probablemente tenga su propia contraseña.
+            </p>
+            <p className="text-[13px] text-text-secondary mb-5">
+              Si generás una nueva, la contraseña anterior deja de funcionar y vas a tener que pasarle la nueva. ¿Continuar?
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setConfirmResetMember(null)}
+                className="text-[13px] text-text-secondary hover:text-text-primary px-3 py-2"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => handleResetAccess(confirmResetMember, true)}
+                disabled={resettingId === confirmResetMember.id}
+                className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
+              >
+                {resettingId === confirmResetMember.id ? 'Generando...' : 'Sí, generar nueva'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
