@@ -59,7 +59,7 @@ export default function EquipoClient({ userId, org: initialOrg, members: initial
   const [memberName, setMemberName] = useState('')
   const [addError, setAddError] = useState('')
   const [addLoading, setAddLoading] = useState(false)
-  const [newCredentials, setNewCredentials] = useState<{ email: string; tempPassword?: string } | null>(null)
+  const [newCredentials, setNewCredentials] = useState<{ email: string; tempPassword?: string; fullName?: string } | null>(null)
 
   const [removing, setRemoving] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
@@ -107,7 +107,7 @@ export default function EquipoClient({ userId, org: initialOrg, members: initial
       if (res?.error) {
         setAddError(res.error)
       } else {
-        setNewCredentials({ email: res.email!, tempPassword: res.tempPassword })
+        setNewCredentials({ email: res.email!, tempPassword: res.tempPassword, fullName: memberName.trim() })
         setMemberEmail('')
         setMemberName('')
         setShowAddForm(false)
@@ -170,7 +170,7 @@ export default function EquipoClient({ userId, org: initialOrg, members: initial
         setConfirmResetMember(member)
       } else if (res?.tempPassword) {
         setConfirmResetMember(null)
-        setNewCredentials({ email: res.email!, tempPassword: res.tempPassword })
+        setNewCredentials({ email: res.email!, tempPassword: res.tempPassword, fullName: member.users?.full_name || undefined })
         setCopied(false)
         // Llevamos el banner de credenciales a la vista.
         window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -182,18 +182,28 @@ export default function EquipoClient({ userId, org: initialOrg, members: initial
     }
   }
 
-  const buildShareMessage = (email?: string, password?: string) => {
-    const credBlock = email
-      ? `\nEmail: ${email}\nContraseña: ${password || '(la que te compartí)'}`
-      : ''
-    return `Hola! A partir de ahora usamos Reason para gestionar los pacientes en ${org?.name || 'el centro'}.
+  const buildShareMessage = (email?: string, password?: string, fullName?: string) => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : ''
+    const saludo = fullName ? `¡Hola ${fullName.split(' ')[0]}! 👋` : '¡Hola! 👋'
 
-Accedé en: ${window.location.origin}/login${credBlock}
+    // Sin contraseña (p. ej. el integrante ya tenía cuenta) mandamos solo el link
+    // y el email, sin inventar una clave.
+    const accesoBlock = password
+      ? `Tus datos de acceso:
+🔗 Entrá en: ${origin}/login
+📧 Email: ${email}
+🔑 Contraseña temporal: ${password}
 
-Desde Reason vas a poder:
-- Ver y crear pacientes del equipo
-- Armar planes de ejercicio
-- Completar fichas clínicas, cuestionarios y más
+Apenas entres, cambiá la contraseña por una tuya (así solo vos la sabés):
+👉 Abrí ${origin}/reset-password, elegí tu nueva contraseña y listo.`
+      : `Entrá en: ${origin}/login${email ? `\n📧 Email: ${email}` : ''}
+(Usás la contraseña que ya tenés en Reason.)`
+
+    return `${saludo} A partir de ahora usamos Reason para gestionar los pacientes en ${org?.name || 'el centro'}.
+
+${accesoBlock}
+
+Desde Reason vas a poder ver y crear pacientes del equipo, armar planes de ejercicio y completar fichas clínicas, cuestionarios y más.
 
 Cualquier duda, avisame.`
   }
@@ -201,7 +211,8 @@ Cualquier duda, avisame.`
   const handleCopyMessage = async () => {
     await navigator.clipboard.writeText(buildShareMessage(
       newCredentials?.email,
-      newCredentials?.tempPassword
+      newCredentials?.tempPassword,
+      newCredentials?.fullName
     ))
     setCopied(true)
     setTimeout(() => setCopied(false), 2500)
@@ -357,7 +368,8 @@ Cualquier duda, avisame.`
           </div>
           {newCredentials.tempPassword && (
             <p className="text-[12px] text-text-secondary mt-3">
-              El integrante puede cambiar su contraseña desde Mi Perfil.
+              El mensaje ya incluye cómo cambiar la contraseña: apenas ingresa, el integrante abre
+              {' '}<span className="font-mono">/reset-password</span> y elige la suya.
             </p>
           )}
         </div>
