@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { login } from '../auth/actions'
 import PasswordField from './PasswordField'
+import GoogleButton from '@/components/GoogleButton'
 
 export default function LoginPage({
   searchParams,
@@ -21,14 +22,23 @@ export default function LoginPage({
           Ingresá a tu cuenta de Reason
         </p>
 
+        {searchParams?.message && (
+          <div className="p-4 mb-5 bg-bg-secondary text-warning text-[14px] rounded-lg border-[0.5px] border-warning text-center">
+            {searchParams.message}
+          </div>
+        )}
+
+        <GoogleButton returnUrl={searchParams?.returnUrl ?? null} />
+
+        <div className="flex items-center gap-3 my-6">
+          <div className="flex-1 h-px bg-border" />
+          <span className="text-[12px] text-text-tertiary uppercase tracking-[0.05em]">o</span>
+          <div className="flex-1 h-px bg-border" />
+        </div>
+
         <form className="flex flex-col gap-5" action={login}>
           {searchParams?.returnUrl && (
             <input type="hidden" name="returnUrl" value={searchParams.returnUrl} />
-          )}
-          {searchParams?.message && (
-            <div className="p-4 bg-bg-secondary text-warning text-[14px] rounded-lg border-[0.5px] border-warning text-center">
-              {searchParams.message}
-            </div>
           )}
 
           <div className="flex flex-col gap-2">
