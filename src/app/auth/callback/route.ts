@@ -36,12 +36,34 @@ export async function GET(request: Request) {
     }
   )
 
-  const { error } = await supabase.auth.exchangeCodeForSession(code)
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code)
   if (error) {
     // Link vencido, ya usado, o abierto en otro navegador del que se pidió.
     return NextResponse.redirect(
       new URL('/forgot-password?error=1&message=El link venció o ya se usó. Pedí uno nuevo.', request.url)
     )
+  }
+
+  // Perfil en public.users para quien entra con Google (o cualquier método que no
+  // pase por el signup con email). El signup por email ya crea su fila; acá la
+  // creamos SOLO si falta (ignoreDuplicates) para no pisar el rol de los que ya
+  // existen. Rol inicial 'free' → quedan en paywall, igual que un alta normal.
+  const user = data.user
+  if (user) {
+    const { createClient: createAdminClient } = await import('@supabase/supabase-js')
+    const adminClient = createAdminClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+    const fullName =
+      (user.user_metadata?.full_name as string | undefined) ??
+      (user.user_metadata?.name as string | undefined) ??
+      null
+    const { error: profileError } = await adminClient.from('users').upsert(
+      { id: user.id, email: user.email, full_name: fullName, role: 'free' },
+      { onConflict: 'id', ignoreDuplicates: true },
+    )
+    if (profileError) console.error('Error creando perfil OAuth:', profileError)
   }
 
   return response

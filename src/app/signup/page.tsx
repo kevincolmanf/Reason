@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { signup } from '../auth/actions'
+import GoogleButton from '@/components/GoogleButton'
 
 export default function SignupPage({
   searchParams,
@@ -20,14 +21,23 @@ export default function SignupPage({
           Empezá a decidir mejor desde el lunes
         </p>
 
+        {searchParams?.message && (
+          <div className="p-4 mb-5 bg-bg-secondary text-warning text-[14px] rounded-lg border-[0.5px] border-warning text-center">
+            {searchParams.message}
+          </div>
+        )}
+
+        <GoogleButton returnUrl={searchParams?.returnUrl ?? null} label="Registrarme con Google" />
+
+        <div className="flex items-center gap-3 my-6">
+          <div className="flex-1 h-px bg-border" />
+          <span className="text-[12px] text-text-tertiary uppercase tracking-[0.05em]">o</span>
+          <div className="flex-1 h-px bg-border" />
+        </div>
+
         <form className="flex flex-col gap-5" action={signup}>
           {searchParams?.returnUrl && (
             <input type="hidden" name="returnUrl" value={searchParams.returnUrl} />
-          )}
-          {searchParams?.message && (
-            <div className="p-4 bg-bg-secondary text-warning text-[14px] rounded-lg border-[0.5px] border-warning text-center">
-              {searchParams.message}
-            </div>
           )}
 
           <div className="flex flex-col gap-2">
