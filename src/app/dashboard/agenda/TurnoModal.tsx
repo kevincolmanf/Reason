@@ -25,6 +25,7 @@ interface Turno {
   appointment_type: string | null
   is_blocked: boolean | null
   confirm_token: string | null
+  reminder_sent_at: string | null
 }
 
 interface HistorialTurno {

@@ -7,6 +7,8 @@ import CloneTurnoModal from './CloneTurnoModal'
 import AgendaSettings from './AgendaSettings'
 import MiniCalendar from './MiniCalendar'
 import QuickSessionSheet from '@/components/QuickSessionSheet'
+import Link from 'next/link'
+import { buildWhatsAppUrl, buildConfirmUrl } from './whatsapp'
 
 interface Turno {
   id: string
@@ -28,6 +30,7 @@ interface Turno {
   appointment_type: string | null
   is_blocked: boolean | null
   confirm_token: string | null
+  reminder_sent_at: string | null
 }
 
 interface Professional {
@@ -108,6 +111,14 @@ function formatDateHeader(date: Date): string {
   return date.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })
 }
 
+// YYYY-MM-DD en hora local (no UTC), para pasar el día por query a /recordatorios.
+function toDayParam(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
 function formatDateLong(date: Date): string {
   return date.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 }
@@ -124,42 +135,6 @@ function minutesFromMidnight(date: Date): number {
 
 function formatTime(date: Date): string {
   return date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
-}
-
-function formatArgentinePhone(phone: string): string {
-  let n = phone.replace(/\D/g, '')
-  if (n.startsWith('549') || n.startsWith('5411')) return n
-  if (n.startsWith('54')) return n
-  if (n.startsWith('0')) n = n.slice(1)
-  if (n.startsWith('15')) n = n.slice(2)
-  return `54${n}`
-}
-
-// Link de confirmación del paciente: usa el dominio de producción configurado
-// para que nunca le llegue una URL de preview (*.vercel.app). Si no está seteado,
-// cae al origen actual.
-function buildConfirmUrl(token: string | null): string | null {
-  if (!token) return null
-  const base = process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== 'undefined' ? window.location.origin : '')
-  return base ? `${base}/turno/${token}` : null
-}
-
-function buildWhatsAppUrl(phone: string, name: string, start: Date, area: string, org: string | null, confirmUrl: string | null): string {
-  const clean = formatArgentinePhone(phone)
-  const fecha = start.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })
-  const hora  = start.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
-  const lugar = org ?? 'el centro'
-  const cierre = confirmUrl
-    ? `Avisanos si vas a asistir con un toque acá:\n${confirmUrl}\n\n¡Te esperamos!`
-    : `Para confirmar o cancelar, respondé este mensaje. ¡Te esperamos!`
-  const msg =
-    `Hola ${name},\n\n` +
-    `Te recordamos tu próximo turno en ${lugar}:\n\n` +
-    `Fecha: ${fecha}\n` +
-    `Hora: ${hora}\n` +
-    `Área: ${area}\n\n` +
-    cierre
-  return `https://wa.me/${clean}?text=${encodeURIComponent(msg)}`
 }
 
 const GRID_START_DEFAULT = 7 * 60
@@ -564,6 +539,12 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
   }, [isOwner])
 
   const markReminded = useCallback((id: string) => {
+    // Persistente: guarda el momento del envío en la base para que la agenda y la
+    // página de recordatorios queden sincronizadas entre integrantes y dispositivos.
+    const now = new Date().toISOString()
+    setTurnos(prev => prev.map(t => t.id === id ? { ...t, reminder_sent_at: now } : t))
+    supabaseRef.current.from('turnos').update({ reminder_sent_at: now }).eq('id', id).then(() => {})
+    // Respaldo local para navegadores que ya venían usando el marcador anterior.
     setRemindedIds(prev => {
       const next = new Set(prev)
       next.add(id)
@@ -677,7 +658,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                   ) : (
                     <>
                       <p className={`text-[11.5px] font-semibold leading-tight flex items-center gap-1 ${t.status === 'cancelado' ? '' : 'text-text-primary'}`}>
-                        {remindedIds.has(t.id) && (
+                        {(t.reminder_sent_at != null || remindedIds.has(t.id)) && (
                           <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-green-400" title="Recordatorio enviado" />
                         )}
                         {t.patient_id && registeredKeys.has(`${t.patient_id}|${new Date(t.start_time).toISOString().slice(0, 10)}`) && (
@@ -863,6 +844,17 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                 PDF
               </button>
             </>
+          )}
+
+          {canEdit && (
+            <Link
+              href={`/dashboard/agenda/recordatorios?day=${toDayParam(selectedDay)}${filterArea !== 'all' ? `&area=${encodeURIComponent(filterArea)}` : ''}`}
+              className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors flex items-center gap-1.5"
+              title="Enviar recordatorios del día uno por uno"
+            >
+              <span>🔔</span>
+              <span className="hidden sm:inline">Recordatorios</span>
+            </Link>
           )}
 
           {canEdit && (
