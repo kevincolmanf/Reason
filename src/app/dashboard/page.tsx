@@ -370,8 +370,7 @@ export default async function DashboardPage() {
         <div className="w-full max-w-[1080px] mx-auto px-8 flex justify-between items-center text-[12px] text-text-tertiary">
           <span>© {new Date().getFullYear()} Reason. Todos los derechos reservados.</span>
           <div className="flex gap-4">
-            <Link href="#" className="hover:text-text-primary transition-colors">Términos</Link>
-            <Link href="#" className="hover:text-text-primary transition-colors">Privacidad</Link>
+            <Link href="/sobre-tus-datos" className="hover:text-text-primary transition-colors">Privacidad</Link>
           </div>
         </div>
       </footer>

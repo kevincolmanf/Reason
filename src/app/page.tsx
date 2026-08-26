@@ -652,7 +652,7 @@ export default function LandingPage() {
               <a href="#" className="text-text-secondary text-[13px] no-underline">
                 Términos
               </a>
-              <a href="#" className="text-text-secondary text-[13px] no-underline">
+              <a href="/sobre-tus-datos" className="text-text-secondary text-[13px] no-underline">
                 Privacidad
               </a>
               <a href="mailto:reasoncontacto@gmail.com" className="text-text-secondary text-[13px] no-underline">
