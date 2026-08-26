@@ -22,11 +22,13 @@ const steps = [
   { n: 5, title: 'Seguí la evolución', desc: 'Monitoreo de carga y protocolos de retorno al deporte, integrados al historial.' },
 ]
 
-export default function OnboardingGuide({ hasPatients }: { hasPatients: boolean }) {
+export default function OnboardingGuide() {
   // Empezamos siempre oculto para evitar parpadeo antes de leer localStorage.
   const [ready, setReady] = useState(false)
   const [dismissed, setDismissed] = useState(true)
-  const [open, setOpen] = useState(false)
+  // Abierta por defecto: es la guía de orientación, tiene que ser imposible de
+  // no ver. El usuario la pliega o la descarta con "No mostrar" si no la quiere.
+  const [open, setOpen] = useState(true)
 
   useEffect(() => {
     let isDismissed = false
@@ -36,9 +38,8 @@ export default function OnboardingGuide({ hasPatients }: { hasPatients: boolean 
       // localStorage no disponible (modo privado, etc.): mostramos igual.
     }
     setDismissed(isDismissed)
-    setOpen(!hasPatients) // usuario nuevo (sin pacientes): abierta por defecto
     setReady(true)
-  }, [hasPatients])
+  }, [])
 
   const dismiss = () => {
     setDismissed(true)

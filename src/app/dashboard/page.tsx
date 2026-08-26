@@ -237,7 +237,7 @@ export default async function DashboardPage() {
           </p>
         </div>
 
-        <OnboardingGuide hasPatients={recentPatients.length > 0} />
+        <OnboardingGuide />
 
         {showTrialBanner && (
           <div className={`flex items-center justify-between gap-4 rounded-xl border-[0.5px] px-5 py-4 mb-6 ${
