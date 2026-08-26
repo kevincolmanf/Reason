@@ -19,7 +19,7 @@ export default function ForgotPasswordPage({
           Recuperar contraseña
         </h1>
         <p className="text-[16px] text-text-secondary text-center mb-8">
-          Te enviaremos un link para crear una nueva
+          Te enviaremos un código para crear una nueva
         </p>
 
         <form className="flex flex-col gap-5" action={resetPassword}>
@@ -54,7 +54,7 @@ export default function ForgotPasswordPage({
             type="submit"
             className="w-full py-4 mt-2 bg-accent text-bg-primary rounded-lg text-[15px] font-medium hover:opacity-90 transition-opacity"
           >
-            Enviar link de recuperación
+            Enviar código de recuperación
           </button>
         </form>
 
