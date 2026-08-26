@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { headers } from 'next/headers'
+import { cookies } from 'next/headers'
 import { createClient } from '@/utils/supabase/server'
 
 export async function login(formData: FormData) {
@@ -76,18 +76,14 @@ export async function signup(formData: FormData) {
 
 export async function resetPassword(formData: FormData) {
   const supabase = createClient()
-  const email = (formData.get('email') as string || '').trim()
+  const email = (formData.get('email') as string || '').trim().toLowerCase()
 
-  // Base robusta para el link del mail: preferimos NEXT_PUBLIC_SITE_URL, pero si
-  // no está seteada (p. ej. faltó en Vercel) tomamos el host real del request en
-  // vez de caer a localhost, que rompía el link de recuperación en producción.
-  const h = headers()
-  const host = h.get('x-forwarded-host') ?? h.get('host')
-  const proto = h.get('x-forwarded-proto') ?? 'https'
-  const base = process.env.NEXT_PUBLIC_SITE_URL || (host ? `${proto}://${host}` : 'http://localhost:3000')
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${base}/auth/callback?next=/reset-password`,
-  })
+  // Recuperación por CÓDIGO de 6 dígitos (no por link). El link de un solo uso lo
+  // consumían los escáneres de correo (Gmail lo pre-abría) y llegaba "vencido". El
+  // código va en el cuerpo del mail (plantilla usa {{ .Token }}) y no se puede
+  // consumir con un pre-click. resetPasswordForEmail genera igual el token OTP;
+  // no pasamos redirectTo porque no usamos el link.
+  const { error } = await supabase.auth.resetPasswordForEmail(email)
 
   // No revelamos si el email existe o no (evita enumeración de cuentas): siempre
   // el mismo mensaje de éxito. Solo un error real de envío se muestra distinto.
@@ -95,7 +91,56 @@ export async function resetPassword(formData: FormData) {
     return redirect('/forgot-password?error=1&message=No pudimos enviar el correo. Probá de nuevo en un momento.')
   }
 
-  return redirect('/forgot-password?sent=1&message=Si el email está registrado, te enviamos un link para crear una contraseña nueva. Revisá también el spam.')
+  // Guardamos el email en una cookie corta (httpOnly, no va en la URL) para
+  // pre-cargarlo en la pantalla donde se ingresa el código.
+  cookies().set('pw_reset_email', email, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 60 * 15, // 15 minutos
+  })
+
+  return redirect('/reset-password?sent=1')
+}
+
+// Verifica el código de 6 dígitos del mail y, si es válido, setea la contraseña
+// nueva en la misma acción (el verifyOtp deja una sesión de recuperación).
+export async function resetPasswordWithCode(formData: FormData) {
+  const supabase = createClient()
+  const email = (formData.get('email') as string || '').trim().toLowerCase()
+  const code = (formData.get('code') as string || '').replace(/\s/g, '')
+  const password = (formData.get('password') as string) || ''
+  const confirm = (formData.get('confirm') as string) || ''
+
+  if (!email) {
+    return redirect('/reset-password?message=Ingresá tu email.')
+  }
+  if (!/^\d{6}$/.test(code)) {
+    return redirect('/reset-password?message=El código son los 6 dígitos que te llegaron por mail.')
+  }
+  if (password.length < 8) {
+    return redirect('/reset-password?message=La contraseña debe tener al menos 8 caracteres.')
+  }
+  if (password !== confirm) {
+    return redirect('/reset-password?message=Las contraseñas no coinciden.')
+  }
+
+  // 1) Canjear el código por una sesión de recuperación.
+  const { error: otpError } = await supabase.auth.verifyOtp({ email, token: code, type: 'recovery' })
+  if (otpError) {
+    return redirect('/reset-password?message=El código es incorrecto o venció. Pedí uno nuevo.')
+  }
+
+  // 2) Con la sesión activa, actualizar la contraseña.
+  const { error } = await supabase.auth.updateUser({ password })
+  if (error) {
+    return redirect('/reset-password?message=No pudimos guardar la contraseña. Probá de nuevo.')
+  }
+
+  cookies().delete('pw_reset_email')
+  revalidatePath('/', 'layout')
+  return redirect('/dashboard')
 }
 
 export async function updatePassword(formData: FormData) {
