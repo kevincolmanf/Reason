@@ -5,6 +5,7 @@ import ContentCard from '@/components/ContentCard'
 import Header from '@/components/Header'
 import PlanningReminderBanner from '@/components/PlanningReminderBanner'
 import WeekMilestonesBanner, { type WeekMilestone } from '@/components/WeekMilestonesBanner'
+import OnboardingGuide from '@/components/OnboardingGuide'
 import { eventMeta } from '@/lib/patientEvents'
 import { getActiveContext } from '@/lib/context'
 
@@ -235,6 +236,8 @@ export default async function DashboardPage() {
             ¿Con qué paciente trabajás hoy?
           </p>
         </div>
+
+        <OnboardingGuide hasPatients={recentPatients.length > 0} />
 
         {showTrialBanner && (
           <div className={`flex items-center justify-between gap-4 rounded-xl border-[0.5px] px-5 py-4 mb-6 ${

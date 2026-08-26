@@ -4,7 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 
 export const metadata = {
-  title: 'Movement Dashboard | Reason',
+  title: 'Ejercicios | Reason',
 }
 
 function SectionCard({ title, desc, href }: { title: string, desc: string, href: string }) {
@@ -34,16 +34,11 @@ export default async function EjerciciosHubPage() {
       <Header />
       <main className="flex-grow w-full max-w-[1080px] mx-auto px-8 py-12">
         <div className="mb-8">
-          <div className="flex gap-2 mb-4">
-            <span className="bg-bg-secondary text-text-secondary text-[11px] py-1 px-2 rounded-md uppercase tracking-[0.05em] border-[0.5px] border-border">
-              NUEVO
-            </span>
-          </div>
           <h1 className="text-[32px] font-medium tracking-[-0.02em] mb-4">
-            Movement Dashboard
+            Ejercicios
           </h1>
           <p className="text-text-secondary text-[18px] max-w-[720px] leading-[1.5]">
-            Planificación de ejercicio y rehabilitación, impulsado por una base unificada de +1.700 ejercicios curados.
+            Planificación de ejercicio y rehabilitación, impulsada por una base unificada de +1.700 ejercicios curados. Los planes se arman dentro de cada paciente.
           </p>
         </div>
 
