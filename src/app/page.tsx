@@ -204,7 +204,7 @@ export default function LandingPage() {
               </div>
               <h3 className="text-[17px] font-medium mb-3 text-text-primary">Ficha kinésica digital</h3>
               <p className="text-[14px] text-text-secondary leading-[1.55]">
-                Evaluá a tus pacientes con una ficha diseñada bajo razonamiento clínico. Exportá a PDF para el registro offline. Sin datos sensibles en la nube.
+                Evaluá a tus pacientes con una ficha diseñada bajo razonamiento clínico. Historial permanente y exportable a PDF, con tus datos encriptados y seguros en la nube.
               </p>
             </div>
 
@@ -652,10 +652,10 @@ export default function LandingPage() {
               <a href="#" className="text-text-secondary text-[13px] no-underline">
                 Términos
               </a>
-              <a href="#" className="text-text-secondary text-[13px] no-underline">
+              <a href="/sobre-tus-datos" className="text-text-secondary text-[13px] no-underline">
                 Privacidad
               </a>
-              <a href="#" className="text-text-secondary text-[13px] no-underline">
+              <a href="mailto:reasoncontacto@gmail.com" className="text-text-secondary text-[13px] no-underline">
                 Contacto
               </a>
             </div>

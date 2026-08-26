@@ -5,6 +5,7 @@ import ContentCard from '@/components/ContentCard'
 import Header from '@/components/Header'
 import PlanningReminderBanner from '@/components/PlanningReminderBanner'
 import WeekMilestonesBanner, { type WeekMilestone } from '@/components/WeekMilestonesBanner'
+import OnboardingGuide from '@/components/OnboardingGuide'
 import { eventMeta } from '@/lib/patientEvents'
 import { getActiveContext } from '@/lib/context'
 
@@ -236,6 +237,8 @@ export default async function DashboardPage() {
           </p>
         </div>
 
+        <OnboardingGuide hasPatients={recentPatients.length > 0} />
+
         {showTrialBanner && (
           <div className={`flex items-center justify-between gap-4 rounded-xl border-[0.5px] px-5 py-4 mb-6 ${
             inTrial
@@ -367,8 +370,7 @@ export default async function DashboardPage() {
         <div className="w-full max-w-[1080px] mx-auto px-8 flex justify-between items-center text-[12px] text-text-tertiary">
           <span>© {new Date().getFullYear()} Reason. Todos los derechos reservados.</span>
           <div className="flex gap-4">
-            <Link href="#" className="hover:text-text-primary transition-colors">Términos</Link>
-            <Link href="#" className="hover:text-text-primary transition-colors">Privacidad</Link>
+            <Link href="/sobre-tus-datos" className="hover:text-text-primary transition-colors">Privacidad</Link>
           </div>
         </div>
       </footer>

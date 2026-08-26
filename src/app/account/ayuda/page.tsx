@@ -1,44 +1,94 @@
 import Header from '@/components/Header'
 
+// Flujo recomendado de trabajo con un paciente. Sirve de orientación para
+// quien recién empieza: el orden en que conviene usar las herramientas.
+const flow = [
+  { n: 1, title: 'Creá el paciente', desc: 'Desde "Pacientes" cargás sus datos básicos. Es el punto de partida de todo lo demás.' },
+  { n: 2, title: 'Completá la ficha clínica', desc: 'Anamnesis, diagnóstico, goniometría, cuestionarios y dinamometría dentro de la ficha del paciente.' },
+  { n: 3, title: 'Armá el plan de ejercicio', desc: 'Elegís ejercicios de la base de +1.700 con video y programás las sesiones en el calendario.' },
+  { n: 4, title: 'Compartí el portal del paciente', desc: 'Un link para que siga el plan desde el teléfono y registre cómo le fue en cada sesión.' },
+  { n: 5, title: 'Seguí la evolución', desc: 'Monitoreo de carga y protocolos de retorno al deporte (RTS) quedan integrados al historial.' },
+]
+
 const sections = [
   {
-    icon: '📚',
-    title: 'Biblioteca',
-    description: 'Contenido clínico organizado para tu práctica.',
+    icon: '👥',
+    title: 'Pacientes',
+    description: 'El centro de tu trabajo. Cada paciente reúne su ficha, planes, carga y evaluaciones.',
     steps: [
-      'Accedé desde el menú superior haciendo clic en "Biblioteca".',
-      'Navegá por las categorías o usá el buscador para encontrar un tema específico.',
-      'Hacé clic en cualquier entrada para leer el contenido completo.',
-    ],
-  },
-  {
-    icon: '📁',
-    title: 'Recursos',
-    description: 'Materiales de apoyo descargables y de referencia rápida.',
-    steps: [
-      'Ingresá a "Recursos" desde el menú principal.',
-      'Filtrá por tipo o área para encontrar lo que necesitás.',
-      'Descargá o visualizá el recurso directamente desde la plataforma.',
+      'Entrá a "Pacientes" desde el menú superior y tocá "+ Nuevo Paciente".',
+      'Al abrir un paciente ves sus herramientas: Ficha Clínica, Monitoreo de Carga, Plan de Ejercicio y Retorno al Deporte.',
+      'Registrás sesiones, hitos del tratamiento y el historial de turnos desde la misma pantalla.',
     ],
   },
   {
     icon: '🗂️',
-    title: 'Ficha Kinésica',
-    description: 'Creá y gestioná fichas de evaluación de tus pacientes.',
+    title: 'Ficha Clínica',
+    description: 'La evaluación completa del paciente, pensada bajo razonamiento clínico.',
     steps: [
-      'Accedé desde el menú superior en "Ficha Kinésica".',
-      'Completá los campos de evaluación según el paciente.',
-      'Los datos se procesan localmente: Reason no almacena información de tus pacientes.',
+      'Dentro de un paciente, abrí "Ficha Clínica".',
+      'Cargá anamnesis, diagnóstico, goniometría, cuestionarios validados y dinamometría.',
+      'Todo queda guardado de forma segura en la nube, asociado al paciente, y podés exportarlo a PDF.',
     ],
   },
   {
     icon: '🏋️',
-    title: 'Ejercicios',
-    description: 'Explorá y seleccioná ejercicios para prescribir.',
+    title: 'Plan de Ejercicio y Portal',
+    description: 'Constructor de planes con +1.700 ejercicios en video y seguimiento del paciente.',
     steps: [
-      'Ingresá a "Ejercicios" desde el panel de inicio.',
-      'Buscá por nombre, grupo muscular o tipo de ejercicio.',
-      'Visualizá la descripción y los detalles de cada ejercicio.',
+      'Desde el paciente, abrí "Plan de Ejercicio / Calendario" y agregá ejercicios buscando por patrón, equipo o categoría.',
+      'Programá las sesiones en el calendario y marcá los hitos del tratamiento.',
+      'Generá el link del "Portal del Paciente": lo sigue desde el teléfono y te deja feedback de RPE y dolor en tiempo real.',
+    ],
+  },
+  {
+    icon: '📈',
+    title: 'Monitoreo de Carga',
+    description: 'Decisiones de progresión con datos, sesión a sesión.',
+    steps: [
+      'Dentro del paciente, abrí "Monitoreo de Carga".',
+      'Se registra la carga de cada sesión (propia o cargada por el paciente desde el portal).',
+      'Visualizás ACWR, VAS y RPE con un consejo semanal para ajustar la progresión.',
+    ],
+  },
+  {
+    icon: '🎯',
+    title: 'Retorno al Deporte (RTS)',
+    description: 'Protocolos de retorno al deporte con criterios y etapas definidas.',
+    steps: [
+      'Dentro del paciente, abrí "Retorno al Deporte".',
+      'Elegí el protocolo según la lesión: LCA, isquiotibiales, tobillo, femoropatelar, tendinopatía, inguinal u hombro.',
+      'Registrás las evaluaciones y quedan integradas al historial del paciente.',
+    ],
+  },
+  {
+    icon: '📅',
+    title: 'Agenda',
+    description: 'Gestión de turnos con recordatorios por WhatsApp. Disponible en Plan Pro.',
+    steps: [
+      'Accedé a "Agenda" desde el menú superior (Plan Pro).',
+      'Gestioná los turnos en una vista semanal, por profesional en el modo equipo.',
+      'Enviá recordatorios por WhatsApp con un click desde la propia agenda.',
+    ],
+  },
+  {
+    icon: '🧰',
+    title: 'Recursos',
+    description: 'Herramientas clínicas interactivas de referencia rápida.',
+    steps: [
+      'Entrá a "Recursos" desde el menú superior.',
+      'Usá cuestionarios validados con cálculo automático de score, calculadoras (1RM, IMC, VO2máx), el dinamómetro (HHD) y las banderas rojas.',
+      'El Bodyboard te ayuda a explicarle al paciente los factores que contribuyen a su dolor.',
+    ],
+  },
+  {
+    icon: '📚',
+    title: 'Biblioteca',
+    description: 'Contenido clínico basado en evidencia para leer entre paciente y paciente.',
+    steps: [
+      'Accedé a "Biblioteca" desde el menú superior.',
+      'Navegá por resúmenes comentados y aplicaciones clínicas, o usá el buscador.',
+      'Cada entrada es una lectura corta con criterio clínico aplicado.',
     ],
   },
 ]
@@ -53,9 +103,33 @@ export default function AyudaPage() {
           Centro de ayuda
         </h1>
         <p className="text-[15px] text-text-secondary mb-10">
-          Guías rápidas sobre cómo usar cada herramienta de Reason.
+          Cómo trabajar en Reason y qué hace cada herramienta.
         </p>
 
+        {/* Flujo recomendado — orienta a quien recién empieza */}
+        <div className="bg-bg-secondary rounded-xl border-[0.5px] border-border p-6 mb-10">
+          <h2 className="text-[17px] font-medium mb-1">Cómo trabajar un paciente, paso a paso</h2>
+          <p className="text-[13px] text-text-secondary mb-5">
+            El recorrido típico en Reason. Cada paso vive dentro del paciente.
+          </p>
+          <ol className="flex flex-col gap-4">
+            {flow.map((f) => (
+              <li key={f.n} className="flex gap-4">
+                <span className="shrink-0 w-7 h-7 rounded-lg bg-accent/10 text-accent text-[13px] font-medium flex items-center justify-center mt-[1px]">
+                  {f.n}
+                </span>
+                <div>
+                  <p className="text-[14px] font-medium text-text-primary">{f.title}</p>
+                  <p className="text-[13px] text-text-secondary">{f.desc}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+
+        <h2 className="text-[15px] font-medium text-text-secondary uppercase tracking-[0.05em] mb-4">
+          Cada herramienta en detalle
+        </h2>
         <div className="flex flex-col gap-4">
           {sections.map((section) => (
             <div
