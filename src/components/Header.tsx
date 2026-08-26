@@ -75,15 +75,8 @@ export default async function Header() {
           reason<span className="text-accent">.</span>
         </Link>
         <nav className="flex items-center gap-4 md:gap-6">
-          <Link href="/library" className="hidden md:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
-            Biblioteca
-          </Link>
-          <Link href="/recursos" className="hidden md:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
-            Recursos
-          </Link>
-          <Link href="/dashboard/ejercicios" className="hidden md:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
-            Ejercicios
-          </Link>
+          {/* Orden pensado por el flujo de trabajo real: primero el paciente y su
+              agenda (lo clínico), después las bibliotecas de referencia. */}
           <Link href="/dashboard/pacientes" className="hidden md:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
             Pacientes
           </Link>
@@ -99,6 +92,15 @@ export default async function Header() {
               </div>
             </div>
           )}
+          <Link href="/dashboard/ejercicios" className="hidden md:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+            Ejercicios
+          </Link>
+          <Link href="/recursos" className="hidden md:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+            Recursos
+          </Link>
+          <Link href="/library" className="hidden md:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+            Biblioteca
+          </Link>
           {isProOrAdmin && (
             <Link href="/account/crm" className="hidden md:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
               Analíticas

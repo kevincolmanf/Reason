@@ -426,7 +426,7 @@ export default function PacienteDetail({ patient: initialPatient, userId, initia
           <p className="text-[13px] text-text-secondary mb-4">Paciente recién creado. El camino habitual: completar la ficha y armar el plan.</p>
           <div className="flex flex-wrap items-center gap-3">
             <Link href={`/dashboard/pacientes/${patient.id}/ficha`} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity no-underline">
-              1 · Completar la ficha clínica
+              1 · Completar la ficha kinésica
             </Link>
             <Link
               href={(patient.plan_mode ?? 'detallado') === 'simple'
@@ -462,7 +462,7 @@ export default function PacienteDetail({ patient: initialPatient, userId, initia
         <Link href={`/dashboard/pacientes/${patient.id}/ficha`} className="block no-underline group">
           <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 hover:bg-bg-secondary transition-colors h-full">
             <div className="text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-3">Expediente clínico</div>
-            <div className="text-[18px] font-medium mb-1">Ficha Clínica</div>
+            <div className="text-[18px] font-medium mb-1">Ficha Kinésica</div>
             <div className="text-[13px] text-text-secondary">Anamnesis, diagnóstico, goniometría, cuestionarios, dinamometría</div>
             <div className="mt-5 text-accent text-[13px] font-medium opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity">Abrir →</div>
           </div>

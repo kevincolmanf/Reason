@@ -4,7 +4,7 @@ import Header from '@/components/Header'
 // quien recién empieza: el orden en que conviene usar las herramientas.
 const flow = [
   { n: 1, title: 'Creá el paciente', desc: 'Desde "Pacientes" cargás sus datos básicos. Es el punto de partida de todo lo demás.' },
-  { n: 2, title: 'Completá la ficha clínica', desc: 'Anamnesis, diagnóstico, goniometría, cuestionarios y dinamometría dentro de la ficha del paciente.' },
+  { n: 2, title: 'Completá la ficha kinésica', desc: 'Anamnesis, diagnóstico, goniometría, cuestionarios y dinamometría dentro de la ficha del paciente.' },
   { n: 3, title: 'Armá el plan de ejercicio', desc: 'Elegís ejercicios de la base de +1.700 con video y programás las sesiones en el calendario.' },
   { n: 4, title: 'Compartí el portal del paciente', desc: 'Un link para que siga el plan desde el teléfono y registre cómo le fue en cada sesión.' },
   { n: 5, title: 'Seguí la evolución', desc: 'Monitoreo de carga y protocolos de retorno al deporte (RTS) quedan integrados al historial.' },
@@ -17,16 +17,16 @@ const sections = [
     description: 'El centro de tu trabajo. Cada paciente reúne su ficha, planes, carga y evaluaciones.',
     steps: [
       'Entrá a "Pacientes" desde el menú superior y tocá "+ Nuevo Paciente".',
-      'Al abrir un paciente ves sus herramientas: Ficha Clínica, Monitoreo de Carga, Plan de Ejercicio y Retorno al Deporte.',
+      'Al abrir un paciente ves sus herramientas: Ficha Kinésica, Monitoreo de Carga, Plan de Ejercicio y Retorno al Deporte.',
       'Registrás sesiones, hitos del tratamiento y el historial de turnos desde la misma pantalla.',
     ],
   },
   {
     icon: '🗂️',
-    title: 'Ficha Clínica',
+    title: 'Ficha Kinésica',
     description: 'La evaluación completa del paciente, pensada bajo razonamiento clínico.',
     steps: [
-      'Dentro de un paciente, abrí "Ficha Clínica".',
+      'Dentro de un paciente, abrí "Ficha Kinésica".',
       'Cargá anamnesis, diagnóstico, goniometría, cuestionarios validados y dinamometría.',
       'Todo queda guardado de forma segura en la nube, asociado al paciente, y podés exportarlo a PDF.',
     ],

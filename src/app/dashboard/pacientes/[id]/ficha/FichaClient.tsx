@@ -522,7 +522,7 @@ export default function FichaClient({
 
     // Encabezado compacto
     doc.setFont('helvetica', 'bold'); doc.setFontSize(13)
-    doc.text('Ficha Clínica', margin, y)
+    doc.text('Ficha Kinésica', margin, y)
     doc.setFont('helvetica', 'normal'); doc.setFontSize(9)
     doc.text(`${patientName}${ficha.fecha ? `  ·  ${ficha.fecha}` : ''}`, margin, y + 5)
     y += 10
@@ -732,7 +732,7 @@ export default function FichaClient({
     <div>
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-[28px] font-medium tracking-[-0.01em]">Ficha Clínica</h1>
+        <h1 className="text-[28px] font-medium tracking-[-0.01em]">Ficha Kinésica</h1>
         <div className="flex items-center gap-3">
           {saveStatus === 'saving' && <span className="text-[13px] text-text-secondary">Guardando...</span>}
           {saveStatus === 'saved' && <span className="text-[13px] text-[#3b82f6]">✓ Guardado</span>}

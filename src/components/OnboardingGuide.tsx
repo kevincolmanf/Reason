@@ -16,7 +16,7 @@ const STORAGE_KEY = 'reason_onboarding_dismissed_v1'
 
 const steps = [
   { n: 1, title: 'Creá el paciente', desc: 'Es el punto de partida: reúne su ficha, planes, carga y evaluaciones.' },
-  { n: 2, title: 'Completá la ficha clínica', desc: 'Anamnesis, diagnóstico, goniometría, cuestionarios y dinamometría.' },
+  { n: 2, title: 'Completá la ficha kinésica', desc: 'Anamnesis, diagnóstico, goniometría, cuestionarios y dinamometría.' },
   { n: 3, title: 'Armá el plan de ejercicio', desc: 'Elegí ejercicios de la base con video y programá las sesiones en el calendario.' },
   { n: 4, title: 'Compartí el portal', desc: 'Un link para que el paciente siga el plan y registre cómo le fue.' },
   { n: 5, title: 'Seguí la evolución', desc: 'Monitoreo de carga y protocolos de retorno al deporte, integrados al historial.' },
