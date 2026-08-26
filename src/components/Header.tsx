@@ -75,15 +75,8 @@ export default async function Header() {
           reason<span className="text-accent">.</span>
         </Link>
         <nav className="flex items-center gap-4 md:gap-6">
-          <Link href="/library" className="hidden md:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
-            Biblioteca
-          </Link>
-          <Link href="/recursos" className="hidden md:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
-            Recursos
-          </Link>
-          <Link href="/dashboard/ejercicios" className="hidden md:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
-            Ejercicios
-          </Link>
+          {/* Orden pensado por el flujo de trabajo real: primero el paciente y su
+              agenda (lo clínico), después las bibliotecas de referencia. */}
           <Link href="/dashboard/pacientes" className="hidden md:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
             Pacientes
           </Link>
@@ -99,10 +92,26 @@ export default async function Header() {
               </div>
             </div>
           )}
-          {isProOrAdmin && (
+          <Link href="/dashboard/ejercicios" className="hidden md:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+            Ejercicios
+          </Link>
+          <Link href="/recursos" className="hidden md:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+            Recursos
+          </Link>
+          <Link href="/library" className="hidden md:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+            Biblioteca
+          </Link>
+          {isProOrAdmin ? (
             <Link href="/account/crm" className="hidden md:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
               Analíticas
             </Link>
+          ) : (
+            <div className="relative group hidden md:inline-block">
+              <span className="text-[13px] sm:text-[14px] text-[#c47c5a] cursor-default select-none">Analíticas</span>
+              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-2.5 py-1.5 bg-bg-secondary border-[0.5px] border-border rounded-lg text-[11px] text-text-secondary whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 shadow-lg">
+                Disponible en Plan Pro
+              </div>
+            </div>
           )}
 
           {user && (

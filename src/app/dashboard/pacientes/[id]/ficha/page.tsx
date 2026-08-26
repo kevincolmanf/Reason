@@ -6,7 +6,7 @@ import FichaClient from './FichaClient'
 import { verifyPatientAccess } from '@/utils/patient-access'
 
 export const metadata = {
-  title: 'Ficha Clínica | Reason',
+  title: 'Ficha Kinésica | Reason',
 }
 
 export default async function FichaPage({ params }: { params: { id: string } }) {
@@ -65,7 +65,7 @@ export default async function FichaPage({ params }: { params: { id: string } }) 
           <span>/</span>
           <Link href={`/dashboard/pacientes/${patient.id}`} className="hover:text-text-primary no-underline">{patient.name}</Link>
           <span>/</span>
-          <span className="text-text-primary">Ficha Clínica</span>
+          <span className="text-text-primary">Ficha Kinésica</span>
         </div>
 
         <FichaClient

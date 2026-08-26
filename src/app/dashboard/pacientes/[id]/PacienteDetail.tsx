@@ -93,8 +93,11 @@ function treatmentDuration(start: string | null): string | null {
   return `Semana ${week} · Mes ${month} de tratamiento`
 }
 
-export default function PacienteDetail({ patient: initialPatient, userId, initialEvents = [], treatmentStart = null, professionals = [] }: { patient: Patient; userId: string; initialEvents?: PatientEvent[]; treatmentStart?: string | null; professionals?: { id: string; full_name: string | null }[] }) {
+export default function PacienteDetail({ patient: initialPatient, userId, initialEvents = [], treatmentStart = null, professionals = [], hasFicha = false }: { patient: Patient; userId: string; initialEvents?: PatientEvent[]; treatmentStart?: string | null; professionals?: { id: string; full_name: string | null }[]; hasFicha?: boolean }) {
   const isOwner = initialPatient.user_id === userId
+  // Señal para el bloque "primeros pasos" de un paciente recién creado.
+  // hasPlan se infiere de treatmentStart (fecha del primer plan cargado).
+  const hasPlan = !!treatmentStart
   const { confirm, confirmDialog } = useConfirm()
   const { notify, toast } = useToast()
   const [patient, setPatient] = useState<Patient>(initialPatient)
@@ -412,12 +415,54 @@ export default function PacienteDetail({ patient: initialPatient, userId, initia
         />
       )}
 
+      {/* PRIMEROS PASOS — solo mientras el paciente está "vacío" (sin ficha ni plan).
+          Desaparece solo en cuanto arranca el trabajo, para no molestar después. */}
+      {!hasFicha && !hasPlan && (
+        <div className="bg-accent/5 border-[0.5px] border-accent/30 rounded-xl p-5 mb-6">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-[15px]">🧭</span>
+            <h2 className="text-[15px] font-medium">Primeros pasos con {patient.name.split(/\s+/)[0]}</h2>
+          </div>
+          <p className="text-[13px] text-text-secondary mb-4">Paciente recién creado. El camino habitual: completar la ficha y armar el plan.</p>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link href={`/dashboard/pacientes/${patient.id}/ficha`} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity no-underline">
+              1 · Completar la ficha kinésica
+            </Link>
+            <Link
+              href={(patient.plan_mode ?? 'detallado') === 'simple'
+                ? `/dashboard/pacientes/${patient.id}/bitacora`
+                : `/dashboard/ejercicios/plan?paciente=${patient.id}`}
+              className="bg-bg-secondary border-[0.5px] border-border text-text-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:border-border-strong transition-colors no-underline"
+            >
+              2 · Armar el plan de ejercicio
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* Siguiente paso cuando ya hay ficha pero todavía no hay plan. */}
+      {hasFicha && !hasPlan && (
+        <div className="bg-bg-primary border-[0.5px] border-border rounded-xl px-5 py-4 mb-6 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-[13px] text-text-secondary">
+            <span className="text-text-primary font-medium">Siguiente paso:</span> armá el plan de ejercicio para {patient.name.split(/\s+/)[0]}.
+          </p>
+          <Link
+            href={(patient.plan_mode ?? 'detallado') === 'simple'
+              ? `/dashboard/pacientes/${patient.id}/bitacora`
+              : `/dashboard/ejercicios/plan?paciente=${patient.id}`}
+            className="shrink-0 bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity no-underline"
+          >
+            Armar el plan →
+          </Link>
+        </div>
+      )}
+
       {/* 3 CARDS PRINCIPALES */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         <Link href={`/dashboard/pacientes/${patient.id}/ficha`} className="block no-underline group">
           <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 hover:bg-bg-secondary transition-colors h-full">
             <div className="text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-3">Expediente clínico</div>
-            <div className="text-[18px] font-medium mb-1">Ficha Clínica</div>
+            <div className="text-[18px] font-medium mb-1">Ficha Kinésica</div>
             <div className="text-[13px] text-text-secondary">Anamnesis, diagnóstico, goniometría, cuestionarios, dinamometría</div>
             <div className="mt-5 text-accent text-[13px] font-medium opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity">Abrir →</div>
           </div>

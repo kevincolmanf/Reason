@@ -16,17 +16,19 @@ const STORAGE_KEY = 'reason_onboarding_dismissed_v1'
 
 const steps = [
   { n: 1, title: 'Creá el paciente', desc: 'Es el punto de partida: reúne su ficha, planes, carga y evaluaciones.' },
-  { n: 2, title: 'Completá la ficha clínica', desc: 'Anamnesis, diagnóstico, goniometría, cuestionarios y dinamometría.' },
+  { n: 2, title: 'Completá la ficha kinésica', desc: 'Anamnesis, diagnóstico, goniometría, cuestionarios y dinamometría.' },
   { n: 3, title: 'Armá el plan de ejercicio', desc: 'Elegí ejercicios de la base con video y programá las sesiones en el calendario.' },
   { n: 4, title: 'Compartí el portal', desc: 'Un link para que el paciente siga el plan y registre cómo le fue.' },
   { n: 5, title: 'Seguí la evolución', desc: 'Monitoreo de carga y protocolos de retorno al deporte, integrados al historial.' },
 ]
 
-export default function OnboardingGuide({ hasPatients }: { hasPatients: boolean }) {
+export default function OnboardingGuide() {
   // Empezamos siempre oculto para evitar parpadeo antes de leer localStorage.
   const [ready, setReady] = useState(false)
   const [dismissed, setDismissed] = useState(true)
-  const [open, setOpen] = useState(false)
+  // Abierta por defecto: es la guía de orientación, tiene que ser imposible de
+  // no ver. El usuario la pliega o la descarta con "No mostrar" si no la quiere.
+  const [open, setOpen] = useState(true)
 
   useEffect(() => {
     let isDismissed = false
@@ -36,9 +38,8 @@ export default function OnboardingGuide({ hasPatients }: { hasPatients: boolean 
       // localStorage no disponible (modo privado, etc.): mostramos igual.
     }
     setDismissed(isDismissed)
-    setOpen(!hasPatients) // usuario nuevo (sin pacientes): abierta por defecto
     setReady(true)
-  }, [hasPatients])
+  }, [])
 
   const dismiss = () => {
     setDismissed(true)

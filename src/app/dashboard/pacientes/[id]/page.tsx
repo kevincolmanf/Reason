@@ -42,6 +42,16 @@ export default async function PacientePage({ params }: { params: { id: string } 
     .limit(1)
     .maybeSingle()
 
+  // ¿La ficha tiene contenido? Ojo: al abrir la ficha por primera vez se crea una
+  // fila vacía en patient_fichas, así que "tiene ficha" = fila con ficha_data no vacío.
+  // Se usa para el bloque de "primeros pasos" de un paciente recién creado.
+  const { data: fichaRow } = await supabase
+    .from('patient_fichas')
+    .select('ficha_data')
+    .eq('patient_id', params.id)
+    .maybeSingle()
+  const hasFicha = !!fichaRow?.ficha_data && Object.keys(fichaRow.ficha_data as Record<string, unknown>).length > 0
+
   // Profesionales del equipo, para elegir el profesional habitual del paciente.
   // Solo aplica a pacientes de una organización (equipos con varios profesionales).
   let professionals: { id: string; full_name: string | null }[] = []
@@ -72,7 +82,7 @@ export default async function PacientePage({ params }: { params: { id: string } 
           </Link>
         </div>
 
-        <PacienteDetail patient={patient} userId={user.id} initialEvents={events ?? []} treatmentStart={firstPlan?.created_at ?? null} professionals={professionals} />
+        <PacienteDetail patient={patient} userId={user.id} initialEvents={events ?? []} treatmentStart={firstPlan?.created_at ?? null} professionals={professionals} hasFicha={hasFicha} />
       </main>
     </div>
   )

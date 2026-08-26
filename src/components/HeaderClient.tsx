@@ -76,6 +76,11 @@ export default function HeaderClient({ userMetadata, hasAgendaAccess, isProOrAdm
             <Link href="/dashboard/pacientes" onClick={closeMenu} className="block px-4 py-2 text-[14px] text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline">
               Pacientes
             </Link>
+            {hasAgendaAccess && (
+              <Link href="/dashboard/agenda" onClick={closeMenu} className="block px-4 py-2 text-[14px] text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline">
+                Agenda
+              </Link>
+            )}
             <Link href="/dashboard/ejercicios" onClick={closeMenu} className="block px-4 py-2 text-[14px] text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline">
               Ejercicios
             </Link>
@@ -85,11 +90,6 @@ export default function HeaderClient({ userMetadata, hasAgendaAccess, isProOrAdm
             <Link href="/library" onClick={closeMenu} className="block px-4 py-2 text-[14px] text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline">
               Biblioteca
             </Link>
-            {hasAgendaAccess && (
-              <Link href="/dashboard/agenda" onClick={closeMenu} className="block px-4 py-2 text-[14px] text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline">
-                Agenda
-              </Link>
-            )}
             {isProOrAdmin && (
               <Link href="/account/crm" onClick={closeMenu} className="block px-4 py-2 text-[14px] text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline">
                 Analíticas
