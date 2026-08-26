@@ -24,7 +24,7 @@ export default function ResetPasswordPage({
           Ingresá el código
         </h1>
         <p className="text-[16px] text-text-secondary text-center mb-8">
-          Te enviamos un código de 6 dígitos por mail. Escribilo acá y elegí tu contraseña nueva.
+          Te enviamos un código por mail. Escribilo acá y elegí tu contraseña nueva.
         </p>
 
         <form className="flex flex-col gap-5" action={resetPasswordWithCode}>
@@ -57,7 +57,7 @@ export default function ResetPasswordPage({
 
           <div className="flex flex-col gap-2">
             <label className="text-[12px] font-medium text-text-secondary uppercase tracking-[0.05em]" htmlFor="code">
-              Código de 6 dígitos
+              Código del mail
             </label>
             <input
               id="code"
@@ -65,8 +65,8 @@ export default function ResetPasswordPage({
               type="text"
               inputMode="numeric"
               pattern="[0-9]*"
-              maxLength={6}
-              placeholder="123456"
+              maxLength={10}
+              placeholder="Pegá el código"
               required
               autoComplete="one-time-code"
               className="w-full p-4 bg-bg-primary border-[0.5px] border-border-strong rounded-lg text-[20px] tracking-[0.4em] text-center font-medium focus:outline-none focus:border-accent transition-colors"

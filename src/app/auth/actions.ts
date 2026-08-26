@@ -116,8 +116,8 @@ export async function resetPasswordWithCode(formData: FormData) {
   if (!email) {
     return redirect('/reset-password?message=Ingresá tu email.')
   }
-  if (!/^\d{6}$/.test(code)) {
-    return redirect('/reset-password?message=El código son los 6 dígitos que te llegaron por mail.')
+  if (!/^\d{6,10}$/.test(code)) {
+    return redirect('/reset-password?message=Ingresá el código de dígitos que te llegó por mail.')
   }
   if (password.length < 8) {
     return redirect('/reset-password?message=La contraseña debe tener al menos 8 caracteres.')
