@@ -92,7 +92,7 @@ export default function HeaderClient({ userMetadata, hasAgendaAccess, isProOrAdm
             </Link>
             {isProOrAdmin && (
               <Link href="/account/crm" onClick={closeMenu} className="block px-4 py-2 text-[14px] text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline">
-                Analíticas
+                Panel de gestión
               </Link>
             )}
           </div>
