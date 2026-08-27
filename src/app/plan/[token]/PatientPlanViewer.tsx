@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import type { DaySession } from './page'
 import { groupColor } from '@/lib/exerciseGroups'
+import { formatExerciseName } from '@/lib/formatExerciseName'
 
 // ─── Legacy types ────────────────────────────────────────────────────────────
 
@@ -127,7 +128,7 @@ function ExerciseCard({
               {ex.group}
             </span>
           )}
-          <h4 className="text-[15px] font-medium text-text-primary leading-[1.3]">{ex.exercise_name}</h4>
+          <h4 className="text-[15px] font-medium text-text-primary leading-[1.3]">{formatExerciseName(ex.exercise_name)}</h4>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           {ytId && (
@@ -253,7 +254,7 @@ function LogModal({
             </svg>
           </button>
         </div>
-        <p className="text-[13px] text-text-secondary">{state.ex.exercise_name}</p>
+        <p className="text-[13px] text-text-secondary">{formatExerciseName(state.ex.exercise_name)}</p>
 
         {state.done ? (
           <p className="text-[14px] text-accent text-center py-4">¡Registrado correctamente!</p>
@@ -753,7 +754,7 @@ function LegacyViewer({
                             {ex.group}
                           </span>
                         )}
-                        <h4 className="text-[15px] font-medium text-text-primary leading-[1.3]">{ex.exercise_name}</h4>
+                        <h4 className="text-[15px] font-medium text-text-primary leading-[1.3]">{formatExerciseName(ex.exercise_name)}</h4>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
                         {ytId && (
@@ -836,7 +837,7 @@ function LegacyViewer({
                 </svg>
               </button>
             </div>
-            <p className="text-[13px] text-text-secondary">{logState.ex.exercise_name}</p>
+            <p className="text-[13px] text-text-secondary">{formatExerciseName(logState.ex.exercise_name)}</p>
             {logState.done ? (
               <p className="text-[14px] text-accent text-center py-4">¡Registrado correctamente!</p>
             ) : (

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/Dialogs'
+import { formatExerciseName } from '@/lib/formatExerciseName'
 
 interface Exercise {
   id: string
@@ -262,7 +263,7 @@ export default function BibliotecaInteractive({ equipments, userId }: { equipmen
                     Mis Ejercicios
                   </span>
                 </div>
-                <h3 className="text-[16px] font-medium leading-[1.3] mb-2 flex-grow">{ex.name}</h3>
+                <h3 className="text-[16px] font-medium leading-[1.3] mb-2 flex-grow">{formatExerciseName(ex.name)}</h3>
                 <div className="flex justify-between items-center mt-auto pt-4 border-t-[0.5px] border-border">
                   {ex.youtube_url ? (
                     <button
@@ -285,7 +286,7 @@ export default function BibliotecaInteractive({ equipments, userId }: { equipmen
                     {formatCategory(ex.category)}
                   </span>
                 </div>
-                <h3 className="text-[16px] font-medium leading-[1.3] mb-2">{ex.name}</h3>
+                <h3 className="text-[16px] font-medium leading-[1.3] mb-2">{formatExerciseName(ex.name)}</h3>
 
                 <div className="text-[12px] text-text-secondary mb-6 flex-grow">
                   {ex.equipment && ex.equipment !== 'nan' && <p>Equipo: {ex.equipment}</p>}
@@ -402,7 +403,7 @@ export default function BibliotecaInteractive({ equipments, userId }: { equipmen
                       Mis Ejercicios
                     </span>
                   </div>
-                  <h3 className="text-[16px] font-medium leading-[1.3] mb-2 flex-grow">{ex.name}</h3>
+                  <h3 className="text-[16px] font-medium leading-[1.3] mb-2 flex-grow">{formatExerciseName(ex.name)}</h3>
 
                   {editingVideoId === ex.id ? (
                     <div className="mt-auto pt-4 border-t-[0.5px] border-border">
