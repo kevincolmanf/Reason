@@ -928,7 +928,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
               </div>
             </div>
 
-            <div className="relative overflow-y-auto" style={{ maxHeight: '640px' }}>
+            <div className="relative lg:overflow-y-auto lg:max-h-[640px]">
               {loading && (
                 <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 pointer-events-none bg-bg-secondary/95 border-[0.5px] border-border rounded-full px-3 py-1 shadow-sm">
                   <span className="text-[12px] text-text-secondary">Actualizando…</span>
@@ -977,7 +977,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
               })}
             </div>
 
-            <div className="relative overflow-y-auto" style={{ maxHeight: '640px' }}>
+            <div className="relative lg:overflow-y-auto lg:max-h-[640px]">
               {loading && (
                 <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 pointer-events-none bg-bg-secondary/95 border-[0.5px] border-border rounded-full px-3 py-1 shadow-sm">
                   <span className="text-[12px] text-text-secondary">Actualizando…</span>
