@@ -86,7 +86,16 @@ function VasSlider({ label, value, onChange }: { label: string; value: number; o
   )
 }
 
-function todayStr() { return new Date().toISOString().split('T')[0] }
+function todayStr() {
+  // Fecha LOCAL (no UTC): con toISOString(), a la tarde-noche en Argentina (UTC-3)
+  // "hoy" saltaba al día siguiente y el portal mostraba la sesión de mañana como
+  // la de hoy. Usamos los componentes locales para que coincida con el calendario.
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
 function formatShortDate(d: string) {
   return new Date(d + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' })
 }
@@ -175,15 +184,27 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
   // Sesión de hoy y próxima sesión
   const todaySession = useMemo(() => scheduledSessions.find(s => s.scheduled_date === todayStr()) ?? null, [scheduledSessions])
 
-  // Índice de la sesión de hoy dentro de su semana (para mostrar "Sesión N")
-  const todaySessionIndex = useMemo(() => {
-    if (!todaySession) return 0
-    const monday = getMondayOf(todaySession.scheduled_date)
+  // Si no hay sesión hoy, mostramos la próxima (futura, incompleta) en el hero,
+  // así la zona principal nunca queda vacía. El hero cambia su etiqueta según el caso.
+  const nextSession = useMemo(() => {
+    const today = todayStr()
+    return scheduledSessions
+      .filter(s => !s.completed && s.scheduled_date > today)
+      .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date))[0] ?? null
+  }, [scheduledSessions])
+
+  const heroSession = todaySession ?? nextSession
+  const heroIsToday = !!todaySession
+
+  // Índice de la sesión del hero dentro de su semana (para mostrar "Sesión N")
+  const heroSessionIndex = useMemo(() => {
+    if (!heroSession) return 0
+    const monday = getMondayOf(heroSession.scheduled_date)
     const weekSessions = scheduledSessions
       .filter(s => getMondayOf(s.scheduled_date) === monday)
       .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date))
-    return weekSessions.findIndex(s => s.id === todaySession.id)
-  }, [todaySession, scheduledSessions])
+    return weekSessions.findIndex(s => s.id === heroSession.id)
+  }, [heroSession, scheduledSessions])
 
   // Próxima sesión incompleta (hoy o futura) — para highlight y auto-open
   const nextUpcomingId = useMemo(() => {
@@ -383,24 +404,24 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
 
       {/* ── ZONA 1 · HERO: SESIÓN DE HOY / PRÓXIMA SESIÓN ──── */}
       <div ref={topRef} id="hoy" className="scroll-mt-16">
-        {todaySession ? (
+        {heroSession ? (
           <div className="rounded-2xl border-[0.5px] border-accent/40 bg-accent/5 overflow-hidden">
             <div className="px-5 pt-5 pb-4 border-b-[0.5px] border-accent/20">
               <div className="flex items-center justify-between mb-2">
                 <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-accent">
                   <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse inline-block" />
-                  Tu sesión de hoy
+                  {heroIsToday ? 'Tu sesión de hoy' : 'Tu próxima sesión'}
                 </span>
                 <span className="text-[12px] text-text-secondary capitalize">
-                  {getDayLabel(todayStr())}
+                  {getDayLabel(heroSession.scheduled_date)}
                 </span>
               </div>
               <h2 className="text-[22px] font-semibold tracking-[-0.02em] text-text-primary leading-tight">
-                {getSessionLabel(todaySession.session_name || '', todaySessionIndex)}
+                {getSessionLabel(heroSession.session_name || '', heroSessionIndex)}
               </h2>
             </div>
             <div className="p-4">
-              <SessionExercisesInline session={todaySession} portalToken={token} loadOverrides={loadOverrides} />
+              <SessionExercisesInline session={heroSession} portalToken={token} loadOverrides={loadOverrides} />
             </div>
           </div>
         ) : null}

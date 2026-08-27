@@ -48,11 +48,21 @@ export default async function Header() {
     // lo define agenda_access, no el role personal (que podría ser 'pro' propagado
     // por error). Solo cuenta como dueño la org que realmente le pertenece.
     const ownsThisOrg = isOrgCtx && !!ctx.orgId && ownedOrgs.some(o => o.id === ctx.orgId)
-    if (isOrgCtx && ctx.orgId && !ownsThisOrg) {
-      const myMemberRow = memberRows.find(r => r.org_id === ctx.orgId)
-      hasAgendaAccess = myMemberRow?.agenda_access ?? false
-      agendaBlockedReason = 'member'
+    if (isOrgCtx && ctx.orgId) {
+      // Dentro de una organización, el acceso al menú de Agenda debe coincidir con
+      // el de la propia página (isActive = admin/pro/org, isOwner = admin/dueño):
+      // admin y dueño entran siempre; un integrante, según el agenda_access que le
+      // habilitó el dueño. Antes, un admin (o alguien sin fila de miembro) caía en
+      // la rama de integrante y quedaba bloqueado aunque la página lo dejara entrar.
+      if (role === 'admin' || ownsThisOrg) {
+        hasAgendaAccess = true
+      } else {
+        const myMemberRow = memberRows.find(r => r.org_id === ctx.orgId)
+        hasAgendaAccess = myMemberRow?.agenda_access ?? false
+        agendaBlockedReason = 'member'
+      }
     } else if (role === 'pro' || role === 'admin') {
+      // Contexto personal (sin org): agenda propia para pro/admin.
       hasAgendaAccess = true
     }
 
