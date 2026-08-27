@@ -1250,19 +1250,25 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
                 className="w-full bg-bg-secondary border-[0.5px] border-border rounded-lg p-2 text-[13px] focus:outline-none focus:border-accent"
               />
             </div>
-            <div className="w-full lg:w-[200px]">
-              <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Paciente</label>
-              <select
-                value={plan.patient_id || ''}
-                onChange={e => setPlan(prev => ({ ...prev, patient_id: e.target.value || null }))}
-                className="w-full bg-bg-secondary border-[0.5px] border-border rounded-lg p-2 text-[13px] focus:outline-none focus:border-accent appearance-none"
-              >
-                <option value="">Sin paciente</option>
-                {patients.map(p => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
-            </div>
+            {/* El selector de paciente solo hace falta cuando el plan NO tiene
+                paciente asignado. Si ya lo tiene, el nombre aparece arriba (junto
+                a "Ver portal"), así que mostrarlo acá es redundante y, en tablet
+                landscape, apretaba la fila de campos. */}
+            {patients.length > 0 && !patients.find(p => p.id === plan.patient_id) && (
+              <div className="w-full lg:w-[220px]">
+                <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Asignar paciente</label>
+                <select
+                  value={plan.patient_id || ''}
+                  onChange={e => setPlan(prev => ({ ...prev, patient_id: e.target.value || null }))}
+                  className="w-full bg-bg-secondary border-[0.5px] border-border rounded-lg p-2 text-[13px] focus:outline-none focus:border-accent appearance-none"
+                >
+                  <option value="">Sin paciente</option>
+                  {patients.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
         </div>
         <div className="flex flex-col justify-between items-end min-w-[200px]">
