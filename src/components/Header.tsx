@@ -48,11 +48,21 @@ export default async function Header() {
     // lo define agenda_access, no el role personal (que podría ser 'pro' propagado
     // por error). Solo cuenta como dueño la org que realmente le pertenece.
     const ownsThisOrg = isOrgCtx && !!ctx.orgId && ownedOrgs.some(o => o.id === ctx.orgId)
-    if (isOrgCtx && ctx.orgId && !ownsThisOrg) {
-      const myMemberRow = memberRows.find(r => r.org_id === ctx.orgId)
-      hasAgendaAccess = myMemberRow?.agenda_access ?? false
-      agendaBlockedReason = 'member'
+    if (isOrgCtx && ctx.orgId) {
+      // Dentro de una organización, el acceso al menú de Agenda debe coincidir con
+      // el de la propia página (isActive = admin/pro/org, isOwner = admin/dueño):
+      // admin y dueño entran siempre; un integrante, según el agenda_access que le
+      // habilitó el dueño. Antes, un admin (o alguien sin fila de miembro) caía en
+      // la rama de integrante y quedaba bloqueado aunque la página lo dejara entrar.
+      if (role === 'admin' || ownsThisOrg) {
+        hasAgendaAccess = true
+      } else {
+        const myMemberRow = memberRows.find(r => r.org_id === ctx.orgId)
+        hasAgendaAccess = myMemberRow?.agenda_access ?? false
+        agendaBlockedReason = 'member'
+      }
     } else if (role === 'pro' || role === 'admin') {
+      // Contexto personal (sin org): agenda propia para pro/admin.
       hasAgendaAccess = true
     }
 
@@ -103,11 +113,11 @@ export default async function Header() {
           </Link>
           {isProOrAdmin ? (
             <Link href="/account/crm" className="hidden md:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
-              Analíticas
+              Panel de gestión
             </Link>
           ) : (
             <div className="relative group hidden md:inline-block">
-              <span className="text-[13px] sm:text-[14px] text-[#c47c5a] cursor-default select-none">Analíticas</span>
+              <span className="text-[13px] sm:text-[14px] text-[#c47c5a] cursor-default select-none">Panel de gestión</span>
               <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-2.5 py-1.5 bg-bg-secondary border-[0.5px] border-border rounded-lg text-[11px] text-text-secondary whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 shadow-lg">
                 Disponible en Plan Pro
               </div>
