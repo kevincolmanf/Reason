@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { groupColor } from '@/lib/exerciseGroups'
+import { formatExerciseName } from '@/lib/formatExerciseName'
 
 interface RecentSession {
   session_date: string; activity: string | null; rpe: number; load_units: number; vas_post: number | null; source: string
@@ -955,7 +956,7 @@ function SessionExercisesInline({ session, portalToken, loadOverrides }: { sessi
                         : undefined}
                     >{ex.group}</span>
                   )}
-                  <span className="text-[14px] font-medium text-text-primary">{ex.exercise_name}</span>
+                  <span className="text-[14px] font-medium text-text-primary">{formatExerciseName(ex.exercise_name)}</span>
                 </div>
                 {ex.youtube_url && (
                   <a href={ex.youtube_url} target="_blank" rel="noreferrer"

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
+import { formatExerciseName } from '@/lib/formatExerciseName'
 import { v4 as uuidv4 } from 'uuid'
 import { EVENT_TYPES, eventMeta, type PatientEvent } from '@/lib/patientEvents'
 import { groupColor } from '@/lib/exerciseGroups'
@@ -1761,7 +1762,7 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
                                           <option key={g} value={g}>{g}</option>
                                         ))}
                                       </select>
-                                      <h4 className="text-[15px] font-medium text-text-primary">{ex.exercise_name}</h4>
+                                      <h4 className="text-[15px] font-medium text-text-primary">{formatExerciseName(ex.exercise_name)}</h4>
                                       {latestByExercise[ex.exercise_id] && (() => {
                                         const log = latestByExercise[ex.exercise_id]
                                         const signal = getTrafficLight(log.rpe, log.eva)
@@ -1928,7 +1929,7 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
                       {dayLogs.map(log => (
                         <div key={log.id} className="p-4 flex flex-col sm:flex-row justify-between gap-4">
                           <div>
-                            <div className="text-[14px] font-medium mb-1">{log.exercise_name}</div>
+                            <div className="text-[14px] font-medium mb-1">{formatExerciseName(log.exercise_name)}</div>
                             <div className="text-[12px] text-text-secondary">Sesión {log.session_id.replace('session_', '')} • Semana {log.week}</div>
                             {log.notes && (
                               <div className="mt-2 text-[13px] text-text-secondary italic">&ldquo;{log.notes}&rdquo;</div>
