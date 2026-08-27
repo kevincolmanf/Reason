@@ -928,7 +928,9 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
               </div>
             </div>
 
-            <div className="relative lg:overflow-y-auto lg:max-h-[640px]">
+            {/* Grilla con columnas: solo desktop. En celular/tablet las columnas
+                de turnos superpuestos se aprietan, así que ahí usamos una lista. */}
+            <div className="relative hidden lg:block lg:overflow-y-auto lg:max-h-[640px]">
               {loading && (
                 <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 pointer-events-none bg-bg-secondary/95 border-[0.5px] border-border rounded-full px-3 py-1 shadow-sm">
                   <span className="text-[12px] text-text-secondary">Actualizando…</span>
@@ -954,6 +956,66 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Vista móvil/tablet: lista cronológica del día (sin columnas apretadas). */}
+            <div className="lg:hidden divide-y-[0.5px] divide-border">
+              {dayTurnos.length === 0 ? (
+                <p className="px-4 py-10 text-center text-[13px] text-text-secondary">No hay turnos para este día.</p>
+              ) : (
+                [...dayTurnos].sort((a, b) => a.start_time.localeCompare(b.start_time)).map(t => {
+                  const start = new Date(t.start_time)
+                  const end = new Date(t.end_time)
+                  const leftColor = t.is_blocked ? '#c27b54'
+                    : t.status === 'presente' ? '#34d399'
+                    : t.status === 'ausente' ? '#f87171'
+                    : t.status === 'confirmado' ? '#38bdf8'
+                    : t.status === 'cancelado' ? '#9ca3af'
+                    : '#94a3b8'
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={e => {
+                        if (t.is_blocked) { openEdit(t); return }
+                        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                        setQuickMenu({ turno: t, anchorLeft: rect.left, anchorTop: rect.top, anchorBottom: rect.bottom })
+                      }}
+                      className="w-full text-left flex gap-3 px-4 py-3 hover:bg-bg-secondary transition-colors border-l-[3px]"
+                      style={{ borderLeftColor: leftColor }}
+                    >
+                      <div className="w-[72px] shrink-0 tabular-nums pt-0.5">
+                        <div className="text-[12px] font-semibold text-text-primary leading-tight whitespace-nowrap">{formatTime(start)}</div>
+                        <div className="text-[11px] text-text-tertiary leading-tight whitespace-nowrap">{formatTime(end)}</div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        {t.is_blocked ? (
+                          <p className="text-[13px] font-medium text-[#dda081] flex items-center gap-1.5">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="shrink-0 opacity-80"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                            <span className="truncate">{t.notes || 'Bloqueado'}</span>
+                          </p>
+                        ) : (
+                          <>
+                            <p className="text-[14px] font-medium text-text-primary leading-tight flex items-center gap-1.5">
+                              {(t.reminder_sent_at != null || remindedIds.has(t.id)) && (
+                                <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-green-400" title="Recordatorio enviado" />
+                              )}
+                              <span className="truncate">{t.patient_name}</span>
+                            </p>
+                            <p className="text-[12px] text-text-secondary truncate mt-0.5">
+                              {[t.area, t.professional_name].filter(Boolean).join(' · ')}
+                            </p>
+                          </>
+                        )}
+                      </div>
+                      {!t.is_blocked && (t.status === 'confirmado' || t.status === 'ausente') && (
+                        <span className={`shrink-0 self-center text-[11px] font-bold leading-none rounded px-1.5 py-1 border-[0.5px] ${t.status === 'confirmado' ? 'bg-emerald-500/30 text-emerald-200 border-emerald-400/50' : 'bg-red-500/30 text-red-200 border-red-400/50'}`}>
+                          {t.status === 'confirmado' ? 'C' : 'A'}
+                        </span>
+                      )}
+                    </button>
+                  )
+                })
+              )}
             </div>
           </>
         ) : (
