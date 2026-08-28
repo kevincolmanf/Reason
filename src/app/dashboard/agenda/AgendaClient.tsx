@@ -959,11 +959,17 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
             </div>
 
             {/* Vista móvil/tablet: lista cronológica del día (sin columnas apretadas). */}
-            <div className="lg:hidden divide-y-[0.5px] divide-border">
+            <div className="lg:hidden">
               {dayTurnos.length === 0 ? (
                 <p className="px-4 py-10 text-center text-[13px] text-text-secondary">No hay turnos para este día.</p>
               ) : (
-                [...dayTurnos].sort((a, b) => a.start_time.localeCompare(b.start_time)).map(t => {
+                [...dayTurnos].sort((a, b) => a.start_time.localeCompare(b.start_time)).map((t, i, arr) => {
+                  // Línea más gruesa entre slots (según el intervalo efectivo del área):
+                  // separa el cambio de horario (cada hora, o 30'/40'…) del divisor fino
+                  // que separa a los pacientes de un mismo horario.
+                  const slot = Math.floor(minutesFromMidnight(new Date(t.start_time)) / effectiveInterval)
+                  const prevSlot = i > 0 ? Math.floor(minutesFromMidnight(new Date(arr[i - 1].start_time)) / effectiveInterval) : slot
+                  const topBorder = i === 0 ? '' : slot !== prevSlot ? 'border-t-2 border-border-strong' : 'border-t-[0.5px] border-border'
                   const start = new Date(t.start_time)
                   const end = new Date(t.end_time)
                   const leftColor = t.is_blocked ? '#c27b54'
@@ -980,7 +986,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
                         setQuickMenu({ turno: t, anchorLeft: rect.left, anchorTop: rect.top, anchorBottom: rect.bottom })
                       }}
-                      className="w-full text-left flex gap-3 px-4 py-3 hover:bg-bg-secondary transition-colors border-l-[3px]"
+                      className={`w-full text-left flex gap-3 px-4 py-3 hover:bg-bg-secondary transition-colors border-l-[3px] ${topBorder}`}
                       style={{ borderLeftColor: leftColor }}
                     >
                       <div className="w-[72px] shrink-0 tabular-nums pt-0.5">
