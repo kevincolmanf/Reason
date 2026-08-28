@@ -9,6 +9,32 @@ import MiniCalendar from './MiniCalendar'
 import QuickSessionSheet from '@/components/QuickSessionSheet'
 import Link from 'next/link'
 import { buildWhatsAppUrl, buildConfirmUrl } from './whatsapp'
+import GuideTour, { type GuideStep } from '@/components/GuideTour'
+
+// Guía de primer uso de la Agenda (para quien puede editar: dueño/individual).
+// Cada paso se ancla a un control real con data-tour="...".
+const AGENDA_STEPS: GuideStep[] = [
+  {
+    target: 'agenda-nuevo',
+    title: 'Así das un turno',
+    body: 'Tocá "+ Nuevo turno" (o un espacio libre en la grilla) y cargás el paciente, el horario y el área. Reason lo ubica en la agenda automáticamente.',
+  },
+  {
+    target: 'agenda-areas',
+    title: 'Filtrá por área',
+    body: 'Si tu centro trabaja varias especialidades, con estas pestañas ves solo el área que te interesa. El número es la cantidad de turnos de ese día.',
+  },
+  {
+    target: 'agenda-recordatorios',
+    title: 'Recordatorios por WhatsApp',
+    body: 'Desde acá enviás los recordatorios del día, uno por uno, con un click. Es lo que más baja el ausentismo.',
+  },
+  {
+    target: 'agenda-config',
+    title: 'Configurá tu agenda',
+    body: 'Definís tus horarios, las áreas y la duración de cada turno. En un centro, también elegís qué agenda ve cada integrante.',
+  },
+]
 
 interface Turno {
   id: string
@@ -557,6 +583,20 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
   // en modo solo-lectura: ven pacientes y horarios pero no crean/editan/borran.
   const canEdit = isOwner
 
+  // Guía de primer uso de la agenda: se abre sola una vez (para quien puede
+  // editar) y queda disponible desde el botón "?". Flag en localStorage.
+  const [guideOpen, setGuideOpen] = useState(false)
+  useEffect(() => {
+    if (!canEdit) return
+    try {
+      if (localStorage.getItem('reason_guide_agenda_v1') !== '1') setGuideOpen(true)
+    } catch { /* localStorage no disponible */ }
+  }, [canEdit])
+  const closeGuide = () => {
+    setGuideOpen(false)
+    try { localStorage.setItem('reason_guide_agenda_v1', '1') } catch { /* noop */ }
+  }
+
   const openNew = (day?: Date, hour?: number, minute?: number, defaultStatus?: string) => {
     if (!canEdit) return
     const defaultDay = day ?? (view === 'day' ? selectedDay : new Date())
@@ -758,6 +798,8 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
 
   return (
     <div>
+      <GuideTour steps={AGENDA_STEPS} open={guideOpen} onClose={closeGuide} />
+
       {/* TOOLBAR */}
       {/* En tablet el título va arriba y los controles ocupan todo el ancho abajo,
           así se acomodan sin comprimirse contra el título (se veían "pisados").
@@ -848,6 +890,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
 
           {canEdit && (
             <Link
+              data-tour="agenda-recordatorios"
               href={`/dashboard/agenda/recordatorios?day=${toDayParam(selectedDay)}${filterArea !== 'all' ? `&area=${encodeURIComponent(filterArea)}` : ''}`}
               className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors flex items-center gap-1.5"
               title="Enviar recordatorios del día uno por uno"
@@ -858,13 +901,19 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
           )}
 
           {canEdit && (
-            <button onClick={() => setSettingsOpen(true)} className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors" title="Configurar agenda">
+            <button data-tour="agenda-config" onClick={() => setSettingsOpen(true)} className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors" title="Configurar agenda">
               ⚙
             </button>
           )}
 
+          {canEdit && (
+            <button onClick={() => setGuideOpen(true)} className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors" title="Cómo funciona la agenda" aria-label="Cómo funciona la agenda">
+              ?
+            </button>
+          )}
+
           {canEdit ? (
-            <button onClick={() => openNew()} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity">
+            <button data-tour="agenda-nuevo" onClick={() => openNew()} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity">
               + Nuevo turno
             </button>
           ) : (
@@ -877,7 +926,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
 
       {/* TABS DE ÁREA — se muestran solo si hay más de 1 área configurada */}
       {areas.length > 1 && (
-        <div className="flex gap-1 mb-5 overflow-x-auto pb-1">
+        <div data-tour="agenda-areas" className="flex gap-1 mb-5 overflow-x-auto pb-1">
           {view === 'day' && (
             <button
               onClick={() => setFilterArea('all')}
