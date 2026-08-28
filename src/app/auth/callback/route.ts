@@ -55,15 +55,29 @@ export async function GET(request: Request) {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
-    const fullName =
-      (user.user_metadata?.full_name as string | undefined) ??
-      (user.user_metadata?.name as string | undefined) ??
-      null
-    const { error: profileError } = await adminClient.from('users').upsert(
-      { id: user.id, email: user.email, full_name: fullName, role: 'free' },
-      { onConflict: 'id', ignoreDuplicates: true },
-    )
-    if (profileError) console.error('Error creando perfil OAuth:', profileError)
+    // ¿Ya existía el perfil? Sirve para saber si es el primer ingreso.
+    const { data: existing } = await adminClient
+      .from('users').select('id').eq('id', user.id).maybeSingle()
+
+    if (!existing) {
+      const fullName =
+        (user.user_metadata?.full_name as string | undefined) ??
+        (user.user_metadata?.name as string | undefined) ??
+        null
+      const { error: profileError } = await adminClient.from('users').insert(
+        { id: user.id, email: user.email, full_name: fullName, role: 'free' },
+      )
+      if (profileError) console.error('Error creando perfil OAuth:', profileError)
+
+      // Perfil recién creado (ej. primer login con Google): pedimos el nombre real
+      // antes de entrar. Google suele traer un apodo o nada, y nadie lo corrige
+      // después desde "Mi cuenta". Llevamos las cookies de sesión al nuevo redirect.
+      const perfilRes = NextResponse.redirect(
+        new URL(`/completar-perfil?next=${encodeURIComponent(next)}`, request.url)
+      )
+      response.cookies.getAll().forEach(c => perfilRes.cookies.set(c))
+      return perfilRes
+    }
   }
 
   return response
