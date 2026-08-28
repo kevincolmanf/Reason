@@ -74,6 +74,37 @@ export async function signup(formData: FormData) {
   redirect(returnUrl || '/dashboard')
 }
 
+// Guarda el nombre que el usuario ingresa en /completar-perfil (típicamente tras
+// entrar con Google, donde el nombre puede venir vacío o como un apodo). Escribe
+// tanto en los metadatos de auth (que usa el saludo/header) como en public.users.
+export async function completarPerfil(formData: FormData) {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const fullName = ((formData.get('fullName') as string) || '').trim()
+  const rawNext = (formData.get('next') as string) || '/dashboard'
+  const next = rawNext.startsWith('/') ? rawNext : '/dashboard'
+
+  if (!fullName) {
+    return redirect(`/completar-perfil?next=${encodeURIComponent(next)}&message=Ingresá tu nombre para continuar.`)
+  }
+
+  // Metadatos de auth (nombre visible en la app)
+  await supabase.auth.updateUser({ data: { full_name: fullName } })
+
+  // public.users (no tiene policy de UPDATE para el cliente → usamos admin)
+  const { createClient: createAdminClient } = await import('@supabase/supabase-js')
+  const adminClient = createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  )
+  await adminClient.from('users').update({ full_name: fullName }).eq('id', user.id)
+
+  revalidatePath('/', 'layout')
+  redirect(next)
+}
+
 export async function resetPassword(formData: FormData) {
   const supabase = createClient()
   const email = (formData.get('email') as string || '').trim().toLowerCase()
