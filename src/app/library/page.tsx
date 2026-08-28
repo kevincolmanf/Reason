@@ -53,11 +53,12 @@ export default async function LibraryPage({
             {/* Buscador simple (simulado con links por ahora para no complicar con client components) */}
             <div className="mb-8">
               <form method="GET" action="/library">
-                <input 
-                  type="text" 
-                  name="q" 
-                  defaultValue={query || ''} 
-                  placeholder="Buscar contenido..." 
+                <input
+                  data-tour="biblioteca-buscar"
+                  type="text"
+                  name="q"
+                  defaultValue={query || ''}
+                  placeholder="Buscar contenido..."
                   className="w-full p-3 bg-bg-primary border-[0.5px] border-border-strong rounded-lg text-[13px] focus:outline-none focus:border-accent transition-colors"
                 />
                 {category && <input type="hidden" name="category" value={category} />}

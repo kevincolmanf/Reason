@@ -280,7 +280,7 @@ export default async function DashboardPage() {
         <PlanningReminderBanner patients={planningAlerts} />
 
         {/* PACIENTES — contexto activo */}
-        <section className="mb-16">
+        <section data-tour="dash-pacientes" className="mb-16">
           <div className="flex justify-between items-end mb-6">
             <div>
               <h2 className="text-[20px] font-medium">
@@ -348,7 +348,7 @@ export default async function DashboardPage() {
         </section>
 
         {/* POR CATEGORÍA */}
-        <section className="mb-16">
+        <section data-tour="dash-explorar" className="mb-16">
           <h2 className="text-[20px] font-medium mb-6">Explorar por categoría</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <CategoryCard

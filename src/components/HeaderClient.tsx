@@ -6,7 +6,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import { switchContext } from '@/app/actions/context'
 import type { ActiveContext } from '@/lib/context'
 import type { AvailableContext } from './ContextBadge'
-import GuideTour from './GuideTour'
+import GuideTour, { type GuideState } from './GuideTour'
 import { guideForPath } from '@/lib/guides'
 
 interface Props {
@@ -61,19 +61,26 @@ export default function HeaderClient({ userMetadata, hasAgendaAccess, isProOrAdm
   const pathname = usePathname()
   const guide = guideForPath(pathname)
   const guideKey = guide?.key
-  const [guideOpen, setGuideOpen] = useState(false)
+  const [guideState, setGuideState] = useState<GuideState>('closed')
   useEffect(() => {
+    if (!guideKey) { setGuideState('closed'); return }
+    let flag: string | null = null
+    try { flag = localStorage.getItem(`reason_guide:${guideKey}`) } catch { /* no disponible */ }
+    // 'off' = el usuario la eliminó; 'pill' (o '1' legacy) = ya vista → pastilla;
+    // nunca vista → se abre completa una vez.
+    setGuideState(flag === 'off' ? 'closed' : (flag === 'pill' || flag === '1') ? 'pill' : 'full')
+  }, [guideKey])
+  const changeGuide = (next: GuideState) => {
+    setGuideState(next)
     if (!guideKey) return
     try {
-      if (localStorage.getItem(`reason_guide:${guideKey}`) !== '1') setGuideOpen(true)
-    } catch { /* localStorage no disponible */ }
-  }, [guideKey])
-  const closeGuide = () => {
-    setGuideOpen(false)
-    if (guideKey) { try { localStorage.setItem(`reason_guide:${guideKey}`, '1') } catch { /* noop */ } }
+      if (next === 'pill') localStorage.setItem(`reason_guide:${guideKey}`, 'pill')
+      else if (next === 'closed') localStorage.setItem(`reason_guide:${guideKey}`, 'off')
+      // 'full' es transitorio: no se persiste.
+    } catch { /* noop */ }
   }
   const handleHelp = () => {
-    if (guide) setGuideOpen(true)
+    if (guide) changeGuide('full')
     else router.push('/account/ayuda')
   }
 
@@ -214,7 +221,7 @@ export default function HeaderClient({ userMetadata, hasAgendaAccess, isProOrAdm
       )}
       </div>
 
-      {guide && <GuideTour steps={guide.steps} open={guideOpen} onClose={closeGuide} />}
+      {guide && <GuideTour steps={guide.steps} state={guideState} onState={changeGuide} />}
     </>
   )
 }

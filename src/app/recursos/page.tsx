@@ -27,7 +27,7 @@ export default function RecursosPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div data-tour="recursos-grid" className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <ResourceCard
             title="Cuestionarios Validados"
             desc="Cuestionarios interactivos con cálculo automático de score e interpretación clínica."
