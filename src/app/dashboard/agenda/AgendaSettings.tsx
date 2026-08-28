@@ -361,9 +361,9 @@ export default function AgendaSettings({
               <span className="text-[13px] text-text-primary">Permitir acceso al link público</span>
               <button
                 onClick={() => setShareEnabled(e => !e)}
-                className={`relative w-10 h-5 rounded-full transition-colors ${shareEnabled ? 'bg-accent' : 'bg-border-strong'}`}
+                className={`relative w-10 h-5 rounded-full overflow-hidden transition-colors ${shareEnabled ? 'bg-accent' : 'bg-border-strong'}`}
               >
-                <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${shareEnabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${shareEnabled ? 'left-[22px]' : 'left-0.5'}`} />
               </button>
             </div>
 
@@ -430,9 +430,9 @@ export default function AgendaSettings({
                       <button
                         onClick={() => !isSaving && toggleMemberAccess(m.id)}
                         disabled={isSaving}
-                        className={`relative shrink-0 w-10 h-5 rounded-full transition-colors disabled:opacity-50 ${access ? 'bg-accent' : 'bg-border-strong'}`}
+                        className={`relative shrink-0 w-10 h-5 rounded-full overflow-hidden transition-colors disabled:opacity-50 ${access ? 'bg-accent' : 'bg-border-strong'}`}
                       >
-                        <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${access ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                        <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${access ? 'left-[22px]' : 'left-0.5'}`} />
                       </button>
                     </div>
                     {access && areas.length > 1 && (
