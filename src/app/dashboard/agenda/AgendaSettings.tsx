@@ -4,6 +4,23 @@ import { useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/Dialogs'
 
+// Envuelve un <select> nativo para darle un chevron propio y un look consistente.
+// Sin esto, el <select> toma el chrome del sistema operativo y se ve desalineado
+// ("web barata"), sobre todo en tema oscuro.
+function SelectWrap({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`relative ${className}`}>
+      {children}
+      <svg
+        className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-text-tertiary"
+        width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+      >
+        <polyline points="6 9 12 15 18 9" />
+      </svg>
+    </div>
+  )
+}
+
 const DEFAULT_AREAS = [
   'Kinesiología',
   'Entrenamiento adultos',
@@ -223,16 +240,18 @@ export default function AgendaSettings({
             {areas.map(area => (
               <div key={area} className="flex items-center gap-2 bg-bg-primary border-[0.5px] border-border rounded-lg px-3 py-1.5">
                 <span className="flex-1 text-[13px] truncate">{area}</span>
-                <select
-                  value={areaDurations[area] ?? ''}
-                  onChange={e => setAreaDuration(area, e.target.value === '' ? null : Number(e.target.value))}
-                  className="bg-bg-secondary border-[0.5px] border-border rounded-md px-2 py-1 text-[12px] text-text-primary focus:outline-none focus:border-accent"
-                >
-                  <option value="">Por defecto</option>
-                  {DURATION_OPTIONS.map(min => (
-                    <option key={min} value={min}>{min} min</option>
-                  ))}
-                </select>
+                <SelectWrap className="shrink-0">
+                  <select
+                    value={areaDurations[area] ?? ''}
+                    onChange={e => setAreaDuration(area, e.target.value === '' ? null : Number(e.target.value))}
+                    className="appearance-none bg-bg-secondary border-[0.5px] border-border rounded-md pl-2 pr-6 py-1 text-[12px] text-text-primary focus:outline-none focus:border-accent"
+                  >
+                    <option value="">Por defecto</option>
+                    {DURATION_OPTIONS.map(min => (
+                      <option key={min} value={min}>{min} min</option>
+                    ))}
+                  </select>
+                </SelectWrap>
                 <button
                   onClick={() => removeArea(area)}
                   className="text-text-tertiary hover:text-red-400 leading-none text-[16px] shrink-0"
@@ -352,17 +371,19 @@ export default function AgendaSettings({
               <div className="flex flex-col gap-2">
                 <div>
                   <label className="block text-[11px] text-text-secondary mb-1">¿Qué agenda compartir?</label>
-                  <select
-                    value={shareProf}
-                    onChange={e => setShareProf(e.target.value)}
-                    className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg px-3 py-2 text-[13px] text-text-primary focus:outline-none focus:border-accent"
-                  >
-                    <option value="all">Todos los profesionales</option>
-                    <option value={userId}>Solo la mía</option>
-                    {members.map(m => (
-                      <option key={m.id} value={m.id}>{m.full_name || 'Sin nombre'}</option>
-                    ))}
-                  </select>
+                  <SelectWrap>
+                    <select
+                      value={shareProf}
+                      onChange={e => setShareProf(e.target.value)}
+                      className="appearance-none w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg pl-3 pr-9 py-2 text-[13px] text-text-primary focus:outline-none focus:border-accent"
+                    >
+                      <option value="all">Todos los profesionales</option>
+                      <option value={userId}>Solo la mía</option>
+                      {members.map(m => (
+                        <option key={m.id} value={m.id}>{m.full_name || 'Sin nombre'}</option>
+                      ))}
+                    </select>
+                  </SelectWrap>
                 </div>
                 <div className="flex gap-2">
                   <input
@@ -401,9 +422,9 @@ export default function AgendaSettings({
                 const isSaving = savingMember === m.id
                 const mAreas = memberAreas[m.id] // null = todas
                 return (
-                  <div key={m.id} className="py-2 border-b-[0.5px] border-border last:border-0">
+                  <div key={m.id} className="bg-bg-primary border-[0.5px] border-border rounded-xl px-3.5 py-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-[13px] text-text-primary truncate mr-3">
+                      <span className="text-[13px] font-medium text-text-primary truncate mr-3">
                         {m.full_name || 'Sin nombre'}
                       </span>
                       <button
@@ -415,7 +436,7 @@ export default function AgendaSettings({
                       </button>
                     </div>
                     {access && areas.length > 1 && (
-                      <div className="mt-2">
+                      <div className="mt-3 pt-3 border-t-[0.5px] border-border">
                         <p className="text-[10px] uppercase tracking-[0.05em] text-text-tertiary mb-1.5">Áreas que puede ver</p>
                         <div className="flex flex-wrap gap-1.5">
                           <button
