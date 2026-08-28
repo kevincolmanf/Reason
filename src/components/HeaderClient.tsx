@@ -61,8 +61,8 @@ export default function HeaderClient({ userMetadata, hasAgendaAccess, isProOrAdm
       >
         {/* En mobile mostramos un ícono de menú para que la navegación sea descubrible;
             en desktop, las iniciales del usuario. */}
-        <svg className="md:hidden" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-        <span className="hidden md:inline">{initials}</span>
+        <svg className="lg:hidden" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <span className="hidden lg:inline">{initials}</span>
       </button>
 
       {isOpen && (
@@ -72,7 +72,7 @@ export default function HeaderClient({ userMetadata, hasAgendaAccess, isProOrAdm
           </div>
 
           {/* Mobile-only navigation links */}
-          <div className="md:hidden border-b-[0.5px] border-border mb-2 pb-2">
+          <div className="lg:hidden border-b-[0.5px] border-border mb-2 pb-2">
             <Link href="/dashboard/pacientes" onClick={closeMenu} className="block px-4 py-2 text-[14px] text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline">
               Pacientes
             </Link>
@@ -99,7 +99,7 @@ export default function HeaderClient({ userMetadata, hasAgendaAccess, isProOrAdm
 
           {/* Workspace switcher (mobile-only) */}
           {canSwitch && (
-            <div className="md:hidden border-b-[0.5px] border-border mb-2 pb-2">
+            <div className="lg:hidden border-b-[0.5px] border-border mb-2 pb-2">
               <button
                 onClick={() => setShowWorkspaces(v => !v)}
                 className="w-full text-left px-4 py-2 text-[14px] text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors flex items-center justify-between"
