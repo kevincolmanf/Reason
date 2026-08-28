@@ -64,6 +64,43 @@ const PACIENTES_STEPS: GuideStep[] = [
   },
 ]
 
+const DASHBOARD_STEPS: GuideStep[] = [
+  {
+    target: 'dash-pacientes',
+    title: 'Tu punto de partida',
+    body: 'Acá tenés acceso rápido a tus pacientes. Con "Ver todos" entrás a la lista completa y cargás nuevos — de cada paciente cuelga toda su historia clínica.',
+  },
+  {
+    target: 'dash-explorar',
+    title: 'Contenido clínico',
+    body: 'Artículos con criterio clínico aplicado, para leer entre paciente y paciente. Y arriba, en el menú, están la agenda, los recursos y tu equipo.',
+  },
+]
+
+const RECURSOS_STEPS: GuideStep[] = [
+  {
+    target: 'recursos-grid',
+    title: 'Tus herramientas clínicas',
+    body: 'Cuestionarios con score automático, calculadoras (1RM, IMC, VO2máx), banderas rojas, el dinamómetro (HHD con cálculo de LSI) y el bodyboard. Tocá cualquiera para abrirla.',
+  },
+]
+
+const EJERCICIOS_STEPS: GuideStep[] = [
+  {
+    target: 'ejercicios-grid',
+    title: 'Base de +1.700 ejercicios',
+    body: 'Explorá la biblioteca de ejercicios por patrón, equipo o categoría. Los planes se arman dentro de cada paciente, en su plan de ejercicio.',
+  },
+]
+
+const BIBLIOTECA_STEPS: GuideStep[] = [
+  {
+    target: 'biblioteca-buscar',
+    title: 'Buscá contenido',
+    body: 'Encontrá artículos por tema o palabra clave. Son lecturas cortas con criterio clínico aplicado, pensadas para el consultorio.',
+  },
+]
+
 export type GuideDef = {
   key: string
   paths: string[]
@@ -76,6 +113,10 @@ const GUIDES: GuideDef[] = [
   { key: 'equipo', paths: ['/account/equipo'], steps: EQUIPO_STEPS },
   { key: 'agenda', paths: ['/dashboard/agenda'], steps: AGENDA_STEPS },
   { key: 'pacientes', paths: ['/dashboard/pacientes'], steps: PACIENTES_STEPS },
+  { key: 'dashboard', paths: ['/dashboard'], steps: DASHBOARD_STEPS },
+  { key: 'ejercicios', paths: ['/dashboard/ejercicios'], steps: EJERCICIOS_STEPS },
+  { key: 'recursos', paths: ['/recursos'], steps: RECURSOS_STEPS },
+  { key: 'biblioteca', paths: ['/library'], steps: BIBLIOTECA_STEPS },
 ]
 
 export function guideForPath(pathname: string): GuideDef | null {

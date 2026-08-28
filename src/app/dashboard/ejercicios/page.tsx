@@ -42,9 +42,9 @@ export default async function EjerciciosHubPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <SectionCard 
-            title="Biblioteca de Ejercicios" 
+        <div data-tour="ejercicios-grid" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <SectionCard
+            title="Biblioteca de Ejercicios"
             desc="Explorá la base de datos completa de ejercicios clasificados por patrón, equipo y categoría."
             href="/dashboard/ejercicios/biblioteca"
           />
