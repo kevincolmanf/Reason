@@ -16,6 +16,9 @@ export default async function Header() {
   let hasAgendaAccess = false
   let agendaBlockedReason: 'plan' | 'member' = 'plan'
   let isProOrAdmin = false
+  // Gestionar el equipo: mismo gate que /account/equipo (role pro/admin). Incluye
+  // al Pro que todavía no creó su centro, para que pueda encontrar dónde armarlo.
+  let canManageTeam = false
 
   if (user) {
     const [activeCtx, ownedOrgsResult, memberOrgsResult, userDataResult] = await Promise.all([
@@ -43,6 +46,7 @@ export default async function Header() {
     // (owner_id === user.id). Antes se basaba en role === 'pro', y un integrante
     // con ese role veía el link (aunque la página lo expulsara).
     isProOrAdmin = role === 'admin' || ownedOrgs.length > 0
+    canManageTeam = role === 'pro' || role === 'admin'
 
     // En una org que NO es propia, el usuario es integrante: el acceso a la agenda
     // lo define agenda_access, no el role personal (que podría ser 'pro' propagado
@@ -111,6 +115,11 @@ export default async function Header() {
           <Link href="/library" className="hidden lg:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
             Biblioteca
           </Link>
+          {canManageTeam && (
+            <Link href="/account/equipo" className="hidden lg:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+              Equipo
+            </Link>
+          )}
           {isProOrAdmin ? (
             <Link href="/account/crm" className="hidden lg:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
               Panel de gestión
@@ -137,6 +146,7 @@ export default async function Header() {
               userMetadata={user.user_metadata}
               hasAgendaAccess={hasAgendaAccess}
               isProOrAdmin={isProOrAdmin}
+              canManageTeam={canManageTeam}
               ctx={ctx}
               currentLabel={currentLabel}
               available={available}

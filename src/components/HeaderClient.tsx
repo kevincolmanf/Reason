@@ -12,12 +12,13 @@ interface Props {
   userMetadata: any
   hasAgendaAccess?: boolean
   isProOrAdmin?: boolean
+  canManageTeam?: boolean
   ctx?: ActiveContext
   currentLabel?: string
   available?: AvailableContext[]
 }
 
-export default function HeaderClient({ userMetadata, hasAgendaAccess, isProOrAdmin, ctx, currentLabel, available }: Props) {
+export default function HeaderClient({ userMetadata, hasAgendaAccess, isProOrAdmin, canManageTeam, ctx, currentLabel, available }: Props) {
   const [isOpen, setIsOpen] = useState(false)
   const [showWorkspaces, setShowWorkspaces] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -90,6 +91,11 @@ export default function HeaderClient({ userMetadata, hasAgendaAccess, isProOrAdm
             <Link href="/library" onClick={closeMenu} className="block px-4 py-2 text-[14px] text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline">
               Biblioteca
             </Link>
+            {canManageTeam && (
+              <Link href="/account/equipo" onClick={closeMenu} className="block px-4 py-2 text-[14px] text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline">
+                Mi equipo
+              </Link>
+            )}
             {isProOrAdmin && (
               <Link href="/account/crm" onClick={closeMenu} className="block px-4 py-2 text-[14px] text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline">
                 Panel de gestión
@@ -132,6 +138,15 @@ export default function HeaderClient({ userMetadata, hasAgendaAccess, isProOrAdm
           >
             Mi cuenta
           </Link>
+          {canManageTeam && (
+            <Link
+              href="/account/equipo"
+              onClick={closeMenu}
+              className="hidden lg:block px-4 py-2 text-[14px] text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline"
+            >
+              Mi equipo
+            </Link>
+          )}
           <Link
             href="/account/subscription"
             onClick={closeMenu}
