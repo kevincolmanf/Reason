@@ -446,7 +446,9 @@ export default function AgendaSettings({
                             Todas
                           </button>
                           {areas.map(a => {
-                            const selected = mAreas === null || mAreas.includes(a)
+                            // Con "Todas" activo (mAreas === null) los chips quedan en
+                            // neutro: solo "Todas" resaltado, para no pintar todo de naranja.
+                            const selected = mAreas !== null && mAreas.includes(a)
                             return (
                               <button
                                 key={a}
@@ -458,6 +460,9 @@ export default function AgendaSettings({
                             )
                           })}
                         </div>
+                        {mAreas === null && (
+                          <p className="text-[11px] text-text-tertiary mt-1.5">Ve todas las áreas. Tocá una para elegir cuáles.</p>
+                        )}
                       </div>
                     )}
                   </div>
