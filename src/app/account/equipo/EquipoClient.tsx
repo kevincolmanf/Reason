@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createOrganization, addMember, removeMember, updateMemberName, resetMemberAccess } from './actions'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import GuideTour, { type GuideStep } from '@/components/GuideTour'
 
 interface Member {
   id: string
@@ -41,6 +42,31 @@ const MEMBER_CAN = [
   'Acceder a la biblioteca clínica completa',
 ]
 
+// Guía de primer uso de "Mi Equipo" (estado con centro creado). Cada paso se
+// ancla a un elemento con data-tour="..." de la página.
+const EQUIPO_STEPS: GuideStep[] = [
+  {
+    target: 'equipo-header',
+    title: 'Este es tu centro',
+    body: 'Desde acá gestionás a todo tu equipo. Cada profesional entra con su propio email y contraseña, y todos comparten los mismos pacientes.',
+  },
+  {
+    target: 'equipo-agregar',
+    title: 'Sumá a un profesional',
+    body: 'Tocá "Agregar integrante" y cargás su email y nombre. Si ya tiene cuenta en Reason, lo sumamos; si no, le creamos una con una clave temporal.',
+  },
+  {
+    target: 'equipo-integrantes',
+    title: 'Tu equipo',
+    body: 'Acá ves a todos los integrantes y si ya ingresaron. Cuando alguien no pueda entrar, reenviás su acceso o restablecés su contraseña desde su fila.',
+  },
+  {
+    target: 'equipo-instructivo',
+    title: 'Pasale la guía al equipo',
+    body: 'Descargá el instructivo en PDF (o copiá el mensaje listo para enviar) para que cada profesional sepa cómo ingresar y empezar a usar Reason.',
+  },
+]
+
 export default function EquipoClient({ userId, org: initialOrg, members: initialMembers }: Props) {
   const router = useRouter()
   const [org] = useState(initialOrg)
@@ -49,6 +75,20 @@ export default function EquipoClient({ userId, org: initialOrg, members: initial
   useEffect(() => {
     setMembers(initialMembers)
   }, [initialMembers])
+
+  // Guía de primer uso: se abre sola una vez (por dueño de centro) y queda
+  // siempre disponible desde el botón "?". El flag persiste en localStorage.
+  const [guideOpen, setGuideOpen] = useState(false)
+  useEffect(() => {
+    if (!org) return
+    try {
+      if (localStorage.getItem('reason_guide_equipo_v1') !== '1') setGuideOpen(true)
+    } catch { /* localStorage no disponible */ }
+  }, [org])
+  const closeGuide = () => {
+    setGuideOpen(false)
+    try { localStorage.setItem('reason_guide_equipo_v1', '1') } catch { /* noop */ }
+  }
 
   const [orgName, setOrgName] = useState('')
   const [orgError, setOrgError] = useState('')
@@ -283,15 +323,24 @@ Cualquier duda, avisame.`
   return (
     <div className="space-y-6">
 
+      <GuideTour steps={EQUIPO_STEPS} open={guideOpen} onClose={closeGuide} />
+
       {/* Header card */}
-      <div className="bg-bg-secondary rounded-xl border-[0.5px] border-border p-6 flex flex-col sm:flex-row justify-between gap-4">
+      <div data-tour="equipo-header" className="bg-bg-secondary rounded-xl border-[0.5px] border-border p-6 flex flex-col sm:flex-row justify-between gap-4">
         <div>
           <div className="text-[11px] text-text-secondary uppercase tracking-[0.05em] mb-1">Centro</div>
           <div className="text-[20px] font-medium">{org.name}</div>
           <div className="text-[12px] text-text-secondary mt-1">{members.length} integrante{members.length !== 1 ? 's' : ''}</div>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 sm:items-start">
+          <button
+            onClick={() => setGuideOpen(true)}
+            className="text-center bg-bg-primary border-[0.5px] border-border text-text-secondary px-4 py-2 rounded-lg text-[13px] font-medium hover:border-accent hover:text-accent transition-colors"
+          >
+            ¿Cómo funciona?
+          </button>
           <Link
+            data-tour="equipo-instructivo"
             href={`/account/equipo/instructivo`}
             target="_blank"
             className="text-center bg-bg-primary border-[0.5px] border-border text-text-secondary px-4 py-2 rounded-lg text-[13px] font-medium no-underline hover:border-accent hover:text-accent transition-colors"
@@ -376,11 +425,12 @@ Cualquier duda, avisame.`
       )}
 
       {/* Members list */}
-      <div className="bg-bg-secondary rounded-xl border-[0.5px] border-border overflow-hidden">
+      <div data-tour="equipo-integrantes" className="bg-bg-secondary rounded-xl border-[0.5px] border-border overflow-hidden">
         <div className="p-6 border-b-[0.5px] border-border flex justify-between items-center">
           <h2 className="text-[16px] font-medium">Integrantes</h2>
           {!showAddForm && (
             <button
+              data-tour="equipo-agregar"
               onClick={() => setShowAddForm(true)}
               className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity"
             >
