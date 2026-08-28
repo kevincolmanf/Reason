@@ -449,6 +449,9 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
   // Drag state
   const dragExRef = useRef<{ bIdx: number; exIdx: number } | null>(null)
   const [dragOverEx, setDragOverEx] = useState<{ bIdx: number; exIdx: number } | null>(null)
+  // Destino actual del arrastre táctil (tablet/celu). Se usa un ref para no
+  // depender del closure del estado en onTouchEnd.
+  const touchDropRef = useRef<{ bIdx: number; exIdx: number } | null>(null)
 
   // Logs state
   const [logs, setLogs] = useState<ActivityLog[]>([])
@@ -1735,6 +1738,8 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
                               return (
                               <div
                                 key={ex.id}
+                                data-bidx={bIdx}
+                                data-exidx={exIdx}
                                 draggable
                                 onDragStart={() => { dragExRef.current = { bIdx, exIdx } }}
                                 onDragOver={e => { e.preventDefault(); setDragOverEx({ bIdx, exIdx }) }}
@@ -1753,7 +1758,31 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
                                 <div className="flex justify-between items-start mb-4">
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2">
-                                      <span className="cursor-grab active:cursor-grabbing text-text-secondary hover:text-text-primary transition-colors shrink-0 select-none" title="Arrastrar para reordenar">
+                                      <span
+                                        className="cursor-grab active:cursor-grabbing text-text-secondary hover:text-text-primary transition-colors shrink-0 select-none touch-none"
+                                        title="Arrastrar para reordenar"
+                                        onTouchStart={() => { dragExRef.current = { bIdx, exIdx }; touchDropRef.current = null; setDragOverEx({ bIdx, exIdx }) }}
+                                        onTouchMove={e => {
+                                          if (!dragExRef.current) return
+                                          const t = e.touches[0]
+                                          const el = document.elementFromPoint(t.clientX, t.clientY) as HTMLElement | null
+                                          const row = el?.closest('[data-exidx]') as HTMLElement | null
+                                          if (row && row.dataset.exidx != null && row.dataset.bidx != null) {
+                                            const tb = Number(row.dataset.bidx), te = Number(row.dataset.exidx)
+                                            if (!Number.isNaN(tb) && !Number.isNaN(te)) {
+                                              touchDropRef.current = { bIdx: tb, exIdx: te }
+                                              setDragOverEx({ bIdx: tb, exIdx: te })
+                                            }
+                                          }
+                                        }}
+                                        onTouchEnd={() => {
+                                          const src = dragExRef.current, dst = touchDropRef.current
+                                          if (src && dst && (src.bIdx !== dst.bIdx || src.exIdx !== dst.exIdx)) {
+                                            moveExercise(src.bIdx, src.exIdx, dst.bIdx, dst.exIdx)
+                                          }
+                                          dragExRef.current = null; touchDropRef.current = null; setDragOverEx(null)
+                                        }}
+                                      >
                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="5" r="1.5"/><circle cx="15" cy="5" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="19" r="1.5"/></svg>
                                       </span>
                                       <select
@@ -2059,7 +2088,7 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
                           : `${ex.category.replace(/_/g, ' ').toUpperCase()} • ${ex.equipment || 'Sin equipo'}`}
                       </div>
                     </div>
-                    <div className="text-accent text-[20px] opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity">{targetBlock?.exIdx != null ? '↔' : '+'}</div>
+                    <div className="text-accent text-[20px] opacity-0 group-hover:opacity-100 transition-opacity">{targetBlock?.exIdx != null ? '↔' : '+'}</div>
                   </button>
                 ))
               )}
