@@ -2,10 +2,12 @@
 
 import { useState, useRef, useEffect, useTransition } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { switchContext } from '@/app/actions/context'
 import type { ActiveContext } from '@/lib/context'
 import type { AvailableContext } from './ContextBadge'
+import GuideTour from './GuideTour'
+import { guideForPath } from '@/lib/guides'
 
 interface Props {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -53,8 +55,40 @@ export default function HeaderClient({ userMetadata, hasAgendaAccess, isProOrAdm
   const initials = name.substring(0, 2).toUpperCase()
   const canSwitch = (available?.length ?? 0) > 1
 
+  // Guía de primer uso de la sección actual. El "?" del header la abre; si la
+  // sección no tiene guía, lleva al centro de ayuda. Se abre sola una vez por
+  // sección (flag en localStorage).
+  const pathname = usePathname()
+  const guide = guideForPath(pathname)
+  const guideKey = guide?.key
+  const [guideOpen, setGuideOpen] = useState(false)
+  useEffect(() => {
+    if (!guideKey) return
+    try {
+      if (localStorage.getItem(`reason_guide:${guideKey}`) !== '1') setGuideOpen(true)
+    } catch { /* localStorage no disponible */ }
+  }, [guideKey])
+  const closeGuide = () => {
+    setGuideOpen(false)
+    if (guideKey) { try { localStorage.setItem(`reason_guide:${guideKey}`, '1') } catch { /* noop */ } }
+  }
+  const handleHelp = () => {
+    if (guide) setGuideOpen(true)
+    else router.push('/account/ayuda')
+  }
+
   return (
-    <div className="relative" ref={menuRef}>
+    <>
+      <button
+        onClick={handleHelp}
+        aria-label="Ayuda de esta sección"
+        title="Ayuda de esta sección"
+        className="flex items-center justify-center w-8 h-8 rounded-full bg-bg-secondary border-[0.5px] border-border text-[14px] font-medium text-text-secondary hover:text-text-primary hover:border-border-strong transition-colors focus:outline-none"
+      >
+        ?
+      </button>
+
+      <div className="relative" ref={menuRef}>
       <button
         onClick={toggleMenu}
         aria-label="Menú"
@@ -178,6 +212,9 @@ export default function HeaderClient({ userMetadata, hasAgendaAccess, isProOrAdm
           </form>
         </div>
       )}
-    </div>
+      </div>
+
+      {guide && <GuideTour steps={guide.steps} open={guideOpen} onClose={closeGuide} />}
+    </>
   )
 }

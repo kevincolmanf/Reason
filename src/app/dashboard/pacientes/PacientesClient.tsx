@@ -221,6 +221,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
           <span className="text-[14px] text-text-secondary">{patients.length} paciente{patients.length !== 1 ? 's' : ''}</span>
           {patients.length > 0 && (
             <input
+              data-tour="pacientes-buscar"
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -251,6 +252,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
             </Link>
           ) : !showForm ? (
             <button
+              data-tour="pacientes-nuevo"
               onClick={() => setShowForm(true)}
               className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity"
             >
