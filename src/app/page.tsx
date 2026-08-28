@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import LandingHero from '@/components/LandingHero'
 
 export default function LandingPage({
   searchParams,
@@ -35,57 +36,8 @@ export default function LandingPage({
         </div>
       </header>
 
-      {/* Hero */}
-      <section className="pt-[120px] pb-[96px]">
-        <div className="w-full max-w-[1080px] mx-auto px-8">
-          <div className="max-w-[760px]">
-            <h1 className="text-[64px] font-medium tracking-[-0.02em] leading-[1.1] mb-6">
-              La plataforma que usás<br />para atender mejor.
-            </h1>
-            <p className="text-[20px] text-text-secondary leading-[1.5] max-w-[600px] mb-10">
-              Agenda, planes de ejercicio, monitoreo de carga, protocolos RTS, ficha kinésica y contenido clínico basado en evidencia. Todo diseñado para kinesiólogos.
-            </p>
-            <div className="flex gap-4 items-center flex-wrap">
-              <a
-                href="/login"
-                className="bg-accent text-bg-primary py-[14px] px-7 rounded-lg text-[14px] font-medium no-underline inline-block border-none cursor-pointer"
-              >
-                Probá gratis 7 días
-              </a>
-              <a
-                href="#funcionalidades"
-                className="text-text-primary text-[14px] no-underline py-[14px] px-0"
-              >
-                Ver funcionalidades →
-              </a>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Stats bar */}
-      <section className="py-10 border-t-[0.5px] border-border border-b-[0.5px] bg-bg-secondary">
-        <div className="w-full max-w-[1080px] mx-auto px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            <div>
-              <div className="font-mono text-[32px] font-medium text-text-primary tracking-[-0.02em]">1800+</div>
-              <div className="text-[13px] text-text-secondary mt-1">ejercicios con video</div>
-            </div>
-            <div>
-              <div className="font-mono text-[32px] font-medium text-text-primary tracking-[-0.02em]">Agenda</div>
-              <div className="text-[13px] text-text-secondary mt-1">integrada con recordatorios WA</div>
-            </div>
-            <div>
-              <div className="font-mono text-[32px] font-medium text-text-primary tracking-[-0.02em]">RTS</div>
-              <div className="text-[13px] text-text-secondary mt-1">protocolos de retorno al deporte</div>
-            </div>
-            <div>
-              <div className="font-mono text-[32px] font-medium text-text-primary tracking-[-0.02em]">Equipo</div>
-              <div className="text-[13px] text-text-secondary mt-1">modo multi-profesional integrado</div>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Hero con bifurcación de audiencia (solo vs. centro) + franja de highlights */}
+      <LandingHero />
 
       {/* Problem / Solution */}
       <section className="py-[96px]">
@@ -247,7 +199,7 @@ export default function LandingPage({
       </section>
 
       {/* Modo equipo */}
-      <section className="py-[96px] border-t-[0.5px] border-border">
+      <section className="py-[96px] border-t-[0.5px] border-border" id="modo-equipo">
         <div className="w-full max-w-[1080px] mx-auto px-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
             <div>
