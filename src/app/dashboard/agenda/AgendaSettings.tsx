@@ -171,13 +171,19 @@ export default function AgendaSettings({
     }
   }
 
-  // Enciende/apaga un área para el integrante. null = todas; no permite dejarlo
-  // sin ninguna (si querés que no vea nada, apagá el acceso).
+  // Enciende/apaga un área para el integrante. null = todas.
+  // Con "Todas" activo (null), el primer clic elige SOLO esa área — así el chip
+  // se comporta como uno espera (seleccionar), y no como "quitar del conjunto".
+  // Si no queda ninguna, o quedan todas, volvemos a "Todas" (null). Para que un
+  // integrante no vea nada, se apaga el acceso, no las áreas.
   const toggleMemberArea = (memberId: string, area: string) => {
-    const base = memberAreas[memberId] ?? [...areas]
-    const next = base.includes(area) ? base.filter(a => a !== area) : [...base, area]
-    if (next.length === 0) return
-    saveMemberAreas(memberId, next.length === areas.length ? null : next)
+    const current = memberAreas[memberId] // null = todas
+    const next = current === null
+      ? [area]
+      : current.includes(area)
+        ? current.filter(a => a !== area)
+        : [...current, area]
+    saveMemberAreas(memberId, next.length === 0 || next.length === areas.length ? null : next)
   }
 
   const handleSave = async () => {
