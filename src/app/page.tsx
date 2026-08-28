@@ -1,4 +1,22 @@
-export default function LandingPage() {
+import { redirect } from 'next/navigation'
+
+export default function LandingPage({
+  searchParams,
+}: {
+  searchParams: { code?: string; error?: string; error_description?: string; next?: string }
+}) {
+  // Red de seguridad OAuth: si el `redirectTo` (/auth/callback) no matchea la lista
+  // de Redirect URLs de Supabase, éste cae al Site URL (la raíz) con el ?code=.
+  // Sin esto el usuario vuelve a la landing sin loguearse. Reenviamos el código a
+  // /auth/callback, que lo canjea por sesión (el code_verifier vive en este dominio).
+  if (searchParams?.code) {
+    const nextParam = searchParams.next && searchParams.next.startsWith('/') ? searchParams.next : '/dashboard'
+    redirect(`/auth/callback?code=${encodeURIComponent(searchParams.code)}&next=${encodeURIComponent(nextParam)}`)
+  }
+  if (searchParams?.error) {
+    redirect(`/login?message=${encodeURIComponent(searchParams.error_description || 'No pudimos completar el ingreso con Google. Probá de nuevo.')}`)
+  }
+
   return (
     <>
       <header className="py-8 border-b-[0.5px] border-border">
