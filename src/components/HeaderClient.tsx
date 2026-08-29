@@ -16,12 +16,13 @@ interface Props {
   hasAgendaAccess?: boolean
   isProOrAdmin?: boolean
   canManageTeam?: boolean
+  canSeeCaja?: boolean
   ctx?: ActiveContext
   currentLabel?: string
   available?: AvailableContext[]
 }
 
-export default function HeaderClient({ userMetadata, hasAgendaAccess, isProOrAdmin, canManageTeam, ctx, currentLabel, available }: Props) {
+export default function HeaderClient({ userMetadata, hasAgendaAccess, isProOrAdmin, canManageTeam, canSeeCaja, ctx, currentLabel, available }: Props) {
   const [isOpen, setIsOpen] = useState(false)
   const [showWorkspaces, setShowWorkspaces] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -122,6 +123,11 @@ export default function HeaderClient({ userMetadata, hasAgendaAccess, isProOrAdm
             {hasAgendaAccess && (
               <Link href="/dashboard/agenda" onClick={closeMenu} className="block px-4 py-2 text-[14px] text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline">
                 Agenda
+              </Link>
+            )}
+            {canSeeCaja && (
+              <Link href="/dashboard/caja" onClick={closeMenu} className="block px-4 py-2 text-[14px] text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline">
+                Caja
               </Link>
             )}
             <Link href="/dashboard/ejercicios" onClick={closeMenu} className="block px-4 py-2 text-[14px] text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline">
