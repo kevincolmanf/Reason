@@ -411,6 +411,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
   // Claves "patient_id|YYYY-MM-DD" con sesión de carga registrada, para marcar en
   // la agenda si ya se cargó la sesión del paciente (recordatorio antes de irse).
   const [registeredKeys, setRegisteredKeys] = useState<Set<string>>(new Set())
+  const [paidKeys, setPaidKeys] = useState<Set<string>>(new Set())
   // Menú contextual de un turno. Guardamos el rectángulo del chip clickeado
   // (no un solo punto) para poder abrir el menú hacia abajo o hacia arriba según
   // el espacio disponible, y medirlo después de montarlo.
@@ -512,8 +513,23 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
     } else {
       setRegisteredKeys(new Set())
     }
+
+    // Marca de "pago cargado" ($): cobros de caja enlazados a esos pacientes en el
+    // rango. La RLS de cash_entries filtra según permiso (el dueño ve todo; una
+    // secretaria con permiso, solo hoy; quien no tiene permiso, nada).
+    if (canRegisterCash && patIds.length > 0) {
+      const { data: ce } = await supabaseRef.current
+        .from('cash_entries')
+        .select('patient_id, entry_date')
+        .in('patient_id', patIds)
+        .gte('entry_date', from.slice(0, 10))
+        .lt('entry_date', to.slice(0, 10))
+      setPaidKeys(new Set((ce ?? []).filter(r => r.patient_id).map(r => `${r.patient_id}|${r.entry_date}`)))
+    } else {
+      setPaidKeys(new Set())
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [weekStart, selectedDay, view, orgId, userId])
+  }, [weekStart, selectedDay, view, orgId, userId, canRegisterCash])
 
   useEffect(() => { fetchTurnos() }, [fetchTurnos])
 
@@ -671,6 +687,9 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                           <span className="shrink-0 text-sky-400" title="Sesión registrada">
                             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
                           </span>
+                        )}
+                        {t.patient_id && paidKeys.has(`${t.patient_id}|${new Date(t.start_time).toISOString().slice(0, 10)}`) && (
+                          <span className="shrink-0 text-[#6FAE7E] font-bold leading-none" title="Pago cargado a caja">$</span>
                         )}
                         <span className="truncate">{compact ? t.patient_name : `${formatTime(start)} ${t.patient_name}`}</span>
                       </p>
