@@ -55,6 +55,7 @@ interface Props {
   members: Member[]
   areas: string[]
   isOwner: boolean
+  canEditTurnos: boolean
   shareToken: string | null
   shareEnabled: boolean
   slotInterval: number
@@ -374,7 +375,7 @@ function exportDayPdf(turnos: Turno[], date: Date, orgName: string | null, filte
   }, 250)
 }
 
-export default function AgendaClient({ userId, orgId, orgName, professionals, members, areas: initialAreas, isOwner, shareToken, shareEnabled, slotInterval: initialSlotInterval, areaDurations: initialAreaDurations, dayStart: initialDayStart, dayEnd: initialDayEnd, initialWhatsapp, canRegisterCash, cashPresets, cashMethods }: Props) {
+export default function AgendaClient({ userId, orgId, orgName, professionals, members, areas: initialAreas, isOwner, canEditTurnos, shareToken, shareEnabled, slotInterval: initialSlotInterval, areaDurations: initialAreaDurations, dayStart: initialDayStart, dayEnd: initialDayEnd, initialWhatsapp, canRegisterCash, cashPresets, cashMethods }: Props) {
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()))
   const [selectedDay, setSelectedDay] = useState<Date>(() => new Date())
   const [view, setView] = useState<'week' | 'day'>('day')
@@ -577,7 +578,9 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
 
   // Solo el dueño (Pro/admin) edita. Los integrantes con acceso habilitado entran
   // en modo solo-lectura: ven pacientes y horarios pero no crean/editan/borran.
-  const canEdit = isOwner
+  // Editar turnos: dueño/admin o integrante con permiso "modifica la agenda".
+  // OJO: la CONFIGURACIÓN de la agenda (⚙) sigue siendo solo del dueño (isOwner).
+  const canEdit = canEditTurnos
 
   const openNew = (day?: Date, hour?: number, minute?: number, defaultStatus?: string) => {
     if (!canEdit) return
@@ -883,7 +886,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
             </Link>
           )}
 
-          {canEdit && (
+          {isOwner && (
             <button data-tour="agenda-config" onClick={() => setSettingsOpen(true)} className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors" title="Configurar agenda">
               ⚙
             </button>
@@ -1288,6 +1291,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
           presets={cashPresets}
           methods={cashMethods}
           onClose={() => setCajaSheet(null)}
+          onSaved={() => fetchTurnos()}
         />
       )}
 

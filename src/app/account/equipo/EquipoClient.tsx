@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createOrganization, addMember, removeMember, updateMemberName, resetMemberAccess, setMemberCashAccess, setMemberAgendaAccess, deleteOrganization } from './actions'
+import { createOrganization, addMember, removeMember, updateMemberName, resetMemberAccess, setMemberCashAccess, setMemberAgendaLevel, type AgendaLevel, deleteOrganization } from './actions'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
@@ -11,6 +11,7 @@ interface Member {
   role: string
   can_register_cash: boolean
   agenda_access: boolean
+  agenda_can_edit: boolean
   hasLoggedIn: boolean
   users: { full_name: string | null; email: string }
 }
@@ -193,14 +194,15 @@ export default function EquipoClient({ userId, org: initialOrg, members: initial
     setCashToggling(null)
   }
 
-  const handleToggleAgenda = async (member: Member) => {
-    if (!org || agendaToggling) return
-    const next = !member.agenda_access
+  const handleSetAgendaLevel = async (member: Member, level: AgendaLevel) => {
+    if (!org) return
+    const prev = { agenda_access: member.agenda_access, agenda_can_edit: member.agenda_can_edit }
+    const next = { agenda_access: level !== 'no', agenda_can_edit: level === 'edit' }
     setAgendaToggling(member.id)
-    setMembers(prev => prev.map(m => m.id === member.id ? { ...m, agenda_access: next } : m))
-    const res = await setMemberAgendaAccess(org.id, member.user_id, next)
+    setMembers(ms => ms.map(m => m.id === member.id ? { ...m, ...next } : m))
+    const res = await setMemberAgendaLevel(org.id, member.user_id, level)
     if (res.error) {
-      setMembers(prev => prev.map(m => m.id === member.id ? { ...m, agenda_access: !next } : m))
+      setMembers(ms => ms.map(m => m.id === member.id ? { ...m, ...prev } : m))
     }
     setAgendaToggling(null)
   }
@@ -442,9 +444,9 @@ Cualquier duda, avisame.`
         {members.length > 0 && (
           <div className="px-6 py-3 border-b-[0.5px] border-border">
             <p className="text-[12px] text-text-tertiary leading-relaxed">
-              <span className="text-accent font-medium">Agenda</span> = ve la agenda del centro en solo lectura (marcar presente, registrar sesión y cargar cobros). Qué áreas ve se ajusta en la configuración de la agenda.
+              <span className="text-accent font-medium">Agenda</span>: <b>no ve</b> · <b>ve</b> (solo lectura: marca presente, registra sesión y carga cobros) · <b>modifica</b> (además crea y edita turnos). Qué áreas ve se ajusta en la configuración de la agenda; la configuración del centro sigue siendo solo tuya.
               {' · '}
-              <span className="text-[#6FAE7E] font-medium">Caja</span> = registra cobros y ve el arqueo del día (no el mes ni el historial).
+              <span className="text-[#6FAE7E] font-medium">Caja</span>: registra cobros y ve el arqueo del día (no el mes ni el historial).
             </p>
           </div>
         )}
@@ -562,18 +564,19 @@ Cualquier duda, avisame.`
                         )}
                         {!isCurrentUser && (
                           <>
-                            <button
-                              onClick={() => handleToggleAgenda(m)}
+                            <select
+                              value={m.agenda_can_edit ? 'edit' : m.agenda_access ? 'view' : 'no'}
+                              onChange={e => handleSetAgendaLevel(m, e.target.value as AgendaLevel)}
                               disabled={agendaToggling === m.id}
-                              title="Acceso de solo lectura a la agenda del centro: ve turnos, marca presente/ausente, registra sesión y carga cobros. Qué áreas ve se ajusta en la configuración de la agenda."
-                              className={`text-[12px] px-2.5 py-0.5 rounded-full border-[0.5px] transition-colors disabled:opacity-40 ${
-                                m.agenda_access
-                                  ? 'text-accent border-accent/30 bg-accent/10 hover:opacity-80'
-                                  : 'text-text-secondary border-border hover:text-text-primary'
+                              title="Qué puede hacer con la agenda del centro. Las áreas que ve se ajustan en la configuración de la agenda."
+                              className={`text-[12px] px-2.5 py-1 rounded-full border-[0.5px] bg-bg-primary transition-colors disabled:opacity-40 ${
+                                m.agenda_access ? 'text-accent border-accent/30' : 'text-text-secondary border-border'
                               }`}
                             >
-                              {agendaToggling === m.id ? '...' : m.agenda_access ? 'Ve la agenda ✓' : 'Dar acceso a agenda'}
-                            </button>
+                              <option value="no">Agenda: no ve</option>
+                              <option value="view">Agenda: ve (solo lectura)</option>
+                              <option value="edit">Agenda: modifica turnos</option>
+                            </select>
                             <button
                               onClick={() => handleToggleCash(m)}
                               disabled={cashToggling === m.id}

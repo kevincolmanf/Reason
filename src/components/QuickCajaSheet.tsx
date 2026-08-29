@@ -21,9 +21,10 @@ interface Props {
   presets: Preset[]
   methods: Method[]
   onClose: () => void
+  onSaved?: () => void
 }
 
-export default function QuickCajaSheet({ orgId, userId, patientId, patientName, area, presets, methods, onClose }: Props) {
+export default function QuickCajaSheet({ orgId, userId, patientId, patientName, area, presets, methods, onClose, onSaved }: Props) {
   const supabase = createClient()
   const methodNames = useMemo(() => {
     const configured = methods.filter(m => m.active).map(m => m.name)
@@ -69,6 +70,7 @@ export default function QuickCajaSheet({ orgId, userId, patientId, patientName, 
     if (insErr) { setError(`No se pudo cargar: ${insErr.message}`); return }
     setSavedMsg(`✓ Ingreso de ${fmt(amt)} cargado a caja`)
     setAmount(''); setConcept(''); setSelectedPreset('')
+    onSaved?.()
     setTimeout(() => setSavedMsg(''), 3000)
   }
 

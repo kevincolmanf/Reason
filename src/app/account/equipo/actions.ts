@@ -246,13 +246,17 @@ export async function setMemberCashAccess(
   return { success: true }
 }
 
-// Habilita/deshabilita el acceso a la agenda de un integrante. Antes solo se
-// manejaba desde la configuración de la agenda; tenerlo también acá hace más
-// práctico dejar a una secretaria operativa desde un solo lugar.
-export async function setMemberAgendaAccess(
+// Nivel de acceso a la agenda de un integrante, desde Mi Equipo:
+//   'no'     → no ve la agenda.
+//   'view'   → la ve en solo lectura (marca presente, registra sesión, cobra).
+//   'edit'   → además crea/edita/borra turnos ("modifica la agenda").
+// La CONFIGURACIÓN de la agenda (áreas, horarios, compartir) sigue siendo del dueño.
+export type AgendaLevel = 'no' | 'view' | 'edit'
+
+export async function setMemberAgendaLevel(
   orgId: string,
   memberUserId: string,
-  access: boolean,
+  level: AgendaLevel,
 ): Promise<{ error?: string; success?: boolean }> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -270,7 +274,10 @@ export async function setMemberAgendaAccess(
   const adminClient = createAdminClient()
   const { error } = await adminClient
     .from('organization_members')
-    .update({ agenda_access: access })
+    .update({
+      agenda_access: level !== 'no',
+      agenda_can_edit: level === 'edit',
+    })
     .eq('org_id', orgId)
     .eq('user_id', memberUserId)
 
