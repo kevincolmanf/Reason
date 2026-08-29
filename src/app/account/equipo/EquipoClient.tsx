@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createOrganization, addMember, removeMember, updateMemberName, resetMemberAccess, setMemberCashAccess, deleteOrganization } from './actions'
+import { createOrganization, addMember, removeMember, updateMemberName, resetMemberAccess, setMemberCashAccess, setMemberAgendaAccess, deleteOrganization } from './actions'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
@@ -10,6 +10,7 @@ interface Member {
   user_id: string
   role: string
   can_register_cash: boolean
+  agenda_access: boolean
   hasLoggedIn: boolean
   users: { full_name: string | null; email: string }
 }
@@ -64,6 +65,7 @@ export default function EquipoClient({ userId, org: initialOrg, members: initial
 
   const [removing, setRemoving] = useState<string | null>(null)
   const [cashToggling, setCashToggling] = useState<string | null>(null)
+  const [agendaToggling, setAgendaToggling] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
 
   const [resettingId, setResettingId] = useState<string | null>(null)
@@ -189,6 +191,18 @@ export default function EquipoClient({ userId, org: initialOrg, members: initial
       setMembers(prev => prev.map(m => m.id === member.id ? { ...m, can_register_cash: !next } : m))
     }
     setCashToggling(null)
+  }
+
+  const handleToggleAgenda = async (member: Member) => {
+    if (!org || agendaToggling) return
+    const next = !member.agenda_access
+    setAgendaToggling(member.id)
+    setMembers(prev => prev.map(m => m.id === member.id ? { ...m, agenda_access: next } : m))
+    const res = await setMemberAgendaAccess(org.id, member.user_id, next)
+    if (res.error) {
+      setMembers(prev => prev.map(m => m.id === member.id ? { ...m, agenda_access: !next } : m))
+    }
+    setAgendaToggling(null)
   }
 
   const handleResetAccess = async (member: Member, force = false) => {
@@ -538,6 +552,18 @@ Cualquier duda, avisame.`
                         )}
                         {!isCurrentUser && (
                           <>
+                            <button
+                              onClick={() => handleToggleAgenda(m)}
+                              disabled={agendaToggling === m.id}
+                              title="Permite ver y operar la agenda del centro"
+                              className={`text-[12px] px-2.5 py-0.5 rounded-full border-[0.5px] transition-colors disabled:opacity-40 ${
+                                m.agenda_access
+                                  ? 'text-accent border-accent/30 bg-accent/10 hover:opacity-80'
+                                  : 'text-text-secondary border-border hover:text-text-primary'
+                              }`}
+                            >
+                              {agendaToggling === m.id ? '...' : m.agenda_access ? 'Agenda ✓' : 'Habilitar agenda'}
+                            </button>
                             <button
                               onClick={() => handleToggleCash(m)}
                               disabled={cashToggling === m.id}

@@ -246,6 +246,38 @@ export async function setMemberCashAccess(
   return { success: true }
 }
 
+// Habilita/deshabilita el acceso a la agenda de un integrante. Antes solo se
+// manejaba desde la configuración de la agenda; tenerlo también acá hace más
+// práctico dejar a una secretaria operativa desde un solo lugar.
+export async function setMemberAgendaAccess(
+  orgId: string,
+  memberUserId: string,
+  access: boolean,
+): Promise<{ error?: string; success?: boolean }> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const { data: membership } = await supabase
+    .from('organization_members')
+    .select('role')
+    .eq('org_id', orgId)
+    .eq('user_id', user.id)
+    .single()
+
+  if (membership?.role !== 'admin') return { error: 'Solo el administrador puede cambiar permisos' }
+
+  const adminClient = createAdminClient()
+  const { error } = await adminClient
+    .from('organization_members')
+    .update({ agenda_access: access })
+    .eq('org_id', orgId)
+    .eq('user_id', memberUserId)
+
+  if (error) return { error: 'No se pudo actualizar el acceso a la agenda' }
+  return { success: true }
+}
+
 export async function removeMember(orgId: string, memberId: string) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()

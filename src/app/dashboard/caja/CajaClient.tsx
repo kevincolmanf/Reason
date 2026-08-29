@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import CajaConfig, { type Method, type Preset } from './CajaConfig'
 
@@ -69,6 +69,27 @@ export default function CajaClient({ userId, orgId, orgName, isOwner, areas, tod
   const [error, setError] = useState('')
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null)
 
+  // Paciente opcional al que se enlaza el cobro (buscable por nombre o DNI).
+  const [patientSearch, setPatientSearch] = useState('')
+  const [patientResults, setPatientResults] = useState<{ id: string; name: string; dni: string | null }[]>([])
+  const [selectedPatient, setSelectedPatient] = useState<{ id: string; name: string } | null>(null)
+  const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (selectedPatient) return
+    if (patientSearch.trim().length < 2) { setPatientResults([]); return }
+    if (searchTimeout.current) clearTimeout(searchTimeout.current)
+    searchTimeout.current = setTimeout(async () => {
+      const trimmed = patientSearch.trim()
+      const isNumeric = /^\d+$/.test(trimmed)
+      let query = supabase.from('patients').select('id, name, dni').eq('org_id', orgId).limit(6)
+      if (isNumeric) query = query.ilike('dni', `%${trimmed}%`)
+      else for (const t of trimmed.split(/\s+/)) query = query.ilike('name', `%${t}%`)
+      const { data } = await query
+      setPatientResults((data ?? []) as { id: string; name: string; dni: string | null }[])
+    }, 250)
+  }, [patientSearch, selectedPatient, orgId, supabase])
+
   // Edición de un movimiento
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<FormState>({ type: 'ingreso', amount: '', payment_method: '', area: '', concept: '', notes: '' })
@@ -120,7 +141,8 @@ export default function CajaClient({ userId, orgId, orgName, isOwner, areas, tod
       payment_method: form.payment_method,
       area: form.area || null,
       concept: form.concept.trim() || null,
-      notes: form.notes.trim() || null,
+      notes: form.notes.trim() || selectedPatient?.name || null,
+      patient_id: selectedPatient?.id ?? null,
       created_by: userId,
     }).select('id, type, amount, payment_method, area, concept, notes, created_by, created_at').single()
     if (insErr || !data) { setError(`No se pudo guardar: ${insErr?.message ?? 'error'}`); setSaving(false); return }
@@ -128,6 +150,7 @@ export default function CajaClient({ userId, orgId, orgName, isOwner, areas, tod
     // Mantenemos tipo/medio/área para cargar rápido varios seguidos; limpiamos el resto.
     setForm(f => ({ ...f, amount: '', concept: '', notes: '' }))
     setSelectedPreset('')
+    setSelectedPatient(null); setPatientSearch('')
     setSaving(false)
   }
 
@@ -267,13 +290,45 @@ export default function CajaClient({ userId, orgId, orgName, isOwner, areas, tod
               </Select>
             </div>
           )}
+          <div className="sm:col-span-2 relative">
+            <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Paciente (opcional)</label>
+            {selectedPatient ? (
+              <div className="flex items-center justify-between bg-bg-primary border-[0.5px] border-border-strong rounded-lg px-3 py-2.5">
+                <span className="text-[14px]">{selectedPatient.name}</span>
+                <button onClick={() => { setSelectedPatient(null); setPatientSearch('') }} className="text-text-tertiary hover:text-red-400 text-[16px] leading-none" title="Quitar paciente">×</button>
+              </div>
+            ) : (
+              <>
+                <input
+                  type="text" value={patientSearch}
+                  onChange={e => setPatientSearch(e.target.value)}
+                  placeholder="Buscar por nombre o DNI…"
+                  className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg px-3 py-2.5 text-[14px] focus:outline-none focus:border-accent"
+                />
+                {patientResults.length > 0 && (
+                  <ul className="absolute z-20 left-0 right-0 mt-1 bg-bg-primary border-[0.5px] border-border rounded-lg shadow-lg overflow-hidden">
+                    {patientResults.map(p => (
+                      <li key={p.id}>
+                        <button
+                          onClick={() => { setSelectedPatient({ id: p.id, name: p.name }); setPatientResults([]); setPatientSearch('') }}
+                          className="w-full text-left px-3 py-2 text-[13px] hover:bg-bg-secondary transition-colors"
+                        >
+                          {p.name}{p.dni ? <span className="text-text-tertiary"> · {p.dni}</span> : null}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </>
+            )}
+          </div>
           <div className="sm:col-span-2">
             <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Nota (opcional)</label>
             <input
               type="text" value={form.notes}
               onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
               onKeyDown={e => { if (e.key === 'Enter') handleAdd() }}
-              placeholder="Ej: nombre del paciente, detalle…"
+              placeholder="Ej: detalle, deuda de sesión anterior…"
               className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg px-3 py-2.5 text-[14px] focus:outline-none focus:border-accent"
             />
           </div>
@@ -294,7 +349,6 @@ export default function CajaClient({ userId, orgId, orgName, isOwner, areas, tod
         methods={methods}
         presets={presets}
         areas={areas}
-        methodNames={methodNames}
         onMethods={setMethods}
         onPresets={setPresets}
       />

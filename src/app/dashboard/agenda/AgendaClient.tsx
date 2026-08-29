@@ -8,6 +8,7 @@ import type { Method as CashMethod, Preset as CashPreset } from '../caja/CajaCon
 import AgendaSettings from './AgendaSettings'
 import MiniCalendar from './MiniCalendar'
 import QuickSessionSheet from '@/components/QuickSessionSheet'
+import QuickCajaSheet from '@/components/QuickCajaSheet'
 import Link from 'next/link'
 import { buildWhatsAppUrl, buildConfirmUrl } from './whatsapp'
 
@@ -406,6 +407,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
   }>({ open: false })
   const [cloneModal, setCloneModal] = useState<Turno | null>(null)
   const [sessionSheet, setSessionSheet] = useState<{ patientId: string; patientName: string; turnoId: string } | null>(null)
+  const [cajaSheet, setCajaSheet] = useState<{ patientId: string | null; patientName: string; area: string; turnoId: string } | null>(null)
   // Claves "patient_id|YYYY-MM-DD" con sesión de carga registrada, para marcar en
   // la agenda si ya se cargó la sesión del paciente (recordatorio antes de irse).
   const [registeredKeys, setRegisteredKeys] = useState<Set<string>>(new Set())
@@ -1122,6 +1124,14 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                 + Registrar sesión
               </button>
             )}
+            {canRegisterCash && !quickMenu.turno.is_blocked && (
+              <button
+                onClick={() => { const t = quickMenu.turno; setCajaSheet({ patientId: t.patient_id, patientName: t.patient_name, area: t.area, turnoId: t.id }); setQuickMenu(null) }}
+                className="w-full text-left px-3 py-2 text-[13px] text-accent font-medium hover:bg-bg-primary transition-colors"
+              >
+                + Cargar ingreso a caja
+              </button>
+            )}
             {canEdit && (
               <button
                 onClick={() => { setQuickMenu(null); openEdit(quickMenu.turno) }}
@@ -1245,6 +1255,20 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
           canMarkPresent
           onClose={() => setSessionSheet(null)}
           onSaved={() => fetchTurnos()}
+        />
+      )}
+
+      {/* CARGA RÁPIDA DE INGRESO A CAJA (desde el turno) */}
+      {cajaSheet && orgId && (
+        <QuickCajaSheet
+          orgId={orgId}
+          userId={userId}
+          patientId={cajaSheet.patientId}
+          patientName={cajaSheet.patientName}
+          area={cajaSheet.area}
+          presets={cashPresets}
+          methods={cashMethods}
+          onClose={() => setCajaSheet(null)}
         />
       )}
 

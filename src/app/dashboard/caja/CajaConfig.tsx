@@ -17,14 +17,13 @@ interface Props {
   methods: Method[]
   presets: Preset[]
   areas: string[]
-  methodNames: string[]
   onMethods: (m: Method[]) => void
   onPresets: (p: Preset[]) => void
 }
 
 type PresetDraft = { label: string; type: 'ingreso' | 'egreso'; amount: string; payment_method: string; area: string }
 
-export default function CajaConfig({ orgId, methods, presets, areas, methodNames, onMethods, onPresets }: Props) {
+export default function CajaConfig({ orgId, methods, presets, areas, onMethods, onPresets }: Props) {
   const supabase = createClient()
   const [open, setOpen] = useState(false)
   const [newMethod, setNewMethod] = useState('')
@@ -62,7 +61,7 @@ export default function CajaConfig({ orgId, methods, presets, areas, methodNames
 
   // ---- Cobros rápidos (presets) ----
   const startNew = () => {
-    setDraft({ label: '', type: 'ingreso', amount: '', payment_method: methodNames[0] ?? '', area: '' })
+    setDraft({ label: '', type: 'ingreso', amount: '', payment_method: '', area: '' })
     setEditingPreset('new'); setErr('')
   }
   const startEdit = (p: Preset) => {
@@ -131,7 +130,7 @@ export default function CajaConfig({ orgId, methods, presets, areas, methodNames
             </p>
 
             {editingPreset === 'new' && (
-              <PresetForm draft={draft} setDraft={setDraft} methodNames={methodNames} areas={areas}
+              <PresetForm draft={draft} setDraft={setDraft} areas={areas}
                 onSave={saveDraft} onCancel={cancelEdit} busy={busy} inputCls={inputCls} />
             )}
 
@@ -142,7 +141,7 @@ export default function CajaConfig({ orgId, methods, presets, areas, methodNames
               {presets.map(p => (
                 editingPreset === p.id ? (
                   <li key={p.id}>
-                    <PresetForm draft={draft} setDraft={setDraft} methodNames={methodNames} areas={areas}
+                    <PresetForm draft={draft} setDraft={setDraft} areas={areas}
                       onSave={saveDraft} onCancel={cancelEdit} busy={busy} inputCls={inputCls} />
                   </li>
                 ) : (
@@ -203,8 +202,8 @@ export default function CajaConfig({ orgId, methods, presets, areas, methodNames
   )
 }
 
-function PresetForm({ draft, setDraft, methodNames, areas, onSave, onCancel, busy, inputCls }: {
-  draft: PresetDraft; setDraft: (d: PresetDraft) => void; methodNames: string[]; areas: string[]
+function PresetForm({ draft, setDraft, areas, onSave, onCancel, busy, inputCls }: {
+  draft: PresetDraft; setDraft: (d: PresetDraft) => void; areas: string[]
   onSave: () => void; onCancel: () => void; busy: boolean; inputCls: string
 }) {
   return (
@@ -219,16 +218,8 @@ function PresetForm({ draft, setDraft, methodNames, areas, onSave, onCancel, bus
           onChange={e => setDraft({ ...draft, amount: e.target.value })}
           placeholder="Monto" className={inputCls + ' tabular-nums'}
         />
-        <select value={draft.type} onChange={e => setDraft({ ...draft, type: e.target.value as 'ingreso' | 'egreso' })} className={inputCls}>
-          <option value="ingreso">Ingreso</option>
-          <option value="egreso">Egreso</option>
-        </select>
-        <select value={draft.payment_method} onChange={e => setDraft({ ...draft, payment_method: e.target.value })} className={inputCls}>
-          <option value="">Destino (opcional)</option>
-          {methodNames.map(n => <option key={n} value={n}>{n}</option>)}
-        </select>
         {areas.length > 0 && (
-          <select value={draft.area} onChange={e => setDraft({ ...draft, area: e.target.value })} className={inputCls}>
+          <select value={draft.area} onChange={e => setDraft({ ...draft, area: e.target.value })} className={inputCls + ' sm:col-span-2'}>
             <option value="">Área (opcional)</option>
             {areas.map(a => <option key={a} value={a}>{a}</option>)}
           </select>
