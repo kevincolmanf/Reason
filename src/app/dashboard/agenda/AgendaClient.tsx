@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef, type MouseEvent as ReactMouse
 import { createClient } from '@/utils/supabase/client'
 import TurnoModal from './TurnoModal'
 import CloneTurnoModal from './CloneTurnoModal'
+import type { Method as CashMethod, Preset as CashPreset } from '../caja/CajaConfig'
 import AgendaSettings from './AgendaSettings'
 import MiniCalendar from './MiniCalendar'
 import QuickSessionSheet from '@/components/QuickSessionSheet'
@@ -60,6 +61,9 @@ interface Props {
   dayStart: number
   dayEnd: number
   initialWhatsapp: string | null
+  canRegisterCash: boolean
+  cashPresets: CashPreset[]
+  cashMethods: CashMethod[]
 }
 
 // Status-based colors (lighter palette for readability)
@@ -369,7 +373,7 @@ function exportDayPdf(turnos: Turno[], date: Date, orgName: string | null, filte
   }, 250)
 }
 
-export default function AgendaClient({ userId, orgId, orgName, professionals, members, areas: initialAreas, isOwner, shareToken, shareEnabled, slotInterval: initialSlotInterval, areaDurations: initialAreaDurations, dayStart: initialDayStart, dayEnd: initialDayEnd, initialWhatsapp }: Props) {
+export default function AgendaClient({ userId, orgId, orgName, professionals, members, areas: initialAreas, isOwner, shareToken, shareEnabled, slotInterval: initialSlotInterval, areaDurations: initialAreaDurations, dayStart: initialDayStart, dayEnd: initialDayEnd, initialWhatsapp, canRegisterCash, cashPresets, cashMethods }: Props) {
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()))
   const [selectedDay, setSelectedDay] = useState<Date>(() => new Date())
   const [view, setView] = useState<'week' | 'day'>('day')
@@ -1215,6 +1219,9 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
           onClone={handleClone}
           onReminderSent={markReminded}
           onHistorialChanged={fetchTurnos}
+          canRegisterCash={canRegisterCash}
+          cashPresets={cashPresets}
+          cashMethods={cashMethods}
         />
       )}
 

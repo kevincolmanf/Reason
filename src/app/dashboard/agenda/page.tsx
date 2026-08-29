@@ -117,12 +117,19 @@ export default async function AgendaPage() {
   // los turnos por área; esto restringe además las pestañas de área que ve.
   let viewableAreas = areas
 
+  // Caja desde la agenda: ¿el usuario actual puede registrar caja? (dueño o
+  // integrante con permiso). Si sí, traemos sus cobros rápidos y destinos para
+  // cargar el ingreso al dar presente.
+  let canRegisterCash = false
+  let cashPresets: unknown[] = []
+  let cashMethods: unknown[] = []
+
   if (orgId) {
-    type MemberRow = { user_id: string; agenda_access: boolean; agenda_areas: string[] | null; users: { id: string; full_name: string | null; email: string | null } | null }
+    type MemberRow = { user_id: string; agenda_access: boolean; agenda_areas: string[] | null; can_register_cash: boolean | null; users: { id: string; full_name: string | null; email: string | null } | null }
     const adminClient = createAdminClient()
     const { data: memberRows } = await adminClient
       .from('organization_members')
-      .select('user_id, agenda_access, agenda_areas, users(id, full_name, email)')
+      .select('user_id, agenda_access, agenda_areas, can_register_cash, users(id, full_name, email)')
       .eq('org_id', orgId)
 
     members = ((memberRows ?? []) as unknown as MemberRow[]).map(m => ({
@@ -147,6 +154,17 @@ export default async function AgendaPage() {
     if (userData?.full_name && !professionals.find(p => p.id === user.id)) {
       professionals = [{ id: user.id, full_name: userData.full_name }, ...professionals]
     }
+
+    const myRow = (memberRows as unknown as MemberRow[] | null)?.find(m => m.user_id === user.id)
+    canRegisterCash = isOrgOwner || (myRow?.can_register_cash ?? false)
+    if (canRegisterCash) {
+      const [pres, meth] = await Promise.all([
+        supabase.from('cash_presets').select('id, label, type, amount, payment_method, area, sort_order, active').eq('org_id', orgId).order('sort_order', { ascending: true }),
+        supabase.from('cash_payment_methods').select('id, name, sort_order, active').eq('org_id', orgId).order('sort_order', { ascending: true }),
+      ])
+      cashPresets = pres.data ?? []
+      cashMethods = meth.data ?? []
+    }
   }
 
   return (
@@ -168,6 +186,9 @@ export default async function AgendaPage() {
           dayStart={dayStart}
           dayEnd={dayEnd}
           initialWhatsapp={whatsapp}
+          canRegisterCash={canRegisterCash}
+          cashPresets={cashPresets as never[]}
+          cashMethods={cashMethods as never[]}
         />
       </main>
     </div>
