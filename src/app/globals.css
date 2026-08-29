@@ -31,6 +31,21 @@ input[type="month"] {
   color-scheme: dark;
 }
 
+/* Autofill de Chrome/Safari: por defecto pinta el input de blanco/amarillo al
+   autocompletar (típico en el login). Lo mantenemos oscuro —como Spotify—
+   pintando el fondo con un box-shadow inset y forzando el color del texto. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill {
+  -webkit-text-fill-color: var(--color-text-primary) !important;
+  -webkit-box-shadow: 0 0 0 1000px var(--color-bg-primary) inset !important;
+  caret-color: var(--color-text-primary);
+  border-color: var(--color-border-strong);
+  transition: background-color 9999s ease-in-out 0s;
+}
+
 /* Fix SVG / Mermaid diagrams colors */
 svg text {
   fill: var(--color-text-primary) !important;
