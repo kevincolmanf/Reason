@@ -185,6 +185,9 @@ export default async function DashboardPage() {
   }
 
   const role = userData?.role
+  // Guía de arranque según el plan: los Pro/admin (centros) ven el camino de
+  // equipo; el resto, el flujo del profesional individual.
+  const onboardingVariant: 'solo' | 'centro' = (role === 'pro' || role === 'admin') ? 'centro' : 'solo'
   const trialExpiresAt = userData?.trial_expires_at
   const daysLeft = trialExpiresAt
     ? Math.ceil((new Date(trialExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
@@ -237,7 +240,7 @@ export default async function DashboardPage() {
           </p>
         </div>
 
-        <OnboardingGuide />
+        <OnboardingGuide variant={onboardingVariant} />
 
         {showTrialBanner && (
           <div className={`flex items-center justify-between gap-4 rounded-xl border-[0.5px] px-5 py-4 mb-6 ${
