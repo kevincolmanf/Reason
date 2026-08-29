@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
+import CajaConfig, { type Method, type Preset } from './CajaConfig'
 
 interface Entry {
   id: string
@@ -9,6 +10,7 @@ interface Entry {
   amount: number
   payment_method: string
   area: string | null
+  concept: string | null
   notes: string | null
   created_by: string
   created_at: string
@@ -22,27 +24,24 @@ interface Props {
   areas: string[]
   today: string
   initialEntries: Entry[]
+  initialMethods: Method[]
+  initialPresets: Preset[]
 }
 
-const METHODS: { value: string; label: string }[] = [
-  { value: 'efectivo', label: 'Efectivo' },
-  { value: 'tarjeta', label: 'Tarjeta' },
-  { value: 'mp', label: 'Mercado Pago' },
-  { value: 'obra_social', label: 'Obra social' },
-  { value: 'transferencia', label: 'Transferencia' },
-]
-const METHOD_LABEL: Record<string, string> = Object.fromEntries(METHODS.map(m => [m.value, m.label]))
+// Medios por defecto para un centro que todavía no configuró ninguno (el medio
+// es texto libre, así que sirve aunque no haya filas en la base).
+const DEFAULT_METHOD_NAMES = ['Efectivo', 'Tarjeta', 'Mercado Pago', 'Obra social', 'Transferencia']
 
 const fmt = (n: number) =>
   new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n)
 
-function Select({ value, onChange, children }: { value: string; onChange: (v: string) => void; children: React.ReactNode }) {
+function Select({ value, onChange, children, className = '' }: { value: string; onChange: (v: string) => void; children: React.ReactNode; className?: string }) {
   return (
     <div className="relative">
       <select
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="appearance-none w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg pl-3 pr-9 py-2.5 text-[14px] text-text-primary focus:outline-none focus:border-accent"
+        className={`appearance-none w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg pl-3 pr-9 py-2.5 text-[14px] text-text-primary focus:outline-none focus:border-accent ${className}`}
       >
         {children}
       </select>
@@ -51,23 +50,62 @@ function Select({ value, onChange, children }: { value: string; onChange: (v: st
   )
 }
 
-export default function CajaClient({ userId, orgId, orgName, isOwner, areas, today, initialEntries }: Props) {
+type FormState = { type: 'ingreso' | 'egreso'; amount: string; payment_method: string; area: string; concept: string; notes: string }
+
+export default function CajaClient({ userId, orgId, orgName, isOwner, areas, today, initialEntries, initialMethods, initialPresets }: Props) {
   const supabase = createClient()
   const [entries, setEntries] = useState<Entry[]>(initialEntries)
-  const [form, setForm] = useState({ type: 'ingreso' as 'ingreso' | 'egreso', amount: '', payment_method: 'efectivo', area: areas[0] ?? '', notes: '' })
+  const [methods, setMethods] = useState<Method[]>(initialMethods)
+  const [presets, setPresets] = useState<Preset[]>(initialPresets)
+
+  const methodNames = useMemo(() => {
+    const configured = methods.filter(m => m.active).map(m => m.name)
+    return configured.length ? configured : DEFAULT_METHOD_NAMES
+  }, [methods])
+
+  const [form, setForm] = useState<FormState>({ type: 'ingreso', amount: '', payment_method: methodNames[0] ?? '', area: areas[0] ?? '', concept: '', notes: '' })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null)
+
+  // Edición de un movimiento
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editForm, setEditForm] = useState<FormState>({ type: 'ingreso', amount: '', payment_method: '', area: '', concept: '', notes: '' })
+
+  const formRef = useRef<HTMLDivElement>(null)
+  const amountRef = useRef<HTMLInputElement>(null)
 
   const ingresos = entries.filter(e => e.type === 'ingreso').reduce((s, e) => s + Number(e.amount), 0)
   const egresos = entries.filter(e => e.type === 'egreso').reduce((s, e) => s + Number(e.amount), 0)
   const neto = ingresos - egresos
-  const netByMethod = METHODS.map(m => {
-    const inn = entries.filter(e => e.payment_method === m.value && e.type === 'ingreso').reduce((s, e) => s + Number(e.amount), 0)
-    const out = entries.filter(e => e.payment_method === m.value && e.type === 'egreso').reduce((s, e) => s + Number(e.amount), 0)
-    return { ...m, net: inn - out }
-  })
+
+  // Desglose por medio de pago: los medios configurados + cualquier otro que
+  // aparezca en los movimientos del día (para que los totales siempre cierren).
+  const netByMethod = useMemo(() => {
+    const names = [...methodNames]
+    for (const e of entries) if (e.payment_method && !names.includes(e.payment_method)) names.push(e.payment_method)
+    return names.map(name => {
+      const inn = entries.filter(e => e.payment_method === name && e.type === 'ingreso').reduce((s, e) => s + Number(e.amount), 0)
+      const out = entries.filter(e => e.payment_method === name && e.type === 'egreso').reduce((s, e) => s + Number(e.amount), 0)
+      return { name, net: inn - out }
+    }).filter(m => m.net !== 0 || methodNames.includes(m.name))
+  }, [entries, methodNames])
 
   const dateLabel = new Date(today + 'T00:00:00').toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })
+
+  const applyPreset = (p: Preset) => {
+    setForm({
+      type: p.type,
+      amount: p.amount ? String(p.amount) : '',
+      payment_method: p.payment_method || methodNames[0] || '',
+      area: p.area || areas[0] || '',
+      concept: p.label,
+      notes: '',
+    })
+    setError('')
+    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    setTimeout(() => amountRef.current?.focus(), 300)
+  }
 
   const handleAdd = async () => {
     const amt = Number(form.amount)
@@ -79,20 +117,45 @@ export default function CajaClient({ userId, orgId, orgName, isOwner, areas, tod
       amount: amt,
       payment_method: form.payment_method,
       area: form.area || null,
+      concept: form.concept.trim() || null,
       notes: form.notes.trim() || null,
       created_by: userId,
-    }).select('id, type, amount, payment_method, area, notes, created_by, created_at').single()
+    }).select('id, type, amount, payment_method, area, concept, notes, created_by, created_at').single()
     if (insErr || !data) { setError(`No se pudo guardar: ${insErr?.message ?? 'error'}`); setSaving(false); return }
     setEntries(prev => [data as Entry, ...prev])
-    // Mantenemos tipo/medio/área para cargar rápido varios seguidos; limpiamos monto y nota.
-    setForm(f => ({ ...f, amount: '', notes: '' }))
+    // Mantenemos tipo/medio/área para cargar rápido varios seguidos; limpiamos el resto.
+    setForm(f => ({ ...f, amount: '', concept: '', notes: '' }))
     setSaving(false)
+  }
+
+  const startEdit = (e: Entry) => {
+    setEditingId(e.id)
+    setEditForm({
+      type: e.type, amount: String(e.amount), payment_method: e.payment_method,
+      area: e.area ?? '', concept: e.concept ?? '', notes: e.notes ?? '',
+    })
+  }
+  const saveEdit = async () => {
+    if (!editingId) return
+    const amt = Number(editForm.amount)
+    if (!amt || amt <= 0) { setError('Ingresá un monto válido.'); return }
+    const patch = {
+      type: editForm.type, amount: amt, payment_method: editForm.payment_method,
+      area: editForm.area || null, concept: editForm.concept.trim() || null, notes: editForm.notes.trim() || null,
+    }
+    const { error: updErr } = await supabase.from('cash_entries').update(patch).eq('id', editingId)
+    if (updErr) { setError('No se pudo guardar el cambio.'); return }
+    setEntries(prev => prev.map(e => e.id === editingId ? { ...e, ...patch } as Entry : e))
+    setEditingId(null)
   }
 
   const handleDelete = async (id: string) => {
     const { error: delErr } = await supabase.from('cash_entries').delete().eq('id', id)
     if (!delErr) setEntries(prev => prev.filter(e => e.id !== id))
+    setConfirmingDelete(null)
   }
+
+  const activePresets = presets.filter(p => p.active)
 
   return (
     <div>
@@ -126,16 +189,37 @@ export default function CajaClient({ userId, orgId, orgName, isOwner, areas, tod
         <div className="text-[11px] uppercase tracking-[0.05em] text-text-tertiary mb-3">Neto por medio de pago</div>
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           {netByMethod.map(m => (
-            <div key={m.value}>
-              <div className="text-[12px] text-text-secondary">{m.label}</div>
+            <div key={m.name}>
+              <div className="text-[12px] text-text-secondary">{m.name}</div>
               <div className="text-[15px] font-medium tabular-nums">{fmt(m.net)}</div>
             </div>
           ))}
         </div>
       </div>
 
+      {/* Cobros rápidos */}
+      {activePresets.length > 0 && (
+        <div className="mb-4">
+          <div className="text-[11px] uppercase tracking-[0.05em] text-text-tertiary mb-2">Cobros rápidos</div>
+          <div className="flex flex-wrap gap-2">
+            {activePresets.map(p => (
+              <button
+                key={p.id}
+                onClick={() => applyPreset(p)}
+                className="flex items-center gap-2 bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] hover:border-accent hover:text-text-primary transition-colors"
+                title={`Cargar ${p.label}`}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${p.type === 'ingreso' ? 'bg-[#6FAE7E]' : 'bg-[#c47c5a]'}`} />
+                <span className="font-medium">{p.label}</span>
+                <span className="tabular-nums text-text-secondary">{fmt(Number(p.amount))}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Nuevo movimiento */}
-      <div className="bg-bg-secondary rounded-xl border-[0.5px] border-border p-5 mb-6">
+      <div ref={formRef} className="bg-bg-secondary rounded-xl border-[0.5px] border-border p-5 mb-6">
         <div className="text-[13px] font-medium mb-4">Cargar movimiento</div>
         <div className="flex gap-2 mb-4">
           {(['ingreso', 'egreso'] as const).map(t => (
@@ -154,34 +238,46 @@ export default function CajaClient({ userId, orgId, orgName, isOwner, areas, tod
           <div>
             <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Monto</label>
             <input
+              ref={amountRef}
               type="number" inputMode="numeric" min="0" value={form.amount}
               onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
               onKeyDown={e => { if (e.key === 'Enter') handleAdd() }}
               placeholder="0"
-              className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg px-3 py-2.5 text-[14px] focus:outline-none focus:border-accent"
+              className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg px-3 py-2.5 text-[14px] tabular-nums focus:outline-none focus:border-accent"
             />
           </div>
           <div>
             <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Medio de pago</label>
             <Select value={form.payment_method} onChange={v => setForm(f => ({ ...f, payment_method: v }))}>
-              {METHODS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+              {methodNames.map(n => <option key={n} value={n}>{n}</option>)}
             </Select>
+          </div>
+          <div>
+            <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Concepto (opcional)</label>
+            <input
+              type="text" value={form.concept}
+              onChange={e => setForm(f => ({ ...f, concept: e.target.value }))}
+              onKeyDown={e => { if (e.key === 'Enter') handleAdd() }}
+              placeholder="Ej: OSDE, Particular, sesión…"
+              className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg px-3 py-2.5 text-[14px] focus:outline-none focus:border-accent"
+            />
           </div>
           {areas.length > 0 && (
             <div>
               <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Área</label>
               <Select value={form.area} onChange={v => setForm(f => ({ ...f, area: v }))}>
+                <option value="">—</option>
                 {areas.map(a => <option key={a} value={a}>{a}</option>)}
               </Select>
             </div>
           )}
-          <div>
+          <div className="sm:col-span-2">
             <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Nota (opcional)</label>
             <input
               type="text" value={form.notes}
               onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
               onKeyDown={e => { if (e.key === 'Enter') handleAdd() }}
-              placeholder="Ej: producto, paciente…"
+              placeholder="Ej: nombre del paciente, detalle…"
               className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg px-3 py-2.5 text-[14px] focus:outline-none focus:border-accent"
             />
           </div>
@@ -196,6 +292,17 @@ export default function CajaClient({ userId, orgId, orgName, isOwner, areas, tod
         </button>
       </div>
 
+      {/* Configuración (cobros rápidos + medios) */}
+      <CajaConfig
+        orgId={orgId}
+        methods={methods}
+        presets={presets}
+        areas={areas}
+        methodNames={methodNames}
+        onMethods={setMethods}
+        onPresets={setPresets}
+      />
+
       {/* Lista del día */}
       <div className="bg-bg-secondary rounded-xl border-[0.5px] border-border overflow-hidden">
         <div className="px-5 py-3 border-b-[0.5px] border-border text-[13px] font-medium">
@@ -206,30 +313,92 @@ export default function CajaClient({ userId, orgId, orgName, isOwner, areas, tod
         ) : (
           <ul>
             {entries.map(e => (
-              <li key={e.id} className="px-5 py-3 border-b-[0.5px] border-border last:border-0 flex items-center gap-3">
-                <span className={`shrink-0 w-1.5 h-1.5 rounded-full ${e.type === 'ingreso' ? 'bg-[#6FAE7E]' : 'bg-[#c47c5a]'}`} />
-                <div className="min-w-0 flex-1">
-                  <div className="text-[14px] tabular-nums">
-                    <span className={e.type === 'ingreso' ? 'text-text-primary' : 'text-[#c47c5a]'}>
-                      {e.type === 'egreso' ? '-' : ''}{fmt(Number(e.amount))}
+              <li key={e.id} className="px-5 py-3 border-b-[0.5px] border-border last:border-0">
+                {editingId === e.id ? (
+                  <EditRow
+                    editForm={editForm} setEditForm={setEditForm} methodNames={methodNames} areas={areas}
+                    onSave={saveEdit} onCancel={() => setEditingId(null)}
+                  />
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <span className={`shrink-0 w-1.5 h-1.5 rounded-full ${e.type === 'ingreso' ? 'bg-[#6FAE7E]' : 'bg-[#c47c5a]'}`} />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[14px] tabular-nums">
+                        <span className={e.type === 'ingreso' ? 'text-text-primary' : 'text-[#c47c5a]'}>
+                          {e.type === 'egreso' ? '-' : ''}{fmt(Number(e.amount))}
+                        </span>
+                        <span className="text-text-tertiary text-[12px] ml-2">{e.payment_method}</span>
+                        {e.area && <span className="text-text-tertiary text-[12px] ml-2">· {e.area}</span>}
+                      </div>
+                      {(e.concept || e.notes) && (
+                        <div className="text-[12px] text-text-secondary truncate">
+                          {[e.concept, e.notes].filter(Boolean).join(' — ')}
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-[11px] text-text-tertiary shrink-0">
+                      {new Date(e.created_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
                     </span>
-                    <span className="text-text-tertiary text-[12px] ml-2">{METHOD_LABEL[e.payment_method] ?? e.payment_method}</span>
-                    {e.area && <span className="text-text-tertiary text-[12px] ml-2">· {e.area}</span>}
+                    {confirmingDelete === e.id ? (
+                      <span className="flex items-center gap-2 shrink-0">
+                        <button onClick={() => handleDelete(e.id)} className="text-[12px] text-red-400 hover:opacity-80">Borrar</button>
+                        <button onClick={() => setConfirmingDelete(null)} className="text-[12px] text-text-tertiary hover:text-text-primary">No</button>
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-2 shrink-0">
+                        <button onClick={() => startEdit(e)} className="text-[12px] text-text-tertiary hover:text-text-primary" title="Editar">Editar</button>
+                        <button onClick={() => setConfirmingDelete(e.id)} className="text-text-tertiary hover:text-red-400 text-[16px] leading-none" title="Eliminar">×</button>
+                      </span>
+                    )}
                   </div>
-                  {e.notes && <div className="text-[12px] text-text-secondary truncate">{e.notes}</div>}
-                </div>
-                <span className="text-[11px] text-text-tertiary shrink-0">
-                  {new Date(e.created_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
-                </span>
-                <button
-                  onClick={() => handleDelete(e.id)}
-                  className="text-text-tertiary hover:text-red-400 text-[16px] leading-none shrink-0"
-                  title="Eliminar movimiento"
-                >×</button>
+                )}
               </li>
             ))}
           </ul>
         )}
+      </div>
+    </div>
+  )
+}
+
+function EditRow({ editForm, setEditForm, methodNames, areas, onSave, onCancel }: {
+  editForm: FormState; setEditForm: (f: FormState) => void; methodNames: string[]; areas: string[]
+  onSave: () => void; onCancel: () => void
+}) {
+  const cls = 'w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:border-accent'
+  return (
+    <div className="bg-bg-primary/40 rounded-lg">
+      <div className="flex gap-2 mb-2">
+        {(['ingreso', 'egreso'] as const).map(t => (
+          <button key={t} onClick={() => setEditForm({ ...editForm, type: t })}
+            className={`px-3 py-1.5 rounded-lg text-[12px] font-medium border-[0.5px] capitalize ${editForm.type === t ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-primary border-border text-text-secondary'}`}>
+            {t}
+          </button>
+        ))}
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
+        <input type="number" inputMode="numeric" min="0" value={editForm.amount}
+          onChange={e => setEditForm({ ...editForm, amount: e.target.value })} placeholder="Monto" className={cls + ' tabular-nums'} />
+        <select value={editForm.payment_method} onChange={e => setEditForm({ ...editForm, payment_method: e.target.value })} className={cls}>
+          {!methodNames.includes(editForm.payment_method) && editForm.payment_method && <option value={editForm.payment_method}>{editForm.payment_method}</option>}
+          {methodNames.map(n => <option key={n} value={n}>{n}</option>)}
+        </select>
+        <input type="text" value={editForm.concept} onChange={e => setEditForm({ ...editForm, concept: e.target.value })} placeholder="Concepto" className={cls} />
+        {areas.length > 0 ? (
+          <select value={editForm.area} onChange={e => setEditForm({ ...editForm, area: e.target.value })} className={cls}>
+            <option value="">— Área —</option>
+            {areas.map(a => <option key={a} value={a}>{a}</option>)}
+          </select>
+        ) : (
+          <input type="text" value={editForm.notes} onChange={e => setEditForm({ ...editForm, notes: e.target.value })} placeholder="Nota" className={cls} />
+        )}
+        {areas.length > 0 && (
+          <input type="text" value={editForm.notes} onChange={e => setEditForm({ ...editForm, notes: e.target.value })} placeholder="Nota" className={cls + ' sm:col-span-2'} />
+        )}
+      </div>
+      <div className="flex gap-2">
+        <button onClick={onSave} className="bg-accent text-bg-primary px-4 py-1.5 rounded-lg text-[12px] font-medium hover:opacity-90">Guardar</button>
+        <button onClick={onCancel} className="px-4 py-1.5 rounded-lg text-[12px] text-text-secondary hover:text-text-primary">Cancelar</button>
       </div>
     </div>
   )

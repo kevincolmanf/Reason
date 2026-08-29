@@ -34,12 +34,24 @@ export default async function CajaPage() {
   if (!canRegister) redirect('/dashboard') // ni dueño ni secretaria con permiso
 
   const today = todayAR()
-  const { data: entries } = await supabase
-    .from('cash_entries')
-    .select('id, type, amount, payment_method, area, notes, created_by, created_at')
-    .eq('org_id', orgId)
-    .eq('entry_date', today)
-    .order('created_at', { ascending: false })
+  const [entriesRes, methodsRes, presetsRes] = await Promise.all([
+    supabase
+      .from('cash_entries')
+      .select('id, type, amount, payment_method, area, concept, notes, created_by, created_at')
+      .eq('org_id', orgId)
+      .eq('entry_date', today)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('cash_payment_methods')
+      .select('id, name, sort_order, active')
+      .eq('org_id', orgId)
+      .order('sort_order', { ascending: true }),
+    supabase
+      .from('cash_presets')
+      .select('id, label, type, amount, payment_method, area, sort_order, active')
+      .eq('org_id', orgId)
+      .order('sort_order', { ascending: true }),
+  ])
 
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
@@ -52,7 +64,9 @@ export default async function CajaPage() {
           isOwner={isOwner}
           areas={org.agenda_areas ?? []}
           today={today}
-          initialEntries={(entries ?? []) as never[]}
+          initialEntries={(entriesRes.data ?? []) as never[]}
+          initialMethods={(methodsRes.data ?? []) as never[]}
+          initialPresets={(presetsRes.data ?? []) as never[]}
         />
       </main>
     </div>
