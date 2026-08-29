@@ -60,7 +60,7 @@ export default function LoginPage({
                   placeholder="--------"
                   required
                   autoFocus
-                  className="w-full p-4 bg-bg-primary border-[0.5px] border-border-strong rounded-lg text-[22px] tracking-[0.5em] text-left font-mono placeholder:text-text-tertiary focus:outline-none focus:border-accent transition-colors"
+                  className="w-full p-4 bg-bg-primary border-[0.5px] border-border-strong rounded-lg text-[22px] tracking-[0.5em] indent-[0.5em] text-center font-mono placeholder:text-text-tertiary focus:outline-none focus:border-accent transition-colors"
                 />
               </div>
               <button

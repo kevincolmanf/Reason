@@ -66,27 +66,31 @@ export async function GET(request: Request) {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
-    // ¿Ya existía el perfil? Sirve para saber si es el primer ingreso.
+    // Traemos también el nombre: sirve para decidir si hay que pedirlo.
     const { data: existing } = await adminClient
-      .from('users').select('id').eq('id', user.id).maybeSingle()
+      .from('users').select('id, full_name').eq('id', user.id).maybeSingle()
+
+    const googleName =
+      (user.user_metadata?.full_name as string | undefined) ??
+      (user.user_metadata?.name as string | undefined) ??
+      null
 
     if (!existing) {
-      const fullName =
-        (user.user_metadata?.full_name as string | undefined) ??
-        (user.user_metadata?.name as string | undefined) ??
-        null
       // Prueba de 7 días con acceso completo desde el primer ingreso: durante ese
       // período trialActive es verdadero y el usuario ve toda la funcionalidad.
       // Al vencer, vuelve al gating de free (paywall / límites).
       const trialExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
       const { error: profileError } = await adminClient.from('users').insert(
-        { id: user.id, email: user.email, full_name: fullName, role: 'free', trial_expires_at: trialExpiresAt },
+        { id: user.id, email: user.email, full_name: googleName, role: 'free', trial_expires_at: trialExpiresAt },
       )
       if (profileError) console.error('Error creando perfil OAuth:', profileError)
+    }
 
-      // Perfil recién creado (ej. primer login con Google): pedimos el nombre real
-      // antes de entrar. Google suele traer un apodo o nada, y nadie lo corrige
-      // después desde "Mi cuenta". Llevamos las cookies de sesión al nuevo redirect.
+    // Si la cuenta no tiene nombre cargado —un alta nueva sin nombre, o una cuenta
+    // vieja que quedó sin él— pedimos completarlo antes de entrar. Si ya lo tiene,
+    // entra directo. Llevamos las cookies de sesión al nuevo redirect.
+    const effectiveName = (existing?.full_name ?? googleName ?? '').trim()
+    if (!effectiveName) {
       const perfilRes = NextResponse.redirect(
         new URL(`/completar-perfil?next=${encodeURIComponent(next)}`, request.url)
       )

@@ -144,15 +144,19 @@ export async function verifyLoginCode(formData: FormData) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
     )
     const { data: existing } = await adminClient
-      .from('users').select('id').eq('id', user.id).maybeSingle()
+      .from('users').select('id, full_name').eq('id', user.id).maybeSingle()
 
     if (!existing) {
       const trialExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
       await adminClient.from('users').insert({
         id: user.id, email: user.email, full_name: null, role: 'free', trial_expires_at: trialExpiresAt,
       })
+    }
+
+    // Si la cuenta no tiene nombre (alta nueva, o cuenta vieja sin él), lo pedimos.
+    const effectiveName = (existing?.full_name ?? '').trim()
+    if (!effectiveName) {
       revalidatePath('/', 'layout')
-      // Usuario nuevo: le pedimos el nombre antes de entrar.
       return redirect(`/completar-perfil?next=${encodeURIComponent(next)}`)
     }
   }
