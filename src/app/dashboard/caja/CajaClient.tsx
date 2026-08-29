@@ -64,6 +64,7 @@ export default function CajaClient({ userId, orgId, orgName, isOwner, areas, tod
   }, [methods])
 
   const [form, setForm] = useState<FormState>({ type: 'ingreso', amount: '', payment_method: methodNames[0] ?? '', area: areas[0] ?? '', concept: '', notes: '' })
+  const [selectedPreset, setSelectedPreset] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null)
@@ -93,18 +94,19 @@ export default function CajaClient({ userId, orgId, orgName, isOwner, areas, tod
 
   const dateLabel = new Date(today + 'T00:00:00').toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })
 
-  const applyPreset = (p: Preset) => {
-    setForm({
+  const applyPreset = (id: string) => {
+    setSelectedPreset(id)
+    const p = presets.find(x => x.id === id)
+    if (!p) return
+    setForm(f => ({
+      ...f,
       type: p.type,
       amount: p.amount ? String(p.amount) : '',
-      payment_method: p.payment_method || methodNames[0] || '',
-      area: p.area || areas[0] || '',
+      payment_method: p.payment_method || f.payment_method || methodNames[0] || '',
+      area: p.area || f.area,
       concept: p.label,
-      notes: '',
-    })
+    }))
     setError('')
-    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    setTimeout(() => amountRef.current?.focus(), 300)
   }
 
   const handleAdd = async () => {
@@ -125,6 +127,7 @@ export default function CajaClient({ userId, orgId, orgName, isOwner, areas, tod
     setEntries(prev => [data as Entry, ...prev])
     // Mantenemos tipo/medio/área para cargar rápido varios seguidos; limpiamos el resto.
     setForm(f => ({ ...f, amount: '', concept: '', notes: '' }))
+    setSelectedPreset('')
     setSaving(false)
   }
 
@@ -197,30 +200,23 @@ export default function CajaClient({ userId, orgId, orgName, isOwner, areas, tod
         </div>
       </div>
 
-      {/* Cobros rápidos */}
-      {activePresets.length > 0 && (
-        <div className="mb-4">
-          <div className="text-[11px] uppercase tracking-[0.05em] text-text-tertiary mb-2">Cobros rápidos</div>
-          <div className="flex flex-wrap gap-2">
-            {activePresets.map(p => (
-              <button
-                key={p.id}
-                onClick={() => applyPreset(p)}
-                className="flex items-center gap-2 bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] hover:border-accent hover:text-text-primary transition-colors"
-                title={`Cargar ${p.label}`}
-              >
-                <span className={`w-1.5 h-1.5 rounded-full ${p.type === 'ingreso' ? 'bg-[#6FAE7E]' : 'bg-[#c47c5a]'}`} />
-                <span className="font-medium">{p.label}</span>
-                <span className="tabular-nums text-text-secondary">{fmt(Number(p.amount))}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Nuevo movimiento */}
       <div ref={formRef} className="bg-bg-secondary rounded-xl border-[0.5px] border-border p-5 mb-6">
         <div className="text-[13px] font-medium mb-4">Cargar movimiento</div>
+
+        {/* Selector de cobro / obra social: al elegir uno se completa el monto solo */}
+        {activePresets.length > 0 && (
+          <div className="mb-4">
+            <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Cobro / obra social</label>
+            <Select value={selectedPreset} onChange={applyPreset}>
+              <option value="">— Elegí un cobro (o cargá manual) —</option>
+              {activePresets.map(p => (
+                <option key={p.id} value={p.id}>{p.label} · {fmt(Number(p.amount))}</option>
+              ))}
+            </Select>
+          </div>
+        )}
+
         <div className="flex gap-2 mb-4">
           {(['ingreso', 'egreso'] as const).map(t => (
             <button

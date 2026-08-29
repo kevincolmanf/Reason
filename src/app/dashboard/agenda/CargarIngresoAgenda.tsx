@@ -32,13 +32,17 @@ export default function CargarIngresoAgenda({ orgId, userId, patientId, patientN
   const [amount, setAmount] = useState('')
   const [destino, setDestino] = useState(methodNames[0] ?? '')
   const [concept, setConcept] = useState('')
+  const [selectedPreset, setSelectedPreset] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [savedMsg, setSavedMsg] = useState('')
 
   const activePresets = presets.filter(p => p.active && p.type === 'ingreso')
 
-  const applyPreset = (p: Preset) => {
+  const applyPreset = (id: string) => {
+    setSelectedPreset(id)
+    const p = presets.find(x => x.id === id)
+    if (!p) return
     setAmount(p.amount ? String(p.amount) : '')
     if (p.payment_method) setDestino(p.payment_method)
     setConcept(p.label)
@@ -64,7 +68,7 @@ export default function CargarIngresoAgenda({ orgId, userId, patientId, patientN
     setSaving(false)
     if (insErr) { setError(`No se pudo cargar: ${insErr.message}`); return }
     setSavedMsg(`✓ Ingreso de ${fmt(amt)} cargado a caja`)
-    setAmount(''); setConcept('')
+    setAmount(''); setConcept(''); setSelectedPreset('')
     setTimeout(() => setSavedMsg(''), 4000)
   }
 
@@ -96,17 +100,13 @@ export default function CargarIngresoAgenda({ orgId, userId, patientId, patientN
       )}
 
       {activePresets.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-3">
-          {activePresets.map(p => (
-            <button
-              key={p.id}
-              onClick={() => applyPreset(p)}
-              className="flex items-center gap-2 bg-bg-primary border-[0.5px] border-border rounded-lg px-3 py-1.5 text-[13px] hover:border-accent transition-colors"
-            >
-              <span className="font-medium">{p.label}</span>
-              <span className="tabular-nums text-text-secondary">{fmt(Number(p.amount))}</span>
-            </button>
-          ))}
+        <div className="mb-3">
+          <select value={selectedPreset} onChange={e => applyPreset(e.target.value)} className={inputCls}>
+            <option value="">— Elegí un cobro / obra social (o cargá manual) —</option>
+            {activePresets.map(p => (
+              <option key={p.id} value={p.id}>{p.label} · {fmt(Number(p.amount))}</option>
+            ))}
+          </select>
         </div>
       )}
 

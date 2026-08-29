@@ -1186,8 +1186,8 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
             </div>
 
             {/* Caja: cargar el ingreso en el momento (dar presente y cobrar). Solo
-                para quien puede registrar caja, en un turno existente con paciente. */}
-            {canRegisterCash && orgId && isEdit && !form.is_blocked && (
+                para quien puede registrar caja, cuando hay un paciente cargado. */}
+            {canRegisterCash && orgId && !form.is_blocked && form.patient_name.trim() && (
               <CargarIngresoAgenda
                 orgId={orgId}
                 userId={userId}
