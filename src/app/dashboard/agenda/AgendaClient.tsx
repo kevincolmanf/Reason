@@ -45,6 +45,7 @@ interface Member {
   full_name: string | null
   agendaAccess: boolean
   agendaAreas: string[] | null
+  agendaCanEdit: boolean
 }
 
 interface Props {

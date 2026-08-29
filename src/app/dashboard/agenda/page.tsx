@@ -111,7 +111,7 @@ export default async function AgendaPage() {
 
   // Load org members — check access for non-owners, build professional filter
   let professionals: { id: string; full_name: string | null }[] = []
-  let members: { id: string; full_name: string | null; agendaAccess: boolean; agendaAreas: string[] | null }[] = []
+  let members: { id: string; full_name: string | null; agendaAccess: boolean; agendaAreas: string[] | null; agendaCanEdit: boolean }[] = []
   // Áreas que puede ver el usuario actual. Para el dueño = todas; para un
   // integrante = las que le habilitó el dueño (null = todas). La RLS ya restringe
   // los turnos por área; esto restringe además las pestañas de área que ve.
@@ -139,6 +139,7 @@ export default async function AgendaPage() {
       full_name: m.users?.full_name ?? m.users?.email ?? null,
       agendaAccess: m.agenda_access ?? false,
       agendaAreas: m.agenda_areas ?? null,
+      agendaCanEdit: m.agenda_can_edit ?? false,
     }))
 
     // Non-owner members need explicit agenda_access to enter
