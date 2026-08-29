@@ -4,9 +4,11 @@ import { useState, useEffect, useCallback, useRef, type MouseEvent as ReactMouse
 import { createClient } from '@/utils/supabase/client'
 import TurnoModal from './TurnoModal'
 import CloneTurnoModal from './CloneTurnoModal'
+import type { Method as CashMethod, Preset as CashPreset } from '../caja/CajaConfig'
 import AgendaSettings from './AgendaSettings'
 import MiniCalendar from './MiniCalendar'
 import QuickSessionSheet from '@/components/QuickSessionSheet'
+import QuickCajaSheet from '@/components/QuickCajaSheet'
 import Link from 'next/link'
 import { buildWhatsAppUrl, buildConfirmUrl } from './whatsapp'
 
@@ -43,6 +45,7 @@ interface Member {
   full_name: string | null
   agendaAccess: boolean
   agendaAreas: string[] | null
+  agendaCanEdit: boolean
 }
 
 interface Props {
@@ -53,6 +56,7 @@ interface Props {
   members: Member[]
   areas: string[]
   isOwner: boolean
+  canEditTurnos: boolean
   shareToken: string | null
   shareEnabled: boolean
   slotInterval: number
@@ -60,6 +64,9 @@ interface Props {
   dayStart: number
   dayEnd: number
   initialWhatsapp: string | null
+  canRegisterCash: boolean
+  cashPresets: CashPreset[]
+  cashMethods: CashMethod[]
 }
 
 // Status-based colors (lighter palette for readability)
@@ -369,7 +376,7 @@ function exportDayPdf(turnos: Turno[], date: Date, orgName: string | null, filte
   }, 250)
 }
 
-export default function AgendaClient({ userId, orgId, orgName, professionals, members, areas: initialAreas, isOwner, shareToken, shareEnabled, slotInterval: initialSlotInterval, areaDurations: initialAreaDurations, dayStart: initialDayStart, dayEnd: initialDayEnd, initialWhatsapp }: Props) {
+export default function AgendaClient({ userId, orgId, orgName, professionals, members, areas: initialAreas, isOwner, canEditTurnos, shareToken, shareEnabled, slotInterval: initialSlotInterval, areaDurations: initialAreaDurations, dayStart: initialDayStart, dayEnd: initialDayEnd, initialWhatsapp, canRegisterCash, cashPresets, cashMethods }: Props) {
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()))
   const [selectedDay, setSelectedDay] = useState<Date>(() => new Date())
   const [view, setView] = useState<'week' | 'day'>('day')
@@ -402,9 +409,11 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
   }>({ open: false })
   const [cloneModal, setCloneModal] = useState<Turno | null>(null)
   const [sessionSheet, setSessionSheet] = useState<{ patientId: string; patientName: string; turnoId: string } | null>(null)
+  const [cajaSheet, setCajaSheet] = useState<{ patientId: string | null; patientName: string; area: string; turnoId: string } | null>(null)
   // Claves "patient_id|YYYY-MM-DD" con sesión de carga registrada, para marcar en
   // la agenda si ya se cargó la sesión del paciente (recordatorio antes de irse).
   const [registeredKeys, setRegisteredKeys] = useState<Set<string>>(new Set())
+  const [paidTurnoIds, setPaidTurnoIds] = useState<Set<string>>(new Set())
   // Menú contextual de un turno. Guardamos el rectángulo del chip clickeado
   // (no un solo punto) para poder abrir el menú hacia abajo o hacia arriba según
   // el espacio disponible, y medirlo después de montarlo.
@@ -506,8 +515,22 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
     } else {
       setRegisteredKeys(new Set())
     }
+
+    // Marca de "pago cargado" ($): cobros de caja enlazados a estos turnos (por
+    // turno_id, no por fecha: el cobro puede cargarse otro día). La RLS de
+    // cash_entries filtra según permiso; quien no puede ver caja no recibe filas.
+    const turnoIds = list.filter(t => !t.is_blocked).map(t => t.id)
+    if (canRegisterCash && turnoIds.length > 0) {
+      const { data: ce } = await supabaseRef.current
+        .from('cash_entries')
+        .select('turno_id')
+        .in('turno_id', turnoIds)
+      setPaidTurnoIds(new Set((ce ?? []).map(r => r.turno_id).filter(Boolean) as string[]))
+    } else {
+      setPaidTurnoIds(new Set())
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [weekStart, selectedDay, view, orgId, userId])
+  }, [weekStart, selectedDay, view, orgId, userId, canRegisterCash])
 
   useEffect(() => { fetchTurnos() }, [fetchTurnos])
 
@@ -555,7 +578,9 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
 
   // Solo el dueño (Pro/admin) edita. Los integrantes con acceso habilitado entran
   // en modo solo-lectura: ven pacientes y horarios pero no crean/editan/borran.
-  const canEdit = isOwner
+  // Editar turnos: dueño/admin o integrante con permiso "modifica la agenda".
+  // OJO: la CONFIGURACIÓN de la agenda (⚙) sigue siendo solo del dueño (isOwner).
+  const canEdit = canEditTurnos
 
   const openNew = (day?: Date, hour?: number, minute?: number, defaultStatus?: string) => {
     if (!canEdit) return
@@ -665,6 +690,9 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                           <span className="shrink-0 text-sky-400" title="Sesión registrada">
                             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
                           </span>
+                        )}
+                        {paidTurnoIds.has(t.id) && (
+                          <span className="shrink-0 text-[#6FAE7E] font-bold leading-none" title="Pago cargado a caja">$</span>
                         )}
                         <span className="truncate">{compact ? t.patient_name : `${formatTime(start)} ${t.patient_name}`}</span>
                       </p>
@@ -858,7 +886,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
             </Link>
           )}
 
-          {canEdit && (
+          {isOwner && (
             <button data-tour="agenda-config" onClick={() => setSettingsOpen(true)} className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors" title="Configurar agenda">
               ⚙
             </button>
@@ -1118,6 +1146,14 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                 + Registrar sesión
               </button>
             )}
+            {canRegisterCash && !quickMenu.turno.is_blocked && (
+              <button
+                onClick={() => { const t = quickMenu.turno; setCajaSheet({ patientId: t.patient_id, patientName: t.patient_name, area: t.area, turnoId: t.id }); setQuickMenu(null) }}
+                className="w-full text-left px-3 py-2 text-[13px] text-accent font-medium hover:bg-bg-primary transition-colors"
+              >
+                + Cargar ingreso a caja
+              </button>
+            )}
             {canEdit && (
               <button
                 onClick={() => { setQuickMenu(null); openEdit(quickMenu.turno) }}
@@ -1215,6 +1251,9 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
           onClone={handleClone}
           onReminderSent={markReminded}
           onHistorialChanged={fetchTurnos}
+          canRegisterCash={canRegisterCash}
+          cashPresets={cashPresets}
+          cashMethods={cashMethods}
         />
       )}
 
@@ -1237,6 +1276,22 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
           turnoId={sessionSheet.turnoId}
           canMarkPresent
           onClose={() => setSessionSheet(null)}
+          onSaved={() => fetchTurnos()}
+        />
+      )}
+
+      {/* CARGA RÁPIDA DE INGRESO A CAJA (desde el turno) */}
+      {cajaSheet && orgId && (
+        <QuickCajaSheet
+          orgId={orgId}
+          userId={userId}
+          patientId={cajaSheet.patientId}
+          patientName={cajaSheet.patientName}
+          area={cajaSheet.area}
+          turnoId={cajaSheet.turnoId}
+          presets={cashPresets}
+          methods={cashMethods}
+          onClose={() => setCajaSheet(null)}
           onSaved={() => fetchTurnos()}
         />
       )}

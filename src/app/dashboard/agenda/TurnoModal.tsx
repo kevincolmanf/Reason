@@ -4,6 +4,8 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { useConfirm } from '@/components/Dialogs'
+import CargarIngresoAgenda from './CargarIngresoAgenda'
+import type { Method as CashMethod, Preset as CashPreset } from '../caja/CajaConfig'
 
 interface Turno {
   id: string
@@ -75,6 +77,9 @@ interface Props {
   onClone?: (turno: Turno) => void
   onReminderSent?: (id: string) => void
   onHistorialChanged?: () => void
+  canRegisterCash?: boolean
+  cashPresets?: CashPreset[]
+  cashMethods?: CashMethod[]
 }
 
 // Tope de filas que puede generar un bloqueo de una sola vez, para que un rango
@@ -238,7 +243,7 @@ function formatISOToDMY(iso: string): string {
   return m ? `${m[3]}/${m[2]}/${m[1]}` : ''
 }
 
-export default function TurnoModal({ userId, orgId, orgName, professionals, areas, turno, defaultStart, defaultStatus, defaultArea, slotInterval, dayStart, dayEnd, onClose, onSaved, onClone, onReminderSent, onHistorialChanged }: Props) {
+export default function TurnoModal({ userId, orgId, orgName, professionals, areas, turno, defaultStart, defaultStatus, defaultArea, slotInterval, dayStart, dayEnd, onClose, onSaved, onClone, onReminderSent, onHistorialChanged, canRegisterCash, cashPresets, cashMethods }: Props) {
   const isEdit = !!turno
   const { confirm, confirmDialog } = useConfirm()
   // Áreas del centro. Si todavía no cargó ninguna, el turno no se categoriza por
@@ -1179,6 +1184,21 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
                 </div>
               )}
             </div>
+
+            {/* Caja: cargar el ingreso en el momento (dar presente y cobrar). Solo
+                para quien puede registrar caja, cuando hay un paciente cargado. */}
+            {canRegisterCash && orgId && !form.is_blocked && form.patient_name.trim() && (
+              <CargarIngresoAgenda
+                orgId={orgId}
+                userId={userId}
+                patientId={form.patient_id}
+                patientName={form.patient_name}
+                area={form.area}
+                turnoId={turno?.id ?? null}
+                presets={cashPresets ?? []}
+                methods={cashMethods ?? []}
+              />
+            )}
 
             {/* Área — solo si el centro tiene áreas configuradas */}
             {effectiveAreas.length > 0 && (

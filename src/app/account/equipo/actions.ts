@@ -214,6 +214,77 @@ export async function updateMemberName(orgId: string, memberUserId: string, newN
   return {}
 }
 
+// Habilita/deshabilita el permiso de caja de un integrante (registrar y ver la
+// caja del día). Solo el admin/dueño del equipo. La secretaria con este permiso
+// ve SOLO el día de hoy (arqueo), nunca el mes ni el historial (RLS lo blinda).
+export async function setMemberCashAccess(
+  orgId: string,
+  memberUserId: string,
+  access: boolean,
+): Promise<{ error?: string; success?: boolean }> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const { data: membership } = await supabase
+    .from('organization_members')
+    .select('role')
+    .eq('org_id', orgId)
+    .eq('user_id', user.id)
+    .single()
+
+  if (membership?.role !== 'admin') return { error: 'Solo el administrador puede cambiar permisos' }
+
+  const adminClient = createAdminClient()
+  const { error } = await adminClient
+    .from('organization_members')
+    .update({ can_register_cash: access })
+    .eq('org_id', orgId)
+    .eq('user_id', memberUserId)
+
+  if (error) return { error: 'No se pudo actualizar el permiso de caja' }
+  return { success: true }
+}
+
+// Nivel de acceso a la agenda de un integrante, desde Mi Equipo:
+//   'no'     → no ve la agenda.
+//   'view'   → la ve en solo lectura (marca presente, registra sesión, cobra).
+//   'edit'   → además crea/edita/borra turnos ("modifica la agenda").
+// La CONFIGURACIÓN de la agenda (áreas, horarios, compartir) sigue siendo del dueño.
+export type AgendaLevel = 'no' | 'view' | 'edit'
+
+export async function setMemberAgendaLevel(
+  orgId: string,
+  memberUserId: string,
+  level: AgendaLevel,
+): Promise<{ error?: string; success?: boolean }> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const { data: membership } = await supabase
+    .from('organization_members')
+    .select('role')
+    .eq('org_id', orgId)
+    .eq('user_id', user.id)
+    .single()
+
+  if (membership?.role !== 'admin') return { error: 'Solo el administrador puede cambiar permisos' }
+
+  const adminClient = createAdminClient()
+  const { error } = await adminClient
+    .from('organization_members')
+    .update({
+      agenda_access: level !== 'no',
+      agenda_can_edit: level === 'edit',
+    })
+    .eq('org_id', orgId)
+    .eq('user_id', memberUserId)
+
+  if (error) return { error: 'No se pudo actualizar el acceso a la agenda' }
+  return { success: true }
+}
+
 export async function removeMember(orgId: string, memberId: string) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()

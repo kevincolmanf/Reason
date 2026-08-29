@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/Dialogs'
+import { setMemberAgendaLevel, type AgendaLevel } from '@/app/account/equipo/actions'
 
 // Envuelve un <select> nativo para darle un chevron propio y un look consistente.
 // Sin esto, el <select> toma el chrome del sistema operativo y se ve desalineado
@@ -38,6 +39,7 @@ interface Member {
   full_name: string | null
   agendaAccess: boolean
   agendaAreas: string[] | null
+  agendaCanEdit: boolean
 }
 
 interface Props {
@@ -84,8 +86,8 @@ export default function AgendaSettings({
   const [whatsapp, setWhatsapp] = useState(initialWhatsapp ?? '')
   const [newArea, setNewArea] = useState('')
   const [shareEnabled, setShareEnabled] = useState(initialShareEnabled)
-  const [memberAccess, setMemberAccess] = useState<Record<string, boolean>>(
-    Object.fromEntries(members.map(m => [m.id, m.agendaAccess]))
+  const [memberLevel, setMemberLevel] = useState<Record<string, AgendaLevel>>(
+    Object.fromEntries(members.map(m => [m.id, m.agendaCanEdit ? 'edit' : m.agendaAccess ? 'view' : 'no'] as [string, AgendaLevel]))
   )
   // Áreas visibles por integrante. null = todas.
   const [memberAreas, setMemberAreas] = useState<Record<string, string[] | null>>(
@@ -137,21 +139,17 @@ export default function AgendaSettings({
     setTimeout(() => setCopied(false), 2000)
   }
 
-  const toggleMemberAccess = async (memberId: string) => {
+  // Mismo modelo de 3 niveles que Mi Equipo, con la MISMA acción del servidor, para
+  // que ambos lugares queden siempre sincronizados (no ve / ve / modifica).
+  const changeMemberLevel = async (memberId: string, level: AgendaLevel) => {
     if (!orgId || !isOwner) return
-    const newAccess = !memberAccess[memberId]
+    const prev = memberLevel[memberId] ?? 'no'
     setSavingMember(memberId)
-    setMemberAccess(prev => ({ ...prev, [memberId]: newAccess }))
-    const { error } = await supabase.rpc('set_member_agenda_access', {
-      p_org_id: orgId,
-      p_user_id: memberId,
-      p_access: newAccess,
-    })
-    // Si falla, revertimos el toggle y avisamos en vez de fingir que se guardó.
-    if (error) {
-      console.error('set_member_agenda_access error:', error.message)
-      setMemberAccess(prev => ({ ...prev, [memberId]: !newAccess }))
-      notify(`No se pudo cambiar el acceso: ${error.message}`, 'error')
+    setMemberLevel(p => ({ ...p, [memberId]: level }))
+    const res = await setMemberAgendaLevel(orgId, memberId, level)
+    if (res.error) {
+      setMemberLevel(p => ({ ...p, [memberId]: prev }))
+      notify(`No se pudo cambiar el acceso: ${res.error}`, 'error')
     }
     setSavingMember(null)
   }
@@ -427,26 +425,30 @@ export default function AgendaSettings({
               Acceso a la agenda por integrante
             </label>
             <p className="text-[12px] text-text-secondary mb-3">
-              Los integrantes sin acceso no pueden ver la agenda del equipo. Con acceso, entran en modo solo lectura y ven únicamente las áreas que les habilites.
+              <b>No ve</b>: no entra a la agenda. <b>Ve</b>: solo lectura (marca presente, registra sesión, carga cobros). <b>Modifica</b>: además crea y edita turnos. Es el mismo permiso que ves en Mi Equipo.
             </p>
             <div className="flex flex-col gap-2">
               {members.map(m => {
-                const access = memberAccess[m.id] ?? false
+                const level = memberLevel[m.id] ?? 'no'
+                const access = level !== 'no'
                 const isSaving = savingMember === m.id
                 const mAreas = memberAreas[m.id] // null = todas
                 return (
                   <div key={m.id} className="bg-bg-primary border-[0.5px] border-border rounded-xl px-3.5 py-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[13px] font-medium text-text-primary truncate mr-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[13px] font-medium text-text-primary truncate">
                         {m.full_name || 'Sin nombre'}
                       </span>
-                      <button
-                        onClick={() => !isSaving && toggleMemberAccess(m.id)}
+                      <select
+                        value={level}
+                        onChange={e => changeMemberLevel(m.id, e.target.value as AgendaLevel)}
                         disabled={isSaving}
-                        className={`relative shrink-0 w-10 h-5 rounded-full overflow-hidden transition-colors disabled:opacity-50 ${access ? 'bg-accent' : 'bg-border-strong'}`}
+                        className="shrink-0 bg-bg-secondary border-[0.5px] border-border rounded-lg px-2.5 py-1.5 text-[12px] text-text-primary focus:outline-none focus:border-accent disabled:opacity-50"
                       >
-                        <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${access ? 'left-[22px]' : 'left-0.5'}`} />
-                      </button>
+                        <option value="no">No ve</option>
+                        <option value="view">Ve (solo lectura)</option>
+                        <option value="edit">Modifica turnos</option>
+                      </select>
                     </div>
                     {access && areas.length > 1 && (
                       <div className="mt-3 pt-3 border-t-[0.5px] border-border">

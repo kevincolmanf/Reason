@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createOrganization, addMember, removeMember, updateMemberName, resetMemberAccess, deleteOrganization } from './actions'
+import { createOrganization, addMember, removeMember, updateMemberName, resetMemberAccess, setMemberCashAccess, setMemberAgendaLevel, type AgendaLevel, deleteOrganization } from './actions'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
@@ -9,6 +9,9 @@ interface Member {
   id: string
   user_id: string
   role: string
+  can_register_cash: boolean
+  agenda_access: boolean
+  agenda_can_edit: boolean
   hasLoggedIn: boolean
   users: { full_name: string | null; email: string }
 }
@@ -62,6 +65,8 @@ export default function EquipoClient({ userId, org: initialOrg, members: initial
   const [newCredentials, setNewCredentials] = useState<{ email: string; tempPassword?: string; fullName?: string } | null>(null)
 
   const [removing, setRemoving] = useState<string | null>(null)
+  const [cashToggling, setCashToggling] = useState<string | null>(null)
+  const [agendaToggling, setAgendaToggling] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
 
   const [resettingId, setResettingId] = useState<string | null>(null)
@@ -174,6 +179,32 @@ export default function EquipoClient({ userId, org: initialOrg, members: initial
     await removeMember(org.id, memberUserId)
     setMembers(prev => prev.filter(m => m.id !== memberId))
     setRemoving(null)
+  }
+
+  const handleToggleCash = async (member: Member) => {
+    if (!org || cashToggling) return
+    const next = !member.can_register_cash
+    setCashToggling(member.id)
+    // Optimista: reflejamos el cambio ya y revertimos si falla.
+    setMembers(prev => prev.map(m => m.id === member.id ? { ...m, can_register_cash: next } : m))
+    const res = await setMemberCashAccess(org.id, member.user_id, next)
+    if (res.error) {
+      setMembers(prev => prev.map(m => m.id === member.id ? { ...m, can_register_cash: !next } : m))
+    }
+    setCashToggling(null)
+  }
+
+  const handleSetAgendaLevel = async (member: Member, level: AgendaLevel) => {
+    if (!org) return
+    const prev = { agenda_access: member.agenda_access, agenda_can_edit: member.agenda_can_edit }
+    const next = { agenda_access: level !== 'no', agenda_can_edit: level === 'edit' }
+    setAgendaToggling(member.id)
+    setMembers(ms => ms.map(m => m.id === member.id ? { ...m, ...next } : m))
+    const res = await setMemberAgendaLevel(org.id, member.user_id, level)
+    if (res.error) {
+      setMembers(ms => ms.map(m => m.id === member.id ? { ...m, ...prev } : m))
+    }
+    setAgendaToggling(null)
   }
 
   const handleResetAccess = async (member: Member, force = false) => {
@@ -410,6 +441,16 @@ Cualquier duda, avisame.`
           )}
         </div>
 
+        {members.length > 0 && (
+          <div className="px-6 py-3 border-b-[0.5px] border-border">
+            <p className="text-[12px] text-text-tertiary leading-relaxed">
+              <span className="text-accent font-medium">Agenda</span>: <b>no ve</b> · <b>ve</b> (solo lectura: marca presente, registra sesión y carga cobros) · <b>modifica</b> (además crea y edita turnos). Qué áreas ve se ajusta en la configuración de la agenda; la configuración del centro sigue siendo solo tuya.
+              {' · '}
+              <span className="text-[#6FAE7E] font-medium">Caja</span>: registra cobros y ve el arqueo del día (no el mes ni el historial).
+            </p>
+          </div>
+        )}
+
         {resetError && (
           <div className="px-6 py-3 border-b-[0.5px] border-border bg-red-500/5">
             <p className="text-[13px] text-red-400">{resetError}</p>
@@ -523,6 +564,31 @@ Cualquier duda, avisame.`
                         )}
                         {!isCurrentUser && (
                           <>
+                            <select
+                              value={m.agenda_can_edit ? 'edit' : m.agenda_access ? 'view' : 'no'}
+                              onChange={e => handleSetAgendaLevel(m, e.target.value as AgendaLevel)}
+                              disabled={agendaToggling === m.id}
+                              title="Qué puede hacer con la agenda del centro. Las áreas que ve se ajustan en la configuración de la agenda."
+                              className={`text-[12px] px-2.5 py-1 rounded-full border-[0.5px] bg-bg-primary transition-colors disabled:opacity-40 ${
+                                m.agenda_access ? 'text-accent border-accent/30' : 'text-text-secondary border-border'
+                              }`}
+                            >
+                              <option value="no">Agenda: no ve</option>
+                              <option value="view">Agenda: ve (solo lectura)</option>
+                              <option value="edit">Agenda: modifica turnos</option>
+                            </select>
+                            <button
+                              onClick={() => handleToggleCash(m)}
+                              disabled={cashToggling === m.id}
+                              title="Permite registrar la caja y ver el arqueo del día (no el mes ni el historial)"
+                              className={`text-[12px] px-2.5 py-0.5 rounded-full border-[0.5px] transition-colors disabled:opacity-40 ${
+                                m.can_register_cash
+                                  ? 'text-[#6FAE7E] border-[#6FAE7E]/30 bg-[#6FAE7E]/10 hover:opacity-80'
+                                  : 'text-text-secondary border-border hover:text-text-primary'
+                              }`}
+                            >
+                              {cashToggling === m.id ? '...' : m.can_register_cash ? 'Caja ✓' : 'Habilitar caja'}
+                            </button>
                             <button
                               onClick={() => handleResetAccess(m)}
                               disabled={resettingId === m.id}
