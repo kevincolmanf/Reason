@@ -56,10 +56,11 @@ export default function LoginPage({
                   type="text"
                   inputMode="numeric"
                   autoComplete="one-time-code"
-                  placeholder="123456"
+                  maxLength={8}
+                  placeholder="--------"
                   required
                   autoFocus
-                  className="w-full p-4 bg-bg-primary border-[0.5px] border-border-strong rounded-lg text-[20px] tracking-[0.3em] text-center font-mono focus:outline-none focus:border-accent transition-colors"
+                  className="w-full p-4 bg-bg-primary border-[0.5px] border-border-strong rounded-lg text-[22px] tracking-[0.5em] text-left font-mono placeholder:text-text-tertiary focus:outline-none focus:border-accent transition-colors"
                 />
               </div>
               <button
