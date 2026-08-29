@@ -68,9 +68,15 @@ export default function HeaderClient({ userMetadata, hasAgendaAccess, isProOrAdm
     if (!guideKey) { setGuideState('closed'); return }
     let flag: string | null = null
     try { flag = localStorage.getItem(`reason_guide:${guideKey}`) } catch { /* no disponible */ }
-    // 'off' = el usuario la eliminó; 'pill' (o '1' legacy) = ya vista → pastilla;
-    // nunca vista → se abre completa una vez.
-    setGuideState(flag === 'off' ? 'closed' : (flag === 'pill' || flag === '1') ? 'pill' : 'full')
+    // 'off' = el usuario la eliminó; 'pill' (o '1' legacy) = ya vista → pastilla.
+    if (flag === 'off') { setGuideState('closed'); return }
+    if (flag === 'pill' || flag === '1') { setGuideState('pill'); return }
+    // Primera vez en la sección: se abre completa una sola vez, PERO la marcamos
+    // como vista de una para que a partir de la próxima entrada aparezca ya
+    // minimizada (pastilla). Antes solo se marcaba si el usuario la minimizaba a
+    // mano, así que entrar 5 veces sin minimizar mostraba el globo grande siempre.
+    setGuideState('full')
+    try { localStorage.setItem(`reason_guide:${guideKey}`, 'pill') } catch { /* noop */ }
   }, [guideKey])
   const changeGuide = (next: GuideState) => {
     setGuideState(next)
