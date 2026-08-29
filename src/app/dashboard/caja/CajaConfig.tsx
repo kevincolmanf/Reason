@@ -37,13 +37,13 @@ export default function CajaConfig({ orgId, methods, presets, areas, methodNames
   const addMethod = async () => {
     const name = newMethod.trim()
     if (!name) return
-    if (methods.some(m => m.name.toLowerCase() === name.toLowerCase())) { setErr('Ese medio ya existe.'); return }
+    if (methods.some(m => m.name.toLowerCase() === name.toLowerCase())) { setErr('Ese destino ya existe.'); return }
     setBusy(true); setErr('')
     const { data, error } = await supabase.from('cash_payment_methods')
       .insert({ org_id: orgId, name, sort_order: methods.length })
       .select('id, name, sort_order, active').single()
     setBusy(false)
-    if (error || !data) { setErr('No se pudo agregar el medio.'); return }
+    if (error || !data) { setErr('No se pudo agregar el destino.'); return }
     onMethods([...methods, data as Method])
     setNewMethod('')
   }
@@ -110,7 +110,7 @@ export default function CajaConfig({ orgId, methods, presets, areas, methodNames
         onClick={() => setOpen(o => !o)}
         className="w-full flex items-center justify-between px-5 py-3 text-[13px] font-medium text-text-secondary hover:text-text-primary transition-colors"
       >
-        <span>Configurar caja · cobros rápidos y medios de pago</span>
+        <span>Configurar caja · cobros rápidos y destinos</span>
         <span className="text-[11px] opacity-50">{open ? '▴' : '▾'}</span>
       </button>
 
@@ -127,7 +127,7 @@ export default function CajaConfig({ orgId, methods, presets, areas, methodNames
               )}
             </div>
             <p className="text-[12px] text-text-tertiary mb-3">
-              Botones para cargar un monto exacto de un toque (ej. OSDE, Particular). Editá el monto cuando cambian los precios.
+              Tu lista de precios: cargá cada obra social o concepto con su monto (ej. OSDE $7.000). Quedan guardados y, al aplicar el cobro en la caja, se pre-carga el monto. Editalos cuando cambien los precios.
             </p>
 
             {editingPreset === 'new' && (
@@ -169,7 +169,8 @@ export default function CajaConfig({ orgId, methods, presets, areas, methodNames
 
           {/* Medios de pago */}
           <div>
-            <div className="text-[12px] uppercase tracking-[0.05em] text-text-tertiary mb-2">Medios de pago</div>
+            <div className="text-[12px] uppercase tracking-[0.05em] text-text-tertiary mb-1">Destinos · dónde entra la plata</div>
+            <p className="text-[12px] text-text-tertiary mb-2">Adónde llega el cobro (efectivo, una cuenta, Mercado Pago…), no cómo paga el cliente. El arqueo del día se agrupa por acá.</p>
             <ul className="flex flex-col gap-2 mb-3">
               {methods.map(m => (
                 <li key={m.id} className="flex items-center gap-2">
@@ -179,7 +180,7 @@ export default function CajaConfig({ orgId, methods, presets, areas, methodNames
                     onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
                     className={inputCls + ' flex-1'}
                   />
-                  <button onClick={() => removeMethod(m.id)} className="text-text-tertiary hover:text-red-400 text-[16px] leading-none shrink-0" title="Eliminar medio">×</button>
+                  <button onClick={() => removeMethod(m.id)} className="text-text-tertiary hover:text-red-400 text-[16px] leading-none shrink-0" title="Eliminar destino">×</button>
                 </li>
               ))}
             </ul>
@@ -188,7 +189,7 @@ export default function CajaConfig({ orgId, methods, presets, areas, methodNames
                 value={newMethod}
                 onChange={e => setNewMethod(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') addMethod() }}
-                placeholder="Agregar medio (ej. Débito automático)"
+                placeholder="Agregar destino (ej. Cuenta Santander)"
                 className={inputCls + ' flex-1'}
               />
               <button onClick={addMethod} disabled={busy} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 shrink-0">
@@ -223,7 +224,7 @@ function PresetForm({ draft, setDraft, methodNames, areas, onSave, onCancel, bus
           <option value="egreso">Egreso</option>
         </select>
         <select value={draft.payment_method} onChange={e => setDraft({ ...draft, payment_method: e.target.value })} className={inputCls}>
-          <option value="">Medio (opcional)</option>
+          <option value="">Destino (opcional)</option>
           {methodNames.map(n => <option key={n} value={n}>{n}</option>)}
         </select>
         {areas.length > 0 && (

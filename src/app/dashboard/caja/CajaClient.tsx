@@ -28,9 +28,9 @@ interface Props {
   initialPresets: Preset[]
 }
 
-// Medios por defecto para un centro que todavía no configuró ninguno (el medio
-// es texto libre, así que sirve aunque no haya filas en la base).
-const DEFAULT_METHOD_NAMES = ['Efectivo', 'Tarjeta', 'Mercado Pago', 'Obra social', 'Transferencia']
+// Destinos por defecto para un centro que todavía no configuró ninguno (dónde
+// entra la plata; es texto libre, así que sirve aunque no haya filas en la base).
+const DEFAULT_METHOD_NAMES = ['Efectivo', 'Cuenta bancaria', 'Mercado Pago']
 
 const fmt = (n: number) =>
   new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n)
@@ -186,7 +186,7 @@ export default function CajaClient({ userId, orgId, orgName, isOwner, areas, tod
 
       {/* Desglose por medio de pago (para el arqueo) */}
       <div className="bg-bg-secondary rounded-xl border-[0.5px] border-border p-4 mb-6">
-        <div className="text-[11px] uppercase tracking-[0.05em] text-text-tertiary mb-3">Neto por medio de pago</div>
+        <div className="text-[11px] uppercase tracking-[0.05em] text-text-tertiary mb-3">Neto por destino (dónde entró la plata)</div>
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           {netByMethod.map(m => (
             <div key={m.name}>
@@ -247,7 +247,7 @@ export default function CajaClient({ userId, orgId, orgName, isOwner, areas, tod
             />
           </div>
           <div>
-            <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Medio de pago</label>
+            <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Destino</label>
             <Select value={form.payment_method} onChange={v => setForm(f => ({ ...f, payment_method: v }))}>
               {methodNames.map(n => <option key={n} value={n}>{n}</option>)}
             </Select>
