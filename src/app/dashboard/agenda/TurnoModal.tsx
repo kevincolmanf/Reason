@@ -77,11 +77,6 @@ interface Props {
   onHistorialChanged?: () => void
 }
 
-const AREAS = [
-  'Kinesiología', 'Entrenamiento adultos', 'Entrenamiento niños',
-  'RPG', 'Pilates', 'Yoga', 'Nutrición', 'Traumatología', 'Análisis de la marcha',
-]
-
 // Tope de filas que puede generar un bloqueo de una sola vez, para que un rango
 // mal tipeado no dispare miles de inserts.
 const BLOCK_ROW_CAP = 500
@@ -246,7 +241,10 @@ function formatISOToDMY(iso: string): string {
 export default function TurnoModal({ userId, orgId, orgName, professionals, areas, turno, defaultStart, defaultStatus, defaultArea, slotInterval, dayStart, dayEnd, onClose, onSaved, onClone, onReminderSent, onHistorialChanged }: Props) {
   const isEdit = !!turno
   const { confirm, confirmDialog } = useConfirm()
-  const effectiveAreas = areas.length > 0 ? areas : AREAS
+  // Áreas del centro. Si todavía no cargó ninguna, el turno no se categoriza por
+  // área (no forzamos una lista por defecto): el selector de área directamente
+  // no se muestra.
+  const effectiveAreas = areas
   const defaultDuration = slotInterval ?? 60
   const openMin  = dayStart ?? 7 * 60
   const closeMin = dayEnd ?? 21 * 60
@@ -264,7 +262,7 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
     professional_id:     turno?.professional_id ?? (professionals[0]?.id ?? null) as string | null,
     start_time:          turno ? toLocalInputValue(new Date(turno.start_time)) : (defaultStart ? toLocalInputValue(defaultStart) : ''),
     end_time:            turno ? toLocalInputValue(new Date(turno.end_time))   : (defaultEnd   ? toLocalInputValue(defaultEnd)   : ''),
-    area:                turno?.area             ?? defaultArea ?? (effectiveAreas[0] ?? AREAS[0]),
+    area:                turno?.area             ?? defaultArea ?? (effectiveAreas[0] ?? ''),
     status:              turno?.status           ?? defaultStatus ?? 'programado',
     notes:               turno?.notes            ?? '',
     appointment_type:    turno?.appointment_type ?? 'turno_comun',
@@ -1182,13 +1180,15 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
               )}
             </div>
 
-            {/* Area */}
-            <div>
-              <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Área</label>
-              <select value={form.area} onChange={e => setForm(f => ({ ...f, area: e.target.value }))} className={inputCls}>
-                {effectiveAreas.map(a => <option key={a} value={a}>{a}</option>)}
-              </select>
-            </div>
+            {/* Área — solo si el centro tiene áreas configuradas */}
+            {effectiveAreas.length > 0 && (
+              <div>
+                <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Área</label>
+                <select value={form.area} onChange={e => setForm(f => ({ ...f, area: e.target.value }))} className={inputCls}>
+                  {effectiveAreas.map(a => <option key={a} value={a}>{a}</option>)}
+                </select>
+              </div>
+            )}
 
             {/* Professional */}
             {professionals.length > 0 && (

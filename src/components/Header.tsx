@@ -125,10 +125,17 @@ export default async function Header() {
               Panel de gestión
             </Link>
           ) : (
+            // Un Pro que todavía no creó su centro NO tiene métricas que mostrar
+            // (el CRM exige owner de una organización). En vez del engañoso
+            // "Disponible en Plan Pro" (¡ya es Pro!), lo guiamos a crear su centro.
             <div className="relative group hidden lg:inline-block">
-              <span className="text-[13px] sm:text-[14px] text-[#c47c5a] cursor-default select-none">Panel de gestión</span>
+              {canManageTeam ? (
+                <Link href="/account/equipo" className="text-[13px] sm:text-[14px] text-[#c47c5a] no-underline">Panel de gestión</Link>
+              ) : (
+                <span className="text-[13px] sm:text-[14px] text-[#c47c5a] cursor-default select-none">Panel de gestión</span>
+              )}
               <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-2.5 py-1.5 bg-bg-secondary border-[0.5px] border-border rounded-lg text-[11px] text-text-secondary whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 shadow-lg">
-                Disponible en Plan Pro
+                {canManageTeam ? 'Creá tu centro para verlo' : 'Disponible en Plan Pro'}
               </div>
             </div>
           )}
