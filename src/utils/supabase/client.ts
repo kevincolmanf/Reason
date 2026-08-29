@@ -1,5 +1,6 @@
 import { createBrowserClient } from '@supabase/ssr'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { authCookieDomain } from './cookieDomain'
 
 // Un único cliente por pestaña del navegador (singleton). Antes createClient()
 // devolvía una instancia nueva en cada llamada, y como ~28 componentes lo usan
@@ -10,9 +11,12 @@ let browserClient: SupabaseClient | undefined
 
 export function createClient() {
   if (browserClient) return browserClient
+  // Dominio de cookie compartido apex/www en producción (ver cookieDomain).
+  const domain = typeof window !== 'undefined' ? authCookieDomain(window.location.hostname) : undefined
   browserClient = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    domain ? { cookieOptions: { domain } } : undefined
   )
   return browserClient
 }

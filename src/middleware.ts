@@ -1,8 +1,10 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { authCookieDomain } from './utils/supabase/cookieDomain'
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
+  const cookieDomain = authCookieDomain(request.headers.get('host'))
 
   // Portales públicos de paciente (acceso por token, sin sesión): solo necesitan
   // los headers no-cache. Salimos temprano SIN llamar a supabase.auth.getUser()
@@ -48,6 +50,7 @@ export async function middleware(request: NextRequest) {
             name,
             value,
             ...options,
+            domain: cookieDomain,
           })
         },
         remove(name: string, options: CookieOptions) {
@@ -65,6 +68,7 @@ export async function middleware(request: NextRequest) {
             name,
             value: '',
             ...options,
+            domain: cookieDomain,
           })
         },
       },
