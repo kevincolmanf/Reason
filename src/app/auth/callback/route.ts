@@ -64,8 +64,12 @@ export async function GET(request: Request) {
         (user.user_metadata?.full_name as string | undefined) ??
         (user.user_metadata?.name as string | undefined) ??
         null
+      // Prueba de 7 días con acceso completo desde el primer ingreso: durante ese
+      // período trialActive es verdadero y el usuario ve toda la funcionalidad.
+      // Al vencer, vuelve al gating de free (paywall / límites).
+      const trialExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
       const { error: profileError } = await adminClient.from('users').insert(
-        { id: user.id, email: user.email, full_name: fullName, role: 'free' },
+        { id: user.id, email: user.email, full_name: fullName, role: 'free', trial_expires_at: trialExpiresAt },
       )
       if (profileError) console.error('Error creando perfil OAuth:', profileError)
 
