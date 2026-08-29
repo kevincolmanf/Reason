@@ -6,6 +6,25 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   const cookieDomain = authCookieDomain(request.headers.get('host'))
 
+  // Limpieza de migración: durante un tiempo las cookies de sesión se setearon con
+  // domain=.reason.com.ar. Ahora volvimos a host-only, pero quedaron cookies de
+  // dominio "fantasma" que conviven con las host-only (mismo nombre) y traban el
+  // login según cuál lea el server. Acá expiramos SOLO la variante de dominio de
+  // cualquier cookie de Supabase (sb-*), en TODAS las respuestas (incluidos los
+  // redirects), para que nadie quede afuera. En localhost/preview cookieDomain es
+  // undefined → no hacemos nada (y así no borramos las host-only por error).
+  const staleCookieNames = cookieDomain
+    ? request.cookies.getAll().filter(c => c.name.startsWith('sb-')).map(c => c.name)
+    : []
+  const withCleanup = (res: NextResponse) => {
+    if (cookieDomain) {
+      for (const name of staleCookieNames) {
+        res.cookies.set({ name, value: '', domain: cookieDomain, path: '/', maxAge: 0 })
+      }
+    }
+    return res
+  }
+
   // Portales públicos de paciente (acceso por token, sin sesión): solo necesitan
   // los headers no-cache. Salimos temprano SIN llamar a supabase.auth.getUser()
   // para ahorrar un viaje de red al servidor de auth en cada carga del portal.
@@ -50,7 +69,6 @@ export async function middleware(request: NextRequest) {
             name,
             value,
             ...options,
-            domain: cookieDomain,
           })
         },
         remove(name: string, options: CookieOptions) {
@@ -68,7 +86,6 @@ export async function middleware(request: NextRequest) {
             name,
             value: '',
             ...options,
-            domain: cookieDomain,
           })
         },
       },
@@ -115,7 +132,7 @@ export async function middleware(request: NextRequest) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     url.searchParams.set('returnUrl', pathname)
-    return NextResponse.redirect(url)
+    return withCleanup(NextResponse.redirect(url))
   }
 
   // 2. Si está logueado → verificar acceso para rutas premium y admin
@@ -151,30 +168,30 @@ export async function middleware(request: NextRequest) {
     if (isAdminRoute && role !== 'admin') {
       const url = request.nextUrl.clone()
       url.pathname = '/dashboard'
-      return NextResponse.redirect(url)
+      return withCleanup(NextResponse.redirect(url))
     }
 
     // Only org owners (pro/admin) can manage the team page
     if (isEquipoRoute && role !== 'pro' && role !== 'admin') {
       const url = request.nextUrl.clone()
       url.pathname = '/account'
-      return NextResponse.redirect(url)
+      return withCleanup(NextResponse.redirect(url))
     }
 
     if ((isSubscriberRoute || isAdvancedModule) && !isActive) {
       const url = request.nextUrl.clone()
       url.pathname = '/paywall'
-      return NextResponse.redirect(url)
+      return withCleanup(NextResponse.redirect(url))
     }
 
     if (isProRoute && !isProActive) {
       const url = request.nextUrl.clone()
       url.pathname = '/paywall'
-      return NextResponse.redirect(url)
+      return withCleanup(NextResponse.redirect(url))
     }
   }
 
-  return supabaseResponse
+  return withCleanup(supabaseResponse)
 }
 
 export const config = {
