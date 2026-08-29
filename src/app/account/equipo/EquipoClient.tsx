@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createOrganization, addMember, removeMember, updateMemberName, resetMemberAccess, deleteOrganization } from './actions'
+import { createOrganization, addMember, removeMember, updateMemberName, resetMemberAccess, setMemberCashAccess, deleteOrganization } from './actions'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
@@ -9,6 +9,7 @@ interface Member {
   id: string
   user_id: string
   role: string
+  can_register_cash: boolean
   hasLoggedIn: boolean
   users: { full_name: string | null; email: string }
 }
@@ -62,6 +63,7 @@ export default function EquipoClient({ userId, org: initialOrg, members: initial
   const [newCredentials, setNewCredentials] = useState<{ email: string; tempPassword?: string; fullName?: string } | null>(null)
 
   const [removing, setRemoving] = useState<string | null>(null)
+  const [cashToggling, setCashToggling] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
 
   const [resettingId, setResettingId] = useState<string | null>(null)
@@ -174,6 +176,19 @@ export default function EquipoClient({ userId, org: initialOrg, members: initial
     await removeMember(org.id, memberUserId)
     setMembers(prev => prev.filter(m => m.id !== memberId))
     setRemoving(null)
+  }
+
+  const handleToggleCash = async (member: Member) => {
+    if (!org || cashToggling) return
+    const next = !member.can_register_cash
+    setCashToggling(member.id)
+    // Optimista: reflejamos el cambio ya y revertimos si falla.
+    setMembers(prev => prev.map(m => m.id === member.id ? { ...m, can_register_cash: next } : m))
+    const res = await setMemberCashAccess(org.id, member.user_id, next)
+    if (res.error) {
+      setMembers(prev => prev.map(m => m.id === member.id ? { ...m, can_register_cash: !next } : m))
+    }
+    setCashToggling(null)
   }
 
   const handleResetAccess = async (member: Member, force = false) => {
@@ -523,6 +538,18 @@ Cualquier duda, avisame.`
                         )}
                         {!isCurrentUser && (
                           <>
+                            <button
+                              onClick={() => handleToggleCash(m)}
+                              disabled={cashToggling === m.id}
+                              title="Permite registrar la caja y ver el arqueo del día (no el mes ni el historial)"
+                              className={`text-[12px] px-2.5 py-0.5 rounded-full border-[0.5px] transition-colors disabled:opacity-40 ${
+                                m.can_register_cash
+                                  ? 'text-[#6FAE7E] border-[#6FAE7E]/30 bg-[#6FAE7E]/10 hover:opacity-80'
+                                  : 'text-text-secondary border-border hover:text-text-primary'
+                              }`}
+                            >
+                              {cashToggling === m.id ? '...' : m.can_register_cash ? 'Caja ✓' : 'Habilitar caja'}
+                            </button>
                             <button
                               onClick={() => handleResetAccess(m)}
                               disabled={resettingId === m.id}
