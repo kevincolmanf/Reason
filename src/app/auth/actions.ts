@@ -77,6 +77,90 @@ export async function signup(formData: FormData) {
   redirect(returnUrl || '/dashboard')
 }
 
+// ── Login por código de 6 dígitos (passwordless) ────────────────────────────
+// Paso 1: manda el código al mail. Guardamos el email en una cookie httpOnly
+// (no en la URL, por privacidad) para el paso 2 y para prellenar la pantalla.
+export async function sendLoginCode(formData: FormData) {
+  const supabase = createClient()
+  const email = ((formData.get('email') as string) || '').trim().toLowerCase()
+  const returnUrl = (formData.get('returnUrl') as string) || ''
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return redirect('/login?metodo=codigo&message=Ingresá un email válido.')
+  }
+
+  // shouldCreateUser: true → sirve también como alta (el perfil + trial se crean
+  // al verificar, más abajo). El código va en el mail si la plantilla de "Magic
+  // Link" incluye {{ .Token }} (ver nota de config).
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: { shouldCreateUser: true },
+  })
+
+  if (error) {
+    return redirect(`/login?metodo=codigo&message=${encodeURIComponent('No pudimos enviar el código. Probá de nuevo en un momento.')}`)
+  }
+
+  cookies().set('login_code_email', email, {
+    httpOnly: true, secure: true, sameSite: 'lax', path: '/', maxAge: 60 * 15,
+  })
+
+  const params = new URLSearchParams({ metodo: 'codigo', sent: '1' })
+  if (returnUrl.startsWith('/')) params.set('returnUrl', returnUrl)
+  redirect(`/login?${params.toString()}`)
+}
+
+// Paso 2: verifica el código y deja la sesión. Si es un usuario nuevo, le crea
+// el perfil con 7 días de prueba (igual que el alta por Google) y lo manda a
+// completar su nombre.
+export async function verifyLoginCode(formData: FormData) {
+  const supabase = createClient()
+  const code = ((formData.get('code') as string) || '').replace(/\s/g, '')
+  const returnUrl = (formData.get('returnUrl') as string) || ''
+  const email = cookies().get('login_code_email')?.value || ''
+
+  const next = returnUrl.startsWith('/') ? returnUrl : '/dashboard'
+
+  if (!email) {
+    return redirect('/login?metodo=codigo&message=Se venció el pedido. Ingresá tu email de nuevo.')
+  }
+  if (!/^\d{6,10}$/.test(code)) {
+    return redirect('/login?metodo=codigo&sent=1&message=Ingresá el código de dígitos que te llegó por mail.')
+  }
+
+  const { data, error } = await supabase.auth.verifyOtp({ email, token: code, type: 'email' })
+  if (error) {
+    return redirect('/login?metodo=codigo&sent=1&message=El código es incorrecto o venció. Pedí uno nuevo.')
+  }
+
+  cookies().delete('login_code_email')
+
+  // Perfil en public.users si es un alta nueva (mismo criterio que /auth/callback).
+  const user = data.user
+  if (user) {
+    const { createClient: createAdminClient } = await import('@supabase/supabase-js')
+    const adminClient = createAdminClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    )
+    const { data: existing } = await adminClient
+      .from('users').select('id').eq('id', user.id).maybeSingle()
+
+    if (!existing) {
+      const trialExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+      await adminClient.from('users').insert({
+        id: user.id, email: user.email, full_name: null, role: 'free', trial_expires_at: trialExpiresAt,
+      })
+      revalidatePath('/', 'layout')
+      // Usuario nuevo: le pedimos el nombre antes de entrar.
+      return redirect(`/completar-perfil?next=${encodeURIComponent(next)}`)
+    }
+  }
+
+  revalidatePath('/', 'layout')
+  redirect(next)
+}
+
 // Guarda el nombre que el usuario ingresa en /completar-perfil (típicamente tras
 // entrar con Google, donde el nombre puede venir vacío o como un apodo). Escribe
 // tanto en los metadatos de auth (que usa el saludo/header) como en public.users.
