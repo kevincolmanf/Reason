@@ -1,7 +1,6 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
-import { authCookieDomain } from '@/utils/supabase/cookieDomain'
 
 // Intercambia el código del email (login mágico / recuperación) por una sesión.
 // Las cookies de sesión se escriben sobre la respuesta de redirect para que
@@ -28,7 +27,6 @@ export async function GET(request: Request) {
 
   const response = NextResponse.redirect(new URL(next, request.url))
   const cookieStore = cookies()
-  const cookieDomain = authCookieDomain(request.headers.get('host'))
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -39,10 +37,10 @@ export async function GET(request: Request) {
           return cookieStore.get(name)?.value
         },
         set(name: string, value: string, options: CookieOptions) {
-          response.cookies.set({ name, value, ...options, domain: cookieDomain })
+          response.cookies.set({ name, value, ...options })
         },
         remove(name: string, options: CookieOptions) {
-          response.cookies.set({ name, value: '', ...options, domain: cookieDomain })
+          response.cookies.set({ name, value: '', ...options })
         },
       },
     }
