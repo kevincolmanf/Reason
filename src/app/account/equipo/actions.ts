@@ -41,6 +41,12 @@ export async function createOrganization(formData: FormData) {
       return { error: `Error al crear el equipo: ${rpcError.message}` }
     }
 
+    // El centro arranca SIN áreas de agenda: cada uno agrega las suyas ("agregá
+    // tus áreas"), en vez de heredar un set por defecto que no le corresponde.
+    if (orgId) {
+      await adminClient.from('organizations').update({ agenda_areas: [] }).eq('id', orgId)
+    }
+
     return { success: true, orgId }
   } catch (e) {
     console.error('Excepción en createOrganization:', e)

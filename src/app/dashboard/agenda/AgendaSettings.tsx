@@ -242,6 +242,12 @@ export default function AgendaSettings({
 
           <p className="text-[12px] text-text-secondary mb-3">Elegí la duración de turno de cada área. Las que queden en &quot;Por defecto&quot; usan el intervalo general de abajo.</p>
 
+          {areas.length === 0 && (
+            <p className="text-[12px] text-text-secondary mb-3 bg-bg-primary border-[0.5px] border-border rounded-lg px-3 py-2.5 leading-[1.5]">
+              Todavía no cargaste áreas. Agregá las de tu centro (ej: Kinesiología, Nutrición): filtran la agenda y, más adelante, organizan la caja diaria.
+            </p>
+          )}
+
           <div className="flex flex-col gap-1.5 mb-3">
             {areas.map(area => (
               <div key={area} className="flex items-center gap-2 bg-bg-primary border-[0.5px] border-border rounded-lg px-3 py-1.5">
