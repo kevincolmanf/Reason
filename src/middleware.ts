@@ -19,7 +19,16 @@ export async function middleware(request: NextRequest) {
   const withCleanup = (res: NextResponse) => {
     if (cookieDomain) {
       for (const name of staleCookieNames) {
-        res.cookies.set({ name, value: '', domain: cookieDomain, path: '/', maxAge: 0 })
+        // IMPORTANTE: usamos headers.append (no res.cookies.set). Si en esta misma
+        // respuesta el refresh de sesión ya seteó la cookie host-only del mismo
+        // nombre, `res.cookies.set` la pisaría (NextResponse.cookies deduplica por
+        // nombre) y dejaría al usuario con el token viejo → logout. Con un
+        // Set-Cookie aparte, el borrado de la variante de DOMINIO convive con la
+        // cookie de sesión host-only sin tocarla.
+        res.headers.append(
+          'Set-Cookie',
+          `${name}=; Domain=${cookieDomain}; Path=/; Max-Age=0; Secure; SameSite=Lax`
+        )
       }
     }
     return res
