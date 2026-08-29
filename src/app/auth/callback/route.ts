@@ -11,8 +11,18 @@ export async function GET(request: Request) {
   const code = requestUrl.searchParams.get('code')
   const next = requestUrl.searchParams.get('next') ?? '/dashboard'
 
+  // Este callback es sobre todo el retorno de OAuth (Google) y la confirmación de
+  // email; NO es el flujo de recuperación (ese usa un código OTP). Por eso, ante
+  // una falla, mandamos a /login (donde se puede reintentar) y no a
+  // /forgot-password con un mensaje de "link vencido", que confundía al usuario
+  // que solo intentaba entrar con Google.
+  const loginError = (msg: string) =>
+    NextResponse.redirect(
+      new URL(`/login?message=${encodeURIComponent(msg)}&returnUrl=${encodeURIComponent(next)}`, request.url)
+    )
+
   if (!code) {
-    return NextResponse.redirect(new URL('/forgot-password?error=1&message=El link no es válido. Pedí uno nuevo.', request.url))
+    return loginError('No pudimos completar el ingreso. Probá de nuevo.')
   }
 
   const response = NextResponse.redirect(new URL(next, request.url))
@@ -38,10 +48,9 @@ export async function GET(request: Request) {
 
   const { data, error } = await supabase.auth.exchangeCodeForSession(code)
   if (error) {
-    // Link vencido, ya usado, o abierto en otro navegador del que se pidió.
-    return NextResponse.redirect(
-      new URL('/forgot-password?error=1&message=El link venció o ya se usó. Pedí uno nuevo.', request.url)
-    )
+    // Falla típica del OAuth: el código ya se usó, venció, o el code_verifier de
+    // PKCE quedó en otro dominio (www vs. apex). Volvemos a /login para reintentar.
+    return loginError('No pudimos completar el ingreso con Google. Probá de nuevo.')
   }
 
   // Perfil en public.users para quien entra con Google (o cualquier método que no
