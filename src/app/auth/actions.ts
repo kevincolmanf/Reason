@@ -98,7 +98,12 @@ export async function sendLoginCode(formData: FormData) {
   })
 
   if (error) {
-    return redirect(`/login?metodo=codigo&message=${encodeURIComponent('No pudimos enviar el código. Probá de nuevo en un momento.')}`)
+    console.error('signInWithOtp error:', error.status, error.message)
+    const isRate = error.status === 429 || /rate limit|too many|exceeded|seconds/i.test(error.message)
+    const msg = isRate
+      ? 'Pediste varios códigos seguidos. Esperá un minuto y probá de nuevo.'
+      : `No pudimos enviar el código. (${error.message})`
+    return redirect(`/login?metodo=codigo&message=${encodeURIComponent(msg)}`)
   }
 
   cookies().set('login_code_email', email, {

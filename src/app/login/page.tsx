@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { cookies } from 'next/headers'
 import { login, sendLoginCode, verifyLoginCode } from '../auth/actions'
 import PasswordField from './PasswordField'
+import CodeInput from './CodeInput'
 import GoogleButton from '@/components/GoogleButton'
 
 export default function LoginPage({
@@ -50,18 +51,7 @@ export default function LoginPage({
                 <label className="text-[12px] font-medium text-text-secondary uppercase tracking-[0.05em]" htmlFor="code">
                   Código
                 </label>
-                <input
-                  id="code"
-                  name="code"
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  maxLength={8}
-                  placeholder="--------"
-                  required
-                  autoFocus
-                  className="w-full p-4 bg-bg-primary border-[0.5px] border-border-strong rounded-lg text-[22px] tracking-[0.5em] indent-[0.5em] text-center font-mono placeholder:text-text-tertiary focus:outline-none focus:border-accent transition-colors"
-                />
+                <CodeInput length={8} />
               </div>
               <button
                 type="submit"
