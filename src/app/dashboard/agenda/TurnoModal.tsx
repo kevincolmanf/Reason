@@ -1194,6 +1194,7 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
                 patientId={form.patient_id}
                 patientName={form.patient_name}
                 area={form.area}
+                turnoId={turno?.id ?? null}
                 presets={cashPresets ?? []}
                 methods={cashMethods ?? []}
               />

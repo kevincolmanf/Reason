@@ -18,13 +18,14 @@ interface Props {
   patientId: string | null
   patientName: string
   area: string
+  turnoId?: string | null
   presets: Preset[]
   methods: Method[]
   onClose: () => void
   onSaved?: () => void
 }
 
-export default function QuickCajaSheet({ orgId, userId, patientId, patientName, area, presets, methods, onClose, onSaved }: Props) {
+export default function QuickCajaSheet({ orgId, userId, patientId, patientName, area, turnoId, presets, methods, onClose, onSaved }: Props) {
   const supabase = createClient()
   const methodNames = useMemo(() => {
     const configured = methods.filter(m => m.active).map(m => m.name)
@@ -63,6 +64,7 @@ export default function QuickCajaSheet({ orgId, userId, patientId, patientName, 
       concept: concept.trim() || null,
       notes: patientName || null,
       patient_id: patientId,
+      turno_id: turnoId ?? null,
       source: 'agenda',
       created_by: userId,
     })

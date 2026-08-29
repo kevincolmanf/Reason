@@ -14,6 +14,7 @@ interface Props {
   patientId: string | null
   patientName: string
   area: string
+  turnoId?: string | null
   presets: Preset[]
   methods: Method[]
 }
@@ -21,7 +22,7 @@ interface Props {
 // Carga rápida de un ingreso a la caja desde el modal del turno ("dar presente y
 // cobrar en el momento"). Queda enlazado al paciente del turno. Solo se muestra a
 // quien puede registrar caja (dueño o secretaria con permiso), gate en el server.
-export default function CargarIngresoAgenda({ orgId, userId, patientId, patientName, area, presets, methods }: Props) {
+export default function CargarIngresoAgenda({ orgId, userId, patientId, patientName, area, turnoId, presets, methods }: Props) {
   const supabase = createClient()
   const methodNames = useMemo(() => {
     const configured = methods.filter(m => m.active).map(m => m.name)
@@ -62,6 +63,7 @@ export default function CargarIngresoAgenda({ orgId, userId, patientId, patientN
       concept: concept.trim() || null,
       notes: patientName ? patientName : null,
       patient_id: patientId,
+      turno_id: turnoId ?? null,
       source: 'agenda',
       created_by: userId,
     })
