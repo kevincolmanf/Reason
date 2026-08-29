@@ -71,9 +71,9 @@ export default async function Header() {
     }
 
     available = [
-      { type: 'personal', orgId: null, label: 'Mi espacio' },
-      ...ownedOrgs.map(o => ({ type: 'org' as const, orgId: o.id, label: o.name })),
-      ...memberOrgs.map(o => ({ type: 'org' as const, orgId: o.id, label: o.name })),
+      { type: 'personal', orgId: null, label: 'Mi espacio', kind: 'personal' as const },
+      ...ownedOrgs.map(o => ({ type: 'org' as const, orgId: o.id, label: o.name, kind: 'owner' as const })),
+      ...memberOrgs.map(o => ({ type: 'org' as const, orgId: o.id, label: o.name, kind: 'member' as const })),
     ]
 
     if (ctx.type === 'org' && ctx.orgId) {

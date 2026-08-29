@@ -8,6 +8,7 @@ import type { ActiveContext } from '@/lib/context'
 import type { AvailableContext } from './ContextBadge'
 import GuideTour, { type GuideState } from './GuideTour'
 import { guideForPath } from '@/lib/guides'
+import { workspaceSubtitle } from '@/lib/context/describe'
 
 interface Props {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -160,12 +161,15 @@ export default function HeaderClient({ userMetadata, hasAgendaAccess, isProOrAdm
                   <button
                     key={avail.orgId ?? 'personal'}
                     onClick={() => !isActive && handleSwitch(avail)}
-                    className={`w-full text-left px-6 py-2 text-[13px] transition-colors flex items-center justify-between ${
-                      isActive ? 'text-accent cursor-default' : 'text-text-secondary hover:text-text-primary hover:bg-bg-secondary'
+                    className={`w-full text-left px-6 py-2 transition-colors flex items-start justify-between gap-2 ${
+                      isActive ? 'cursor-default bg-bg-secondary' : 'hover:bg-bg-secondary'
                     }`}
                   >
-                    <span className="truncate">{avail.label}</span>
-                    {isActive && <span className="text-[10px] shrink-0 ml-2">✓</span>}
+                    <span className="min-w-0 flex-1">
+                      <span className={`block text-[13px] truncate ${isActive ? 'text-accent' : 'text-text-primary'}`}>{avail.label}</span>
+                      <span className="block text-[11px] text-text-tertiary leading-snug">{workspaceSubtitle(avail.kind)}</span>
+                    </span>
+                    {isActive && <span className="text-[10px] text-accent shrink-0 mt-0.5">✓</span>}
                   </button>
                 )
               })}
