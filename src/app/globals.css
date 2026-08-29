@@ -22,6 +22,15 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Inputs de fecha/hora: el picker nativo y su ícono usan el esquema oscuro,
+   así el calendario no aparece en blanco chillón sobre el tema oscuro. */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"],
+input[type="month"] {
+  color-scheme: dark;
+}
+
 /* Fix SVG / Mermaid diagrams colors */
 svg text {
   fill: var(--color-text-primary) !important;

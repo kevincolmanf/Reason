@@ -58,11 +58,14 @@ export async function signup(formData: FormData) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
+    // Prueba de 7 días con acceso completo desde el registro (ver auth/callback).
+    const trialExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
     const { error: insertError } = await adminClient.from('users').upsert({
       id: data.user.id,
       email: data.user.email,
       full_name: fullName,
-      role: 'free'
+      role: 'free',
+      trial_expires_at: trialExpiresAt
     })
     
     if (insertError) {
