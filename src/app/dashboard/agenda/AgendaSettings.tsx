@@ -149,8 +149,9 @@ export default function AgendaSettings({
     })
     // Si falla, revertimos el toggle y avisamos en vez de fingir que se guardó.
     if (error) {
+      console.error('set_member_agenda_access error:', error.message)
       setMemberAccess(prev => ({ ...prev, [memberId]: !newAccess }))
-      notify('No se pudo cambiar el acceso a la agenda. Intentá de nuevo.', 'error')
+      notify(`No se pudo cambiar el acceso: ${error.message}`, 'error')
     }
     setSavingMember(null)
   }

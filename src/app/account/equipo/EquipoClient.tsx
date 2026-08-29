@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createOrganization, addMember, removeMember, updateMemberName, resetMemberAccess } from './actions'
+import { createOrganization, addMember, removeMember, updateMemberName, resetMemberAccess, deleteOrganization } from './actions'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
@@ -74,6 +74,25 @@ export default function EquipoClient({ userId, org: initialOrg, members: initial
   const [editName, setEditName] = useState('')
   const [editLoading, setEditLoading] = useState(false)
   const [editError, setEditError] = useState('')
+
+  // Eliminar centro (destructivo): pide escribir el nombre exacto para confirmar.
+  const [showDeleteOrg, setShowDeleteOrg] = useState(false)
+  const [deleteConfirmName, setDeleteConfirmName] = useState('')
+  const [deletingOrg, setDeletingOrg] = useState(false)
+  const [deleteOrgError, setDeleteOrgError] = useState('')
+
+  const handleDeleteOrg = async () => {
+    if (!org || deletingOrg) return
+    setDeletingOrg(true)
+    setDeleteOrgError('')
+    const res = await deleteOrganization(org.id, deleteConfirmName)
+    if (res?.error) {
+      setDeleteOrgError(res.error)
+      setDeletingOrg(false)
+    } else {
+      window.location.href = '/dashboard'
+    }
+  }
 
   const handleCreateOrg = async () => {
     if (!orgName.trim() || orgLoading) return
@@ -547,6 +566,63 @@ Cualquier duda, avisame.`
           generar una contraseña nueva y compartírsela.
         </p>
       </div>
+
+      {/* Zona de riesgo: eliminar el centro */}
+      <div className="bg-bg-secondary rounded-xl border-[0.5px] border-[#A33D2D]/40 p-6">
+        <h2 className="text-[15px] font-medium mb-1 text-[#c47c5a]">Eliminar centro</h2>
+        <p className="text-[13px] text-text-secondary mb-4 leading-[1.6] max-w-[560px]">
+          Elimina el centro <span className="text-text-primary font-medium">{org.name}</span> de forma permanente:
+          se quitan todos los integrantes y se borran sus turnos. Los pacientes NO se borran — pasan al espacio
+          personal de quien los creó. Es irreversible.
+        </p>
+        <button
+          onClick={() => { setDeleteConfirmName(''); setDeleteOrgError(''); setShowDeleteOrg(true) }}
+          className="bg-transparent border-[0.5px] border-[#A33D2D]/60 text-[#c47c5a] px-4 py-2 rounded-lg text-[13px] font-medium hover:bg-[#A33D2D]/15 transition-colors"
+        >
+          Eliminar este centro
+        </button>
+      </div>
+
+      {/* Confirmación destructiva: eliminar centro */}
+      {showDeleteOrg && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => !deletingOrg && setShowDeleteOrg(false)}>
+          <div className="bg-bg-secondary border-[0.5px] border-border rounded-xl p-6 max-w-[440px] w-full" onClick={e => e.stopPropagation()}>
+            <h3 className="text-[16px] font-medium mb-2">Eliminar &quot;{org.name}&quot;</h3>
+            <p className="text-[13px] text-text-secondary mb-1 leading-[1.6]">
+              Esto es <span className="text-text-primary font-medium">irreversible</span>. Se quitan los integrantes
+              y se borran los turnos del centro. Los pacientes se conservan en el espacio personal de quien los creó.
+            </p>
+            <p className="text-[13px] text-text-secondary mb-4 leading-[1.6]">
+              Para confirmar, escribí el nombre del centro: <span className="text-text-primary font-medium">{org.name}</span>
+            </p>
+            <input
+              type="text"
+              value={deleteConfirmName}
+              onChange={e => setDeleteConfirmName(e.target.value)}
+              placeholder={org.name}
+              autoFocus
+              className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg px-3 py-2.5 text-[14px] mb-2 focus:outline-none focus:border-accent"
+            />
+            {deleteOrgError && <p className="text-[13px] text-red-400 mb-2">{deleteOrgError}</p>}
+            <div className="flex gap-3 justify-end mt-3">
+              <button
+                onClick={() => setShowDeleteOrg(false)}
+                disabled={deletingOrg}
+                className="text-[13px] text-text-secondary hover:text-text-primary px-3 py-2 disabled:opacity-40"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleDeleteOrg}
+                disabled={deletingOrg || deleteConfirmName.trim() !== org.name}
+                className="bg-[#A33D2D] text-white px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+              >
+                {deletingOrg ? 'Eliminando...' : 'Eliminar centro'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Confirmación: el integrante ya ingresó alguna vez */}
       {confirmResetMember && (
