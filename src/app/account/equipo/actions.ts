@@ -239,3 +239,36 @@ export async function removeMember(orgId: string, memberId: string) {
   // No revertimos el role — el usuario mantiene el que tenía antes de entrar al equipo
   return { success: true }
 }
+
+// Elimina un centro entero. Acción destructiva e irreversible: solo el DUEÑO
+// real puede hacerlo. Los pacientes NO se borran (org_id es ON DELETE SET NULL →
+// pasan al espacio personal de quien los creó); los integrantes se quitan por
+// cascade; los turnos del centro se eliminan. Pide el nombre exacto para
+// confirmar desde el cliente.
+export async function deleteOrganization(orgId: string, confirmName: string): Promise<{ error?: string; success?: boolean }> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const { data: org } = await supabase
+    .from('organizations')
+    .select('owner_id, name')
+    .eq('id', orgId)
+    .single()
+
+  if (!org) return { error: 'El centro no existe.' }
+  if (org.owner_id !== user.id) return { error: 'Solo el dueño del centro puede eliminarlo.' }
+  if ((confirmName || '').trim() !== org.name) {
+    return { error: 'El nombre no coincide. Escribí el nombre exacto del centro para confirmar.' }
+  }
+
+  const adminClient = createAdminClient()
+  // Los turnos del centro no tienen cascade → los limpiamos antes.
+  await adminClient.from('turnos').delete().eq('org_id', orgId)
+  const { error } = await adminClient.from('organizations').delete().eq('id', orgId)
+  if (error) {
+    console.error('Error eliminando organización:', JSON.stringify(error))
+    return { error: 'No se pudo eliminar el centro. Intentá de nuevo.' }
+  }
+  return { success: true }
+}
