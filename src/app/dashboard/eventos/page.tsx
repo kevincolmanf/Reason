@@ -12,12 +12,9 @@ export default async function EventosPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  // Crear eventos es, por ahora, para organizadores (Pro/admin o dueño de un centro).
-  const { data: userData } = await supabase.from('users').select('role').eq('id', user.id).single()
-  const role = userData?.role
-  const isOrganizer = role === 'pro' || role === 'admin'
-  if (!isOrganizer) redirect('/dashboard')
-
+  // Crear eventos está abierto a cualquier usuario (free o pago): es el embudo de
+  // adquisición, y organizar un evento no debería requerir plan. La RLS ya limita
+  // a que cada uno solo maneje sus propios eventos.
   const ctx = await getActiveContext(user.id, supabase)
   const orgId = ctx.type === 'org' ? ctx.orgId : null
 

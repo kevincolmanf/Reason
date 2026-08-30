@@ -195,15 +195,13 @@ export default function HeaderClient({ userMetadata, hasAgendaAccess, isProOrAdm
           >
             Mi cuenta
           </Link>
-          {canManageTeam && (
-            <Link
-              href="/dashboard/eventos"
-              onClick={closeMenu}
-              className="block px-4 py-2 text-[14px] text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline"
-            >
-              Eventos
-            </Link>
-          )}
+          <Link
+            href="/dashboard/eventos"
+            onClick={closeMenu}
+            className="block px-4 py-2 text-[14px] text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline"
+          >
+            Eventos
+          </Link>
           {canManageTeam && (
             <Link
               href="/account/equipo"
