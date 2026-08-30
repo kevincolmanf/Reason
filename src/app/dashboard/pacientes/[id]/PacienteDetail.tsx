@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
+import ObraSocialField from '@/components/ObraSocialField'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import QuickSessionSheet from '@/components/QuickSessionSheet'
@@ -343,7 +344,13 @@ export default function PacienteDetail({ patient: initialPatient, userId, initia
               </div>
               <div className="sm:col-span-2">
                 <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Obra social</label>
-                <input type="text" value={editForm.obra_social} onChange={e => setEditForm(f => ({ ...f, obra_social: e.target.value }))} placeholder="Ej: OSDE, PAMI, IOMA..." className="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent" />
+                <ObraSocialField
+                  value={editForm.obra_social}
+                  onChange={v => setEditForm(f => ({ ...f, obra_social: v }))}
+                  orgId={patient.org_id}
+                  userId={userId}
+                  inputClassName="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent"
+                />
               </div>
               <div>
                 <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">N° de afiliado</label>

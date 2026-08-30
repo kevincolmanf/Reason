@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { createClient } from '@/utils/supabase/client'
+import ObraSocialField from '@/components/ObraSocialField'
 import Link from 'next/link'
 import { useConfirm } from '@/components/Dialogs'
 import CargarIngresoAgenda from './CargarIngresoAgenda'
@@ -1103,7 +1104,13 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
               </div>
               <div>
                 <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Obra social</label>
-                <input type="text" value={form.patient_obra_social} onChange={e => setForm(f => ({ ...f, patient_obra_social: e.target.value }))} placeholder="Ej: OSDE, PAMI..." className={inputCls} />
+                <ObraSocialField
+                  value={form.patient_obra_social}
+                  onChange={v => setForm(f => ({ ...f, patient_obra_social: v }))}
+                  orgId={orgId}
+                  userId={userId}
+                  inputClassName={inputCls}
+                />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
