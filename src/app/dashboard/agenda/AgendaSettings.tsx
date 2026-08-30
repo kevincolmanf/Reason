@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/Dialogs'
+import { setMemberAgendaLevel, type AgendaLevel } from '@/app/account/equipo/actions'
+import { savePersonalAgendaConfig } from './actions'
 
 // Envuelve un <select> nativo para darle un chevron propio y un look consistente.
 // Sin esto, el <select> toma el chrome del sistema operativo y se ve desalineado
@@ -38,6 +40,7 @@ interface Member {
   full_name: string | null
   agendaAccess: boolean
   agendaAreas: string[] | null
+  agendaCanEdit: boolean
 }
 
 interface Props {
@@ -84,8 +87,8 @@ export default function AgendaSettings({
   const [whatsapp, setWhatsapp] = useState(initialWhatsapp ?? '')
   const [newArea, setNewArea] = useState('')
   const [shareEnabled, setShareEnabled] = useState(initialShareEnabled)
-  const [memberAccess, setMemberAccess] = useState<Record<string, boolean>>(
-    Object.fromEntries(members.map(m => [m.id, m.agendaAccess]))
+  const [memberLevel, setMemberLevel] = useState<Record<string, AgendaLevel>>(
+    Object.fromEntries(members.map(m => [m.id, m.agendaCanEdit ? 'edit' : m.agendaAccess ? 'view' : 'no'] as [string, AgendaLevel]))
   )
   // Áreas visibles por integrante. null = todas.
   const [memberAreas, setMemberAreas] = useState<Record<string, string[] | null>>(
@@ -137,20 +140,17 @@ export default function AgendaSettings({
     setTimeout(() => setCopied(false), 2000)
   }
 
-  const toggleMemberAccess = async (memberId: string) => {
+  // Mismo modelo de 3 niveles que Mi Equipo, con la MISMA acción del servidor, para
+  // que ambos lugares queden siempre sincronizados (no ve / ve / modifica).
+  const changeMemberLevel = async (memberId: string, level: AgendaLevel) => {
     if (!orgId || !isOwner) return
-    const newAccess = !memberAccess[memberId]
+    const prev = memberLevel[memberId] ?? 'no'
     setSavingMember(memberId)
-    setMemberAccess(prev => ({ ...prev, [memberId]: newAccess }))
-    const { error } = await supabase.rpc('set_member_agenda_access', {
-      p_org_id: orgId,
-      p_user_id: memberId,
-      p_access: newAccess,
-    })
-    // Si falla, revertimos el toggle y avisamos en vez de fingir que se guardó.
-    if (error) {
-      setMemberAccess(prev => ({ ...prev, [memberId]: !newAccess }))
-      notify('No se pudo cambiar el acceso a la agenda. Intentá de nuevo.', 'error')
+    setMemberLevel(p => ({ ...p, [memberId]: level }))
+    const res = await setMemberAgendaLevel(orgId, memberId, level)
+    if (res.error) {
+      setMemberLevel(p => ({ ...p, [memberId]: prev }))
+      notify(`No se pudo cambiar el acceso: ${res.error}`, 'error')
     }
     setSavingMember(null)
   }
@@ -198,30 +198,33 @@ export default function AgendaSettings({
     const safeStart = Math.min(dayStart, dayEnd - 60)
     const safeEnd   = Math.max(dayEnd, dayStart + 60)
 
-    const table = orgId && isOwner ? 'organizations' : 'users'
-    const rowId = orgId && isOwner ? orgId : userId
-
-    // Guardado principal (áreas, intervalo, etc.). No incluye el horario visible
-    // para que, si la migración de esas columnas no corrió, esto igual persista.
+    // CENTRO (dueño): la config vive en organizations, que sí permite el UPDATE del
+    // dueño por RLS. Se guarda desde el cliente como siempre.
     if (orgId && isOwner) {
       await supabase.from('organizations').update({ agenda_areas: areas, agenda_slot_interval: slotInterval, agenda_area_durations: cleanDurations, agenda_share_enabled: shareEnabled }).eq('id', orgId)
-    } else {
-      await supabase.from('users').update({ agenda_areas: areas, agenda_slot_interval: slotInterval, agenda_area_durations: cleanDurations }).eq('id', userId)
+      // Horario visible por separado (best-effort): si las columnas no existen,
+      // falla solo esto y el resto igual se guarda.
+      const { error: hoursErr } = await supabase.from('organizations').update({ agenda_day_start: safeStart, agenda_day_end: safeEnd }).eq('id', orgId)
+      await supabase.from('organizations').update({ whatsapp: whatsapp.trim() || null }).eq('id', orgId)
+      setSaving(false)
+      onSaved(areas, slotInterval, cleanDurations, hoursErr ? initialDayStart : safeStart, hoursErr ? initialDayEnd : safeEnd)
+      return
     }
 
-    // Guardado del horario visible por separado (best-effort): si las columnas
-    // todavía no existen, falla solo esto y el resto de la config igual se guarda.
-    const { error: hoursErr } = await supabase.from(table).update({ agenda_day_start: safeStart, agenda_day_end: safeEnd }).eq('id', rowId)
-
-    // WhatsApp de contacto para los avisos de ausencia. Se guarda en la misma
-    // tabla que el resto de la config: organizations para el dueño de una clínica
-    // (un solo número por org), users para agendas personales. Best-effort: si la
-    // columna todavía no existe, falla solo esto y el resto igual se guarda.
-    await supabase.from(table).update({ whatsapp: whatsapp.trim() || null }).eq('id', rowId)
-
+    // ESPACIO PERSONAL: la escritura del cliente a `users` se descarta en silencio
+    // (users no tiene policy de UPDATE) → antes la config volvía a los defaults al
+    // recargar. Persistimos por una acción de servidor (admin, solo la propia fila).
+    const res = await savePersonalAgendaConfig({
+      agenda_areas: areas,
+      agenda_slot_interval: slotInterval,
+      agenda_area_durations: cleanDurations,
+      agenda_day_start: safeStart,
+      agenda_day_end: safeEnd,
+      whatsapp: whatsapp.trim() || null,
+    })
     setSaving(false)
-    // Si no se pudo guardar el horario (migración pendiente), no lo reflejamos en la UI.
-    onSaved(areas, slotInterval, cleanDurations, hoursErr ? initialDayStart : safeStart, hoursErr ? initialDayEnd : safeEnd)
+    if (res.error) { notify('No se pudo guardar la configuración. Probá de nuevo.', 'error'); return }
+    onSaved(areas, slotInterval, cleanDurations, safeStart, safeEnd)
   }
 
   return (
@@ -241,6 +244,12 @@ export default function AgendaSettings({
           </div>
 
           <p className="text-[12px] text-text-secondary mb-3">Elegí la duración de turno de cada área. Las que queden en &quot;Por defecto&quot; usan el intervalo general de abajo.</p>
+
+          {areas.length === 0 && (
+            <p className="text-[12px] text-text-secondary mb-3 bg-bg-primary border-[0.5px] border-border rounded-lg px-3 py-2.5 leading-[1.5]">
+              Todavía no cargaste áreas. Agregá las de tu centro (ej: Kinesiología, Nutrición): filtran la agenda y, más adelante, organizan la caja diaria.
+            </p>
+          )}
 
           <div className="flex flex-col gap-1.5 mb-3">
             {areas.map(area => (
@@ -420,26 +429,30 @@ export default function AgendaSettings({
               Acceso a la agenda por integrante
             </label>
             <p className="text-[12px] text-text-secondary mb-3">
-              Los integrantes sin acceso no pueden ver la agenda del equipo. Con acceso, entran en modo solo lectura y ven únicamente las áreas que les habilites.
+              <b>No ve</b>: no entra a la agenda. <b>Ve</b>: solo lectura (marca presente, registra sesión, carga cobros). <b>Modifica</b>: además crea y edita turnos. Es el mismo permiso que ves en Mi Equipo.
             </p>
             <div className="flex flex-col gap-2">
               {members.map(m => {
-                const access = memberAccess[m.id] ?? false
+                const level = memberLevel[m.id] ?? 'no'
+                const access = level !== 'no'
                 const isSaving = savingMember === m.id
                 const mAreas = memberAreas[m.id] // null = todas
                 return (
                   <div key={m.id} className="bg-bg-primary border-[0.5px] border-border rounded-xl px-3.5 py-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[13px] font-medium text-text-primary truncate mr-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[13px] font-medium text-text-primary truncate">
                         {m.full_name || 'Sin nombre'}
                       </span>
-                      <button
-                        onClick={() => !isSaving && toggleMemberAccess(m.id)}
+                      <select
+                        value={level}
+                        onChange={e => changeMemberLevel(m.id, e.target.value as AgendaLevel)}
                         disabled={isSaving}
-                        className={`relative shrink-0 w-10 h-5 rounded-full overflow-hidden transition-colors disabled:opacity-50 ${access ? 'bg-accent' : 'bg-border-strong'}`}
+                        className="shrink-0 bg-bg-secondary border-[0.5px] border-border rounded-lg px-2.5 py-1.5 text-[12px] text-text-primary focus:outline-none focus:border-accent disabled:opacity-50"
                       >
-                        <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${access ? 'left-[22px]' : 'left-0.5'}`} />
-                      </button>
+                        <option value="no">No ve</option>
+                        <option value="view">Ve (solo lectura)</option>
+                        <option value="edit">Modifica turnos</option>
+                      </select>
                     </div>
                     {access && areas.length > 1 && (
                       <div className="mt-3 pt-3 border-t-[0.5px] border-border">

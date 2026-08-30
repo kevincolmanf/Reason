@@ -41,6 +41,12 @@ export async function createOrganization(formData: FormData) {
       return { error: `Error al crear el equipo: ${rpcError.message}` }
     }
 
+    // El centro arranca SIN áreas de agenda: cada uno agrega las suyas ("agregá
+    // tus áreas"), en vez de heredar un set por defecto que no le corresponde.
+    if (orgId) {
+      await adminClient.from('organizations').update({ agenda_areas: [] }).eq('id', orgId)
+    }
+
     return { success: true, orgId }
   } catch (e) {
     console.error('Excepción en createOrganization:', e)
@@ -208,6 +214,77 @@ export async function updateMemberName(orgId: string, memberUserId: string, newN
   return {}
 }
 
+// Habilita/deshabilita el permiso de caja de un integrante (registrar y ver la
+// caja del día). Solo el admin/dueño del equipo. La secretaria con este permiso
+// ve SOLO el día de hoy (arqueo), nunca el mes ni el historial (RLS lo blinda).
+export async function setMemberCashAccess(
+  orgId: string,
+  memberUserId: string,
+  access: boolean,
+): Promise<{ error?: string; success?: boolean }> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const { data: membership } = await supabase
+    .from('organization_members')
+    .select('role')
+    .eq('org_id', orgId)
+    .eq('user_id', user.id)
+    .single()
+
+  if (membership?.role !== 'admin') return { error: 'Solo el administrador puede cambiar permisos' }
+
+  const adminClient = createAdminClient()
+  const { error } = await adminClient
+    .from('organization_members')
+    .update({ can_register_cash: access })
+    .eq('org_id', orgId)
+    .eq('user_id', memberUserId)
+
+  if (error) return { error: 'No se pudo actualizar el permiso de caja' }
+  return { success: true }
+}
+
+// Nivel de acceso a la agenda de un integrante, desde Mi Equipo:
+//   'no'     → no ve la agenda.
+//   'view'   → la ve en solo lectura (marca presente, registra sesión, cobra).
+//   'edit'   → además crea/edita/borra turnos ("modifica la agenda").
+// La CONFIGURACIÓN de la agenda (áreas, horarios, compartir) sigue siendo del dueño.
+export type AgendaLevel = 'no' | 'view' | 'edit'
+
+export async function setMemberAgendaLevel(
+  orgId: string,
+  memberUserId: string,
+  level: AgendaLevel,
+): Promise<{ error?: string; success?: boolean }> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const { data: membership } = await supabase
+    .from('organization_members')
+    .select('role')
+    .eq('org_id', orgId)
+    .eq('user_id', user.id)
+    .single()
+
+  if (membership?.role !== 'admin') return { error: 'Solo el administrador puede cambiar permisos' }
+
+  const adminClient = createAdminClient()
+  const { error } = await adminClient
+    .from('organization_members')
+    .update({
+      agenda_access: level !== 'no',
+      agenda_can_edit: level === 'edit',
+    })
+    .eq('org_id', orgId)
+    .eq('user_id', memberUserId)
+
+  if (error) return { error: 'No se pudo actualizar el acceso a la agenda' }
+  return { success: true }
+}
+
 export async function removeMember(orgId: string, memberId: string) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -231,5 +308,38 @@ export async function removeMember(orgId: string, memberId: string) {
     .eq('user_id', memberId)
 
   // No revertimos el role — el usuario mantiene el que tenía antes de entrar al equipo
+  return { success: true }
+}
+
+// Elimina un centro entero. Acción destructiva e irreversible: solo el DUEÑO
+// real puede hacerlo. Los pacientes NO se borran (org_id es ON DELETE SET NULL →
+// pasan al espacio personal de quien los creó); los integrantes se quitan por
+// cascade; los turnos del centro se eliminan. Pide el nombre exacto para
+// confirmar desde el cliente.
+export async function deleteOrganization(orgId: string, confirmName: string): Promise<{ error?: string; success?: boolean }> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const { data: org } = await supabase
+    .from('organizations')
+    .select('owner_id, name')
+    .eq('id', orgId)
+    .single()
+
+  if (!org) return { error: 'El centro no existe.' }
+  if (org.owner_id !== user.id) return { error: 'Solo el dueño del centro puede eliminarlo.' }
+  if ((confirmName || '').trim() !== org.name) {
+    return { error: 'El nombre no coincide. Escribí el nombre exacto del centro para confirmar.' }
+  }
+
+  const adminClient = createAdminClient()
+  // Los turnos del centro no tienen cascade → los limpiamos antes.
+  await adminClient.from('turnos').delete().eq('org_id', orgId)
+  const { error } = await adminClient.from('organizations').delete().eq('id', orgId)
+  if (error) {
+    console.error('Error eliminando organización:', JSON.stringify(error))
+    return { error: 'No se pudo eliminar el centro. Intentá de nuevo.' }
+  }
   return { success: true }
 }

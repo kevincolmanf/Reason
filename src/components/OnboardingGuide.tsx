@@ -68,16 +68,16 @@ export default function OnboardingGuide({ variant = 'solo' }: { variant?: Varian
 
   return (
     <div className="bg-bg-secondary border-[0.5px] border-border rounded-xl mb-6 overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-4">
+      <div className="flex items-start justify-between gap-3 px-4 sm:px-5 py-3.5 sm:py-4">
         <button
           onClick={() => setOpen(o => !o)}
-          className="flex items-center gap-2.5 text-left"
+          className="flex items-start gap-2.5 text-left min-w-0"
           aria-expanded={open}
         >
-          <span className="text-[16px]">🧭</span>
-          <span className="text-[14px] font-medium text-text-primary">{title}</span>
+          <span className="text-[15px] leading-6 shrink-0">🧭</span>
+          <span className="text-[13px] sm:text-[14px] font-medium text-text-primary leading-6 min-w-0">{title}</span>
           <svg
-            className={`transition-transform ${open ? 'rotate-180' : ''}`}
+            className={`shrink-0 mt-1.5 text-text-secondary transition-transform ${open ? 'rotate-180' : ''}`}
             width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
           >
             <polyline points="6 9 12 15 18 9" />
@@ -85,31 +85,33 @@ export default function OnboardingGuide({ variant = 'solo' }: { variant?: Varian
         </button>
         <button
           onClick={dismiss}
-          className="text-[12px] text-text-secondary hover:text-text-primary transition-colors shrink-0 ml-3"
+          className="text-[12px] text-text-secondary hover:text-text-primary transition-colors shrink-0 whitespace-nowrap mt-0.5"
         >
           No mostrar
         </button>
       </div>
 
       {open && (
-        <div className="px-5 pb-5 pt-1 border-t-[0.5px] border-border">
-          <ol className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-4">
+        <div className="px-4 sm:px-5 pb-5 pt-4 border-t-[0.5px] border-border">
+          <ol className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
             {steps.map((s) => (
-              <li key={s.n}>
+              <li key={s.n} className="h-full">
                 <Link
                   href={s.href}
-                  className="flex flex-col gap-1.5 h-full p-3 rounded-lg border-[0.5px] border-transparent hover:border-border hover:bg-bg-primary transition-colors no-underline"
+                  className="flex sm:flex-col items-start gap-3 sm:gap-1.5 h-full p-3 rounded-lg border-[0.5px] border-border bg-bg-primary/40 hover:border-accent hover:bg-bg-primary transition-colors no-underline"
                 >
-                  <span className="w-7 h-7 rounded-lg bg-accent/10 text-accent text-[13px] font-medium flex items-center justify-center">
+                  <span className="w-7 h-7 shrink-0 rounded-full bg-accent/15 border-[0.5px] border-accent/25 text-accent text-[13px] font-semibold flex items-center justify-center">
                     {s.n}
                   </span>
-                  <span className="text-[13px] font-medium text-text-primary leading-snug">{s.title}</span>
-                  <span className="text-[12px] text-text-secondary leading-snug">{s.desc}</span>
+                  <span className="min-w-0">
+                    <span className="block text-[13px] font-medium text-text-primary leading-snug">{s.title}</span>
+                    <span className="block text-[12px] text-text-secondary leading-snug mt-0.5">{s.desc}</span>
+                  </span>
                 </Link>
               </li>
             ))}
           </ol>
-          <div className="mt-5 flex items-center gap-4">
+          <div className="mt-4 sm:mt-5 flex flex-wrap items-center gap-x-4 gap-y-2.5">
             <Link
               href={cta.href}
               className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity no-underline"

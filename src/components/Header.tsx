@@ -19,12 +19,15 @@ export default async function Header() {
   // Gestionar el equipo: mismo gate que /account/equipo (role pro/admin). Incluye
   // al Pro que todavía no creó su centro, para que pueda encontrar dónde armarlo.
   let canManageTeam = false
+  // Caja diaria: visible en contexto de centro para el dueño o una secretaria
+  // con permiso de registrar caja.
+  let canSeeCaja = false
 
   if (user) {
     const [activeCtx, ownedOrgsResult, memberOrgsResult, userDataResult] = await Promise.all([
       getActiveContext(user.id, supabase),
       supabase.from('organizations').select('id, name').eq('owner_id', user.id),
-      supabase.from('organization_members').select('org_id, agenda_access, organizations(id, name)').eq('user_id', user.id),
+      supabase.from('organization_members').select('org_id, agenda_access, can_register_cash, organizations(id, name)').eq('user_id', user.id),
       supabase.from('users').select('role').eq('id', user.id).single(),
     ])
 
@@ -32,7 +35,7 @@ export default async function Header() {
     const role = userDataResult.data?.role
     const isOrgCtx = ctx.type === 'org' && !!ctx.orgId
 
-    type MemberRow = { org_id: string; agenda_access: boolean | null; organizations: { id: string; name: string } | null }
+    type MemberRow = { org_id: string; agenda_access: boolean | null; can_register_cash: boolean | null; organizations: { id: string; name: string } | null }
 
     const ownedOrgs = (ownedOrgsResult.data ?? []) as { id: string; name: string }[]
     const memberRows = (memberOrgsResult.data ?? []) as unknown as MemberRow[]
@@ -68,6 +71,11 @@ export default async function Header() {
     } else if (role === 'pro' || role === 'admin') {
       // Contexto personal (sin org): agenda propia para pro/admin.
       hasAgendaAccess = true
+    }
+
+    if (isOrgCtx && ctx.orgId) {
+      const myRow = memberRows.find(r => r.org_id === ctx.orgId)
+      canSeeCaja = role === 'admin' || ownsThisOrg || (myRow?.can_register_cash ?? false)
     }
 
     available = [
@@ -125,12 +133,25 @@ export default async function Header() {
               Panel de gestión
             </Link>
           ) : (
+            // Un Pro que todavía no creó su centro NO tiene métricas que mostrar
+            // (el CRM exige owner de una organización). En vez del engañoso
+            // "Disponible en Plan Pro" (¡ya es Pro!), lo guiamos a crear su centro.
             <div className="relative group hidden lg:inline-block">
-              <span className="text-[13px] sm:text-[14px] text-[#c47c5a] cursor-default select-none">Panel de gestión</span>
+              {canManageTeam ? (
+                <Link href="/account/equipo" className="text-[13px] sm:text-[14px] text-[#c47c5a] no-underline">Panel de gestión</Link>
+              ) : (
+                <span className="text-[13px] sm:text-[14px] text-[#c47c5a] cursor-default select-none">Panel de gestión</span>
+              )}
               <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-2.5 py-1.5 bg-bg-secondary border-[0.5px] border-border rounded-lg text-[11px] text-text-secondary whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 shadow-lg">
-                Disponible en Plan Pro
+                {canManageTeam ? 'Creá tu centro para verlo' : 'Disponible en Plan Pro'}
               </div>
             </div>
+          )}
+
+          {canSeeCaja && (
+            <Link href="/dashboard/caja" className="hidden lg:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+              Caja
+            </Link>
           )}
 
           {user && (
@@ -147,6 +168,7 @@ export default async function Header() {
               hasAgendaAccess={hasAgendaAccess}
               isProOrAdmin={isProOrAdmin}
               canManageTeam={canManageTeam}
+              canSeeCaja={canSeeCaja}
               ctx={ctx}
               currentLabel={currentLabel}
               available={available}

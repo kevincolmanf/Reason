@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createOrganization, addMember, removeMember, updateMemberName, resetMemberAccess } from './actions'
+import { createOrganization, addMember, removeMember, updateMemberName, resetMemberAccess, setMemberCashAccess, setMemberAgendaLevel, type AgendaLevel, deleteOrganization } from './actions'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
@@ -9,6 +9,9 @@ interface Member {
   id: string
   user_id: string
   role: string
+  can_register_cash: boolean
+  agenda_access: boolean
+  agenda_can_edit: boolean
   hasLoggedIn: boolean
   users: { full_name: string | null; email: string }
 }
@@ -62,6 +65,8 @@ export default function EquipoClient({ userId, org: initialOrg, members: initial
   const [newCredentials, setNewCredentials] = useState<{ email: string; tempPassword?: string; fullName?: string } | null>(null)
 
   const [removing, setRemoving] = useState<string | null>(null)
+  const [cashToggling, setCashToggling] = useState<string | null>(null)
+  const [agendaToggling, setAgendaToggling] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
 
   const [resettingId, setResettingId] = useState<string | null>(null)
@@ -74,6 +79,25 @@ export default function EquipoClient({ userId, org: initialOrg, members: initial
   const [editName, setEditName] = useState('')
   const [editLoading, setEditLoading] = useState(false)
   const [editError, setEditError] = useState('')
+
+  // Eliminar centro (destructivo): pide escribir el nombre exacto para confirmar.
+  const [showDeleteOrg, setShowDeleteOrg] = useState(false)
+  const [deleteConfirmName, setDeleteConfirmName] = useState('')
+  const [deletingOrg, setDeletingOrg] = useState(false)
+  const [deleteOrgError, setDeleteOrgError] = useState('')
+
+  const handleDeleteOrg = async () => {
+    if (!org || deletingOrg) return
+    setDeletingOrg(true)
+    setDeleteOrgError('')
+    const res = await deleteOrganization(org.id, deleteConfirmName)
+    if (res?.error) {
+      setDeleteOrgError(res.error)
+      setDeletingOrg(false)
+    } else {
+      window.location.href = '/dashboard'
+    }
+  }
 
   const handleCreateOrg = async () => {
     if (!orgName.trim() || orgLoading) return
@@ -155,6 +179,32 @@ export default function EquipoClient({ userId, org: initialOrg, members: initial
     await removeMember(org.id, memberUserId)
     setMembers(prev => prev.filter(m => m.id !== memberId))
     setRemoving(null)
+  }
+
+  const handleToggleCash = async (member: Member) => {
+    if (!org || cashToggling) return
+    const next = !member.can_register_cash
+    setCashToggling(member.id)
+    // Optimista: reflejamos el cambio ya y revertimos si falla.
+    setMembers(prev => prev.map(m => m.id === member.id ? { ...m, can_register_cash: next } : m))
+    const res = await setMemberCashAccess(org.id, member.user_id, next)
+    if (res.error) {
+      setMembers(prev => prev.map(m => m.id === member.id ? { ...m, can_register_cash: !next } : m))
+    }
+    setCashToggling(null)
+  }
+
+  const handleSetAgendaLevel = async (member: Member, level: AgendaLevel) => {
+    if (!org) return
+    const prev = { agenda_access: member.agenda_access, agenda_can_edit: member.agenda_can_edit }
+    const next = { agenda_access: level !== 'no', agenda_can_edit: level === 'edit' }
+    setAgendaToggling(member.id)
+    setMembers(ms => ms.map(m => m.id === member.id ? { ...m, ...next } : m))
+    const res = await setMemberAgendaLevel(org.id, member.user_id, level)
+    if (res.error) {
+      setMembers(ms => ms.map(m => m.id === member.id ? { ...m, ...prev } : m))
+    }
+    setAgendaToggling(null)
   }
 
   const handleResetAccess = async (member: Member, force = false) => {
@@ -391,6 +441,16 @@ Cualquier duda, avisame.`
           )}
         </div>
 
+        {members.length > 0 && (
+          <div className="px-6 py-3 border-b-[0.5px] border-border">
+            <p className="text-[12px] text-text-tertiary leading-relaxed">
+              <span className="text-accent font-medium">Agenda</span>: <b>no ve</b> · <b>ve</b> (solo lectura: marca presente, registra sesión y carga cobros) · <b>modifica</b> (además crea y edita turnos). Qué áreas ve se ajusta en la configuración de la agenda; la configuración del centro sigue siendo solo tuya.
+              {' · '}
+              <span className="text-[#6FAE7E] font-medium">Caja</span>: registra cobros y ve el arqueo del día (no el mes ni el historial).
+            </p>
+          </div>
+        )}
+
         {resetError && (
           <div className="px-6 py-3 border-b-[0.5px] border-border bg-red-500/5">
             <p className="text-[13px] text-red-400">{resetError}</p>
@@ -504,6 +564,31 @@ Cualquier duda, avisame.`
                         )}
                         {!isCurrentUser && (
                           <>
+                            <select
+                              value={m.agenda_can_edit ? 'edit' : m.agenda_access ? 'view' : 'no'}
+                              onChange={e => handleSetAgendaLevel(m, e.target.value as AgendaLevel)}
+                              disabled={agendaToggling === m.id}
+                              title="Qué puede hacer con la agenda del centro. Las áreas que ve se ajustan en la configuración de la agenda."
+                              className={`text-[12px] px-2.5 py-1 rounded-full border-[0.5px] bg-bg-primary transition-colors disabled:opacity-40 ${
+                                m.agenda_access ? 'text-accent border-accent/30' : 'text-text-secondary border-border'
+                              }`}
+                            >
+                              <option value="no">Agenda: no ve</option>
+                              <option value="view">Agenda: ve (solo lectura)</option>
+                              <option value="edit">Agenda: modifica turnos</option>
+                            </select>
+                            <button
+                              onClick={() => handleToggleCash(m)}
+                              disabled={cashToggling === m.id}
+                              title="Permite registrar la caja y ver el arqueo del día (no el mes ni el historial)"
+                              className={`text-[12px] px-2.5 py-0.5 rounded-full border-[0.5px] transition-colors disabled:opacity-40 ${
+                                m.can_register_cash
+                                  ? 'text-[#6FAE7E] border-[#6FAE7E]/30 bg-[#6FAE7E]/10 hover:opacity-80'
+                                  : 'text-text-secondary border-border hover:text-text-primary'
+                              }`}
+                            >
+                              {cashToggling === m.id ? '...' : m.can_register_cash ? 'Caja ✓' : 'Habilitar caja'}
+                            </button>
                             <button
                               onClick={() => handleResetAccess(m)}
                               disabled={resettingId === m.id}
@@ -547,6 +632,63 @@ Cualquier duda, avisame.`
           generar una contraseña nueva y compartírsela.
         </p>
       </div>
+
+      {/* Zona de riesgo: eliminar el centro */}
+      <div className="bg-bg-secondary rounded-xl border-[0.5px] border-[#A33D2D]/40 p-6">
+        <h2 className="text-[15px] font-medium mb-1 text-[#c47c5a]">Eliminar centro</h2>
+        <p className="text-[13px] text-text-secondary mb-4 leading-[1.6] max-w-[560px]">
+          Elimina el centro <span className="text-text-primary font-medium">{org.name}</span> de forma permanente:
+          se quitan todos los integrantes y se borran sus turnos. Los pacientes NO se borran — pasan al espacio
+          personal de quien los creó. Es irreversible.
+        </p>
+        <button
+          onClick={() => { setDeleteConfirmName(''); setDeleteOrgError(''); setShowDeleteOrg(true) }}
+          className="bg-transparent border-[0.5px] border-[#A33D2D]/60 text-[#c47c5a] px-4 py-2 rounded-lg text-[13px] font-medium hover:bg-[#A33D2D]/15 transition-colors"
+        >
+          Eliminar este centro
+        </button>
+      </div>
+
+      {/* Confirmación destructiva: eliminar centro */}
+      {showDeleteOrg && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => !deletingOrg && setShowDeleteOrg(false)}>
+          <div className="bg-bg-secondary border-[0.5px] border-border rounded-xl p-6 max-w-[440px] w-full" onClick={e => e.stopPropagation()}>
+            <h3 className="text-[16px] font-medium mb-2">Eliminar &quot;{org.name}&quot;</h3>
+            <p className="text-[13px] text-text-secondary mb-1 leading-[1.6]">
+              Esto es <span className="text-text-primary font-medium">irreversible</span>. Se quitan los integrantes
+              y se borran los turnos del centro. Los pacientes se conservan en el espacio personal de quien los creó.
+            </p>
+            <p className="text-[13px] text-text-secondary mb-4 leading-[1.6]">
+              Para confirmar, escribí el nombre del centro: <span className="text-text-primary font-medium">{org.name}</span>
+            </p>
+            <input
+              type="text"
+              value={deleteConfirmName}
+              onChange={e => setDeleteConfirmName(e.target.value)}
+              placeholder={org.name}
+              autoFocus
+              className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg px-3 py-2.5 text-[14px] mb-2 focus:outline-none focus:border-accent"
+            />
+            {deleteOrgError && <p className="text-[13px] text-red-400 mb-2">{deleteOrgError}</p>}
+            <div className="flex gap-3 justify-end mt-3">
+              <button
+                onClick={() => setShowDeleteOrg(false)}
+                disabled={deletingOrg}
+                className="text-[13px] text-text-secondary hover:text-text-primary px-3 py-2 disabled:opacity-40"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleDeleteOrg}
+                disabled={deletingOrg || deleteConfirmName.trim() !== org.name}
+                className="bg-[#A33D2D] text-white px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+              >
+                {deletingOrg ? 'Eliminando...' : 'Eliminar centro'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Confirmación: el integrante ya ingresó alguna vez */}
       {confirmResetMember && (
