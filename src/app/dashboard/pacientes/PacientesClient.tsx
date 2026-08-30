@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
+import ObraSocialField from '@/components/ObraSocialField'
 import Link from 'next/link'
 
 interface Patient {
@@ -332,7 +333,13 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
             </div>
             <div>
               <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Obra social</label>
-              <input type="text" value={form.obra_social} onChange={e => setForm(f => ({ ...f, obra_social: e.target.value }))} placeholder="Ej: OSDE, PAMI, IOMA..." className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent" />
+              <ObraSocialField
+                value={form.obra_social}
+                onChange={v => setForm(f => ({ ...f, obra_social: v }))}
+                orgId={orgId ?? null}
+                userId={userId}
+                inputClassName="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent"
+              />
             </div>
             <div>
               <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">N° de afiliado</label>
