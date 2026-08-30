@@ -30,12 +30,12 @@ export default async function EquipoPage() {
 
   const org = orgRows?.[0] || null
 
-  let members: { id: string; user_id: string; role: string; can_register_cash: boolean; agenda_access: boolean; agenda_can_edit: boolean; hasLoggedIn: boolean; users: { full_name: string | null; email: string } }[] = []
+  let members: { id: string; user_id: string; role: string; hasLoggedIn: boolean; users: { full_name: string | null; email: string } }[] = []
 
   if (org) {
     const { data: membersData } = await supabase
       .from('organization_members')
-      .select('id, user_id, role, can_register_cash, agenda_access, agenda_can_edit, users(full_name, email)')
+      .select('id, user_id, role, users(full_name, email)')
       .eq('org_id', org.id)
       .order('created_at', { ascending: true })
 

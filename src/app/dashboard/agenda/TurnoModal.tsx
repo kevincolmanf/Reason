@@ -4,8 +4,6 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import { useConfirm } from '@/components/Dialogs'
-import CargarIngresoAgenda from './CargarIngresoAgenda'
-import type { Method as CashMethod, Preset as CashPreset } from '../caja/CajaConfig'
 
 interface Turno {
   id: string
@@ -77,10 +75,12 @@ interface Props {
   onClone?: (turno: Turno) => void
   onReminderSent?: (id: string) => void
   onHistorialChanged?: () => void
-  canRegisterCash?: boolean
-  cashPresets?: CashPreset[]
-  cashMethods?: CashMethod[]
 }
+
+const AREAS = [
+  'Kinesiología', 'Entrenamiento adultos', 'Entrenamiento niños',
+  'RPG', 'Pilates', 'Yoga', 'Nutrición', 'Traumatología', 'Análisis de la marcha',
+]
 
 // Tope de filas que puede generar un bloqueo de una sola vez, para que un rango
 // mal tipeado no dispare miles de inserts.
@@ -243,13 +243,10 @@ function formatISOToDMY(iso: string): string {
   return m ? `${m[3]}/${m[2]}/${m[1]}` : ''
 }
 
-export default function TurnoModal({ userId, orgId, orgName, professionals, areas, turno, defaultStart, defaultStatus, defaultArea, slotInterval, dayStart, dayEnd, onClose, onSaved, onClone, onReminderSent, onHistorialChanged, canRegisterCash, cashPresets, cashMethods }: Props) {
+export default function TurnoModal({ userId, orgId, orgName, professionals, areas, turno, defaultStart, defaultStatus, defaultArea, slotInterval, dayStart, dayEnd, onClose, onSaved, onClone, onReminderSent, onHistorialChanged }: Props) {
   const isEdit = !!turno
   const { confirm, confirmDialog } = useConfirm()
-  // Áreas del centro. Si todavía no cargó ninguna, el turno no se categoriza por
-  // área (no forzamos una lista por defecto): el selector de área directamente
-  // no se muestra.
-  const effectiveAreas = areas
+  const effectiveAreas = areas.length > 0 ? areas : AREAS
   const defaultDuration = slotInterval ?? 60
   const openMin  = dayStart ?? 7 * 60
   const closeMin = dayEnd ?? 21 * 60
@@ -267,7 +264,7 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
     professional_id:     turno?.professional_id ?? (professionals[0]?.id ?? null) as string | null,
     start_time:          turno ? toLocalInputValue(new Date(turno.start_time)) : (defaultStart ? toLocalInputValue(defaultStart) : ''),
     end_time:            turno ? toLocalInputValue(new Date(turno.end_time))   : (defaultEnd   ? toLocalInputValue(defaultEnd)   : ''),
-    area:                turno?.area             ?? defaultArea ?? (effectiveAreas[0] ?? ''),
+    area:                turno?.area             ?? defaultArea ?? (effectiveAreas[0] ?? AREAS[0]),
     status:              turno?.status           ?? defaultStatus ?? 'programado',
     notes:               turno?.notes            ?? '',
     appointment_type:    turno?.appointment_type ?? 'turno_comun',
@@ -1185,30 +1182,13 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
               )}
             </div>
 
-            {/* Caja: cargar el ingreso en el momento (dar presente y cobrar). Solo
-                para quien puede registrar caja, cuando hay un paciente cargado. */}
-            {canRegisterCash && orgId && !form.is_blocked && form.patient_name.trim() && (
-              <CargarIngresoAgenda
-                orgId={orgId}
-                userId={userId}
-                patientId={form.patient_id}
-                patientName={form.patient_name}
-                area={form.area}
-                turnoId={turno?.id ?? null}
-                presets={cashPresets ?? []}
-                methods={cashMethods ?? []}
-              />
-            )}
-
-            {/* Área — solo si el centro tiene áreas configuradas */}
-            {effectiveAreas.length > 0 && (
-              <div>
-                <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Área</label>
-                <select value={form.area} onChange={e => setForm(f => ({ ...f, area: e.target.value }))} className={inputCls}>
-                  {effectiveAreas.map(a => <option key={a} value={a}>{a}</option>)}
-                </select>
-              </div>
-            )}
+            {/* Area */}
+            <div>
+              <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Área</label>
+              <select value={form.area} onChange={e => setForm(f => ({ ...f, area: e.target.value }))} className={inputCls}>
+                {effectiveAreas.map(a => <option key={a} value={a}>{a}</option>)}
+              </select>
+            </div>
 
             {/* Professional */}
             {professionals.length > 0 && (

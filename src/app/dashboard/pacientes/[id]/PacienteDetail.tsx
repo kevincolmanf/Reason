@@ -18,7 +18,6 @@ interface Patient {
   phone: string | null
   email: string | null
   obra_social: string | null
-  affiliate_number: string | null
   occupation: string | null
   source: string | null
   created_at: string
@@ -110,7 +109,6 @@ export default function PacienteDetail({ patient: initialPatient, userId, initia
     phone: initialPatient.phone || '',
     email: initialPatient.email || '',
     obra_social: initialPatient.obra_social || '',
-    affiliate_number: initialPatient.affiliate_number || '',
     occupation: initialPatient.occupation || '',
     source: initialPatient.source || '',
     habitual_professional_id: initialPatient.habitual_professional_id || '',
@@ -281,7 +279,6 @@ export default function PacienteDetail({ patient: initialPatient, userId, initia
         phone: editForm.phone.trim() || null,
         email: editForm.email.trim() || null,
         obra_social: editForm.obra_social.trim() || null,
-        affiliate_number: editForm.affiliate_number.trim() || null,
         occupation: editForm.occupation.trim() || null,
         source: editForm.source || null,
         habitual_professional_id: editForm.habitual_professional_id || null,
@@ -345,10 +342,6 @@ export default function PacienteDetail({ patient: initialPatient, userId, initia
                 <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Obra social</label>
                 <input type="text" value={editForm.obra_social} onChange={e => setEditForm(f => ({ ...f, obra_social: e.target.value }))} placeholder="Ej: OSDE, PAMI, IOMA..." className="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent" />
               </div>
-              <div>
-                <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">N° de afiliado</label>
-                <input type="text" value={editForm.affiliate_number} onChange={e => setEditForm(f => ({ ...f, affiliate_number: e.target.value }))} placeholder="Ej: 123456789" className="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent" />
-              </div>
               {sources.length > 0 && (
                 <div className="sm:col-span-2">
                   <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">¿Cómo llegó?</label>
@@ -389,7 +382,7 @@ export default function PacienteDetail({ patient: initialPatient, userId, initia
                 {patient.occupation && <span className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1 text-[13px] text-text-secondary">{patient.occupation}</span>}
                 {patient.phone && <span className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1 text-[13px] text-text-secondary">📞 {patient.phone}</span>}
                 {patient.email && <span className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1 text-[13px] text-text-secondary">✉ {patient.email}</span>}
-                {patient.obra_social && <span className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1 text-[13px] text-text-secondary">{patient.obra_social}{patient.affiliate_number ? ` · Nº ${patient.affiliate_number}` : ''}</span>}
+                {patient.obra_social && <span className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1 text-[13px] text-text-secondary">{patient.obra_social}</span>}
                 {patient.source && <span className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1 text-[13px] text-text-secondary">Vía: {patient.source}</span>}
                 <span className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1 text-[13px] text-text-secondary">
                   Desde {new Date(patient.created_at).toLocaleDateString('es-AR', { month: 'short', year: 'numeric' })}

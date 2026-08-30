@@ -52,7 +52,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
   const [search, setSearch] = useState('')
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
-  const [form, setForm] = useState({ name: '', dni: '', birth_date: '', phone: '', email: '', obra_social: '', affiliate_number: '', occupation: '', source: '' })
+  const [form, setForm] = useState({ name: '', dni: '', birth_date: '', phone: '', email: '', obra_social: '', occupation: '', source: '' })
   const [dniError, setDniError] = useState<string | null>(null)
   const [limitError, setLimitError] = useState<string | null>(null)
   const [sources, setSources] = useState<PatientSource[]>([])
@@ -137,7 +137,6 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
         phone: form.phone.trim() || null,
         email: form.email.trim() || null,
         obra_social: form.obra_social.trim() || null,
-        affiliate_number: form.affiliate_number.trim() || null,
         occupation: form.occupation.trim() || null,
         source: form.source || null,
         orgId: isOrgContext ? orgId : null,
@@ -161,7 +160,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
       return
     }
 
-    setForm({ name: '', dni: '', birth_date: '', phone: '', email: '', obra_social: '', affiliate_number: '', occupation: '', source: '' })
+    setForm({ name: '', dni: '', birth_date: '', phone: '', email: '', obra_social: '', occupation: '', source: '' })
     setShowForm(false)
     await fetchPatients()
     setSaving(false)
@@ -175,7 +174,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
     await fetchPatients()
   }
 
-  const closeForm = () => { setShowForm(false); setForm({ name: '', dni: '', birth_date: '', phone: '', email: '', obra_social: '', affiliate_number: '', occupation: '', source: '' }); setDniError(null); setLimitError(null) }
+  const closeForm = () => { setShowForm(false); setForm({ name: '', dni: '', birth_date: '', phone: '', email: '', obra_social: '', occupation: '', source: '' }); setDniError(null); setLimitError(null) }
 
   const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
   const filtered = search.trim()
@@ -330,13 +329,9 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
               <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Email</label>
               <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="paciente@email.com" className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent" />
             </div>
-            <div>
+            <div className="sm:col-span-2">
               <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Obra social</label>
               <input type="text" value={form.obra_social} onChange={e => setForm(f => ({ ...f, obra_social: e.target.value }))} placeholder="Ej: OSDE, PAMI, IOMA..." className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent" />
-            </div>
-            <div>
-              <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">N° de afiliado</label>
-              <input type="text" value={form.affiliate_number} onChange={e => setForm(f => ({ ...f, affiliate_number: e.target.value }))} placeholder="Ej: 123456789" className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent" />
             </div>
             {sources.length > 0 && (
               <div className="sm:col-span-2">
