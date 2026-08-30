@@ -92,18 +92,18 @@ export default async function Header() {
 
   return (
     <header className="py-6 border-b-[0.5px] border-border sticky top-0 bg-bg-primary/80 backdrop-blur-md z-10">
-      <div className="w-full max-w-[1080px] mx-auto px-4 md:px-8 flex justify-between items-center">
-        <Link href="/dashboard" className="text-[20px] font-medium tracking-[-0.01em] no-underline text-text-primary">
+      <div className="w-full max-w-[1080px] mx-auto px-4 md:px-8 flex justify-between items-center gap-4">
+        <Link href="/dashboard" className="text-[20px] font-medium tracking-[-0.01em] no-underline text-text-primary shrink-0">
           reason<span className="text-accent">.</span>
         </Link>
-        <nav className="flex items-center gap-4 md:gap-6">
+        <nav className="flex items-center gap-3 lg:gap-4 min-w-0">
           {/* Orden pensado por el flujo de trabajo real: primero el paciente y su
               agenda (lo clínico), después las bibliotecas de referencia. */}
-          <Link href="/dashboard/pacientes" className="hidden lg:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+          <Link href="/dashboard/pacientes" className="hidden lg:inline whitespace-nowrap text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
             Pacientes
           </Link>
           {hasAgendaAccess ? (
-            <Link href="/dashboard/agenda" className="hidden lg:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+            <Link href="/dashboard/agenda" className="hidden lg:inline whitespace-nowrap text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
               Agenda
             </Link>
           ) : (
@@ -114,22 +114,22 @@ export default async function Header() {
               </div>
             </div>
           )}
-          <Link href="/dashboard/ejercicios" className="hidden lg:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+          <Link href="/dashboard/ejercicios" className="hidden lg:inline whitespace-nowrap text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
             Ejercicios
           </Link>
-          <Link href="/recursos" className="hidden lg:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+          <Link href="/recursos" className="hidden lg:inline whitespace-nowrap text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
             Recursos
           </Link>
-          <Link href="/library" className="hidden lg:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+          <Link href="/library" className="hidden lg:inline whitespace-nowrap text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
             Biblioteca
           </Link>
           {canManageTeam && (
-            <Link href="/account/equipo" className="hidden lg:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+            <Link href="/account/equipo" className="hidden lg:inline whitespace-nowrap text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
               Equipo
             </Link>
           )}
           {isProOrAdmin ? (
-            <Link href="/account/crm" className="hidden lg:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+            <Link href="/account/crm" className="hidden lg:inline whitespace-nowrap text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
               Panel de gestión
             </Link>
           ) : (
@@ -138,9 +138,9 @@ export default async function Header() {
             // "Disponible en Plan Pro" (¡ya es Pro!), lo guiamos a crear su centro.
             <div className="relative group hidden lg:inline-block">
               {canManageTeam ? (
-                <Link href="/account/equipo" className="text-[13px] sm:text-[14px] text-[#c47c5a] no-underline">Panel de gestión</Link>
+                <Link href="/account/equipo" className="whitespace-nowrap text-[13px] sm:text-[14px] text-[#c47c5a] no-underline">Panel de gestión</Link>
               ) : (
-                <span className="text-[13px] sm:text-[14px] text-[#c47c5a] cursor-default select-none">Panel de gestión</span>
+                <span className="whitespace-nowrap text-[13px] sm:text-[14px] text-[#c47c5a] cursor-default select-none">Panel de gestión</span>
               )}
               <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-2.5 py-1.5 bg-bg-secondary border-[0.5px] border-border rounded-lg text-[11px] text-text-secondary whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 shadow-lg">
                 {canManageTeam ? 'Creá tu centro para verlo' : 'Disponible en Plan Pro'}
@@ -149,7 +149,7 @@ export default async function Header() {
           )}
 
           {canSeeCaja && (
-            <Link href="/dashboard/caja" className="hidden lg:inline text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+            <Link href="/dashboard/caja" className="hidden lg:inline whitespace-nowrap text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
               Caja
             </Link>
           )}
