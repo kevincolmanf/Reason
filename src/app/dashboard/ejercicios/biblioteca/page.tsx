@@ -1,5 +1,4 @@
 import Header from '@/components/Header'
-import Link from 'next/link'
 import BibliotecaInteractive from './BibliotecaInteractive'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
@@ -28,10 +27,7 @@ export default async function BibliotecaPage() {
     <div className="min-h-screen bg-bg-primary flex flex-col">
       <Header />
       <main className="flex-grow w-full max-w-[1200px] mx-auto px-8 py-12">
-        <div className="mb-8 border-b-[0.5px] border-border pb-8">
-          <Link href="/dashboard/ejercicios" className="text-[13px] text-text-secondary hover:text-text-primary transition-colors no-underline flex items-center gap-2 mb-6">
-            ← Volver al Movement Dashboard
-          </Link>
+        <div data-tour="ejercicios-grid" className="mb-8 border-b-[0.5px] border-border pb-8">
           <div className="flex justify-between items-start">
             <div>
               <h1 className="text-[32px] font-medium tracking-[-0.02em] mb-2">

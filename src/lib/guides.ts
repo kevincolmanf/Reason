@@ -114,7 +114,7 @@ const GUIDES: GuideDef[] = [
   { key: 'agenda', paths: ['/dashboard/agenda'], steps: AGENDA_STEPS },
   { key: 'pacientes', paths: ['/dashboard/pacientes'], steps: PACIENTES_STEPS },
   { key: 'dashboard', paths: ['/dashboard'], steps: DASHBOARD_STEPS },
-  { key: 'ejercicios', paths: ['/dashboard/ejercicios'], steps: EJERCICIOS_STEPS },
+  { key: 'ejercicios', paths: ['/dashboard/ejercicios/biblioteca'], steps: EJERCICIOS_STEPS },
   { key: 'recursos', paths: ['/recursos'], steps: RECURSOS_STEPS },
   { key: 'biblioteca', paths: ['/library'], steps: BIBLIOTECA_STEPS },
 ]
