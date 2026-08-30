@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/Dialogs'
 import { setMemberAgendaLevel, type AgendaLevel } from '@/app/account/equipo/actions'
+import { savePersonalAgendaConfig } from './actions'
 
 // Envuelve un <select> nativo para darle un chevron propio y un look consistente.
 // Sin esto, el <select> toma el chrome del sistema operativo y se ve desalineado
@@ -197,30 +198,33 @@ export default function AgendaSettings({
     const safeStart = Math.min(dayStart, dayEnd - 60)
     const safeEnd   = Math.max(dayEnd, dayStart + 60)
 
-    const table = orgId && isOwner ? 'organizations' : 'users'
-    const rowId = orgId && isOwner ? orgId : userId
-
-    // Guardado principal (áreas, intervalo, etc.). No incluye el horario visible
-    // para que, si la migración de esas columnas no corrió, esto igual persista.
+    // CENTRO (dueño): la config vive en organizations, que sí permite el UPDATE del
+    // dueño por RLS. Se guarda desde el cliente como siempre.
     if (orgId && isOwner) {
       await supabase.from('organizations').update({ agenda_areas: areas, agenda_slot_interval: slotInterval, agenda_area_durations: cleanDurations, agenda_share_enabled: shareEnabled }).eq('id', orgId)
-    } else {
-      await supabase.from('users').update({ agenda_areas: areas, agenda_slot_interval: slotInterval, agenda_area_durations: cleanDurations }).eq('id', userId)
+      // Horario visible por separado (best-effort): si las columnas no existen,
+      // falla solo esto y el resto igual se guarda.
+      const { error: hoursErr } = await supabase.from('organizations').update({ agenda_day_start: safeStart, agenda_day_end: safeEnd }).eq('id', orgId)
+      await supabase.from('organizations').update({ whatsapp: whatsapp.trim() || null }).eq('id', orgId)
+      setSaving(false)
+      onSaved(areas, slotInterval, cleanDurations, hoursErr ? initialDayStart : safeStart, hoursErr ? initialDayEnd : safeEnd)
+      return
     }
 
-    // Guardado del horario visible por separado (best-effort): si las columnas
-    // todavía no existen, falla solo esto y el resto de la config igual se guarda.
-    const { error: hoursErr } = await supabase.from(table).update({ agenda_day_start: safeStart, agenda_day_end: safeEnd }).eq('id', rowId)
-
-    // WhatsApp de contacto para los avisos de ausencia. Se guarda en la misma
-    // tabla que el resto de la config: organizations para el dueño de una clínica
-    // (un solo número por org), users para agendas personales. Best-effort: si la
-    // columna todavía no existe, falla solo esto y el resto igual se guarda.
-    await supabase.from(table).update({ whatsapp: whatsapp.trim() || null }).eq('id', rowId)
-
+    // ESPACIO PERSONAL: la escritura del cliente a `users` se descarta en silencio
+    // (users no tiene policy de UPDATE) → antes la config volvía a los defaults al
+    // recargar. Persistimos por una acción de servidor (admin, solo la propia fila).
+    const res = await savePersonalAgendaConfig({
+      agenda_areas: areas,
+      agenda_slot_interval: slotInterval,
+      agenda_area_durations: cleanDurations,
+      agenda_day_start: safeStart,
+      agenda_day_end: safeEnd,
+      whatsapp: whatsapp.trim() || null,
+    })
     setSaving(false)
-    // Si no se pudo guardar el horario (migración pendiente), no lo reflejamos en la UI.
-    onSaved(areas, slotInterval, cleanDurations, hoursErr ? initialDayStart : safeStart, hoursErr ? initialDayEnd : safeEnd)
+    if (res.error) { notify('No se pudo guardar la configuración. Probá de nuevo.', 'error'); return }
+    onSaved(areas, slotInterval, cleanDurations, safeStart, safeEnd)
   }
 
   return (

@@ -15,7 +15,7 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
   const body = await request.json()
-  const { name, dni, birth_date, phone, email, obra_social, occupation, source, orgId } = body
+  const { name, dni, birth_date, phone, email, obra_social, affiliate_number, occupation, source, orgId } = body
 
   if (!name?.trim() || !dni?.trim()) {
     return NextResponse.json({ error: 'Nombre y DNI son obligatorios' }, { status: 400 })
@@ -64,6 +64,7 @@ export async function POST(request: Request) {
     phone: phone?.trim() || null,
     email: email?.trim() || null,
     obra_social: obra_social?.trim() || null,
+    affiliate_number: affiliate_number?.trim() || null,
     occupation: occupation?.trim() || null,
     source: source?.trim() || null,
   }).select('id').single()
