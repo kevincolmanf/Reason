@@ -429,7 +429,7 @@ export default function AgendaSettings({
               Acceso a la agenda por integrante
             </label>
             <p className="text-[12px] text-text-secondary mb-3">
-              <b>No ve</b>: no entra a la agenda. <b>Ve</b>: solo lectura (marca presente, registra sesión, carga cobros). <b>Modifica</b>: además crea y edita turnos. Es el mismo permiso que ves en Mi Equipo.
+              <b>No ve</b>: no entra a la agenda. <b>Ve</b>: solo lectura (ve turnos y pacientes, sin modificarlos). <b>Modifica</b>: gestiona la agenda — crea y edita turnos, marca presente/ausente y envía recordatorios. Es el mismo permiso que ves en Mi Equipo.
             </p>
             <div className="flex flex-col gap-2">
               {members.map(m => {

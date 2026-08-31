@@ -444,7 +444,7 @@ Cualquier duda, avisame.`
         {members.length > 0 && (
           <div className="px-6 py-3 border-b-[0.5px] border-border">
             <p className="text-[12px] text-text-tertiary leading-relaxed">
-              <span className="text-accent font-medium">Agenda</span>: <b>no ve</b> · <b>ve</b> (solo lectura: marca presente, registra sesión y carga cobros) · <b>modifica</b> (además crea y edita turnos). Qué áreas ve se ajusta en la configuración de la agenda; la configuración del centro sigue siendo solo tuya.
+              <span className="text-accent font-medium">Agenda</span>: <b>no ve</b> · <b>ve</b> (solo lectura, sin modificar) · <b>modifica</b> (crea y edita turnos, marca presente/ausente y envía recordatorios). Qué áreas ve se ajusta en la configuración de la agenda; la configuración del centro sigue siendo solo tuya.
               {' · '}
               <span className="text-[#6FAE7E] font-medium">Caja</span>: registra cobros y ve el arqueo del día (no el mes ni el historial).
             </p>
