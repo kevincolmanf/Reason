@@ -1891,17 +1891,6 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
                     ))}
                   </div>
 
-                  {/* Importar del plan (solo si hay sesiones con ejercicios en plan_data) */}
-                  {importablePlanSessions.length > 0 && (
-                    <button
-                      onClick={() => setShowImportModal(true)}
-                      className="mt-6 w-full py-2.5 border-[0.5px] border-dashed border-accent/50 rounded-xl text-[13px] text-accent hover:border-accent hover:bg-accent/5 transition-colors flex items-center justify-center gap-2"
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                      Importar ejercicios del plan
-                    </button>
-                  )}
-
                   {/* Agregar bloque */}
                   <button
                     onClick={addBlock}
@@ -2081,7 +2070,7 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
                     className="w-full text-left bg-bg-secondary border-[0.5px] border-border rounded-lg p-4 hover:border-accent transition-colors flex justify-between items-center group"
                   >
                     <div>
-                      <div className="text-[14px] font-medium text-text-primary">{ex.name}</div>
+                      <div className="text-[14px] font-medium text-text-primary">{formatExerciseName(ex.name)}</div>
                       <div className="text-[11px] text-text-secondary mt-1">
                         {ex.category === 'mis_ejercicios'
                           ? 'MIS EJERCICIOS'

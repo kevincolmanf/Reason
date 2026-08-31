@@ -46,6 +46,18 @@ textarea:-webkit-autofill {
   transition: background-color 9999s ease-in-out 0s;
 }
 
+/* Evita el auto-zoom de iOS/Safari al enfocar un input en celular/tablet: el
+   navegador hace zoom cuando la fuente del input es menor a 16px. Con (pointer:
+   coarse) apuntamos solo a dispositivos táctiles (celu + tablet), sin tocar el
+   desktop, y llevamos los inputs a 16px. No desactiva el pinch-zoom (accesible). */
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
 /* Fix SVG / Mermaid diagrams colors */
 svg text {
   fill: var(--color-text-primary) !important;
