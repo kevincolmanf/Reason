@@ -206,18 +206,18 @@ export default function EventosClient({ userId, orgId, initialEvents, initialCou
               <label className={label}>Nombre</label>
               <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Ej: Jornada de Kinesiología Build 2026" className={inputCls} />
             </div>
-            <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
+            <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-3 min-w-0">
+              <div className="min-w-0">
                 <label className={label}>Fecha</label>
-                <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} className={inputCls} />
+                <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} className={inputCls + ' min-w-0 max-w-full'} />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className={label}>Inicio</label>
-                <input type="time" value={form.startTime} onChange={e => setForm(f => ({ ...f, startTime: e.target.value }))} className={inputCls} />
+                <input type="time" value={form.startTime} onChange={e => setForm(f => ({ ...f, startTime: e.target.value }))} className={inputCls + ' min-w-0 max-w-full'} />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className={label}>Fin (opc.)</label>
-                <input type="time" value={form.endTime} onChange={e => setForm(f => ({ ...f, endTime: e.target.value }))} className={inputCls} />
+                <input type="time" value={form.endTime} onChange={e => setForm(f => ({ ...f, endTime: e.target.value }))} className={inputCls + ' min-w-0 max-w-full'} />
               </div>
             </div>
             <div className="sm:col-span-2">
