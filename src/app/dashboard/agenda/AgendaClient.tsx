@@ -556,10 +556,16 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
   }
 
   const quickStatus = useCallback(async (id: string, status: string) => {
-    if (!isOwner) return
+    // Marcar presente/ausente lo puede hacer cualquiera que edite la agenda
+    // (dueño o integrante con "modifica turnos"), no solo el dueño. La RLS de
+    // turnos ya habilita el UPDATE a ese integrante (can_edit_org_turnos).
+    if (!canEditTurnos) return
     setTurnos(prev => prev.map(t => t.id === id ? { ...t, status } : t))
-    await supabaseRef.current.from('turnos').update({ status }).eq('id', id)
-  }, [isOwner])
+    const { error } = await supabaseRef.current.from('turnos').update({ status }).eq('id', id)
+    // Si el update falla (p. ej. sin permiso), resincronizamos desde la base para
+    // deshacer el cambio optimista.
+    if (error) fetchTurnos()
+  }, [canEditTurnos, fetchTurnos])
 
   const markReminded = useCallback((id: string) => {
     // Persistente: guarda el momento del envío en la base para que la agenda y la

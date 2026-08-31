@@ -56,21 +56,27 @@ export default async function RecordatoriosPage({ searchParams }: { searchParams
     }
   }
 
-  // Igual que en la agenda: el dueño edita/envía; los integrantes con acceso entran
-  // en modo lectura y no ven esta página (solo el dueño manda recordatorios).
+  // Puede enviar recordatorios el dueño/admin o un integrante que "modifica la
+  // agenda" (mismo permiso con el que se muestra el botón "Recordatorios" en la
+  // agenda). Antes solo entraba el dueño, así que la secretaria con permiso de
+  // edición hacía clic en el botón y rebotaba a la agenda.
   const isOwner = role === 'admin' || !orgId || isOrgOwner
-  if (!isOwner) redirect('/dashboard/agenda')
 
-  // Profesionales de la org (para filtrar la lista por profesional).
+  // Profesionales de la org (para filtrar la lista por profesional) + permiso del
+  // integrante actual.
   let professionals: { id: string; full_name: string | null }[] = []
+  let canEdit = isOwner
   if (orgId) {
-    type MemberRow = { user_id: string; users: { id: string; full_name: string | null; email: string | null } | null }
+    type MemberRow = { user_id: string; agenda_access: boolean | null; agenda_can_edit: boolean | null; users: { id: string; full_name: string | null; email: string | null } | null }
     const adminClient = createAdminClient()
     const { data: memberRows } = await adminClient
       .from('organization_members')
-      .select('user_id, users(id, full_name, email)')
+      .select('user_id, agenda_access, agenda_can_edit, users(id, full_name, email)')
       .eq('org_id', orgId)
-    professionals = ((memberRows ?? []) as unknown as MemberRow[]).map(m => ({
+    const rows = (memberRows ?? []) as unknown as MemberRow[]
+    const myRow = rows.find(m => m.user_id === user.id)
+    canEdit = isOwner || (!!myRow?.agenda_can_edit && !!myRow?.agenda_access)
+    professionals = rows.map(m => ({
       id: m.users?.id ?? m.user_id,
       full_name: m.users?.full_name ?? m.users?.email ?? null,
     }))
@@ -78,6 +84,8 @@ export default async function RecordatoriosPage({ searchParams }: { searchParams
       professionals = [{ id: user.id, full_name: userData.full_name }, ...professionals]
     }
   }
+
+  if (!canEdit) redirect('/dashboard/agenda')
 
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">

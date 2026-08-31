@@ -94,7 +94,10 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
   useEffect(() => { fetchPatients() }, [fetchPatients])
 
   const fetchSources = useCallback(async () => {
-    if (!isPro) return
+    // Un integrante del equipo (role 'free', isPro=false) igual necesita ver las
+    // "vías de llegada" de la org al cargar un paciente. Configurarlas sigue siendo
+    // solo del dueño (botón gateado por isPro), pero leerlas es para todo el equipo.
+    if (!isPro && !isOrgContext) return
     const url = isOrgContext ? `/api/pacientes/fuentes?orgId=${orgId}` : '/api/pacientes/fuentes'
     const res = await fetch(url)
     if (res.ok) setSources(await res.json())
