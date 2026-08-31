@@ -151,7 +151,11 @@ export default function EventosClient({ userId, orgId, initialEvents, initialCou
     const data = await res.json()
     setCertSending(false)
     if (!res.ok) { setCertMsg(data.error ?? 'No se pudo enviar.'); return }
-    setCertMsg(`✓ Certificados enviados: ${data.sent}${data.failed ? ` · fallaron ${data.failed}` : ''}.`)
+    if (data.sent > 0) {
+      setCertMsg(`✓ Enviados: ${data.sent}${data.failed ? ` · fallaron ${data.failed}` : ''}${data.error ? ` — ${data.error}` : ''}.`)
+    } else {
+      setCertMsg(`No se pudo enviar ningún certificado. Motivo: ${data.error || 'desconocido'}`)
+    }
     setEvents(prev => prev.map(e => e.id === certEventId ? { ...e, cert_entity: cert.entity || null, cert_signer: cert.signer || null, cert_signer_role: cert.role || null } : e))
   }
 

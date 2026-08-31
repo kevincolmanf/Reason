@@ -44,6 +44,7 @@ export async function POST(request: Request) {
 
   let sent = 0
   let failed = 0
+  let firstError = ''
   // En tandas para no saturar el proveedor de mail.
   const chunk = 8
   for (let i = 0; i < list.length; i += chunk) {
@@ -65,11 +66,14 @@ export async function POST(request: Request) {
     }))
     for (const res of results) {
       if (res.status === 'fulfilled' && res.value.sent) sent++
-      else failed++
+      else {
+        failed++
+        if (!firstError) firstError = res.status === 'fulfilled' ? (res.value.error || res.value.skipped || 'error desconocido') : String(res.reason)
+      }
     }
     // Marcamos como enviados los de esta tanda (best-effort).
     await admin.from('event_registrations').update({ certificate_sent_at: new Date().toISOString() }).in('id', slice.map(s => s.id))
   }
 
-  return NextResponse.json({ ok: true, sent, failed, total: list.length })
+  return NextResponse.json({ ok: true, sent, failed, total: list.length, error: firstError || undefined })
 }
