@@ -43,7 +43,7 @@ export default function InscripcionForm({ token, eventTitle, startsAt, paymentIn
         </p>
         {paymentInstructions && (
           <div className="mt-4 text-left bg-bg-primary border-[0.5px] border-border rounded-lg p-3">
-            <div className="text-[13px] font-medium mb-1">Para confirmar tu lugar, pagá:</div>
+            <div className="text-[13px] font-medium mb-1">Para confirmar tu lugar, pulsá este link para realizar el pago:</div>
             <p className="text-[13px] text-text-secondary leading-[1.55] whitespace-pre-line"><Linkify text={paymentInstructions} /></p>
           </div>
         )}
