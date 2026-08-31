@@ -14,10 +14,14 @@ interface EventRow {
   capacity: number | null
   public_token: string
   price: number
+  payment_instructions: string | null
   published: boolean
   created_at: string
+  cert_entity: string | null
+  cert_signer: string | null
+  cert_signer_role: string | null
 }
-interface Reg { id: string; name: string; email: string; created_at: string }
+interface Reg { id: string; name: string; email: string; created_at: string; checked_in: boolean }
 
 interface Props {
   userId: string
@@ -41,7 +45,7 @@ function toLocalTime(iso: string | null) {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
-const EMPTY = (date: string) => ({ title: '', description: '', location: '', cover_emoji: '🎟️', date, startTime: '19:00', endTime: '', capacity: '' })
+const EMPTY = (date: string) => ({ title: '', description: '', location: '', cover_emoji: '🎟️', date, startTime: '19:00', endTime: '', capacity: '', price: '', payment_instructions: '' })
 
 export default function EventosClient({ userId, orgId, initialEvents, initialCounts }: Props) {
   const supabase = createClient()
@@ -71,6 +75,7 @@ export default function EventosClient({ userId, orgId, initialEvents, initialCou
       title: e.title, description: e.description ?? '', location: e.location ?? '', cover_emoji: e.cover_emoji,
       date: toLocalDate(e.starts_at), startTime: toLocalTime(e.starts_at), endTime: toLocalTime(e.ends_at),
       capacity: e.capacity != null ? String(e.capacity) : '',
+      price: e.price ? String(e.price) : '', payment_instructions: e.payment_instructions ?? '',
     })
     setError(''); setShowForm(true)
     setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 30)
@@ -89,6 +94,8 @@ export default function EventosClient({ userId, orgId, initialEvents, initialCou
       starts_at: new Date(`${form.date}T${form.startTime}`).toISOString(),
       ends_at: form.endTime ? new Date(`${form.date}T${form.endTime}`).toISOString() : null,
       capacity: form.capacity ? parseInt(form.capacity, 10) : null,
+      price: form.price ? Number(form.price) : 0,
+      payment_instructions: form.payment_instructions.trim() || null,
     }
     if (editingId) {
       const { error: updErr } = await supabase.from('events').update(payload).eq('id', editingId)
@@ -98,7 +105,7 @@ export default function EventosClient({ userId, orgId, initialEvents, initialCou
     } else {
       const { data, error: insErr } = await supabase.from('events').insert({
         creator_id: userId, org_id: orgId, ...payload,
-      }).select('id, title, description, location, starts_at, ends_at, cover_emoji, capacity, public_token, price, published, created_at').single()
+      }).select('id, title, description, location, starts_at, ends_at, cover_emoji, capacity, public_token, price, payment_instructions, published, created_at, cert_entity, cert_signer, cert_signer_role').single()
       setSaving(false)
       if (insErr || !data) { setError(`No se pudo crear: ${insErr?.message ?? 'error'}`); return }
       setEvents(prev => [data as EventRow, ...prev])
@@ -119,8 +126,41 @@ export default function EventosClient({ userId, orgId, initialEvents, initialCou
   const toggleRegs = async (id: string) => {
     if (openRegs === id) { setOpenRegs(null); return }
     setOpenRegs(id); setLoadingRegs(true); setRegs([])
-    const { data } = await supabase.from('event_registrations').select('id, name, email, created_at').eq('event_id', id).order('created_at', { ascending: false })
+    const { data } = await supabase.from('event_registrations').select('id, name, email, created_at, checked_in').eq('event_id', id).order('created_at', { ascending: false })
     setRegs((data ?? []) as Reg[]); setLoadingRegs(false)
+  }
+
+  const toggleCheckIn = async (regId: string, next: boolean) => {
+    setRegs(prev => prev.map(r => r.id === regId ? { ...r, checked_in: next } : r))
+    await supabase.from('event_registrations').update({ checked_in: next }).eq('id', regId)
+  }
+
+  // Envío de certificados (solo a los presentes) con datos del template.
+  const [certEventId, setCertEventId] = useState<string | null>(null)
+  const [cert, setCert] = useState({ entity: '', signer: '', role: '' })
+  const [certSending, setCertSending] = useState(false)
+  const [certMsg, setCertMsg] = useState('')
+  const openCert = (e: EventRow) => {
+    setCertEventId(certEventId === e.id ? null : e.id)
+    setCert({ entity: e.cert_entity ?? '', signer: e.cert_signer ?? '', role: e.cert_signer_role ?? '' })
+    setCertMsg('')
+  }
+  const sendCerts = async () => {
+    if (!certEventId) return
+    setCertSending(true); setCertMsg('')
+    const res = await fetch('/api/eventos/certificados', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ eventId: certEventId, entity: cert.entity, signer: cert.signer, signerRole: cert.role }),
+    })
+    const data = await res.json()
+    setCertSending(false)
+    if (!res.ok) { setCertMsg(data.error ?? 'No se pudo enviar.'); return }
+    if (data.sent > 0) {
+      setCertMsg(`✓ Enviados: ${data.sent}${data.failed ? ` · fallaron ${data.failed}` : ''}${data.error ? ` — ${data.error}` : ''}.`)
+    } else {
+      setCertMsg(`No se pudo enviar ningún certificado. Motivo: ${data.error || 'desconocido'}`)
+    }
+    setEvents(prev => prev.map(e => e.id === certEventId ? { ...e, cert_entity: cert.entity || null, cert_signer: cert.signer || null, cert_signer_role: cert.role || null } : e))
   }
 
   // Exporta los inscriptos a CSV (abre en Excel). BOM para acentos correctos.
@@ -187,6 +227,17 @@ export default function EventosClient({ userId, orgId, initialEvents, initialCou
               <input type="number" min="1" value={form.capacity} onChange={e => setForm(f => ({ ...f, capacity: e.target.value }))} placeholder="Ilimitado" className={inputCls} />
             </div>
             <div>
+              <label className={label}>Precio (opc.)</label>
+              <input type="number" min="0" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="Gratis" className={inputCls + ' tabular-nums'} />
+            </div>
+            {Number(form.price) > 0 && (
+              <div className="sm:col-span-2">
+                <label className={label}>Cómo se paga</label>
+                <textarea value={form.payment_instructions} onChange={e => setForm(f => ({ ...f, payment_instructions: e.target.value }))} rows={3} placeholder="Instrucciones claras para el inscripto: tu link de pago de Mercado Pago, CBU/alias, y si tiene que enviar el comprobante (a dónde) o no hace falta." className={inputCls + ' resize-y'} />
+                <p className="text-[11px] text-text-tertiary mt-1">El pago es directo a vos. Reason solo muestra estas instrucciones; la plata no pasa por Reason.</p>
+              </div>
+            )}
+            <div>
               <label className={label}>Portada</label>
               <div className="flex flex-wrap gap-1.5">
                 {EMOJIS.map(em => (
@@ -226,7 +277,22 @@ export default function EventosClient({ userId, orgId, initialEvents, initialCou
                 <button onClick={() => openEdit(e)} className="text-[12px] text-text-secondary hover:text-text-primary px-1">Editar</button>
                 <button onClick={() => toggleRegs(e.id)} className="text-[12px] text-text-secondary hover:text-text-primary px-1">{openRegs === e.id ? 'Ocultar inscriptos' : 'Ver inscriptos'}</button>
                 <button onClick={() => exportCsv(e)} disabled={exporting === e.id} className="text-[12px] text-text-secondary hover:text-text-primary px-1 disabled:opacity-40">{exporting === e.id ? 'Exportando…' : 'Exportar a Excel'}</button>
+                <button onClick={() => openCert(e)} className="text-[12px] text-text-secondary hover:text-text-primary px-1">Certificados</button>
               </div>
+
+              {certEventId === e.id && (
+                <div className="border-t-[0.5px] border-border px-4 py-4 bg-bg-primary/30">
+                  <div className="text-[13px] font-medium mb-1">Enviar certificados</div>
+                  <p className="text-[12px] text-text-tertiary mb-3">Se mandan por mail <strong>solo a los inscriptos con check-in</strong> (marcá “presente” en la lista de inscriptos). Completá el template:</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">
+                    <input value={cert.entity} onChange={ev => setCert(c => ({ ...c, entity: ev.target.value }))} placeholder="Entidad / organizador" className={inputCls} />
+                    <input value={cert.signer} onChange={ev => setCert(c => ({ ...c, signer: ev.target.value }))} placeholder="Firma (nombre)" className={inputCls} />
+                    <input value={cert.role} onChange={ev => setCert(c => ({ ...c, role: ev.target.value }))} placeholder="Cargo (ej. Director)" className={inputCls} />
+                  </div>
+                  {certMsg && <p className={`text-[13px] mb-2 ${certMsg.startsWith('✓') ? 'text-[#6FAE7E]' : 'text-red-400'}`}>{certMsg}</p>}
+                  <button onClick={sendCerts} disabled={certSending} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40">{certSending ? 'Enviando…' : 'Enviar a los presentes'}</button>
+                </div>
+              )}
               {openRegs === e.id && (
                 <div className="border-t-[0.5px] border-border px-4 py-3">
                   {loadingRegs ? (
@@ -234,14 +300,24 @@ export default function EventosClient({ userId, orgId, initialEvents, initialCou
                   ) : regs.length === 0 ? (
                     <p className="text-[13px] text-text-secondary">Todavía no hay inscriptos.</p>
                   ) : (
-                    <ul className="flex flex-col gap-1.5">
-                      {regs.map(r => (
-                        <li key={r.id} className="flex items-center justify-between gap-3 text-[13px]">
-                          <span className="text-text-primary truncate">{r.name} <span className="text-text-tertiary">· {r.email}</span></span>
-                          <span className="text-[11px] text-text-tertiary shrink-0">{new Date(r.created_at).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}</span>
-                        </li>
-                      ))}
-                    </ul>
+                    <>
+                      <div className="text-[11px] text-text-tertiary mb-2">{regs.filter(r => r.checked_in).length} presente{regs.filter(r => r.checked_in).length === 1 ? '' : 's'} de {regs.length}</div>
+                      <ul className="flex flex-col gap-1.5">
+                        {regs.map(r => (
+                          <li key={r.id} className="flex items-center gap-2.5 text-[13px]">
+                            <button
+                              onClick={() => toggleCheckIn(r.id, !r.checked_in)}
+                              title={r.checked_in ? 'Marcado como presente' : 'Marcar presente'}
+                              className={`shrink-0 text-[11px] px-2 py-0.5 rounded-full border-[0.5px] transition-colors ${r.checked_in ? 'text-[#6FAE7E] border-[#6FAE7E]/30 bg-[#6FAE7E]/10' : 'text-text-tertiary border-border hover:text-text-primary'}`}
+                            >
+                              {r.checked_in ? '✓ Presente' : 'Marcar presente'}
+                            </button>
+                            <span className="text-text-primary truncate flex-1">{r.name} <span className="text-text-tertiary">· {r.email}</span></span>
+                            <span className="text-[11px] text-text-tertiary shrink-0">{new Date(r.created_at).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </>
                   )}
                 </div>
               )}
