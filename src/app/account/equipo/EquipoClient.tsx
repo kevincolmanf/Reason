@@ -128,10 +128,10 @@ export default function EquipoClient({ userId, org: initialOrg, members: initial
       fd.set('email', memberEmail)
       fd.set('full_name', memberName)
       const res = await addMember(org.id, fd)
-      if (res?.error) {
-        setAddError(res.error)
+      if (!res || res.error) {
+        setAddError(res?.error || 'No se pudo agregar al integrante. Recargá la página e intentá de nuevo.')
       } else {
-        setNewCredentials({ email: res.email!, tempPassword: res.tempPassword, fullName: memberName.trim() })
+        setNewCredentials({ email: res.email || memberEmail.trim(), tempPassword: res.tempPassword, fullName: memberName.trim() })
         setMemberEmail('')
         setMemberName('')
         setShowAddForm(false)

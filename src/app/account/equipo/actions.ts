@@ -57,7 +57,10 @@ export async function createOrganization(formData: FormData) {
 export async function addMember(orgId: string, formData: FormData): Promise<{ error?: string; tempPassword?: string; email?: string }> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  // Si el server action no ve la sesión (cookie), devolvemos un error legible en
+  // vez de redirect(): el redirect hacía que el cliente recibiera `undefined` y
+  // reventara al leer res.email ("undefined is not an object").
+  if (!user) return { error: 'Tu sesión expiró. Recargá la página e iniciá sesión de nuevo.' }
 
   // Verify current user is admin of this org
   const { data: membership } = await supabase
@@ -116,18 +119,26 @@ export async function addMember(orgId: string, formData: FormData): Promise<{ er
 
   memberId = authData.user.id
 
-  await adminClient.from('users').insert({
+  const { error: userInsertError } = await adminClient.from('users').insert({
     id: memberId,
     email,
     full_name: fullName,
     role: 'free',  // el acceso Pro viene del equipo, no del role personal
   })
+  if (userInsertError) {
+    console.error('addMember: error insertando en users:', JSON.stringify(userInsertError))
+    return { error: 'Se creó la cuenta pero no se pudo guardar el perfil del integrante. Avisá a soporte.' }
+  }
 
-  await adminClient.from('organization_members').insert({
+  const { error: memberInsertError } = await adminClient.from('organization_members').insert({
     org_id: orgId,
     user_id: memberId,
     role: 'member',
   })
+  if (memberInsertError) {
+    console.error('addMember: error insertando en organization_members:', JSON.stringify(memberInsertError))
+    return { error: 'Se creó la cuenta pero no se pudo sumar al integrante al equipo. Avisá a soporte.' }
+  }
 
   return { tempPassword, email }
 }
