@@ -119,14 +119,17 @@ export async function addMember(orgId: string, formData: FormData): Promise<{ er
 
   memberId = authData.user.id
 
-  const { error: userInsertError } = await adminClient.from('users').insert({
+  // upsert (no insert): un trigger de Supabase puede crear la fila en public.users
+  // al crear el usuario de auth. Con insert eso reventaba por clave duplicada; con
+  // upsert dejamos el perfil correcto exista o no la fila previa.
+  const { error: userUpsertError } = await adminClient.from('users').upsert({
     id: memberId,
     email,
     full_name: fullName,
     role: 'free',  // el acceso Pro viene del equipo, no del role personal
-  })
-  if (userInsertError) {
-    console.error('addMember: error insertando en users:', JSON.stringify(userInsertError))
+  }, { onConflict: 'id' })
+  if (userUpsertError) {
+    console.error('addMember: error en upsert de users:', JSON.stringify(userUpsertError))
     return { error: 'Se creó la cuenta pero no se pudo guardar el perfil del integrante. Avisá a soporte.' }
   }
 
