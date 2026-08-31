@@ -57,9 +57,22 @@ export default async function CertificadoPage({ params }: { params: { token: str
         .cert .sign .who { font-size: 13px; font-weight: 600; color: #2c281f; }
         .cert .sign .role { font-size: 11px; color: #8a8276; }
         .cert .foot { font-family: ui-sans-serif, system-ui, sans-serif; font-size: 10.5px; color: #a89f88; letter-spacing: .03em; }
+        @media (max-width: 640px) {
+          .cert { aspect-ratio: auto; padding: 2.2rem 1.4rem; }
+          .cert .mid { justify-content: flex-start; padding: 1.4rem 0; }
+          .cert h1 { font-size: 1.55rem; }
+          .cert .to { font-size: 11px; }
+          .cert .name { font-size: 1.55rem; min-width: 82%; }
+          .cert .body { max-width: 94%; font-size: .95rem; }
+          .cert .sign { flex-direction: column; gap: 1.5rem; margin-top: 1.6rem; }
+          .cert .sign .line { width: 200px; }
+          .cert::before { inset: 12px; }
+        }
         @media print {
-          .cert-page { background: #fff; padding: 0; }
-          .cert { box-shadow: none; border: none; max-width: none; width: 100%; aspect-ratio: auto; min-height: 100vh; }
+          @page { size: landscape; margin: 0; }
+          .cert-page { background: #fff; padding: 0; display: block; }
+          .cert { box-shadow: none; border: none; border-radius: 0; max-width: none; width: 100vw; height: 100vh; min-height: 100vh; aspect-ratio: auto; margin: 0; padding: 7% 9%; }
+          .cert::before { inset: 22px; }
           .no-print { display: none !important; }
         }
       ` }} />
