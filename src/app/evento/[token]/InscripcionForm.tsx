@@ -7,7 +7,7 @@ function fmtLong(iso: string) {
   return new Date(iso).toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })
 }
 
-export default function InscripcionForm({ token, eventTitle, startsAt }: { token: string; eventTitle: string; startsAt: string }) {
+export default function InscripcionForm({ token, eventTitle, startsAt, paymentInstructions = null }: { token: string; eventTitle: string; startsAt: string; paymentInstructions?: string | null }) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -40,6 +40,12 @@ export default function InscripcionForm({ token, eventTitle, startsAt }: { token
         <p className="text-[15px] text-text-secondary leading-[1.6]">
           Gracias por inscribirte a <strong className="text-text-primary">{eventTitle}</strong>, que se realizará el <span className="capitalize">{fmtLong(startsAt)}</span>. Te esperamos.
         </p>
+        {paymentInstructions && (
+          <div className="mt-4 text-left bg-bg-primary border-[0.5px] border-border rounded-lg p-3">
+            <div className="text-[13px] font-medium mb-1">Para confirmar tu lugar, pagá:</div>
+            <p className="text-[13px] text-text-secondary leading-[1.55] whitespace-pre-line">{paymentInstructions}</p>
+          </div>
+        )}
         <p className="text-[13px] text-text-tertiary leading-[1.6] mt-4 border-t-[0.5px] border-border pt-4">
           Te creamos una cuenta gratuita en Reason con <strong className="text-text-secondary">{email}</strong> — la plataforma clínica para kinesiólogos. Entrá cuando quieras desde{' '}
           <Link href="/login" className="text-accent no-underline">iniciar sesión</Link> (te llega un código por mail).

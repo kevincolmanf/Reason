@@ -53,13 +53,21 @@ export default async function EventoPublicPage({ params }: { params: { token: st
           <p className="text-[15px] text-text-secondary leading-[1.6] mt-6 whitespace-pre-line">{event.description}</p>
         )}
 
+        {event.price > 0 && event.payment_instructions && !past && !full && (
+          <div className="mt-7 bg-bg-secondary border-[0.5px] border-border rounded-xl p-4">
+            <div className="text-[13px] font-medium mb-1">💳 Cómo pagar · {new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(event.price)}</div>
+            <p className="text-[14px] text-text-secondary leading-[1.6] whitespace-pre-line">{event.payment_instructions}</p>
+            <p className="text-[11px] text-text-tertiary mt-2">El pago es directo al organizador. Primero inscribite acá abajo; después seguí estas instrucciones para pagar.</p>
+          </div>
+        )}
+
         <div className="mt-8 border-t-[0.5px] border-border pt-8">
           {past ? (
             <p className="text-[15px] text-text-secondary">Este evento ya pasó.</p>
           ) : full ? (
             <p className="text-[15px] text-text-secondary">El cupo está completo. ¡Gracias por el interés!</p>
           ) : (
-            <InscripcionForm token={params.token} eventTitle={event.title} startsAt={event.starts_at} />
+            <InscripcionForm token={params.token} eventTitle={event.title} startsAt={event.starts_at} paymentInstructions={event.price > 0 ? event.payment_instructions : null} />
           )}
         </div>
       </main>

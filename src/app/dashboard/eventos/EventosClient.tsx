@@ -14,6 +14,7 @@ interface EventRow {
   capacity: number | null
   public_token: string
   price: number
+  payment_instructions: string | null
   published: boolean
   created_at: string
   cert_entity: string | null
@@ -44,7 +45,7 @@ function toLocalTime(iso: string | null) {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
-const EMPTY = (date: string) => ({ title: '', description: '', location: '', cover_emoji: '🎟️', date, startTime: '19:00', endTime: '', capacity: '' })
+const EMPTY = (date: string) => ({ title: '', description: '', location: '', cover_emoji: '🎟️', date, startTime: '19:00', endTime: '', capacity: '', price: '', payment_instructions: '' })
 
 export default function EventosClient({ userId, orgId, initialEvents, initialCounts }: Props) {
   const supabase = createClient()
@@ -74,6 +75,7 @@ export default function EventosClient({ userId, orgId, initialEvents, initialCou
       title: e.title, description: e.description ?? '', location: e.location ?? '', cover_emoji: e.cover_emoji,
       date: toLocalDate(e.starts_at), startTime: toLocalTime(e.starts_at), endTime: toLocalTime(e.ends_at),
       capacity: e.capacity != null ? String(e.capacity) : '',
+      price: e.price ? String(e.price) : '', payment_instructions: e.payment_instructions ?? '',
     })
     setError(''); setShowForm(true)
     setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 30)
@@ -92,6 +94,8 @@ export default function EventosClient({ userId, orgId, initialEvents, initialCou
       starts_at: new Date(`${form.date}T${form.startTime}`).toISOString(),
       ends_at: form.endTime ? new Date(`${form.date}T${form.endTime}`).toISOString() : null,
       capacity: form.capacity ? parseInt(form.capacity, 10) : null,
+      price: form.price ? Number(form.price) : 0,
+      payment_instructions: form.payment_instructions.trim() || null,
     }
     if (editingId) {
       const { error: updErr } = await supabase.from('events').update(payload).eq('id', editingId)
@@ -101,7 +105,7 @@ export default function EventosClient({ userId, orgId, initialEvents, initialCou
     } else {
       const { data, error: insErr } = await supabase.from('events').insert({
         creator_id: userId, org_id: orgId, ...payload,
-      }).select('id, title, description, location, starts_at, ends_at, cover_emoji, capacity, public_token, price, published, created_at').single()
+      }).select('id, title, description, location, starts_at, ends_at, cover_emoji, capacity, public_token, price, payment_instructions, published, created_at, cert_entity, cert_signer, cert_signer_role').single()
       setSaving(false)
       if (insErr || !data) { setError(`No se pudo crear: ${insErr?.message ?? 'error'}`); return }
       setEvents(prev => [data as EventRow, ...prev])
@@ -222,6 +226,17 @@ export default function EventosClient({ userId, orgId, initialEvents, initialCou
               <label className={label}>Cupo (opc.)</label>
               <input type="number" min="1" value={form.capacity} onChange={e => setForm(f => ({ ...f, capacity: e.target.value }))} placeholder="Ilimitado" className={inputCls} />
             </div>
+            <div>
+              <label className={label}>Precio (opc.)</label>
+              <input type="number" min="0" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="Gratis" className={inputCls + ' tabular-nums'} />
+            </div>
+            {Number(form.price) > 0 && (
+              <div className="sm:col-span-2">
+                <label className={label}>Cómo se paga</label>
+                <textarea value={form.payment_instructions} onChange={e => setForm(f => ({ ...f, payment_instructions: e.target.value }))} rows={3} placeholder="Instrucciones claras para el inscripto: tu link de pago de Mercado Pago, CBU/alias, y si tiene que enviar el comprobante (a dónde) o no hace falta." className={inputCls + ' resize-y'} />
+                <p className="text-[11px] text-text-tertiary mt-1">El pago es directo a vos. Reason solo muestra estas instrucciones; la plata no pasa por Reason.</p>
+              </div>
+            )}
             <div>
               <label className={label}>Portada</label>
               <div className="flex flex-wrap gap-1.5">
