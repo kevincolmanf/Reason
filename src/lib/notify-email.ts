@@ -7,12 +7,13 @@ export async function sendEmail(params: {
   subject: string
   html: string
   to?: string
+  from?: string
 }): Promise<{ sent: boolean; skipped?: string; error?: string }> {
   const apiKey = process.env.RESEND_API_KEY
   if (!apiKey) return { sent: false, skipped: 'RESEND_API_KEY no configurada' }
 
   const to = params.to || process.env.RECONCILE_ALERT_EMAIL || 'kevincolmanf@gmail.com'
-  const from = process.env.RESEND_FROM || 'Reason <onboarding@resend.dev>'
+  const from = params.from || process.env.RESEND_FROM || 'Reason <onboarding@resend.dev>'
 
   try {
     const res = await fetch('https://api.resend.com/emails', {

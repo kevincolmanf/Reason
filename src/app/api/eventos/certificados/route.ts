@@ -62,7 +62,12 @@ export async function POST(request: Request) {
           <p style="font-size:13px;color:#8a8276">O copiá este link: ${url}</p>
           <p style="font-size:12px;color:#a89f88;margin-top:28px">Enviado a través de Reason — la plataforma clínica para kinesiólogos.</p>
         </div>`
-      return sendEmail({ to: r.email, subject: `Tu certificado de ${event.title}`, html })
+      return sendEmail({
+        to: r.email,
+        from: process.env.RESEND_FROM || 'Reason <eventos@reason.com.ar>',
+        subject: `Tu certificado de ${event.title}`,
+        html,
+      })
     }))
     for (const res of results) {
       if (res.status === 'fulfilled' && res.value.sent) sent++
