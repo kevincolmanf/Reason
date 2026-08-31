@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { Linkify } from '@/components/Linkify'
 
 function fmtLong(iso: string) {
   return new Date(iso).toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -43,7 +44,7 @@ export default function InscripcionForm({ token, eventTitle, startsAt, paymentIn
         {paymentInstructions && (
           <div className="mt-4 text-left bg-bg-primary border-[0.5px] border-border rounded-lg p-3">
             <div className="text-[13px] font-medium mb-1">Para confirmar tu lugar, pagá:</div>
-            <p className="text-[13px] text-text-secondary leading-[1.55] whitespace-pre-line">{paymentInstructions}</p>
+            <p className="text-[13px] text-text-secondary leading-[1.55] whitespace-pre-line"><Linkify text={paymentInstructions} /></p>
           </div>
         )}
         <p className="text-[13px] text-text-tertiary leading-[1.6] mt-4 border-t-[0.5px] border-border pt-4">
