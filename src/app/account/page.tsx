@@ -2,6 +2,7 @@ import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Header from '@/components/Header'
+import ProfileEditor from './ProfileEditor'
 
 export default async function AccountPage() {
   const supabase = createClient()
@@ -42,32 +43,12 @@ export default async function AccountPage() {
 
         <div className="bg-bg-secondary rounded-xl border-[0.5px] border-border overflow-hidden mb-8">
           <div className="p-8 border-b-[0.5px] border-border">
-            <h2 className="text-[18px] font-medium mb-6">Datos personales</h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div>
-                <div className="text-[11px] text-text-secondary uppercase tracking-[0.05em] mb-1">Nombre completo</div>
-                <div className="text-[15px] font-medium">{userData?.full_name || 'No especificado'}</div>
-              </div>
-              <div>
-                <div className="text-[11px] text-text-secondary uppercase tracking-[0.05em] mb-1">Correo electrónico</div>
-                <div className="text-[15px] font-medium">{userData?.email}</div>
-              </div>
-              <div>
-                <div className="text-[11px] text-text-secondary uppercase tracking-[0.05em] mb-1">Miembro desde</div>
-                <div className="text-[15px] font-medium">{joinDate}</div>
-              </div>
-              <div>
-                <div className="text-[11px] text-text-secondary uppercase tracking-[0.05em] mb-1">Rol actual</div>
-                <div className="text-[15px] font-medium capitalize">{userData?.role}</div>
-              </div>
-            </div>
-            
-            <div className="mt-8">
-              <button className="text-[14px] text-accent hover:opacity-80 transition-opacity bg-transparent border-none cursor-pointer">
-                Editar perfil
-              </button>
-            </div>
+            <ProfileEditor
+              fullName={userData?.full_name || ''}
+              email={userData?.email || user.email || ''}
+              joinDate={joinDate}
+              role={userData?.role || ''}
+            />
           </div>
           
           <div className="p-8 bg-bg-primary flex justify-between items-center border-b-[0.5px] border-border">
