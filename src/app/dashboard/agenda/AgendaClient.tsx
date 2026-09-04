@@ -1058,9 +1058,12 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                           </>
                         )}
                       </div>
-                      {!t.is_blocked && (t.status === 'confirmado' || t.status === 'ausente') && (
-                        <span className={`shrink-0 self-center text-[11px] font-bold leading-none rounded px-1.5 py-1 border-[0.5px] ${t.status === 'confirmado' ? 'bg-emerald-500/30 text-emerald-200 border-emerald-400/50' : 'bg-red-500/30 text-red-200 border-red-400/50'}`}>
-                          {t.status === 'confirmado' ? 'C' : 'A'}
+                      {!t.is_blocked && (t.status === 'presente' || t.status === 'confirmado' || t.status === 'ausente') && (
+                        <span className={`shrink-0 self-center text-[11px] font-bold leading-none rounded px-1.5 py-1 border-[0.5px] ${
+                          t.status === 'presente' ? 'bg-emerald-500/40 text-emerald-100 border-emerald-400/60'
+                          : t.status === 'confirmado' ? 'bg-emerald-500/30 text-emerald-200 border-emerald-400/50'
+                          : 'bg-red-500/30 text-red-200 border-red-400/50'}`}>
+                          {t.status === 'presente' ? 'P' : t.status === 'confirmado' ? 'C' : 'A'}
                         </span>
                       )}
                     </button>
