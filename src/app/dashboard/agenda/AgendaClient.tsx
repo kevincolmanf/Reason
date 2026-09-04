@@ -88,6 +88,17 @@ const TYPE_COLORS: Record<string, string> = {
   controles:     'bg-indigo-500/10 border-indigo-500/25 text-indigo-300',
 }
 
+// Colores sólidos (hex) de la modalidad, para el borde de la vista móvil/tablet.
+// Deben leerse igual que TYPE_COLORS de la grilla de escritorio.
+const TYPE_LEFT_COLORS: Record<string, string> = {
+  turno_comun:   '#94a3b8', // slate-400
+  primera_vez:   '#38bdf8', // sky-400
+  ingreso:       '#fbbf24', // amber-400
+  consulta:      '#2dd4bf', // teal-400
+  antropometria: '#fb923c', // orange-400
+  controles:     '#818cf8', // indigo-400
+}
+
 const TYPE_LABELS: Record<string, string> = {
   turno_comun:   'Turno común',
   primera_vez:   'Primera vez',
@@ -1007,12 +1018,11 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                   const topBorder = i === 0 ? '' : slot !== prevSlot ? 'border-t-2 border-border-strong' : 'border-t-[0.5px] border-border'
                   const start = new Date(t.start_time)
                   const end = new Date(t.end_time)
+                  // El color del borde es la modalidad del turno (igual que la grilla
+                  // de escritorio); el estado se muestra con el badge C/A a la derecha.
                   const leftColor = t.is_blocked ? '#c27b54'
-                    : t.status === 'presente' ? '#34d399'
-                    : t.status === 'ausente' ? '#f87171'
-                    : t.status === 'confirmado' ? '#38bdf8'
                     : t.status === 'cancelado' ? '#9ca3af'
-                    : '#94a3b8'
+                    : TYPE_LEFT_COLORS[t.appointment_type ?? 'turno_comun'] ?? '#94a3b8'
                   return (
                     <button
                       key={t.id}
