@@ -1023,6 +1023,14 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                   const leftColor = t.is_blocked ? '#c27b54'
                     : t.status === 'cancelado' ? '#9ca3af'
                     : TYPE_LEFT_COLORS[t.appointment_type ?? 'turno_comun'] ?? '#94a3b8'
+                  // Fondo de la fila según el estado: verde = presente, rojo =
+                  // ausente. Así en tablet/celu se ve de un vistazo, sin depender
+                  // de la letrita. El borde izquierdo sigue marcando la modalidad
+                  // (ingreso = ámbar), que se lee por encima del tinte.
+                  const rowTint = t.is_blocked ? 'hover:bg-bg-secondary'
+                    : t.status === 'presente' ? 'bg-emerald-500/15 hover:bg-emerald-500/25'
+                    : t.status === 'ausente'  ? 'bg-red-500/15 hover:bg-red-500/25'
+                    : 'hover:bg-bg-secondary'
                   return (
                     <button
                       key={t.id}
@@ -1031,7 +1039,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
                         setQuickMenu({ turno: t, anchorLeft: rect.left, anchorTop: rect.top, anchorBottom: rect.bottom })
                       }}
-                      className={`w-full text-left flex gap-3 px-4 py-3 hover:bg-bg-secondary transition-colors border-l-[3px] ${topBorder}`}
+                      className={`w-full text-left flex gap-3 px-4 py-3 transition-colors border-l-[3px] ${rowTint} ${topBorder}`}
                       style={{ borderLeftColor: leftColor }}
                     >
                       <div className="w-[72px] shrink-0 tabular-nums pt-0.5">
@@ -1059,11 +1067,11 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                         )}
                       </div>
                       {!t.is_blocked && (t.status === 'presente' || t.status === 'confirmado' || t.status === 'ausente') && (
-                        <span className={`shrink-0 self-center text-[11px] font-bold leading-none rounded px-1.5 py-1 border-[0.5px] ${
+                        <span className={`shrink-0 self-center text-[11px] font-bold leading-none rounded px-2 py-1 border-[0.5px] ${
                           t.status === 'presente' ? 'bg-emerald-500/40 text-emerald-100 border-emerald-400/60'
                           : t.status === 'confirmado' ? 'bg-emerald-500/30 text-emerald-200 border-emerald-400/50'
                           : 'bg-red-500/30 text-red-200 border-red-400/50'}`}>
-                          {t.status === 'presente' ? 'P' : t.status === 'confirmado' ? 'C' : 'A'}
+                          {t.status === 'presente' ? 'Presente' : t.status === 'confirmado' ? 'Confirmó' : 'Ausente'}
                         </span>
                       )}
                     </button>
