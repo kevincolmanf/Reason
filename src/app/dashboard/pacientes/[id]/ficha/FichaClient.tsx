@@ -285,7 +285,11 @@ export default function FichaClient({
   const { notify, toast } = useToast()
 
   // Navegación pendiente cuando hay cambios sin guardar (evita perder la ficha).
+  // Valor especial '__back__' = el usuario apretó el botón/gesto "atrás".
   const [pendingNav, setPendingNav] = useState<string | null>(null)
+  // Marca que estamos saliendo a propósito (para no reabrir el guard en el
+  // popstate que dispara el propio router.back()).
+  const leavingRef = useRef(false)
 
   const persistFicha = async (data: FichaData): Promise<boolean> => {
     setSaveStatus('saving')
@@ -305,7 +309,8 @@ export default function FichaClient({
   const handleSave = (): Promise<boolean> => persistFicha(ficha)
 
   // Guard de "cambios sin guardar": interceptamos el cierre/recarga de la
-  // pestaña y los clics en enlaces internos para no perder lo escrito en la ficha.
+  // pestaña, los clics en enlaces internos y el botón/gesto "atrás" para no
+  // perder lo escrito en la ficha.
   useEffect(() => {
     if (!hasChanges) return
     const onBeforeUnload = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = '' }
@@ -320,16 +325,38 @@ export default function FichaClient({
       e.stopPropagation()
       setPendingNav(href)
     }
+    // "Atrás" (botón del navegador o swipe-back en tablet/celu): empujamos un
+    // estado sentinela; cuando el usuario vuelve atrás lo consume y quedamos en
+    // la misma página, momento en que mostramos el cartel en vez de perder todo.
+    window.history.pushState(null, '', window.location.href)
+    const onPopState = () => {
+      if (leavingRef.current) return
+      setPendingNav('__back__')
+    }
     window.addEventListener('beforeunload', onBeforeUnload)
     document.addEventListener('click', onClickCapture, true)
+    window.addEventListener('popstate', onPopState)
     return () => {
       window.removeEventListener('beforeunload', onBeforeUnload)
       document.removeEventListener('click', onClickCapture, true)
+      window.removeEventListener('popstate', onPopState)
     }
   }, [hasChanges])
 
-  const leaveWithoutSaving = () => { const href = pendingNav; setPendingNav(null); setHasChanges(false); if (href) router.push(href) }
-  const saveAndLeave = async () => { const href = pendingNav; const ok = await handleSave(); if (ok && href) { setPendingNav(null); router.push(href) } }
+  // Navegar realmente al destino pendiente (enlace interno o "atrás").
+  const goToPending = (target: string) => {
+    leavingRef.current = true
+    if (target === '__back__') router.back()
+    else router.push(target)
+  }
+  const leaveWithoutSaving = () => { const target = pendingNav; setPendingNav(null); setHasChanges(false); if (target) goToPending(target) }
+  const saveAndLeave = async () => { const target = pendingNav; const ok = await handleSave(); if (ok && target) { setPendingNav(null); goToPending(target) } }
+  // Cancelar el guard. Si vino del "atrás", re-armamos el sentinela para seguir
+  // protegidos ante un nuevo intento de volver.
+  const cancelPendingNav = () => {
+    if (pendingNav === '__back__') window.history.pushState(null, '', window.location.href)
+    setPendingNav(null)
+  }
 
   const handleChange = (field: keyof FichaData, value: string) => {
     setFicha(prev => ({ ...prev, [field]: value }))
@@ -632,7 +659,7 @@ export default function FichaClient({
     {toast}
     {/* Guard: cambios sin guardar al intentar salir de la ficha */}
     {pendingNav && (
-      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setPendingNav(null)}>
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={cancelPendingNav}>
         <div className="bg-bg-secondary border-[0.5px] border-border rounded-2xl w-full max-w-[420px] shadow-xl p-6" onClick={e => e.stopPropagation()}>
           <h3 className="text-[17px] font-medium mb-2">Tenés cambios sin guardar</h3>
           <p className="text-[13px] text-text-secondary mb-5">Si salís de la ficha ahora, se perderá lo que cargaste. ¿Querés guardar antes de salir?</p>
@@ -644,7 +671,7 @@ export default function FichaClient({
               <button onClick={leaveWithoutSaving} disabled={saveStatus === 'saving'} className="flex-1 py-2.5 rounded-lg text-[13px] text-warning border-[0.5px] border-border hover:border-warning disabled:opacity-40 transition-colors">
                 Salir sin guardar
               </button>
-              <button onClick={() => setPendingNav(null)} className="px-3 py-2.5 text-[13px] text-text-secondary hover:text-text-primary">Seguir editando</button>
+              <button onClick={cancelPendingNav} className="px-3 py-2.5 text-[13px] text-text-secondary hover:text-text-primary">Seguir editando</button>
             </div>
           </div>
         </div>
