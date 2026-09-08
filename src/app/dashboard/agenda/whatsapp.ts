@@ -38,3 +38,16 @@ export function buildWhatsAppUrl(phone: string, name: string, start: Date, area:
     cierre
   return `https://wa.me/${clean}?text=${encodeURIComponent(msg)}`
 }
+
+// Aviso a un paciente que hace tiempo no viene (panel de seguimiento de
+// ausencias). Tono cálido: invita a retomar sin dar por cerrado el tratamiento.
+export function buildAbsenceWhatsAppUrl(phone: string, name: string, org: string | null): string {
+  const clean = formatArgentinePhone(phone)
+  const lugar = org ?? 'el centro'
+  const msg =
+    `Hola ${name},\n\n` +
+    `Vimos que hace un tiempo no venís por ${lugar}. ` +
+    `¿Querés que coordinemos un turno para seguir con tu tratamiento?\n\n` +
+    `¡Te esperamos!`
+  return `https://wa.me/${clean}?text=${encodeURIComponent(msg)}`
+}
