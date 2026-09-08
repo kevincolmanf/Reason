@@ -234,19 +234,19 @@ export default function EquipoClient({ userId, org: initialOrg, members: initial
 
   const buildShareMessage = (email?: string, password?: string, fullName?: string) => {
     const origin = typeof window !== 'undefined' ? window.location.origin : ''
-    const saludo = fullName ? `¡Hola ${fullName.split(' ')[0]}! 👋` : '¡Hola! 👋'
+    const saludo = fullName ? `¡Hola ${fullName.split(' ')[0]}!` : '¡Hola!'
 
     // Sin contraseña (p. ej. el integrante ya tenía cuenta) mandamos solo el link
     // y el email, sin inventar una clave.
     const accesoBlock = password
       ? `Tus datos de acceso:
-🔗 Entrá en: ${origin}/login
-📧 Email: ${email}
-🔑 Contraseña temporal: ${password}
+Entrá en: ${origin}/login
+Email: ${email}
+Contraseña temporal: ${password}
 
 Apenas entres, cambiá la contraseña por una tuya (así solo vos la sabés):
-👉 Abrí ${origin}/reset-password, elegí tu nueva contraseña y listo.`
-      : `Entrá en: ${origin}/login${email ? `\n📧 Email: ${email}` : ''}
+Abrí ${origin}/reset-password, elegí tu nueva contraseña y listo.`
+      : `Entrá en: ${origin}/login${email ? `\nEmail: ${email}` : ''}
 (Usás la contraseña que ya tenés en Reason.)`
 
     return `${saludo} A partir de ahora usamos Reason para gestionar los pacientes en ${org?.name || 'el centro'}.

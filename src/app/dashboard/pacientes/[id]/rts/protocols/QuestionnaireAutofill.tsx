@@ -62,8 +62,7 @@ export function QuestionnaireAutofill({
             className="p-3 bg-bg-secondary border-[0.5px] border-border rounded-xl flex items-center justify-between flex-wrap gap-3"
           >
             <div className="text-[13px] text-text-secondary">
-              <span className="mr-2">📊</span>
-              {spec.label} cargado en Recursos — {fmtDate(r.created_at)}
+                            {spec.label} cargado en Recursos — {fmtDate(r.created_at)}
               {r.score !== null && <span className="ml-1">· score {Math.round(r.score)}</span>}
             </div>
             <div className="flex gap-2">

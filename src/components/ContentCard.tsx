@@ -8,7 +8,7 @@ export default function ContentCard({ item }: { item: any }) {
   let chipClass = "bg-bg-secondary text-text-secondary text-[11px] py-[4px] px-2 rounded-md"
   if (item.category === 'aplicacion_clinica') chipClass = "bg-[#F0F0F0] text-text-secondary text-[11px] py-[4px] px-2 rounded-md"
   if (item.category === 'protocolo') chipClass = "bg-bg-secondary text-text-secondary text-[11px] py-[4px] px-2 rounded-md border-[0.5px] border-accent"
-  if (item.category === 'caso_real') chipClass = "bg-bg-secondary text-text-secondary text-[11px] py-[4px] px-2 rounded-md border-[0.5px] border-accent flex items-center gap-1 before:content-['⚡'] before:text-[10px] w-fit"
+  if (item.category === 'caso_real') chipClass = "bg-bg-secondary text-text-secondary text-[11px] py-[4px] px-2 rounded-md border-[0.5px] border-accent flex items-center gap-1 w-fit"
 
   const previewText = item.body_que_saber && Array.isArray(item.body_que_saber) && item.body_que_saber.length > 0 
     ? item.body_que_saber[0]

@@ -167,8 +167,8 @@ export default function RecordatoriosClient({ userId, orgId, orgName, areas, pro
     <div>
       {/* Encabezado */}
       <div className="flex items-center justify-between gap-3 mb-1">
-        <h1 className="text-[22px] font-semibold text-text-primary flex items-center gap-2">
-          <span>🔔</span> Recordatorios
+        <h1 className="text-[22px] font-semibold text-text-primary">
+          Recordatorios
         </h1>
         <Link
           href="/dashboard/agenda"
@@ -240,7 +240,7 @@ export default function RecordatoriosClient({ userId, orgId, orgName, areas, pro
       ) : visible.length === 0 ? (
         <div className="text-center py-16 text-text-secondary text-[14px]">
           {pending.length === 0 && sent.length > 0
-            ? '✅ ¡Listo! No quedan recordatorios pendientes para este día.'
+            ? '¡Listo! No quedan recordatorios pendientes para este día.'
             : 'No hay turnos con teléfono para recordar en este día.'}
         </div>
       ) : (

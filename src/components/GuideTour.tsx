@@ -91,8 +91,7 @@ export default function GuideTour({
             className="flex items-center gap-2.5 text-left flex-1 min-w-0"
             aria-label="Abrir la guía de esta sección"
           >
-            <span className="w-6 h-6 rounded-lg bg-accent/15 text-accent flex items-center justify-center text-[13px] shrink-0">🧭</span>
-            <span className="text-[13.5px] font-medium text-text-primary truncate">Primeros pasos</span>
+                        <span className="text-[13.5px] font-medium text-text-primary truncate">Primeros pasos</span>
           </button>
           <button
             onClick={() => onState('closed')}

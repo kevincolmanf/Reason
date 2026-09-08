@@ -978,9 +978,9 @@ export default function LoadMonitorClient({
                     </div>
                     {(s.sleep_quality !== null || s.energy !== null || s.stress !== null) && (
                       <div className="flex gap-x-3 mt-0.5 text-[11px] text-text-secondary">
-                        {s.sleep_quality !== null && <span>😴 <span className={`font-medium ${wellnessColor(s.sleep_quality)}`}>{s.sleep_quality}</span></span>}
-                        {s.energy !== null && <span>⚡ <span className={`font-medium ${wellnessColor(s.energy)}`}>{s.energy}</span></span>}
-                        {s.stress !== null && <span>🧠 <span className={`font-medium ${wellnessColor(s.stress)}`}>{s.stress}</span></span>}
+                        {s.sleep_quality !== null && <span>Sueño <span className={`font-medium ${wellnessColor(s.sleep_quality)}`}>{s.sleep_quality}</span></span>}
+                        {s.energy !== null && <span>Energía <span className={`font-medium ${wellnessColor(s.energy)}`}>{s.energy}</span></span>}
+                        {s.stress !== null && <span>Estrés <span className={`font-medium ${wellnessColor(s.stress)}`}>{s.stress}</span></span>}
                       </div>
                     )}
                     <div className="mt-0.5"><PainTrajectory pre={s.vas_pre} during={s.vas_during} post={s.vas_post} /></div>
@@ -1025,9 +1025,9 @@ export default function LoadMonitorClient({
                     </div>
                     {(s.sleep_quality !== null || s.energy !== null || s.stress !== null) && (
                       <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1 text-[11px] text-text-secondary items-center">
-                        {s.sleep_quality !== null && <span>😴 Sueño <span className={`font-medium ${wellnessColor(s.sleep_quality)}`}>{s.sleep_quality}/10</span></span>}
-                        {s.energy !== null && <span>⚡ Energía <span className={`font-medium ${wellnessColor(s.energy)}`}>{s.energy}/10</span></span>}
-                        {s.stress !== null && <span>🧠 Estrés <span className={`font-medium ${wellnessColor(s.stress)}`}>{s.stress}/10</span></span>}
+                        {s.sleep_quality !== null && <span>Sueño <span className={`font-medium ${wellnessColor(s.sleep_quality)}`}>{s.sleep_quality}/10</span></span>}
+                        {s.energy !== null && <span>Energía <span className={`font-medium ${wellnessColor(s.energy)}`}>{s.energy}/10</span></span>}
+                        {s.stress !== null && <span>Estrés <span className={`font-medium ${wellnessColor(s.stress)}`}>{s.stress}/10</span></span>}
                         <span className="text-[10px] opacity-60">(10 = mejor)</span>
                       </div>
                     )}

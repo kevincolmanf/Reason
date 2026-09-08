@@ -435,8 +435,7 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
           className="w-full flex items-center justify-between gap-3 px-4 py-3 hover:bg-bg-primary transition-colors text-left"
         >
           <div className="flex items-center gap-2.5">
-            <span className="text-[16px]">📱</span>
-            <span className="text-[13px] font-medium text-text-primary">¿Cómo usar el portal?</span>
+                        <span className="text-[13px] font-medium text-text-primary">¿Cómo usar el portal?</span>
           </div>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
             className={`shrink-0 text-text-secondary transition-transform ${showHelp ? 'rotate-180' : ''}`}>
@@ -520,8 +519,7 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
       {/* ── RECORDATORIO DE REGISTRO ───────────────────────── */}
       {showSessionReminder && (
         <div className="flex items-start gap-3 bg-accent/10 border-[0.5px] border-accent/30 rounded-xl px-4 py-3.5">
-          <span className="text-[20px] shrink-0 mt-0.5">📋</span>
-          <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0">
             <p className="text-[13px] font-medium text-text-primary leading-snug">
               Registrá tu sesión después de entrenar
             </p>

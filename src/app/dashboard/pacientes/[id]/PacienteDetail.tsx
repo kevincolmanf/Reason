@@ -394,8 +394,8 @@ export default function PacienteDetail({ patient: initialPatient, userId, initia
                 {(() => { const age = calcAge(patient.birth_date) ?? patient.age; return age ? <span className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1 text-[13px] text-text-secondary">{age} años</span> : null })()}
                 {patient.birth_date && <span className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1 text-[13px] text-text-secondary">{new Date(patient.birth_date + 'T12:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' })}</span>}
                 {patient.occupation && <span className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1 text-[13px] text-text-secondary">{patient.occupation}</span>}
-                {patient.phone && <span className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1 text-[13px] text-text-secondary">📞 {patient.phone}</span>}
-                {patient.email && <span className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1 text-[13px] text-text-secondary">✉ {patient.email}</span>}
+                {patient.phone && <span className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1 text-[13px] text-text-secondary">{patient.phone}</span>}
+                {patient.email && <span className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1 text-[13px] text-text-secondary">{patient.email}</span>}
                 {patient.obra_social && <span className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1 text-[13px] text-text-secondary">{patient.obra_social}{patient.affiliate_number ? ` · Nº ${patient.affiliate_number}` : ''}</span>}
                 {patient.source && <span className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1 text-[13px] text-text-secondary">Vía: {patient.source}</span>}
                 <span className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1 text-[13px] text-text-secondary">
@@ -434,8 +434,7 @@ export default function PacienteDetail({ patient: initialPatient, userId, initia
       {!hasFicha && !hasPlan && (
         <div className="bg-accent/5 border-[0.5px] border-accent/30 rounded-xl p-5 mb-6">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-[15px]">🧭</span>
-            <h2 className="text-[15px] font-medium">Primeros pasos con {patient.name.split(/\s+/)[0]}</h2>
+                        <h2 className="text-[15px] font-medium">Primeros pasos con {patient.name.split(/\s+/)[0]}</h2>
           </div>
           <p className="text-[13px] text-text-secondary mb-4">Paciente recién creado. El camino habitual: completar la ficha y armar el plan.</p>
           <div className="flex flex-wrap items-center gap-3">

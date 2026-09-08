@@ -71,7 +71,7 @@ export default async function ContentPage({ params }: { params: { slug: string }
   let chipClass = "bg-bg-secondary text-text-secondary text-[12px] py-[6px] px-3 rounded-md"
   if (content.category === 'aplicacion_clinica') chipClass = "bg-[#F0F0F0] text-text-secondary text-[12px] py-[6px] px-3 rounded-md"
   if (content.category === 'protocolo') chipClass = "bg-bg-secondary text-text-secondary text-[12px] py-[6px] px-3 rounded-md border-[0.5px] border-accent"
-  if (content.category === 'caso_real') chipClass = "bg-bg-secondary text-text-secondary text-[12px] py-[6px] px-3 rounded-md border-[0.5px] border-accent flex items-center gap-1 before:content-['⚡'] before:text-[10px]"
+  if (content.category === 'caso_real') chipClass = "bg-bg-secondary text-text-secondary text-[12px] py-[6px] px-3 rounded-md border-[0.5px] border-accent flex items-center gap-1"
 
   // Combine regions into a string if it's an array
   const regions = Array.isArray(content.metadata_region) ? content.metadata_region.join(', ') : null

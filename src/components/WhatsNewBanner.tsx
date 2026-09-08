@@ -32,8 +32,7 @@ export default function WhatsNewBanner() {
       {/* Header */}
       <div className="flex items-center justify-between gap-3 px-5 py-4">
         <div className="flex items-center gap-3">
-          <span className="text-[18px]">🚀</span>
-          <div>
+                    <div>
             <p className="text-[14px] font-semibold text-text-primary leading-none mb-0.5">
               Novedades en el portal del paciente
             </p>

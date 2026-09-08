@@ -836,8 +836,7 @@ export default function RtsEvaluationForm({
         {lastDynamo && dynamoMode === 'imported' && (
           <div className="mb-5 p-4 bg-bg-secondary border-[0.5px] border-border rounded-xl flex items-center justify-between flex-wrap gap-3">
             <div className="text-[13px] text-text-secondary">
-              <span className="mr-2">📊</span>
-              Datos disponibles del dinamómetro —{' '}
+                            Datos disponibles del dinamómetro —{' '}
               {new Date(lastDynamo.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })}
             </div>
             <div className="flex gap-2">
@@ -1148,8 +1147,7 @@ export default function RtsEvaluationForm({
         {lastKoos && koosMode === 'imported' && (
           <div className="mb-4 p-4 bg-bg-secondary border-[0.5px] border-border rounded-xl flex items-center justify-between flex-wrap gap-3">
             <div className="text-[13px] text-text-secondary">
-              <span className="mr-2">📊</span>
-              KOOS importado del historial —{' '}
+                            KOOS importado del historial —{' '}
               {new Date(lastKoos.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })}
               {lastKoos.score !== null && <span className="ml-1">· score {lastKoos.score}</span>}
             </div>
@@ -1164,8 +1162,7 @@ export default function RtsEvaluationForm({
         {lastAclRsi && aclRsiMode === 'imported' && (
           <div className="mb-4 p-4 bg-bg-secondary border-[0.5px] border-border rounded-xl flex items-center justify-between flex-wrap gap-3">
             <div className="text-[13px] text-text-secondary">
-              <span className="mr-2">📊</span>
-              ACL-RSI importado del historial —{' '}
+                            ACL-RSI importado del historial —{' '}
               {new Date(lastAclRsi.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })}
               {lastAclRsi.score !== null && <span className="ml-1">· score {lastAclRsi.score}</span>}
             </div>

@@ -526,7 +526,7 @@ function generateAnalysis(evaluation: RtsEvaluation, metrics: ReturnType<typeof 
 
   // Ratio H:Q
   if (hqRatio !== null && hqRatio < 0.60) {
-    insights.push(`🚨 El ratio H:Q (${hqRatio.toFixed(2)}) es el predictor más potente de ruptura de injerto. Kyritsis et al. (2016) reportan HR 10.6 por cada 10% de reducción. Fortalecer isquiotibiales es prioritario.`)
+    insights.push(`⚠ El ratio H:Q (${hqRatio.toFixed(2)}) es el predictor más potente de ruptura de injerto. Kyritsis et al. (2016) reportan HR 10.6 por cada 10% de reducción. Fortalecer isquiotibiales es prioritario.`)
   }
 
   // Injerto específico
@@ -550,7 +550,7 @@ function generateAnalysis(evaluation: RtsEvaluation, metrics: ReturnType<typeof 
   }
 
   if (evaluation.drop_jump_quality === 'poor') {
-    insights.push(`🚨 Calidad de aterrizaje en Drop Jump comprometida. El valgo dinámico en aterrizaje se asocia a OR 3.3 de relesión (Kyritsis, 2016). Trabajar control neuromuscular y estabilidad de core antes del RTS.`)
+    insights.push(`⚠ Calidad de aterrizaje en Drop Jump comprometida. El valgo dinámico en aterrizaje se asocia a OR 3.3 de relesión (Kyritsis, 2016). Trabajar control neuromuscular y estabilidad de core antes del RTS.`)
   }
 
   // Psicológico

@@ -74,8 +74,7 @@ export default function OnboardingGuide({ variant = 'solo' }: { variant?: Varian
           className="flex items-start gap-2.5 text-left min-w-0"
           aria-expanded={open}
         >
-          <span className="text-[15px] leading-6 shrink-0">🧭</span>
-          <span className="text-[13px] sm:text-[14px] font-medium text-text-primary leading-6 min-w-0">{title}</span>
+                    <span className="text-[13px] sm:text-[14px] font-medium text-text-primary leading-6 min-w-0">{title}</span>
           <svg
             className={`shrink-0 mt-1.5 text-text-secondary transition-transform ${open ? 'rotate-180' : ''}`}
             width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"

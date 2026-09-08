@@ -12,7 +12,6 @@ const flow = [
 
 const sections = [
   {
-    icon: '👥',
     title: 'Pacientes',
     description: 'El centro de tu trabajo. Cada paciente reúne su ficha, planes, carga y evaluaciones.',
     steps: [
@@ -22,7 +21,6 @@ const sections = [
     ],
   },
   {
-    icon: '🗂️',
     title: 'Ficha Kinésica',
     description: 'La evaluación completa del paciente, pensada bajo razonamiento clínico.',
     steps: [
@@ -32,7 +30,6 @@ const sections = [
     ],
   },
   {
-    icon: '🏋️',
     title: 'Plan de Ejercicio y Portal',
     description: 'Constructor de planes con +1.700 ejercicios en video y seguimiento del paciente.',
     steps: [
@@ -42,7 +39,6 @@ const sections = [
     ],
   },
   {
-    icon: '📈',
     title: 'Monitoreo de Carga',
     description: 'Decisiones de progresión con datos, sesión a sesión.',
     steps: [
@@ -52,7 +48,6 @@ const sections = [
     ],
   },
   {
-    icon: '🎯',
     title: 'Retorno al Deporte (RTS)',
     description: 'Protocolos de retorno al deporte con criterios y etapas definidas.',
     steps: [
@@ -62,7 +57,6 @@ const sections = [
     ],
   },
   {
-    icon: '📅',
     title: 'Agenda',
     description: 'Gestión de turnos con recordatorios por WhatsApp. Disponible en Plan Pro.',
     steps: [
@@ -72,7 +66,6 @@ const sections = [
     ],
   },
   {
-    icon: '🧰',
     title: 'Recursos',
     description: 'Herramientas clínicas interactivas de referencia rápida.',
     steps: [
@@ -82,7 +75,6 @@ const sections = [
     ],
   },
   {
-    icon: '📚',
     title: 'Biblioteca',
     description: 'Contenido clínico basado en evidencia para leer entre paciente y paciente.',
     steps: [
@@ -136,8 +128,7 @@ export default function AyudaPage() {
               key={section.title}
               className="bg-bg-secondary rounded-xl border-[0.5px] border-border p-6"
             >
-              <div className="flex items-center gap-3 mb-3">
-                <span className="text-[20px]">{section.icon}</span>
+              <div className="mb-3">
                 <h2 className="text-[17px] font-medium">{section.title}</h2>
               </div>
               <p className="text-[13px] text-text-secondary mb-4">

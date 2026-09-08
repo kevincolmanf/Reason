@@ -117,8 +117,8 @@ export default function SeguimientoClient({ userId, orgName, thresholdDays }: Pr
 
       {/* Encabezado */}
       <div className="flex items-center justify-between gap-3 mb-1">
-        <h1 className="text-[22px] font-semibold text-text-primary flex items-center gap-2">
-          <span>👋</span> Seguimiento de ausencias
+        <h1 className="text-[22px] font-semibold text-text-primary">
+          Seguimiento de ausencias
         </h1>
         <Link href="/dashboard/agenda" className="text-[13px] text-text-secondary hover:text-text-primary transition-colors">
           ← Volver a la agenda
@@ -141,7 +141,7 @@ export default function SeguimientoClient({ userId, orgName, thresholdDays }: Pr
         </div>
       ) : rows.length === 0 ? (
         <div className="text-center py-16 text-text-secondary text-[14px]">
-          ✅ ¡Al día! Ningún paciente activo quedó sin próximo turno hace más de {thresholdDays} días.
+          ¡Al día! Ningún paciente activo quedó sin próximo turno hace más de {thresholdDays} días.
         </div>
       ) : (
         <div className="space-y-2">
