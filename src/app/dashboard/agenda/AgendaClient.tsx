@@ -903,6 +903,17 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
             </Link>
           )}
 
+          {canEdit && (
+            <Link
+              href="/dashboard/agenda/seguimiento"
+              className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors flex items-center gap-1.5"
+              title="Pacientes que hace días no vienen y no tienen próximo turno"
+            >
+              <span>👋</span>
+              <span className="hidden sm:inline">Ausencias</span>
+            </Link>
+          )}
+
           {isOwner && (
             <button data-tour="agenda-config" onClick={() => setSettingsOpen(true)} className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors" title="Configurar agenda">
               ⚙
