@@ -32,6 +32,11 @@ DROP FUNCTION IF EXISTS public.panel_pro_clinico(timestamptz, timestamptz);
 
 -- ── 1) Operativo del mes, por profesional ───────────────────────────────────
 -- Turnos, asistencia, horas y densidad en un rango [p_from, p_to).
+-- OJO: "horas" = HORAS TRABAJADAS = suma del span de la jornada por día
+-- (del primer turno al último de ese día), NO la suma de la duración de cada
+-- turno. Así "pac/hora" = turnos ÷ horas trabajadas es una densidad real
+-- (mismo criterio que la analítica de agenda). Con suma-de-duraciones daba el
+-- inverso de la duración del turno (p. ej. 2.0 para todos si son de 30').
 CREATE OR REPLACE FUNCTION public.panel_pro_operativo(p_from timestamptz, p_to timestamptz)
 RETURNS TABLE (
   professional_id   uuid,
@@ -47,23 +52,42 @@ RETURNS TABLE (
 )
 LANGUAGE sql STABLE SECURITY INVOKER
 AS $$
+  WITH base AS (
+    SELECT t.professional_id, t.professional_name, t.status, t.appointment_type,
+           t.patient_id, t.start_time, t.end_time
+    FROM public.turnos t
+    WHERE t.is_blocked IS NOT TRUE
+      AND t.professional_id IS NOT NULL
+      AND t.start_time >= p_from AND t.start_time < p_to
+  ),
+  perday AS (  -- span de la jornada por profesional y día (turnos no cancelados)
+    SELECT professional_id, start_time::date AS d,
+      EXTRACT(EPOCH FROM (MAX(end_time) - MIN(start_time)))/3600.0 AS span_h
+    FROM base
+    WHERE status <> 'cancelado'
+    GROUP BY professional_id, start_time::date
+  ),
+  jornada AS (
+    SELECT professional_id,
+      ROUND(SUM(span_h)::numeric, 1) AS horas,
+      COUNT(*)::int AS dias
+    FROM perday
+    GROUP BY professional_id
+  )
   SELECT
-    t.professional_id,
-    COALESCE(MAX(t.professional_name), '') AS professional_name,
-    COUNT(*) FILTER (WHERE t.status <> 'cancelado')::int AS turnos,
-    COUNT(*) FILTER (WHERE t.status = 'presente')::int   AS presentes,
-    COUNT(*) FILTER (WHERE t.status = 'ausente')::int     AS ausentes,
-    COUNT(*) FILTER (WHERE t.status = 'cancelado')::int   AS cancelados,
-    COUNT(*) FILTER (WHERE t.status <> 'cancelado' AND t.appointment_type IN ('primera_vez','ingreso'))::int AS nuevos,
-    ROUND(COALESCE(SUM(EXTRACT(EPOCH FROM (t.end_time - t.start_time))/3600.0)
-      FILTER (WHERE t.status <> 'cancelado'), 0)::numeric, 1) AS horas,
-    COUNT(DISTINCT t.start_time::date) FILTER (WHERE t.status <> 'cancelado')::int AS dias,
-    COUNT(DISTINCT t.patient_id) FILTER (WHERE t.status <> 'cancelado')::int AS pacientes
-  FROM public.turnos t
-  WHERE t.is_blocked IS NOT TRUE
-    AND t.professional_id IS NOT NULL
-    AND t.start_time >= p_from AND t.start_time < p_to
-  GROUP BY t.professional_id;
+    b.professional_id,
+    COALESCE(MAX(b.professional_name), '') AS professional_name,
+    COUNT(*) FILTER (WHERE b.status <> 'cancelado')::int AS turnos,
+    COUNT(*) FILTER (WHERE b.status = 'presente')::int   AS presentes,
+    COUNT(*) FILTER (WHERE b.status = 'ausente')::int     AS ausentes,
+    COUNT(*) FILTER (WHERE b.status = 'cancelado')::int   AS cancelados,
+    COUNT(*) FILTER (WHERE b.status <> 'cancelado' AND b.appointment_type IN ('primera_vez','ingreso'))::int AS nuevos,
+    COALESCE(j.horas, 0)::numeric AS horas,
+    COALESCE(j.dias, 0)::int AS dias,
+    COUNT(DISTINCT b.patient_id) FILTER (WHERE b.status <> 'cancelado')::int AS pacientes
+  FROM base b
+  LEFT JOIN jornada j ON j.professional_id = b.professional_id
+  GROUP BY b.professional_id, j.horas, j.dias;
 $$;
 
 -- ── 2) Retención / ciclo de vida, por profesional ───────────────────────────
