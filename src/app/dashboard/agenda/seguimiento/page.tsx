@@ -82,7 +82,7 @@ export default async function SeguimientoPage() {
           thresholdDays={THRESHOLD_DAYS}
           areas={areas}
           trackedAreas={trackedAreas}
-          canConfig={isOrgOwner}
+          canConfig={canEdit}
         />
       </main>
     </div>

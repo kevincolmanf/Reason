@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
 import { useConfirm, useToast } from '@/components/Dialogs'
 import { buildAbsenceWhatsAppUrl } from '../whatsapp'
+import { setAbsenceAreas } from './actions'
 
 interface LapsingPatient {
   patient_id: string
@@ -86,8 +87,10 @@ export default function SeguimientoClient({ userId, orgId, orgName, thresholdDay
     setSelectedAreas(next)
     if (canConfig && orgId) {
       const toStore = (next.size === 0 || next.size >= areas.length) ? null : Array.from(next)
-      supabaseRef.current.from('organizations').update({ absence_areas: toStore }).eq('id', orgId).then(({ error }) => {
-        if (error) notify('No se pudo guardar la configuración de áreas', 'error')
+      // Server action: la RLS de organizations es solo-dueño; la action valida el
+      // permiso (dueño o integrante que modifica la agenda) y escribe con admin.
+      setAbsenceAreas(orgId, toStore).then(res => {
+        if (res.error) notify(res.error, 'error')
       })
     }
   }
