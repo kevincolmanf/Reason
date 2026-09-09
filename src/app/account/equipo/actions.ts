@@ -299,6 +299,45 @@ export async function setMemberAgendaLevel(
   return { success: true }
 }
 
+// Categoría del profesional (profesión, especialidad, vínculo) desde Mi Equipo.
+// Son etiquetas para el panel de gestión; no cambian permisos.
+export type MemberCategory = { profession?: string | null; specialty?: string | null; vinculo?: string | null }
+
+export async function setMemberCategory(
+  orgId: string,
+  memberUserId: string,
+  patch: MemberCategory,
+): Promise<{ error?: string; success?: boolean }> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const { data: membership } = await supabase
+    .from('organization_members')
+    .select('role')
+    .eq('org_id', orgId)
+    .eq('user_id', user.id)
+    .single()
+
+  if (membership?.role !== 'admin') return { error: 'Solo el administrador puede cambiar la categoría' }
+
+  const update: Record<string, string | null> = {}
+  if ('profession' in patch) update.profession = patch.profession?.trim() || null
+  if ('specialty' in patch) update.specialty = patch.specialty?.trim() || null
+  if ('vinculo' in patch && patch.vinculo) update.vinculo = patch.vinculo
+  if (Object.keys(update).length === 0) return { success: true }
+
+  const adminClient = createAdminClient()
+  const { error } = await adminClient
+    .from('organization_members')
+    .update(update)
+    .eq('org_id', orgId)
+    .eq('user_id', memberUserId)
+
+  if (error) return { error: 'No se pudo guardar la categoría' }
+  return { success: true }
+}
+
 export async function removeMember(orgId: string, memberId: string) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
