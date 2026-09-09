@@ -13,6 +13,9 @@ export type TeamMember = {
   ausenciaPct: number | null
   pacientesMes: number
   activos: number
+  altas: number
+  abandonos: number
+  abandonoPct: number | null
   completanPct: number | null
   duracionSem: number | null
   enRiesgo: number
@@ -22,11 +25,30 @@ export type TeamMember = {
   planesDesact: number
 }
 
-type SortKey = 'name' | 'activos' | 'nuevos' | 'horas' | 'pacDia' | 'pacHora' | 'ausenciaPct' | 'completanPct' | 'duracionSem' | 'fichasMes' | 'planesMes' | 'planesDesact' | 'evalsMes'
+type SortKey = 'name' | 'activos' | 'nuevos' | 'horas' | 'pacDia' | 'pacHora' | 'ausenciaPct' | 'completanPct' | 'abandonoPct' | 'duracionSem' | 'fichasMes' | 'planesMes' | 'planesDesact' | 'evalsMes'
+
+// Textos de ayuda (globo al pasar el mouse por cada columna).
+const TIPS: Record<SortKey, string> = {
+  name: 'Profesional del equipo. Tocá la fila para su resumen 1:1.',
+  activos: 'Pacientes en tratamiento: sin alta ni abandono marcados.',
+  nuevos: 'Primeras consultas del mes (turnos "primera vez" o "ingreso").',
+  horas: 'Horas atendidas en el mes (suma de la duración de sus turnos).',
+  pacDia: 'Promedio de pacientes por día trabajado en el mes.',
+  pacHora: 'Pacientes por hora: densidad de atención.',
+  ausenciaPct: 'Ausencias sobre turnos resueltos (presentes + ausentes). Objetivo: ≤ 10%.',
+  completanPct: 'De los que ya pudieron (primer turno hace ≥6 sem), cuántos llegan a ≥10 sesiones o 6 semanas.',
+  abandonoPct: 'De los tratamientos terminados, qué proporción fue abandono (vs. alta).',
+  duracionSem: 'Duración media del tratamiento: del primer turno al alta (solo pacientes dados de alta).',
+  fichasMes: 'Fichas cargadas o actualizadas en el mes.',
+  planesMes: 'Planes de ejercicio creados en el mes.',
+  planesDesact: 'Pacientes activos con ≥7 días desde la consulta y sin plan cargado/actualizado.',
+  evalsMes: 'Evaluaciones del mes: cuestionarios + dinamometría + RTS.',
+}
 
 // ── Semáforos (umbrales definidos con Kevin) ──
 const cAus = (v: number | null) => v == null ? '' : v > 20 ? 'text-red-400' : v > 10 ? 'text-warning' : 'text-emerald-400'
 const cComp = (v: number | null) => v == null ? '' : v < 60 ? 'text-red-400' : v < 75 ? 'text-warning' : 'text-emerald-400'
+const cAband = (v: number | null) => v == null ? '' : v > 30 ? 'text-red-400' : v > 15 ? 'text-warning' : 'text-emerald-400'
 const cDur = (v: number | null) => v == null ? '' : v < 6 ? 'text-red-400' : v < 9 ? 'text-warning' : 'text-emerald-400'
 const cDesact = (v: number) => v >= 7 ? 'text-red-400' : v >= 4 ? 'text-warning' : 'text-emerald-400'
 
@@ -65,6 +87,7 @@ export default function EquipoClient({ team, monthLabel }: { team: TeamMember[];
     return {
       ausenciaPct: avg(m => m.ausenciaPct),
       completanPct: avg(m => m.completanPct),
+      abandonoPct: avg(m => m.abandonoPct),
       duracionSem: avg(m => m.duracionSem),
       fichasMes: avg(m => m.fichasMes),
       planesMes: avg(m => m.planesMes),
@@ -81,7 +104,8 @@ export default function EquipoClient({ team, monthLabel }: { team: TeamMember[];
   const H = ({ k, label, right = true }: { k: SortKey; label: string; right?: boolean }) => (
     <th
       onClick={() => setSort(k)}
-      className={`${right ? 'text-right' : 'text-left'} px-3 py-3 text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em] cursor-pointer select-none hover:text-text-primary whitespace-nowrap`}
+      title={TIPS[k]}
+      className={`${right ? 'text-right' : 'text-left'} px-3 py-3 text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em] cursor-help select-none hover:text-text-primary whitespace-nowrap`}
     >
       {label}{sortKey === k && <span className="opacity-50 ml-1 text-[9px]">{sortDir < 0 ? '▼' : '▲'}</span>}
     </th>
@@ -99,7 +123,7 @@ export default function EquipoClient({ team, monthLabel }: { team: TeamMember[];
 
       <div className="bg-bg-primary border-[0.5px] border-border rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[980px]">
+          <table className="w-full min-w-[1080px]">
             <thead>
               <tr className="border-b-[0.5px] border-border">
                 <H k="name" label="Profesional" right={false} />
@@ -110,6 +134,7 @@ export default function EquipoClient({ team, monthLabel }: { team: TeamMember[];
                 <H k="pacHora" label="Pac/hora" />
                 <H k="ausenciaPct" label="% Aus." />
                 <H k="completanPct" label="Completan" />
+                <H k="abandonoPct" label="% Aband." />
                 <H k="duracionSem" label="Durac." />
                 <H k="fichasMes" label="Fichas/mes" />
                 <H k="planesMes" label="Planes/mes" />
@@ -135,6 +160,7 @@ export default function EquipoClient({ team, monthLabel }: { team: TeamMember[];
                   <td className={`px-3 py-3 text-[13px] text-right font-mono tabular-nums ${m.pacHora >= 3 ? 'text-warning' : 'text-text-secondary'}`}>{m.pacHora}</td>
                   <td className={`px-3 py-3 text-[13px] text-right font-mono tabular-nums ${cAus(m.ausenciaPct)}`}>{fmtPct(m.ausenciaPct)}</td>
                   <td className={`px-3 py-3 text-[13px] text-right font-mono tabular-nums ${cComp(m.completanPct)}`}>{fmtPct(m.completanPct)}</td>
+                  <td className={`px-3 py-3 text-[13px] text-right font-mono tabular-nums ${cAband(m.abandonoPct)}`}>{fmtPct(m.abandonoPct)}</td>
                   <td className={`px-3 py-3 text-[13px] text-right font-mono tabular-nums ${cDur(m.duracionSem)}`}>{fmtSem(m.duracionSem)}</td>
                   <td className="px-3 py-3 text-[13px] text-text-secondary text-right font-mono tabular-nums">{m.fichasMes}</td>
                   <td className="px-3 py-3 text-[13px] text-text-secondary text-right font-mono tabular-nums">{m.planesMes}</td>
@@ -149,9 +175,7 @@ export default function EquipoClient({ team, monthLabel }: { team: TeamMember[];
 
       <p className="text-[11.5px] text-text-tertiary mt-3">
         <span className="text-emerald-400">verde</span> bien · <span className="text-warning">ámbar</span> a vigilar · <span className="text-red-400">rojo</span> a conversar ·
-        {' '}<span className="text-text-secondary">Completan</span> = pacientes que llegan a ≥10 sesiones o 6 semanas ·
-        {' '}<span className="text-text-secondary">Planes desact.</span> = pacientes con ≥7 días de la consulta sin plan al día ·
-        {' '}ausencia alerta &gt;10%.
+        {' '}<span className="text-text-primary">pasá el mouse por cada columna</span> para ver qué mide. Activos = en tratamiento (sin alta ni abandono); duración = hasta el alta; ausencia alerta &gt;10%.
       </p>
 
       {open && <Scorecard m={open} center={center} monthLabel={monthLabel} onClose={() => setOpen(null)} />}
@@ -162,7 +186,7 @@ export default function EquipoClient({ team, monthLabel }: { team: TeamMember[];
 // ── Scorecard 1:1 ──
 function Scorecard({ m, center, monthLabel, onClose }: {
   m: TeamMember
-  center: { ausenciaPct: number | null; completanPct: number | null; duracionSem: number | null; fichasMes: number | null; planesMes: number | null; planesDesact: number | null; evalsMes: number | null }
+  center: { ausenciaPct: number | null; completanPct: number | null; abandonoPct: number | null; duracionSem: number | null; fichasMes: number | null; planesMes: number | null; planesDesact: number | null; evalsMes: number | null }
   monthLabel: string
   onClose: () => void
 }) {
@@ -179,7 +203,8 @@ function Scorecard({ m, center, monthLabel, onClose }: {
   const rowsCore: [string, ReturnType<typeof cmp>][] = [
     ['% Ausencia de sus pacientes', cmp(m.ausenciaPct, center.ausenciaPct, '%', 'low')],
     ['Completan (≥10 ses / 6 sem)', cmp(m.completanPct, center.completanPct, '%', 'high')],
-    ['Duración del tratamiento', cmp(m.duracionSem, center.duracionSem, ' sem', 'high')],
+    ['% Abandono (de los terminados)', cmp(m.abandonoPct, center.abandonoPct, '%', 'low')],
+    ['Duración (hasta el alta)', cmp(m.duracionSem, center.duracionSem, ' sem', 'high')],
   ]
   const rowsClin: [string, ReturnType<typeof cmp>][] = [
     ['Fichas trabajadas (mes)', cmp(m.fichasMes, center.fichasMes, '', 'high')],
@@ -194,6 +219,8 @@ function Scorecard({ m, center, monthLabel, onClose }: {
   else if (m.planesDesact >= 4) talk.push({ sev: 'warn', t: `${m.planesDesact} pacientes con plan desactualizado` })
   if (m.completanPct != null && m.completanPct < 60) talk.push({ sev: 'bad', t: `Solo ${m.completanPct}% de sus pacientes completa el tratamiento (≥10 ses / 6 sem)` })
   else if (m.completanPct != null && m.completanPct >= 80) talk.push({ sev: 'good', t: `${m.completanPct}% de sus pacientes llega al tratamiento completo` })
+  if (m.abandonoPct != null && m.abandonoPct > 30) talk.push({ sev: 'bad', t: `${m.abandonoPct}% de sus tratamientos terminados fueron abandono (${m.abandonos} de ${m.altas + m.abandonos})` })
+  else if (m.abandonoPct != null && m.abandonoPct <= 15 && (m.altas + m.abandonos) >= 3) talk.push({ sev: 'good', t: `Bajo abandono (${m.abandonoPct}%)` })
   if (m.duracionSem != null && m.duracionSem < 6) talk.push({ sev: 'warn', t: `Tratamientos cortos (${m.duracionSem} sem de media) — muchos no llegan a 6 semanas` })
   if (m.ausenciaPct != null && m.ausenciaPct > 20) talk.push({ sev: 'bad', t: `Ausentismo muy alto (${m.ausenciaPct}%) — muy por encima del 10%` })
   else if (m.ausenciaPct != null && m.ausenciaPct > 10) talk.push({ sev: 'warn', t: `Ausentismo ${m.ausenciaPct}% — sobre el objetivo de 10%` })
@@ -250,19 +277,20 @@ function Scorecard({ m, center, monthLabel, onClose }: {
             ))}
           </div>
           <div className="grid grid-cols-3 gap-3">
-            <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-4">
-              <div className="text-[10.5px] uppercase tracking-[0.06em] text-text-secondary">Pacientes activos</div>
+            <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-4" title="Pacientes en tratamiento: sin alta ni abandono">
+              <div className="text-[10.5px] uppercase tracking-[0.06em] text-text-secondary">Activos</div>
               <div className="font-mono text-[18px] font-medium mt-1.5 tabular-nums">{m.activos}</div>
             </div>
-            <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-4">
-              <div className="text-[10.5px] uppercase tracking-[0.06em] text-text-secondary">Nuevos ({monthLabel.split(' ')[0]})</div>
-              <div className="font-mono text-[18px] font-medium mt-1.5 tabular-nums">{m.nuevos}</div>
+            <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-4" title="Pacientes dados de alta (tratamiento terminado)">
+              <div className="text-[10.5px] uppercase tracking-[0.06em] text-text-secondary">Altas</div>
+              <div className="font-mono text-[18px] font-medium mt-1.5 tabular-nums text-emerald-400">{m.altas}</div>
             </div>
-            <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-4">
-              <div className="text-[10.5px] uppercase tracking-[0.06em] text-text-secondary">En riesgo</div>
-              <div className={`font-mono text-[18px] font-medium mt-1.5 tabular-nums ${m.enRiesgo > 0 ? 'text-warning' : ''}`}>{m.enRiesgo}</div>
+            <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-4" title="Pacientes que abandonaron el tratamiento">
+              <div className="text-[10.5px] uppercase tracking-[0.06em] text-text-secondary">Abandonos</div>
+              <div className={`font-mono text-[18px] font-medium mt-1.5 tabular-nums ${m.abandonos > 0 ? 'text-red-400' : ''}`}>{m.abandonos}</div>
             </div>
           </div>
+          <p className="text-[12px] text-text-secondary mt-3">Nuevos en {monthLabel.split(' ')[0]}: <span className="text-text-primary font-mono">{m.nuevos}</span> · En riesgo de perderse: <span className={`font-mono ${m.enRiesgo > 0 ? 'text-warning' : 'text-text-primary'}`}>{m.enRiesgo}</span></p>
 
           <CmpTable title="Núcleo" rows={rowsCore} />
           <CmpTable title="Trabajo clínico" rows={rowsClin} />

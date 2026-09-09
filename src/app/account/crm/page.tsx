@@ -137,7 +137,7 @@ export default async function CRMPage() {
   const monthFrom = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
   const monthTo = nextMonthStart.toISOString()
   type OpRow = { professional_id: string; professional_name: string; turnos: number; presentes: number; ausentes: number; cancelados: number; nuevos: number; horas: number; dias: number; pacientes: number }
-  type RetRow = { professional_id: string; pacientes: number; oportunidad: number; completan: number; duracion_dias: number | null; en_riesgo: number }
+  type RetRow = { professional_id: string; activos: number; altas: number; abandonos: number; oportunidad: number; completan: number; duracion_dias: number | null; en_riesgo: number }
   type CliRow = { professional_id: string; fichas_mes: number; planes_mes: number; evals_mes: number; planes_desactualizados: number }
   type MemberRow = { user_id: string; users: { id: string; full_name: string | null; email: string | null } | null }
 
@@ -181,7 +181,10 @@ export default async function CRMPage() {
       ausenciaPct: resueltos > 0 ? Math.round(((o?.ausentes ?? 0) / resueltos) * 100) : null,
       pacientesMes: o?.pacientes ?? 0,
       // retención (histórico)
-      activos: r?.pacientes ?? 0,
+      activos: r?.activos ?? 0,
+      altas: r?.altas ?? 0,
+      abandonos: r?.abandonos ?? 0,
+      abandonoPct: r && (r.altas + r.abandonos) > 0 ? Math.round((r.abandonos / (r.altas + r.abandonos)) * 100) : null,
       completanPct: r && r.oportunidad > 0 ? Math.round((r.completan / r.oportunidad) * 100) : null,
       duracionSem: r && r.duracion_dias != null ? +(r.duracion_dias / 7).toFixed(1) : null,
       enRiesgo: r?.en_riesgo ?? 0,

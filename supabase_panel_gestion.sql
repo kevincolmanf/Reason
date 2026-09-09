@@ -16,6 +16,15 @@
 --
 -- Ejecutar en Supabase SQL Editor antes de mergear feature/panel-gestion-fase1.
 
+-- ── 0) Motivo de baja del paciente ───────────────────────────────────────────
+-- Junto a discharged_at (del panel de Ausencias) guardamos POR QUÉ salió del
+-- padrón activo: 'alta' (terminó bien) o 'abandono' (dejó el tratamiento). Un
+-- paciente ACTIVO = discharged_at IS NULL.
+ALTER TABLE public.patients ADD COLUMN IF NOT EXISTS discharge_reason text;
+-- Los que ya estaban dados de alta (sin motivo) se toman como 'alta'.
+UPDATE public.patients SET discharge_reason = 'alta'
+  WHERE discharged_at IS NOT NULL AND discharge_reason IS NULL;
+
 -- ── 1) Operativo del mes, por profesional ───────────────────────────────────
 -- Turnos, asistencia, horas y densidad en un rango [p_from, p_to).
 CREATE OR REPLACE FUNCTION public.panel_pro_operativo(p_from timestamptz, p_to timestamptz)
@@ -58,11 +67,13 @@ $$;
 CREATE OR REPLACE FUNCTION public.panel_pro_retencion()
 RETURNS TABLE (
   professional_id uuid,
-  pacientes       int,   -- pacientes atribuidos (con ≥1 sesión)
-  oportunidad     int,   -- los que ya pudieron completar (primer turno hace ≥6 sem)
-  completan       int,   -- de la oportunidad, los que llegaron a ≥10 ses o ≥6 sem
-  duracion_dias   numeric, -- promedio último−primer turno (días)
-  en_riesgo       int    -- activos sin turno futuro y última visita hace ≥7 días
+  activos         int,     -- en tratamiento (sin alta ni abandono)
+  altas           int,     -- dados de alta (tratamiento terminado bien)
+  abandonos       int,     -- marcados como tratamiento abandonado
+  oportunidad     int,     -- primer turno hace ≥6 sem (ya pudieron completar)
+  completan       int,     -- proxy automático: ≥10 ses o ≥6 sem, sobre la oportunidad
+  duracion_dias   numeric, -- promedio (fecha de alta − primer turno), SOLO altas
+  en_riesgo       int      -- activos sin turno futuro y última visita hace ≥7 días
 )
 LANGUAGE sql STABLE SECURITY INVOKER
 AS $$
@@ -80,19 +91,25 @@ AS $$
       AND t.patient_id IS NOT NULL
       AND t.professional_id IS NOT NULL
     GROUP BY t.patient_id
+  ),
+  j AS (
+    SELECT s.*, p.discharged_at, p.discharge_reason
+    FROM ses s JOIN public.patients p ON p.id = s.patient_id
   )
   SELECT
     professional_id,
-    COUNT(*)::int AS pacientes,
+    COUNT(*) FILTER (WHERE discharged_at IS NULL)::int AS activos,
+    COUNT(*) FILTER (WHERE discharged_at IS NOT NULL AND discharge_reason = 'alta')::int AS altas,
+    COUNT(*) FILTER (WHERE discharged_at IS NOT NULL AND discharge_reason = 'abandono')::int AS abandonos,
     COUNT(*) FILTER (WHERE first_t <= now() - interval '6 weeks')::int AS oportunidad,
     COUNT(*) FILTER (
       WHERE first_t <= now() - interval '6 weeks'
         AND (sesiones >= 10 OR (last_t - first_t) >= interval '6 weeks')
     )::int AS completan,
-    ROUND(AVG(EXTRACT(EPOCH FROM (last_t - first_t))/86400.0)
-      FILTER (WHERE last_t IS NOT NULL AND sesiones >= 2), 1) AS duracion_dias,
-    COUNT(*) FILTER (WHERE futuros = 0 AND last_t <= now() - interval '7 days')::int AS en_riesgo
-  FROM ses
+    ROUND(AVG(EXTRACT(EPOCH FROM (discharged_at - first_t))/86400.0)
+      FILTER (WHERE discharge_reason = 'alta' AND discharged_at IS NOT NULL), 1) AS duracion_dias,
+    COUNT(*) FILTER (WHERE discharged_at IS NULL AND futuros = 0 AND last_t <= now() - interval '7 days')::int AS en_riesgo
+  FROM j
   GROUP BY professional_id;
 $$;
 
@@ -151,6 +168,10 @@ AS $$
     FROM pt
     WHERE pt.last_c <= now() - interval '7 days'
       AND pt.last_c >= now() - interval '60 days'
+      AND EXISTS (  -- solo pacientes activos (sin alta ni abandono)
+        SELECT 1 FROM public.patients pp
+        WHERE pp.id = pt.patient_id AND pp.discharged_at IS NULL
+      )
       AND NOT EXISTS (
         SELECT 1 FROM public.exercise_plans ep
         WHERE ep.patient_id = pt.patient_id

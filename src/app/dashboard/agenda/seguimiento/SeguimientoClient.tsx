@@ -84,7 +84,7 @@ export default function SeguimientoClient({ userId, orgName, thresholdDays }: Pr
     }))) return
     setBusyId(p.patient_id)
     const { error } = await supabaseRef.current
-      .from('patients').update({ discharged_at: new Date().toISOString() }).eq('id', p.patient_id)
+      .from('patients').update({ discharged_at: new Date().toISOString(), discharge_reason: 'alta' }).eq('id', p.patient_id)
     if (error) { setBusyId(null); notify('No se pudo dar de alta: ' + error.message, 'error'); return }
     // Hito en el historial (no bloqueante: si falla, el alta ya quedó registrada).
     await supabaseRef.current.from('patient_events').insert({
@@ -97,6 +97,31 @@ export default function SeguimientoClient({ userId, orgName, thresholdDays }: Pr
     setRows(prev => prev.filter(r => r.patient_id !== p.patient_id))
     setBusyId(null)
     notify(`${p.name} dado de alta`)
+  }, [confirm, notify, userId])
+
+  // Tratamiento abandonado: sale del seguimiento como el alta, pero se registra
+  // el motivo (dato fiable para medir abandono por profesional en el panel).
+  const marcarAbandono = useCallback(async (p: LapsingPatient) => {
+    if (!(await confirm({
+      title: 'Marcar tratamiento abandonado',
+      message: `Se registra que ${p.name} abandonó el tratamiento y deja de aparecer en el seguimiento. Queda en su historial y suma a las métricas de abandono.`,
+      danger: true,
+      confirmLabel: 'Marcar abandono',
+    }))) return
+    setBusyId(p.patient_id)
+    const { error } = await supabaseRef.current
+      .from('patients').update({ discharged_at: new Date().toISOString(), discharge_reason: 'abandono' }).eq('id', p.patient_id)
+    if (error) { setBusyId(null); notify('No se pudo marcar: ' + error.message, 'error'); return }
+    await supabaseRef.current.from('patient_events').insert({
+      patient_id: p.patient_id,
+      user_id: userId,
+      event_date: new Date().toISOString().split('T')[0],
+      type: 'otro',
+      title: 'Tratamiento abandonado',
+    })
+    setRows(prev => prev.filter(r => r.patient_id !== p.patient_id))
+    setBusyId(null)
+    notify(`${p.name}: tratamiento abandonado`)
   }, [confirm, notify, userId])
 
   const pausar = useCallback(async (p: LapsingPatient) => {
@@ -193,6 +218,15 @@ export default function SeguimientoClient({ userId, orgName, thresholdDays }: Pr
                     className="text-[12px] text-text-secondary hover:text-text-primary disabled:opacity-40 transition-colors"
                   >
                     Dar de alta
+                  </button>
+                  <span className="text-border">·</span>
+                  <button
+                    onClick={() => marcarAbandono(p)}
+                    disabled={busy}
+                    className="text-[12px] text-text-secondary hover:text-warning disabled:opacity-40 transition-colors"
+                    title="Registra que el paciente abandonó el tratamiento"
+                  >
+                    Tratamiento abandonado
                   </button>
                   <span className="text-border">·</span>
                   <button
