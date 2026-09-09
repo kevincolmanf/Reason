@@ -106,8 +106,8 @@ AS $$
       WHERE first_t <= now() - interval '6 weeks'
         AND (sesiones >= 10 OR (last_t - first_t) >= interval '6 weeks')
     )::int AS completan,
-    ROUND(AVG(EXTRACT(EPOCH FROM (discharged_at - first_t))/86400.0)
-      FILTER (WHERE discharge_reason = 'alta' AND discharged_at IS NOT NULL), 1) AS duracion_dias,
+    ROUND((AVG(EXTRACT(EPOCH FROM (discharged_at - first_t))/86400.0)
+      FILTER (WHERE discharge_reason = 'alta' AND discharged_at IS NOT NULL))::numeric, 1) AS duracion_dias,
     COUNT(*) FILTER (WHERE discharged_at IS NULL AND futuros = 0 AND last_t <= now() - interval '7 days')::int AS en_riesgo
   FROM j
   GROUP BY professional_id;
