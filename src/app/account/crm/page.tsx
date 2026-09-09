@@ -139,13 +139,13 @@ export default async function CRMPage() {
   type OpRow = { professional_id: string; professional_name: string; turnos: number; presentes: number; ausentes: number; cancelados: number; nuevos: number; horas: number; dias: number; pacientes: number }
   type RetRow = { professional_id: string; activos: number; altas: number; abandonos: number; oportunidad: number; completan: number; duracion_dias: number | null; en_riesgo: number }
   type CliRow = { professional_id: string; fichas_mes: number; planes_mes: number; evals_mes: number; planes_desactualizados: number }
-  type MemberRow = { user_id: string; users: { id: string; full_name: string | null; email: string | null } | null }
+  type MemberRow = { user_id: string; profession: string | null; specialty: string | null; vinculo: string | null; users: { id: string; full_name: string | null; email: string | null } | null }
 
   const [opRes, retRes, cliRes, membersRes] = await Promise.all([
     supabase.rpc('panel_pro_operativo', { p_from: monthFrom, p_to: monthTo }),
     supabase.rpc('panel_pro_retencion'),
     supabase.rpc('panel_pro_clinico', { p_from: monthFrom, p_to: monthTo }),
-    admin.from('organization_members').select('user_id, users(id, full_name, email)').eq('org_id', orgRow.id),
+    admin.from('organization_members').select('user_id, profession, specialty, vinculo, users(id, full_name, email)').eq('org_id', orgRow.id),
   ])
 
   const opById = new Map<string, OpRow>((opRes.data ?? []).map((r: OpRow) => [r.professional_id, r]))
@@ -155,7 +155,12 @@ export default async function CRMPage() {
 
   // Nombre por id: del miembro o, si falta, del denormalizado de los turnos.
   const nameById = new Map<string, string>()
-  members.forEach(m => { if (m.users) nameById.set(m.users.id, m.users.full_name ?? m.users.email ?? 'Sin nombre') })
+  const catById = new Map<string, { profession: string | null; specialty: string | null; vinculo: string }>()
+  members.forEach(m => {
+    const id = m.users?.id ?? m.user_id
+    if (m.users) nameById.set(id, m.users.full_name ?? m.users.email ?? 'Sin nombre')
+    catById.set(id, { profession: m.profession ?? null, specialty: m.specialty ?? null, vinculo: m.vinculo ?? 'propio' })
+  })
   opById.forEach((r, id) => { if (!nameById.has(id) && r.professional_name) nameById.set(id, r.professional_name) })
 
   // Universo de profesionales = miembros de la org + cualquiera con actividad.
@@ -167,11 +172,15 @@ export default async function CRMPage() {
 
   const team = Array.from(proIds).map(id => {
     const o = opById.get(id); const r = retById.get(id); const c = cliById.get(id)
+    const cat = catById.get(id)
     const turnos = o?.turnos ?? 0
     const resueltos = (o?.presentes ?? 0) + (o?.ausentes ?? 0)
     return {
       id,
       name: nameById.get(id) ?? 'Sin nombre',
+      profession: cat?.profession ?? null,
+      specialty: cat?.specialty ?? null,
+      vinculo: cat?.vinculo ?? 'propio',
       // operativo (mes en curso)
       turnos,
       nuevos: o?.nuevos ?? 0,

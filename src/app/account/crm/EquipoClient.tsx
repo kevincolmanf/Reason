@@ -5,6 +5,9 @@ import { useState, useMemo } from 'react'
 export type TeamMember = {
   id: string
   name: string
+  profession: string | null
+  specialty: string | null
+  vinculo: string
   turnos: number
   nuevos: number
   horas: number
@@ -67,9 +70,13 @@ export default function EquipoClient({ team, monthLabel }: { team: TeamMember[];
   const [sortDir, setSortDir] = useState<1 | -1>(-1)
   const [open, setOpen] = useState<TeamMember | null>(null)
   const [tip, setTip] = useState<{ text: string; x: number; y: number } | null>(null)
+  const [vinc, setVinc] = useState<string>('propio')
+
+  const hasTerciarizados = useMemo(() => team.some(m => m.vinculo === 'terciarizado'), [team])
+  const hasHonorarios = useMemo(() => team.some(m => m.vinculo === 'honorarios'), [team])
 
   const rows = useMemo(() => {
-    const arr = [...team]
+    const arr = team.filter(m => vinc === 'all' || m.vinculo === vinc)
     arr.sort((a, b) => {
       const x = a[sortKey], y = b[sortKey]
       if (typeof x === 'string' || typeof y === 'string') return sortDir * String(x).localeCompare(String(y))
@@ -77,12 +84,14 @@ export default function EquipoClient({ team, monthLabel }: { team: TeamMember[];
       return sortDir * ((xv as number) - (yv as number))
     })
     return arr
-  }, [team, sortKey, sortDir])
+  }, [team, sortKey, sortDir, vinc])
 
   // Promedios del centro (ignora nulos) para la comparación del 1:1.
+  // Excluye a los terciarizados: no son operación propia del centro.
   const center = useMemo(() => {
+    const base = team.filter(m => m.vinculo !== 'terciarizado')
     const avg = (pick: (m: TeamMember) => number | null) => {
-      const vals = team.map(pick).filter((v): v is number => v != null)
+      const vals = base.map(pick).filter((v): v is number => v != null)
       return vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : null
     }
     return {
@@ -120,8 +129,24 @@ export default function EquipoClient({ team, monthLabel }: { team: TeamMember[];
   return (
     <div>
       <p className="text-[13px] text-text-secondary mb-4">
-        Un vistazo de cada profesional para conversar cara a cara. Tocá una fila para ver su resumen 1:1. Operación y trabajo clínico son del mes de <span className="text-text-primary">{monthLabel}</span>; retención y duración, sobre todo el historial.
+        Un vistazo de cada profesional para conversar cara a cara. Tocá una fila para ver su resumen 1:1. Operación y trabajo clínico son del mes de <span className="text-text-primary">{monthLabel}</span>; retención y duración, sobre todo el historial. La categoría se edita en <span className="text-text-primary">Mi Equipo</span>.
       </p>
+
+      {(hasHonorarios || hasTerciarizados) && (
+        <div className="flex items-center gap-2 flex-wrap mb-4">
+          <span className="text-[11px] uppercase tracking-[0.05em] text-text-tertiary mr-1">Vínculo</span>
+          {[['propio', 'Propios'], ...(hasHonorarios ? [['honorarios', 'Honorarios']] : []), ...(hasTerciarizados ? [['terciarizado', 'Terciarizados']] : []), ['all', 'Todos']].map(([v, label]) => (
+            <button
+              key={v}
+              onClick={() => setVinc(v)}
+              className={`text-[12.5px] px-3 py-1 rounded-full border-[0.5px] transition-colors ${vinc === v ? 'bg-accent text-bg-primary border-accent font-medium' : 'bg-bg-secondary border-border text-text-secondary hover:text-text-primary'}`}
+            >
+              {label}
+            </button>
+          ))}
+          {vinc === 'all' && hasTerciarizados && <span className="text-[11px] text-text-tertiary">· los terciarizados no cuentan en el promedio del centro</span>}
+        </div>
+      )}
 
       <div className="bg-bg-primary border-[0.5px] border-border rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
@@ -151,9 +176,16 @@ export default function EquipoClient({ team, monthLabel }: { team: TeamMember[];
                   onClick={() => setOpen(m)}
                   className={`border-b-[0.5px] border-border last:border-b-0 cursor-pointer hover:bg-bg-secondary transition-colors ${i % 2 === 1 ? 'bg-bg-secondary/30' : ''}`}
                 >
-                  <td className="px-3 py-3 text-[13px] font-medium text-text-primary whitespace-nowrap">
-                    {m.name}{flagged(m) && <span className="text-warning ml-1.5" title="A conversar">⚑</span>}
-                    <span className="text-text-tertiary ml-1.5 text-[11px]">›</span>
+                  <td className="px-3 py-3 whitespace-nowrap">
+                    <div className="text-[13px] font-medium text-text-primary">
+                      {m.name}{flagged(m) && <span className="text-warning ml-1.5" title="A conversar">⚑</span>}
+                      {m.vinculo === 'terciarizado' && <span className="ml-2 text-[10px] uppercase tracking-[0.04em] text-warning border-[0.5px] border-warning/40 rounded px-1.5 py-0.5">Terc.</span>}
+                      {m.vinculo === 'honorarios' && <span className="ml-2 text-[10px] uppercase tracking-[0.04em] text-[#6690c0] border-[0.5px] border-[#6690c0]/40 rounded px-1.5 py-0.5">Hon.</span>}
+                      <span className="text-text-tertiary ml-1.5 text-[11px]">›</span>
+                    </div>
+                    {(m.profession || m.specialty) && (
+                      <div className="text-[11px] text-text-tertiary mt-0.5">{[m.profession, m.specialty].filter(Boolean).join(' · ')}</div>
+                    )}
                   </td>
                   <td className="px-3 py-3 text-[13px] text-text-secondary text-right font-mono tabular-nums">{m.activos}</td>
                   <td className="px-3 py-3 text-[13px] text-text-secondary text-right font-mono tabular-nums">{m.nuevos}</td>
@@ -273,7 +305,12 @@ function Scorecard({ m, center, monthLabel, onClose }: {
         <div className="flex items-start justify-between px-6 py-5 border-b-[0.5px] border-border">
           <div>
             <h3 className="text-[19px] font-medium">{m.name}</h3>
-            <p className="text-[12.5px] text-text-secondary mt-1">Resumen para una conversación 1:1</p>
+            <p className="text-[12.5px] text-text-secondary mt-1">
+              {[m.profession, m.specialty].filter(Boolean).join(' · ') || 'Sin categoría'}
+              {m.vinculo === 'terciarizado' && <span className="text-warning"> · Terciarizado</span>}
+              {m.vinculo === 'honorarios' && <span className="text-[#6690c0]"> · Honorarios</span>}
+              <span className="text-text-tertiary"> · resumen 1:1</span>
+            </p>
           </div>
           <button onClick={onClose} className="text-[13px] text-text-secondary hover:text-text-primary border-[0.5px] border-border rounded-lg w-8 h-8 shrink-0">✕</button>
         </div>
