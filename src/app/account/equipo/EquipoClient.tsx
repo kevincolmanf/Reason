@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createOrganization, addMember, removeMember, updateMemberName, resetMemberAccess, setMemberCashAccess, setMemberAgendaLevel, type AgendaLevel, deleteOrganization } from './actions'
+import { createOrganization, addMember, removeMember, updateMemberName, resetMemberAccess, setMemberCashAccess, setMemberAgendaLevel, setMemberCategory, type AgendaLevel, type MemberCategory, deleteOrganization } from './actions'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
@@ -12,9 +12,20 @@ interface Member {
   can_register_cash: boolean
   agenda_access: boolean
   agenda_can_edit: boolean
+  profession: string | null
+  specialty: string | null
+  vinculo: string | null
   hasLoggedIn: boolean
   users: { full_name: string | null; email: string }
 }
+
+// Sugerencias de profesión (el campo igual acepta texto libre).
+const PROFESSIONS = ['Kinesiólogo/a', 'Fisioterapeuta', 'Nutricionista', 'Médico/a', 'Terapista ocupacional', 'Fonoaudiólogo/a', 'Psicólogo/a', 'Entrenador/a', 'Preparador/a físico']
+const VINCULOS: { value: string; label: string }[] = [
+  { value: 'propio', label: 'Propio (staff)' },
+  { value: 'honorarios', label: 'Honorarios (%)' },
+  { value: 'terciarizado', label: 'Terciarizado' },
+]
 
 interface Org {
   id: string
@@ -205,6 +216,16 @@ export default function EquipoClient({ userId, org: initialOrg, members: initial
       setMembers(ms => ms.map(m => m.id === member.id ? { ...m, ...prev } : m))
     }
     setAgendaToggling(null)
+  }
+
+  // Categoría del profesional (profesión / especialidad / vínculo). Guardado
+  // optimista; si falla, revierte el campo tocado.
+  const handleSetCategory = async (member: Member, patch: MemberCategory) => {
+    if (!org) return
+    const prev: MemberCategory = { profession: member.profession, specialty: member.specialty, vinculo: member.vinculo }
+    setMembers(ms => ms.map(m => m.id === member.id ? { ...m, ...patch } : m))
+    const res = await setMemberCategory(org.id, member.user_id, patch)
+    if (res.error) setMembers(ms => ms.map(m => m.id === member.id ? { ...m, ...prev } : m))
   }
 
   const handleResetAccess = async (member: Member, force = false) => {
@@ -509,6 +530,9 @@ Cualquier duda, avisame.`
           </div>
         ) : (
           <div className="divide-y-[0.5px] divide-border">
+            <datalist id="professions-list">
+              {PROFESSIONS.map(p => <option key={p} value={p} />)}
+            </datalist>
             {members.map(m => {
               const isCurrentUser = m.user_id === userId
               const isEditing = editingId === m.id
@@ -543,6 +567,7 @@ Cualquier duda, avisame.`
                       </button>
                     </div>
                   ) : (
+                    <>
                     <div className="flex items-center justify-between gap-3 flex-wrap">
                       <div>
                         <p className="text-[14px] font-medium">{m.users?.full_name || m.users?.email || '(sin nombre)'}</p>
@@ -614,6 +639,31 @@ Cualquier duda, avisame.`
                         )}
                       </div>
                     </div>
+                    <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t-[0.5px] border-border/60">
+                      <span className="text-[11px] uppercase tracking-[0.05em] text-text-tertiary mr-1">Categoría</span>
+                      <input
+                        list="professions-list"
+                        defaultValue={m.profession ?? ''}
+                        onBlur={e => { const v = e.target.value.trim(); if (v !== (m.profession ?? '')) handleSetCategory(m, { profession: v }) }}
+                        placeholder="Profesión"
+                        className="text-[12px] bg-bg-primary border-[0.5px] border-border rounded-full px-3 py-1 focus:outline-none focus:border-accent w-[150px]"
+                      />
+                      <input
+                        defaultValue={m.specialty ?? ''}
+                        onBlur={e => { const v = e.target.value.trim(); if (v !== (m.specialty ?? '')) handleSetCategory(m, { specialty: v }) }}
+                        placeholder="Especialidad / área"
+                        className="text-[12px] bg-bg-primary border-[0.5px] border-border rounded-full px-3 py-1 focus:outline-none focus:border-accent w-[160px]"
+                      />
+                      <select
+                        value={m.vinculo ?? 'propio'}
+                        onChange={e => handleSetCategory(m, { vinculo: e.target.value })}
+                        title="Vínculo con el centro (para el panel de gestión)"
+                        className="text-[12px] bg-bg-primary border-[0.5px] border-border rounded-full px-2.5 py-1 focus:outline-none focus:border-accent text-text-secondary"
+                      >
+                        {VINCULOS.map(v => <option key={v.value} value={v.value}>{v.label}</option>)}
+                      </select>
+                    </div>
+                    </>
                   )}
                   {isEditing && editError && (
                     <p className="text-[12px] text-red-400 mt-2">{editError}</p>
