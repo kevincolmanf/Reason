@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
 import { useConfirm, useToast } from '@/components/Dialogs'
@@ -17,8 +17,12 @@ interface LapsingPatient {
 
 interface Props {
   userId: string
+  orgId: string | null
   orgName: string | null
   thresholdDays: number
+  areas: string[]
+  trackedAreas: string[] | null // null = todas
+  canConfig: boolean
 }
 
 const SNOOZE_DAYS = 30
@@ -42,7 +46,7 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
-export default function SeguimientoClient({ userId, orgName, thresholdDays }: Props) {
+export default function SeguimientoClient({ userId, orgId, orgName, thresholdDays, areas, trackedAreas, canConfig }: Props) {
   const { confirm, confirmDialog } = useConfirm()
   const { notify, toast } = useToast()
   const supabaseRef = useRef(createClient())
@@ -50,11 +54,20 @@ export default function SeguimientoClient({ userId, orgName, thresholdDays }: Pr
   const [rows, setRows] = useState<LapsingPatient[]>([])
   const [loading, setLoading] = useState(true)
   const [busyId, setBusyId] = useState<string | null>(null)
+  // Áreas en las que se siguen ausencias (config del centro). Sin config = todas.
+  const [selectedAreas, setSelectedAreas] = useState<Set<string>>(() => new Set(trackedAreas ?? areas))
+  const showAreaConfig = canConfig && areas.length > 1
 
-  const fetchRows = useCallback(async () => {
+  // Para la RPC: todas seleccionadas (o ninguna) → null (= todas); si no, el subconjunto.
+  const areaParam = useMemo(
+    () => (selectedAreas.size === 0 || selectedAreas.size >= areas.length) ? null : Array.from(selectedAreas),
+    [selectedAreas, areas.length],
+  )
+
+  const fetchRows = useCallback(async (p_areas: string[] | null) => {
     setLoading(true)
     const { data, error } = await supabaseRef.current
-      .rpc('get_lapsing_patients', { p_threshold_days: thresholdDays })
+      .rpc('get_lapsing_patients', { p_threshold_days: thresholdDays, p_areas })
     if (error) {
       notify('No se pudo cargar el seguimiento: ' + error.message, 'error')
       setLoading(false)
@@ -64,7 +77,20 @@ export default function SeguimientoClient({ userId, orgName, thresholdDays }: Pr
     setLoading(false)
   }, [thresholdDays, notify])
 
-  useEffect(() => { fetchRows() }, [fetchRows])
+  useEffect(() => { fetchRows(areaParam) }, [fetchRows, areaParam])
+
+  // Elegir en qué áreas se siguen ausencias. Guarda en la organización (solo dueño).
+  const toggleArea = (area: string) => {
+    const next = new Set(selectedAreas)
+    if (next.has(area)) next.delete(area); else next.add(area)
+    setSelectedAreas(next)
+    if (canConfig && orgId) {
+      const toStore = (next.size === 0 || next.size >= areas.length) ? null : Array.from(next)
+      supabaseRef.current.from('organizations').update({ absence_areas: toStore }).eq('id', orgId).then(({ error }) => {
+        if (error) notify('No se pudo guardar la configuración de áreas', 'error')
+      })
+    }
+  }
 
   // Avisar por WhatsApp: marca la fecha de aviso (queda "avisado hace X") pero
   // el paciente sigue en el panel hasta que retome (le den un turno) o lo saquen.
@@ -152,6 +178,32 @@ export default function SeguimientoClient({ userId, orgName, thresholdDays }: Pr
       <p className="text-[13px] text-text-secondary mb-5">
         Pacientes que hace {thresholdDays} días o más que no vienen y no tienen un próximo turno agendado.
       </p>
+
+      {/* Config: en qué áreas se siguen ausencias */}
+      {showAreaConfig && (
+        <div className="mb-5 bg-bg-secondary border-[0.5px] border-border rounded-xl p-4">
+          <p className="text-[12px] text-text-secondary mb-2.5">
+            <span className="text-text-primary font-medium">Seguir ausencias en:</span> elegí las áreas donde tiene sentido perseguir la ausencia (ej. kinesiología sí; consultas o nutrición quizá no).
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {areas.map(a => {
+              const on = selectedAreas.has(a)
+              return (
+                <button
+                  key={a}
+                  onClick={() => toggleArea(a)}
+                  className={`text-[12.5px] px-3 py-1.5 rounded-full border-[0.5px] transition-colors ${on ? 'bg-accent text-bg-primary border-accent font-medium' : 'bg-bg-primary border-border text-text-secondary hover:text-text-primary'}`}
+                >
+                  {a}
+                </button>
+              )
+            })}
+          </div>
+          <p className="text-[11px] text-text-tertiary mt-2.5">
+            {areaParam === null ? 'Siguiendo todas las áreas.' : `Siguiendo ${selectedAreas.size} de ${areas.length} áreas.`} Se guarda para todo el centro.
+          </p>
+        </div>
+      )}
 
       {/* Conteo */}
       <div className="mb-3 text-[13px] text-text-secondary">
