@@ -11,6 +11,11 @@ export const metadata = { title: 'Seguimiento de ausencias | Reason' }
 // Umbral por defecto: aparece si hace >= 7 días que no viene y no tiene turno.
 const THRESHOLD_DAYS = 7
 
+const DEFAULT_AREAS = [
+  'Kinesiología', 'Entrenamiento adultos', 'Entrenamiento niños', 'RPG',
+  'Pilates', 'Yoga', 'Nutrición', 'Traumatología', 'Análisis de la marcha',
+]
+
 export default async function SeguimientoPage() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -29,18 +34,22 @@ export default async function SeguimientoPage() {
   let isOrgOwner = false
   let orgId: string | null = null
   let orgName: string | null = null
+  let areas: string[] = DEFAULT_AREAS
+  let trackedAreas: string[] | null = null // null = todas
 
   if (isOrgContext && ctx.orgId) {
     const { data: orgData } = await supabase
       .from('organizations')
-      .select('id, name, owner_id')
+      .select('id, name, owner_id, agenda_areas, absence_areas')
       .eq('id', ctx.orgId)
       .single()
-    const org = orgData as unknown as { id: string; name: string; owner_id: string } | null
+    const org = orgData as unknown as { id: string; name: string; owner_id: string; agenda_areas: string[] | null; absence_areas: string[] | null } | null
     if (org) {
       orgId = org.id
       orgName = org.name
       isOrgOwner = org.owner_id === user.id
+      areas = org.agenda_areas ?? DEFAULT_AREAS
+      trackedAreas = org.absence_areas ?? null
     }
   }
 
@@ -68,8 +77,12 @@ export default async function SeguimientoPage() {
       <main className="flex-grow w-full max-w-[820px] mx-auto px-6 py-8">
         <SeguimientoClient
           userId={user.id}
+          orgId={orgId}
           orgName={orgName}
           thresholdDays={THRESHOLD_DAYS}
+          areas={areas}
+          trackedAreas={trackedAreas}
+          canConfig={isOrgOwner}
         />
       </main>
     </div>
