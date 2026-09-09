@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import dynamic from 'next/dynamic'
+import EquipoClient, { type TeamMember } from './EquipoClient'
 
 const AnalyticsClient = dynamic(() => import('./AnalyticsClient'), { ssr: false })
 
@@ -70,8 +71,8 @@ function exportCSV(patients: CRMPatient[]) {
   URL.revokeObjectURL(url)
 }
 
-export default function CRMPageClient({ patients, analytics }: { patients: CRMPatient[]; analytics: Analytics }) {
-  const [tab, setTab] = useState<'pacientes' | 'analitica'>('pacientes')
+export default function CRMPageClient({ patients, team, monthLabel, analytics }: { patients: CRMPatient[]; team: TeamMember[]; monthLabel: string; analytics: Analytics }) {
+  const [tab, setTab] = useState<'pacientes' | 'equipo' | 'analitica'>('pacientes')
   const [filterProf, setFilterProf] = useState('all')
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all')
   const [filterSource, setFilterSource] = useState('all')
@@ -122,6 +123,12 @@ export default function CRMPageClient({ patients, analytics }: { patients: CRMPa
           className={`pb-3 pr-6 text-[14px] font-medium transition-colors border-b-[1.5px] -mb-[0.5px] ${tab === 'pacientes' ? 'border-text-primary text-text-primary' : 'border-transparent text-text-secondary hover:text-text-primary'}`}
         >
           Pacientes
+        </button>
+        <button
+          onClick={() => setTab('equipo')}
+          className={`pb-3 px-6 text-[14px] font-medium transition-colors border-b-[1.5px] -mb-[0.5px] ${tab === 'equipo' ? 'border-text-primary text-text-primary' : 'border-transparent text-text-secondary hover:text-text-primary'}`}
+        >
+          Equipo
         </button>
         <button
           onClick={() => setTab('analitica')}
@@ -250,6 +257,8 @@ export default function CRMPageClient({ patients, analytics }: { patients: CRMPa
           </div>
         </div>
       )}
+
+      {tab === 'equipo' && <EquipoClient team={team} monthLabel={monthLabel} />}
 
       {tab === 'analitica' && <AnalyticsClient analytics={analytics} />}
     </div>
