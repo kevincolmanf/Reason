@@ -25,6 +25,11 @@ ALTER TABLE public.patients ADD COLUMN IF NOT EXISTS discharge_reason text;
 UPDATE public.patients SET discharge_reason = 'alta'
   WHERE discharged_at IS NOT NULL AND discharge_reason IS NULL;
 
+-- Se borran primero para poder cambiar la firma (columnas de retorno) al re-correr.
+DROP FUNCTION IF EXISTS public.panel_pro_operativo(timestamptz, timestamptz);
+DROP FUNCTION IF EXISTS public.panel_pro_retencion();
+DROP FUNCTION IF EXISTS public.panel_pro_clinico(timestamptz, timestamptz);
+
 -- ── 1) Operativo del mes, por profesional ───────────────────────────────────
 -- Turnos, asistencia, horas y densidad en un rango [p_from, p_to).
 CREATE OR REPLACE FUNCTION public.panel_pro_operativo(p_from timestamptz, p_to timestamptz)
