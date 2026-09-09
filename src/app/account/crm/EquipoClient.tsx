@@ -66,6 +66,7 @@ export default function EquipoClient({ team, monthLabel }: { team: TeamMember[];
   const [sortKey, setSortKey] = useState<SortKey>('activos')
   const [sortDir, setSortDir] = useState<1 | -1>(-1)
   const [open, setOpen] = useState<TeamMember | null>(null)
+  const [tip, setTip] = useState<{ text: string; x: number; y: number } | null>(null)
 
   const rows = useMemo(() => {
     const arr = [...team]
@@ -104,7 +105,8 @@ export default function EquipoClient({ team, monthLabel }: { team: TeamMember[];
   const H = ({ k, label, right = true }: { k: SortKey; label: string; right?: boolean }) => (
     <th
       onClick={() => setSort(k)}
-      title={TIPS[k]}
+      onMouseEnter={e => { const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); setTip({ text: TIPS[k], x: Math.max(8, Math.min(r.left, window.innerWidth - 300)), y: r.bottom + 6 }) }}
+      onMouseLeave={() => setTip(null)}
       className={`${right ? 'text-right' : 'text-left'} px-3 py-3 text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em] cursor-help select-none hover:text-text-primary whitespace-nowrap`}
     >
       {label}{sortKey === k && <span className="opacity-50 ml-1 text-[9px]">{sortDir < 0 ? '▼' : '▲'}</span>}
@@ -179,6 +181,15 @@ export default function EquipoClient({ team, monthLabel }: { team: TeamMember[];
       </p>
 
       {open && <Scorecard m={open} center={center} monthLabel={monthLabel} onClose={() => setOpen(null)} />}
+
+      {tip && (
+        <div
+          className="fixed z-[70] pointer-events-none max-w-[280px] bg-bg-primary border-[0.5px] border-border rounded-lg px-3 py-2 text-[12px] text-text-secondary shadow-xl leading-snug"
+          style={{ left: tip.x, top: tip.y }}
+        >
+          {tip.text} <span className="text-text-tertiary">· Clic para ordenar.</span>
+        </div>
+      )}
     </div>
   )
 }
