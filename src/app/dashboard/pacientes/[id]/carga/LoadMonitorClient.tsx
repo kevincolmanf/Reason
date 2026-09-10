@@ -174,7 +174,7 @@ function SourceBadge({ source }: { source: string }) {
   }
   return (
     <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-bg-secondary text-text-secondary border-[0.5px] border-border whitespace-nowrap">
-      Kinesiólogo
+      Profesional
     </span>
   )
 }

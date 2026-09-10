@@ -80,6 +80,22 @@ export default function AtencionDeHoy({ patientId, initialAttentions = [], kineS
   const [saving, setSaving] = useState(false)
   const [status, setStatus] = useState<'idle' | 'saved' | 'error'>('idle')
   const [showAll, setShowAll] = useState(false)
+  const [confirmDel, setConfirmDel] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState<string | null>(null)
+
+  const deleteAttention = async (id: string) => {
+    setDeleting(id)
+    try {
+      const res = await fetch('/api/pacientes/atencion', {
+        method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attentionId: id }),
+      })
+      if (!res.ok) throw new Error()
+      setAttentions(prev => prev.filter(a => a.id !== id))
+    } catch { /* si falla, se mantiene */ } finally {
+      setDeleting(null); setConfirmDel(null)
+    }
+  }
 
   // Sesión del plan para hoy (precargada del calendario).
   const [session, setSession] = useState<ScheduledSessionLite | null>(kineSession?.todaySession ?? null)
@@ -240,7 +256,7 @@ export default function AtencionDeHoy({ patientId, initialAttentions = [], kineS
           ) : (
             <>
               {visible.map((a, i) => (
-                <div key={a.id} className={`flex gap-3 px-3 py-2.5 ${i > 0 ? 'border-t-[0.5px] border-border' : ''}`}>
+                <div key={a.id} className={`flex gap-3 px-3 py-2.5 items-start ${i > 0 ? 'border-t-[0.5px] border-border' : ''}`}>
                   <div className="shrink-0 w-[104px]">
                     <div className="text-[11.5px] text-text-secondary capitalize">{dateLabel(a.attended_on)}</div>
                     <div className="text-[11px] text-text-secondary/70 truncate">{a.professional_name ?? 'Profesional'}</div>
@@ -259,6 +275,17 @@ export default function AtencionDeHoy({ patientId, initialAttentions = [], kineS
                       })()}
                     </div>
                     {a.note && <div className="text-[12px] text-text-secondary/80 italic mt-1">“{a.note}”</div>}
+                  </div>
+                  <div className="ml-auto shrink-0">
+                    {confirmDel === a.id ? (
+                      <span className="flex items-center gap-1.5 text-[11px]">
+                        <span className="text-text-secondary">¿Borrar?</span>
+                        <button onClick={() => deleteAttention(a.id)} disabled={deleting === a.id} className="text-warning font-medium hover:underline disabled:opacity-50">Sí</button>
+                        <button onClick={() => setConfirmDel(null)} className="text-text-secondary hover:text-text-primary">No</button>
+                      </span>
+                    ) : (
+                      <button onClick={() => setConfirmDel(a.id)} aria-label="Borrar atención" title="Borrar atención" className="text-text-secondary/50 hover:text-warning text-[15px] leading-none px-1">×</button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -410,7 +437,7 @@ export default function AtencionDeHoy({ patientId, initialAttentions = [], kineS
         <textarea
           value={note}
           onChange={e => setNote(e.target.value)}
-          placeholder="Nota opcional para el próximo profe (el “por qué”)…"
+          placeholder="Nota opcional para el próximo profesional (el “por qué”)…"
           className="w-full bg-bg-primary border-[0.5px] border-border rounded-lg px-3 py-2 text-[12.5px] text-text-primary resize-y min-h-[38px] placeholder:text-text-secondary/60"
         />
         <div className="text-[11px] text-text-secondary mt-1.5">La línea de arriba se arma sola. Escribir es opcional.</div>

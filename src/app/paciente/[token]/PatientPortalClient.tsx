@@ -178,7 +178,7 @@ function groupSessionsByWeek(sessions: ScheduledItem[], today: string): WeekGrou
 
 export default function PatientPortalClient({ patient, token, recentSessions, scheduledSessions, planSessions, loadOverrides }: Props) {
   const [showHelp, setShowHelp] = useState(false)
-  // Paciente presencial: no se le pide registrar; su kinesiólogo lo hace en el
+  // Paciente presencial: no se le pide registrar; su profesional lo hace en el
   // centro. El portal le sirve para ver el plan y los videos.
   const isPresencial = (patient.follow_up_mode ?? 'presencial') === 'presencial'
 
@@ -464,7 +464,7 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
                 {!isPresencial && (
                 <li className="flex gap-2">
                   <span className="shrink-0 text-accent mt-0.5">→</span>
-                  <span><span className="text-text-primary font-medium">Registrar sesión:</span> completá después de cada entrenamiento. Tu kinesiólogo lo ve en tiempo real.</span>
+                  <span><span className="text-text-primary font-medium">Registrar sesión:</span> completá después de cada entrenamiento. Tu profesional lo ve en tiempo real.</span>
                 </li>
                 )}
               </ul>
@@ -524,7 +524,7 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
               Registrá tu sesión después de entrenar
             </p>
             <p className="text-[12px] text-text-secondary mt-0.5 leading-relaxed">
-              Tu kinesiólogo usa esos datos para planificar mejor tu próxima semana.
+              Tu profesional usa esos datos para planificar mejor tu próxima semana.
             </p>
           </div>
           <button
@@ -649,7 +649,7 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
             <div className="w-11 h-11 mx-auto mb-3 rounded-full bg-accent/10 flex items-center justify-center">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-accent"><path d="M20 6 9 17l-5-5" /></svg>
             </div>
-            <h2 className="text-[18px] font-medium mb-1">Tu evolución la registra tu kinesiólogo</h2>
+            <h2 className="text-[18px] font-medium mb-1">Tu evolución la registra tu profesional</h2>
             <p className="text-[13px] text-text-secondary max-w-[340px] mx-auto">
               No hace falta que cargues nada acá. En el centro anotamos cómo vas y ajustamos tu plan. Usá este portal para ver tus ejercicios y videos.
             </p>

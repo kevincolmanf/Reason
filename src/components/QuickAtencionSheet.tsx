@@ -124,7 +124,7 @@ export default function QuickAtencionSheet({ patientId, patientName, onClose, on
           <div>
             <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1.5">Nota (opcional)</label>
             <textarea value={note} onChange={e => setNote(e.target.value)} rows={2}
-              placeholder="El porqué, para el próximo profe…"
+              placeholder="El porqué, para el próximo profesional…"
               className="w-full bg-bg-primary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-primary resize-y placeholder:text-text-tertiary" />
           </div>
 

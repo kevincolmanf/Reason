@@ -55,7 +55,7 @@ export default async function PlanPacientePage({ params }: { params: { token: st
         <div className="bg-bg-secondary border-[0.5px] border-border rounded-xl p-8 max-w-[400px] text-center shadow-lg">
           <h1 className="text-[20px] font-medium mb-2 text-text-primary">Link Expirado</h1>
           <p className="text-[14px] text-text-secondary">
-            Este link de ejercicios ya no está disponible. Consultá a tu kinesiólogo para obtener uno nuevo.
+            Este link de ejercicios ya no está disponible. Consultá a tu profesional para obtener uno nuevo.
           </p>
         </div>
       </div>

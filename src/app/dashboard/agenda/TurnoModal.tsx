@@ -549,14 +549,14 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
     if (p.birth_date) applyBirthISO(p.birth_date)
 
     // Prioridad para predeterminar el profesional:
-    //   1) el "profesional habitual" fijado en la ficha del paciente
-    //   2) el del último turno del paciente (historial)
+    //   1) el del último turno del paciente (el ÚLTIMO que lo atendió)
+    //   2) el "profesional habitual" fijado en la ficha (fallback si no hay historial)
     // En ambos casos, solo si sigue siendo integrante activo del equipo.
-    const habitual =
-      p.habitual_professional_id ? professionals.find(pr => pr.id === p.habitual_professional_id) : undefined
     const fromHistory =
       lastProfessionalId ? professionals.find(pr => pr.id === lastProfessionalId) : undefined
-    const usualProfessional = habitual ?? fromHistory
+    const habitual =
+      p.habitual_professional_id ? professionals.find(pr => pr.id === p.habitual_professional_id) : undefined
+    const usualProfessional = fromHistory ?? habitual
     const usualProfessionalId = usualProfessional?.id ?? null
 
     // Avisamos solo si además cambia respecto al que estaba seleccionado por defecto.
