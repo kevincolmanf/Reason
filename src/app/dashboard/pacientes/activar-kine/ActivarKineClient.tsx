@@ -7,6 +7,18 @@ export interface Candidate {
   id: string
   name: string
   turnoCount: number
+  lastTurno: string | null
+}
+
+function lastTurnoLabel(iso: string | null): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  const days = Math.floor((Date.now() - d.getTime()) / 86400000)
+  const fecha = d.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })
+  if (days <= 0) return `último turno: hoy`
+  if (days === 1) return `último turno: ayer`
+  if (days < 30) return `último turno: ${fecha} (hace ${days} días)`
+  return `último turno: ${fecha}`
 }
 
 export default function ActivarKineClient({ candidates, alreadyCount }: { candidates: Candidate[]; alreadyCount: number }) {
@@ -81,8 +93,11 @@ export default function ActivarKineClient({ candidates, alreadyCount }: { candid
             {pending.map(c => (
               <label key={c.id} className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-bg-primary/40">
                 <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggle(c.id)} style={{ accentColor: 'var(--accent)' }} />
-                <span className="text-[14px] text-text-primary flex-1">{c.name}</span>
-                <span className="text-[12px] text-text-secondary tabular-nums">{c.turnoCount} turno{c.turnoCount !== 1 ? 's' : ''}</span>
+                <span className="flex-1 min-w-0">
+                  <span className="block text-[14px] text-text-primary truncate">{c.name}</span>
+                  <span className="block text-[11.5px] text-text-secondary">{lastTurnoLabel(c.lastTurno)}</span>
+                </span>
+                <span className="text-[12px] text-text-secondary tabular-nums shrink-0">{c.turnoCount} turno{c.turnoCount !== 1 ? 's' : ''}</span>
               </label>
             ))}
           </div>

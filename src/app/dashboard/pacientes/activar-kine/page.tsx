@@ -12,13 +12,15 @@ export default async function ActivarKinePage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  // Candidatos = pacientes con turnos (RPC con SECURITY INVOKER, ya scopeado por RLS).
-  const { data, error } = await supabase.rpc('get_kine_candidates')
-  const rows = (error ? [] : (data ?? [])) as { patient_id: string; name: string; kine_mode: boolean; turno_count: number }[]
+  // Candidatos = pacientes con turnos RECIENTES (últimos 30 días), para no traer
+  // a los que ya terminaron la kine y se quedaron entrenando. RPC con SECURITY
+  // INVOKER, ya scopeado por RLS.
+  const { data, error } = await supabase.rpc('get_kine_candidates', { p_days: 30 })
+  const rows = (error ? [] : (data ?? [])) as { patient_id: string; name: string; kine_mode: boolean; turno_count: number; last_turno: string | null }[]
 
   const candidates: Candidate[] = rows
     .filter(r => !r.kine_mode)
-    .map(r => ({ id: r.patient_id, name: r.name, turnoCount: Number(r.turno_count) }))
+    .map(r => ({ id: r.patient_id, name: r.name, turnoCount: Number(r.turno_count), lastTurno: r.last_turno }))
   const alreadyCount = rows.filter(r => r.kine_mode).length
 
   return (
@@ -31,9 +33,10 @@ export default async function ActivarKinePage() {
 
         <h1 className="text-[26px] font-medium tracking-[-0.02em] mb-2">Activar modo kine en tanda</h1>
         <p className="text-text-secondary text-[14px] mb-6 max-w-[62ch]">
-          Estos son tus pacientes que tienen turnos en la agenda — los candidatos a modo kinesiología.
-          Los alumnos de entrenamiento no aparecen porque no tienen turnos. Revisá la lista y pasalos a modo
-          kine juntos. Podés desmarcar los que no correspondan.
+          Estos son tus pacientes con turnos en los <b className="text-text-primary font-medium">últimos 30 días</b> — los que
+          están actualmente en kinesiología. No aparecen los alumnos de entrenamiento ni los que ya terminaron
+          la kine y se quedaron entrenando (no tienen turnos recientes). Mirá el último turno de cada uno,
+          desmarcá los que no correspondan y pasalos a modo kine juntos.
         </p>
 
         {error ? (
