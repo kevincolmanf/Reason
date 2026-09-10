@@ -52,6 +52,16 @@ export default async function PacientePage({ params }: { params: { id: string } 
     .maybeSingle()
   const hasFicha = !!fichaRow?.ficha_data && Object.keys(fichaRow.ficha_data as Record<string, unknown>).length > 0
 
+  // ¿El paciente tiene turnos en la agenda? En centros de kinesiología esto suele
+  // distinguir a un paciente (tiene turnos) de un alumno de entrenamiento (solo
+  // plan, sin turnos). Se usa para sugerir el Modo Kinesiología, nunca para
+  // activarlo solo.
+  const { count: turnosCount } = await supabase
+    .from('turnos')
+    .select('id', { count: 'exact', head: true })
+    .eq('patient_id', params.id)
+  const patientHasTurnos = (turnosCount ?? 0) > 0
+
   // Profesionales del equipo, para elegir el profesional habitual del paciente.
   // Solo aplica a pacientes de una organización (equipos con varios profesionales).
   let professionals: { id: string; full_name: string | null }[] = []
@@ -82,7 +92,7 @@ export default async function PacientePage({ params }: { params: { id: string } 
           </Link>
         </div>
 
-        <PacienteDetail patient={patient} userId={user.id} initialEvents={events ?? []} treatmentStart={firstPlan?.created_at ?? null} professionals={professionals} hasFicha={hasFicha} />
+        <PacienteDetail patient={patient} userId={user.id} initialEvents={events ?? []} treatmentStart={firstPlan?.created_at ?? null} professionals={professionals} hasFicha={hasFicha} patientHasTurnos={patientHasTurnos} />
       </main>
     </div>
   )

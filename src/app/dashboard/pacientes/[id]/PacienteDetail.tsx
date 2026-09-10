@@ -27,6 +27,7 @@ interface Patient {
   load_share_token: string | null
   follow_up_mode?: string | null
   plan_mode?: string | null
+  kine_mode?: boolean | null
   habitual_professional_id?: string | null
   user_id: string
 }
@@ -95,8 +96,10 @@ function treatmentDuration(start: string | null): string | null {
   return `Semana ${week} · Mes ${month} de tratamiento`
 }
 
-export default function PacienteDetail({ patient: initialPatient, userId, initialEvents = [], treatmentStart = null, professionals = [], hasFicha = false }: { patient: Patient; userId: string; initialEvents?: PatientEvent[]; treatmentStart?: string | null; professionals?: { id: string; full_name: string | null }[]; hasFicha?: boolean }) {
+export default function PacienteDetail({ patient: initialPatient, userId, initialEvents = [], treatmentStart = null, professionals = [], hasFicha = false, patientHasTurnos = false }: { patient: Patient; userId: string; initialEvents?: PatientEvent[]; treatmentStart?: string | null; professionals?: { id: string; full_name: string | null }[]; hasFicha?: boolean; patientHasTurnos?: boolean }) {
   const isOwner = initialPatient.user_id === userId
+  // Sugerencia del Modo Kinesiología: el paciente tiene turnos en la agenda.
+  const hasTurnos = patientHasTurnos
   // Señal para el bloque "primeros pasos" de un paciente recién creado.
   // hasPlan se infiere de treatmentStart (fecha del primer plan cargado).
   const hasPlan = !!treatmentStart
@@ -233,6 +236,29 @@ export default function PacienteDetail({ patient: initialPatient, userId, initia
     } catch {
       setPatient(p => ({ ...p, follow_up_mode: prev }))
       setModeSaving('error')
+    }
+  }
+
+  // Modo Kinesiología: enciende la capa "Atención de hoy" para este paciente.
+  // No afecta a nadie más — es un flag por paciente, default apagado.
+  const [kineSaving, setKineSaving] = useState(false)
+  const setKineMode = async (enabled: boolean) => {
+    if ((patient.kine_mode ?? false) === enabled) return
+    setPatient(p => ({ ...p, kine_mode: enabled })) // optimista
+    setKineSaving(true)
+    try {
+      const res = await fetch('/api/pacientes/kine-mode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patientId: patient.id, enabled }),
+      })
+      if (!res.ok) throw new Error()
+      notify(enabled ? 'Modo kinesiología activado' : 'Modo kinesiología desactivado')
+    } catch {
+      setPatient(p => ({ ...p, kine_mode: !enabled }))
+      notify('No se pudo cambiar el modo kinesiología.', 'error')
+    } finally {
+      setKineSaving(false)
     }
   }
 
@@ -406,12 +432,31 @@ export default function PacienteDetail({ patient: initialPatient, userId, initia
                     {treatmentDuration(treatmentStart)}
                   </span>
                 )}
+                {patient.kine_mode && (
+                  <span className="bg-accent/10 border-[0.5px] border-accent/30 rounded-full px-3 py-1 text-[13px] text-accent font-medium">
+                    Modo kinesiología
+                  </span>
+                )}
               </div>
             </div>
             <div className="flex gap-2 shrink-0 items-center flex-wrap">
               {sessionSaved && <span className="text-[12px] text-[#4ade80]">✓ Sesión registrada</span>}
               <button onClick={() => setSessionSheet(true)} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity">
                 + Registrar sesión
+              </button>
+              <button
+                onClick={() => setKineMode(!(patient.kine_mode ?? false))}
+                disabled={kineSaving}
+                title="El modo kinesiología agrega la capa &quot;Atención de hoy&quot; (check de síntoma, sugerencia y continuidad) a este paciente. No afecta a los demás."
+                className={`px-4 py-2 rounded-lg text-[13px] border-[0.5px] transition-colors disabled:opacity-50 ${
+                  patient.kine_mode
+                    ? 'bg-accent/10 border-accent/40 text-accent hover:bg-accent/15'
+                    : 'bg-bg-secondary border-border text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                {patient.kine_mode
+                  ? 'Modo kine activo'
+                  : (hasTurnos ? 'Activar modo kine · sugerido' : 'Activar modo kine')}
               </button>
               <button onClick={() => setEditing(true)} className="bg-bg-secondary border-[0.5px] border-border text-text-secondary px-4 py-2 rounded-lg text-[13px] hover:text-text-primary transition-colors">Editar</button>
               {isOwner && <button onClick={handleDelete} className="bg-bg-secondary border-[0.5px] border-border text-text-secondary px-4 py-2 rounded-lg text-[13px] hover:text-warning transition-colors">Eliminar</button>}
