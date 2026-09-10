@@ -187,7 +187,7 @@ export default function CajaClient({ userId, orgId, orgName, isOwner, areas, tod
     <div>
       {/* Encabezado */}
       <div className="mb-6">
-        <h1 className="text-[28px] font-medium tracking-[-0.02em]">Caja diaria</h1>
+        <h1 data-tour="caja-header" className="text-[28px] font-medium tracking-[-0.02em]">Caja diaria</h1>
         <p className="text-[14px] text-text-secondary mt-1 capitalize">{orgName} · {dateLabel}</p>
         <p className="text-[12px] text-text-tertiary mt-1">
           {isOwner ? 'Ves la caja completa del centro.' : 'Ves solo la caja de hoy (para el arqueo).'}

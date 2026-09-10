@@ -892,6 +892,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
           )}
 
           <Link
+            data-tour="agenda-atencion"
             href={`/dashboard/agenda/atencion?day=${toDayParam(selectedDay)}`}
             className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors flex items-center gap-1.5"
             title="Atención de hoy: los pacientes de kinesiología del bloque, con check rápido de síntoma"

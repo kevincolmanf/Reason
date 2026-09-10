@@ -57,12 +57,39 @@ const sections = [
     ],
   },
   {
+    title: 'Modo kinesiología · Atención de hoy',
+    description: 'Para rehabilitación: el plan se ajusta sesión a sesión según el síntoma.',
+    steps: [
+      'En la ficha del paciente tocá "Activar modo kine" (o pasá a varios de una vez desde "Activar modo kine en tanda" en Pacientes).',
+      'En "Atención de hoy" marcás cómo llegó (mejor / igual / peor) y Reason sugiere un ajuste; podés retocar la carga en el momento.',
+      'Queda una línea de continuidad que lee el próximo profesional. Desde la agenda, "Atención de hoy" te muestra a todos los del bloque juntos.',
+    ],
+  },
+  {
     title: 'Agenda',
     description: 'Gestión de turnos con recordatorios por WhatsApp. Disponible en Plan Pro.',
     steps: [
       'Accedé a "Agenda" desde el menú superior (Plan Pro).',
-      'Gestioná los turnos en una vista semanal, por profesional en el modo equipo.',
-      'Enviá recordatorios por WhatsApp con un click desde la propia agenda.',
+      'Gestioná los turnos en una vista semanal, por profesional y por área en el modo equipo.',
+      'Enviá recordatorios por WhatsApp con un click, seguí las ausencias, y al dar "presente" podés registrar el cobro en la caja.',
+    ],
+  },
+  {
+    title: 'Equipo',
+    description: 'Sumá profesionales a tu centro; todos comparten los pacientes.',
+    steps: [
+      'Entrá a "Panel de gestión" o "Equipo" y tocá "Agregar integrante" con su email y nombre.',
+      'Desde cada fila definís qué agenda ve, si edita turnos o registra caja, y reenviás su acceso.',
+      'Compartí el instructivo en PDF para que cada uno sepa cómo entrar y empezar.',
+    ],
+  },
+  {
+    title: 'Panel de gestión y Caja',
+    description: 'La foto del centro y el control de plata del día.',
+    steps: [
+      'En "Panel de gestión" ves pacientes activos, turnos, ausentismo, ingresos y actividad del equipo.',
+      'En "Caja" registrás ingresos y egresos del día; los cobros de la agenda caen acá solos.',
+      'Ves el total por medio de pago y por área; el dueño ve el consolidado del centro.',
     ],
   },
   {

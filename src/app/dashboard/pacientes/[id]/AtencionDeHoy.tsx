@@ -198,7 +198,7 @@ export default function AtencionDeHoy({ patientId, initialAttentions = [], kineS
   const visible = showAll ? attentions : attentions.slice(0, 3)
 
   return (
-    <section className="bg-bg-secondary border-[0.5px] border-border rounded-xl p-5 mb-8">
+    <section data-tour="ficha-atencion" className="bg-bg-secondary border-[0.5px] border-border rounded-xl p-5 mb-8">
       <div className="flex items-center justify-between gap-3 mb-4">
         <div>
           <h2 className="text-[16px] font-medium">Atención de hoy</h2>

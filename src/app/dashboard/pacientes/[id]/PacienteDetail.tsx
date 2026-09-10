@@ -415,7 +415,7 @@ export default function PacienteDetail({ patient: initialPatient, userId, initia
         ) : (
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
             <div>
-              <h1 className="text-[24px] sm:text-[28px] font-medium tracking-[-0.01em] mb-3">{patient.name}</h1>
+              <h1 data-tour="ficha-header" className="text-[24px] sm:text-[28px] font-medium tracking-[-0.01em] mb-3">{patient.name}</h1>
               <div className="flex flex-wrap gap-2">
                 {patient.dni && <span className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1 text-[13px] text-text-secondary">DNI {patient.dni}</span>}
                 {(() => { const age = calcAge(patient.birth_date) ?? patient.age; return age ? <span className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1 text-[13px] text-text-secondary">{age} años</span> : null })()}
@@ -446,6 +446,7 @@ export default function PacienteDetail({ patient: initialPatient, userId, initia
                 + Registrar sesión
               </button>
               <button
+                data-tour="ficha-modo-kine"
                 onClick={() => setKineMode(!(patient.kine_mode ?? false))}
                 disabled={kineSaving}
                 title="El modo kinesiología agrega la capa &quot;Atención de hoy&quot; (check de síntoma, sugerencia y continuidad) a este paciente. No afecta a los demás."

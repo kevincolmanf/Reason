@@ -226,7 +226,7 @@ export default async function CRMPage() {
         <Link href="/account" className="text-[13px] text-text-secondary hover:text-text-primary transition-colors no-underline flex items-center gap-2 mb-8">
           ← Volver a mi cuenta
         </Link>
-        <div className="mb-10">
+        <div data-tour="panel-header" className="mb-10">
           <h1 className="text-[32px] font-medium tracking-[-0.02em] mb-1">Panel de gestión</h1>
           <p className="text-[14px] text-text-secondary">{orgRow.name}</p>
         </div>
