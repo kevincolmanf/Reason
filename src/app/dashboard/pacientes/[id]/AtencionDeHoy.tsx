@@ -56,6 +56,11 @@ const MODALITIES: { id: string; label: string }[] = [
   { id: 'cuest', label: 'Cuestionario' },
 ]
 
+function capFirst(s?: string): string {
+  if (!s) return ''
+  return s.charAt(0).toUpperCase() + s.slice(1)
+}
+
 function dateLabel(d: string): string {
   try {
     return new Date(d + 'T12:00:00').toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' })
@@ -257,7 +262,7 @@ export default function AtencionDeHoy({ patientId, initialAttentions = [], kineS
                   {b.name && <div className="text-[11px] text-text-secondary px-3 pt-2">{b.name}</div>}
                   {(b.exercises ?? []).map((ex, ei) => (
                     <div key={ei} className="flex items-center gap-3 px-3 py-2 text-[13px]">
-                      <span className="flex-1">{ex.exercise_name || 'Ejercicio'}</span>
+                      <span className="flex-1">{capFirst(ex.exercise_name) || 'Ejercicio'}</span>
                       <span className="text-[12.5px] text-text-secondary">{[[ex.sets, ex.reps].filter(Boolean).join(' × '), ex.load].filter(Boolean).join(' · ')}</span>
                     </div>
                   ))}
