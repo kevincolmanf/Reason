@@ -89,6 +89,47 @@ export default function AtencionDeHoy({ patientId, initialAttentions = [], kineS
   const [bringError, setBringError] = useState<string | null>(null)
   const planId = kineSession?.planId ?? null
 
+  // Edición inline de la sesión (Fase 2c)
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState<SessionBlockLite[] | null>(null)
+  const [savingSession, setSavingSession] = useState(false)
+  const [sessionErr, setSessionErr] = useState<string | null>(null)
+  const [sessionEdited, setSessionEdited] = useState(false)
+
+  const startEdit = () => {
+    setDraft(JSON.parse(JSON.stringify(session?.session_data?.blocks ?? [])))
+    setEditing(true); setSessionErr(null)
+  }
+  const cancelEdit = () => { setEditing(false); setDraft(null) }
+  const editEx = (bi: number, ei: number, field: 'sets' | 'reps' | 'load', value: string) => {
+    setDraft(prev => prev?.map((b, i) => i !== bi ? b : ({
+      ...b, exercises: (b.exercises ?? []).map((ex, j) => j !== ei ? ex : ({ ...ex, [field]: value })),
+    })) ?? prev)
+  }
+  const saveSession = async () => {
+    if (!session || !draft) return
+    setSavingSession(true); setSessionErr(null)
+    try {
+      const newData = { ...(session.session_data ?? {}), blocks: draft }
+      const res = await fetch('/api/sessions/update', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: session.id, session_name: session.session_name, session_data: newData }),
+      })
+      if (!res.ok) throw new Error()
+      setSession(s => s ? { ...s, session_data: newData } : s)
+      setSessionEdited(true); setEditing(false); setDraft(null)
+    } catch {
+      setSessionErr('No se pudo guardar la sesión')
+    } finally {
+      setSavingSession(false)
+    }
+  }
+
+  // Señal para reevaluar (Fase 4b): rachas del síntoma sin mejora.
+  const symStreak = (() => { let n = 0; for (const a of attentions) { if (!a.symptom) continue; if (a.symptom === 'mejor') break; n++ } return n })()
+  const lastSymptom = attentions.find(a => a.symptom)?.symptom ?? null
+  const showSignal = symStreak >= 2
+
   const bringToToday = async () => {
     setBringing(true); setBringError(null)
     try {
@@ -123,12 +164,12 @@ export default function AtencionDeHoy({ patientId, initialAttentions = [], kineS
       const res = await fetch('/api/pacientes/atencion', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ patientId, symptom, manageSymptoms: manage, modalities: Array.from(modalities), note }),
+        body: JSON.stringify({ patientId, symptom, manageSymptoms: manage, modalities: Array.from(modalities), note, adjustedSession: sessionEdited }),
       })
       if (!res.ok) throw new Error()
       const { attention } = await res.json()
       setAttentions(prev => [attention as Attention, ...prev])
-      setSymptom(null); setManage(false); setModalities(new Set()); setNote('')
+      setSymptom(null); setManage(false); setModalities(new Set()); setNote(''); setSessionEdited(false)
       setStatus('saved'); setTimeout(() => setStatus('idle'), 2500)
     } catch {
       setStatus('error')
@@ -145,6 +186,7 @@ export default function AtencionDeHoy({ patientId, initialAttentions = [], kineS
   const previewActions: string[] = []
   if (manage) previewActions.push('manejo de síntomas (sin carga)')
   Array.from(modalities).forEach(m => previewActions.push(MODALITIES.find(x => x.id === m)!.label.toLowerCase()))
+  if (sessionEdited) previewActions.push('ajustó la sesión')
   const previewParts: string[] = []
   if (symptom) previewParts.push(`Síntoma: ${symptom}`)
   if (previewActions.length) previewParts.push(previewActions.join(' · '))
@@ -160,6 +202,25 @@ export default function AtencionDeHoy({ patientId, initialAttentions = [], kineS
           <p className="text-[12px] text-text-secondary mt-0.5">Modo kinesiología · resolvé el ajuste del día en un par de toques.</p>
         </div>
       </div>
+
+      {/* SEÑAL PARA REEVALUAR (Fase 4b) */}
+      {showSignal && (
+        <div className="rounded-lg p-3.5 mb-5 border-[0.5px]" style={{ borderColor: 'rgba(245,196,81,0.4)', background: 'rgba(245,196,81,0.1)' }}>
+          <div className="flex items-start gap-2.5">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#f5c451" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 mt-0.5"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <div>
+              <p className="text-[13px] font-medium text-text-primary">
+                Hace {symStreak} atenciones que el síntoma no mejora{lastSymptom === 'peor' ? ' y la última fue peor' : ''}.
+              </p>
+              <p className="text-[12px] text-text-secondary mt-0.5">Buen momento para reevaluar o tomar un cuestionario auto-reportado y medir dónde está parado.</p>
+              <div className="flex items-center gap-3 mt-2 flex-wrap">
+                <a href={`/recursos/cuestionarios?paciente=${patientId}&from=/dashboard/pacientes/${patientId}`} className="text-[12px] font-medium text-accent no-underline hover:underline">Tomar cuestionario →</a>
+                {planId && <a href={`/dashboard/ejercicios/plan/${planId}`} className="text-[12px] text-text-secondary no-underline hover:text-text-primary">Programar reevaluación en el plan →</a>}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* CONTINUIDAD */}
       <div className="mb-5">
@@ -251,26 +312,49 @@ export default function AtencionDeHoy({ patientId, initialAttentions = [], kineS
           <div className={`border-[0.5px] border-border rounded-lg overflow-hidden transition-opacity ${manage ? 'opacity-60' : ''}`}>
             <div className="flex items-center gap-2 px-3 py-2 bg-bg-primary border-b-[0.5px] border-border">
               <span className="text-[12.5px] font-medium">{session.session_name || 'Sesión'}</span>
-              <span className="text-[10.5px] text-text-secondary border-[0.5px] border-border rounded-full px-2 py-0.5">precargada del plan</span>
-              {planId && <a href={`/dashboard/ejercicios/plan/${planId}`} className="ml-auto text-[12px] text-accent no-underline hover:underline">Abrir plan</a>}
+              {sessionEdited && !editing && <span className="text-[10.5px] text-accent border-[0.5px] border-accent/30 bg-accent/10 rounded-full px-2 py-0.5">ajustada hoy</span>}
+              {!sessionEdited && <span className="text-[10.5px] text-text-secondary border-[0.5px] border-border rounded-full px-2 py-0.5">precargada del plan</span>}
+              {!editing ? (
+                <div className="ml-auto flex items-center gap-3">
+                  {(session.session_data?.blocks ?? []).length > 0 && <button onClick={startEdit} className="text-[12px] text-text-secondary hover:text-text-primary">Ajustar carga</button>}
+                  {planId && <a href={`/dashboard/ejercicios/plan/${planId}`} className="text-[12px] text-accent no-underline hover:underline">Abrir plan</a>}
+                </div>
+              ) : (
+                <div className="ml-auto flex items-center gap-2">
+                  <button onClick={cancelEdit} className="text-[12px] text-text-secondary hover:text-text-primary">Cancelar</button>
+                  <button onClick={saveSession} disabled={savingSession} className="bg-accent text-bg-primary px-2.5 py-1 rounded text-[12px] font-medium hover:opacity-90 disabled:opacity-50">{savingSession ? 'Guardando…' : 'Guardar'}</button>
+                </div>
+              )}
             </div>
             {(session.session_data?.blocks ?? []).length === 0 ? (
               <p className="text-[12.5px] text-text-secondary p-3">La sesión no tiene ejercicios cargados. Abrí el plan para armarla.</p>
             ) : (
-              (session.session_data!.blocks ?? []).map((b, bi) => (
+              (editing ? (draft ?? []) : (session.session_data!.blocks ?? [])).map((b, bi) => (
                 <div key={bi} className={bi > 0 ? 'border-t-[0.5px] border-border' : ''}>
                   {b.name && <div className="text-[11px] text-text-secondary px-3 pt-2">{b.name}</div>}
                   {(b.exercises ?? []).map((ex, ei) => (
                     <div key={ei} className="flex items-center gap-3 px-3 py-2 text-[13px]">
                       <span className="flex-1">{capFirst(ex.exercise_name) || 'Ejercicio'}</span>
-                      <span className="text-[12.5px] text-text-secondary">{[[ex.sets, ex.reps].filter(Boolean).join(' × '), ex.load].filter(Boolean).join(' · ')}</span>
+                      {editing ? (
+                        <span className="flex items-center gap-1.5 shrink-0">
+                          <input value={ex.sets ?? ''} onChange={e => editEx(bi, ei, 'sets', e.target.value)} placeholder="series" className="w-12 bg-bg-secondary border-[0.5px] border-border rounded px-1.5 py-1 text-[12px] text-text-primary text-center" />
+                          <span className="text-text-secondary text-[12px]">×</span>
+                          <input value={ex.reps ?? ''} onChange={e => editEx(bi, ei, 'reps', e.target.value)} placeholder="reps" className="w-12 bg-bg-secondary border-[0.5px] border-border rounded px-1.5 py-1 text-[12px] text-text-primary text-center" />
+                          <input value={ex.load ?? ''} onChange={e => editEx(bi, ei, 'load', e.target.value)} placeholder="carga" className="w-16 bg-bg-secondary border-[0.5px] border-border rounded px-1.5 py-1 text-[12px] text-text-primary text-center" />
+                        </span>
+                      ) : (
+                        <span className="text-[12.5px] text-text-secondary">{[[ex.sets, ex.reps].filter(Boolean).join(' × '), ex.load].filter(Boolean).join(' · ')}</span>
+                      )}
                     </div>
                   ))}
                 </div>
               ))
             )}
+            {sessionErr && <div className="text-[12px] text-warning px-3 py-2 border-t-[0.5px] border-border">{sessionErr}</div>}
             {manage && <div className="text-[12px] text-text-secondary px-3 py-2 border-t-[0.5px] border-border" style={{ background: 'rgba(248,113,113,0.08)' }}>Día de manejo de síntomas: no se carga. La progresión del plan no se rompe.</div>}
-            <div className="text-[11px] text-text-secondary px-3 py-2 border-t-[0.5px] border-border">Son los ejercicios que ya viven en el calendario del plan. El ajuste fino se hace desde el plan.</div>
+            <div className="text-[11px] text-text-secondary px-3 py-2 border-t-[0.5px] border-border">
+              {editing ? 'Editás series × reps · carga. Se guarda en la sesión del calendario del plan.' : 'Ajustá la carga acá o abrí el plan para cambios más finos (ejercicios, bloques).'}
+            </div>
           </div>
         ) : pending ? (
           <div className="flex items-center gap-3 rounded-lg px-3.5 py-3 border-[0.5px]" style={{ borderColor: 'rgba(45,216,168,0.35)', background: 'rgba(45,216,168,0.08)' }}>
