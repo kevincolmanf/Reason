@@ -56,9 +56,8 @@ const MODALITIES: { id: string; label: string }[] = [
   { id: 'cuest', label: 'Cuestionario' },
 ]
 
-function capFirst(s?: string): string {
-  if (!s) return ''
-  return s.charAt(0).toUpperCase() + s.slice(1)
+function upperName(s?: string): string {
+  return (s ?? '').toUpperCase()
 }
 
 function dateLabel(d: string): string {
@@ -125,10 +124,14 @@ export default function AtencionDeHoy({ patientId, initialAttentions = [], kineS
     }
   }
 
-  // Señal para reevaluar (Fase 4b): rachas del síntoma sin mejora.
-  const symStreak = (() => { let n = 0; for (const a of attentions) { if (!a.symptom) continue; if (a.symptom === 'mejor') break; n++ } return n })()
-  const lastSymptom = attentions.find(a => a.symptom)?.symptom ?? null
-  const showSignal = symStreak >= 2
+  // Señal para reevaluar (Fase 4b): SOLO si empeora — racha de "peor" seguidos
+  // desde la atención más reciente. Si se mantiene ("igual") o mejora, no avisa.
+  const worseStreak = (() => {
+    let n = 0
+    for (const a of attentions.filter(x => x.symptom)) { if (a.symptom === 'peor') n++; else break }
+    return n
+  })()
+  const showSignal = worseStreak >= 2
 
   const bringToToday = async () => {
     setBringing(true); setBringError(null)
@@ -210,7 +213,9 @@ export default function AtencionDeHoy({ patientId, initialAttentions = [], kineS
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#f5c451" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 mt-0.5"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             <div>
               <p className="text-[13px] font-medium text-text-primary">
-                Hace {symStreak} atenciones que el síntoma no mejora{lastSymptom === 'peor' ? ' y la última fue peor' : ''}.
+                {worseStreak >= 3
+                  ? `Hace ${worseStreak} atenciones seguidas que el síntoma empeora.`
+                  : 'El síntoma viene empeorando en las últimas atenciones.'}
               </p>
               <p className="text-[12px] text-text-secondary mt-0.5">Buen momento para reevaluar o tomar un cuestionario auto-reportado y medir dónde está parado.</p>
               <div className="flex items-center gap-3 mt-2 flex-wrap">
@@ -334,7 +339,7 @@ export default function AtencionDeHoy({ patientId, initialAttentions = [], kineS
                   {b.name && <div className="text-[11px] text-text-secondary px-3 pt-2">{b.name}</div>}
                   {(b.exercises ?? []).map((ex, ei) => (
                     <div key={ei} className="flex items-center gap-3 px-3 py-2 text-[13px]">
-                      <span className="flex-1">{capFirst(ex.exercise_name) || 'Ejercicio'}</span>
+                      <span className="flex-1">{upperName(ex.exercise_name) || 'EJERCICIO'}</span>
                       {editing ? (
                         <span className="flex items-center gap-1.5 shrink-0">
                           <input value={ex.sets ?? ''} onChange={e => editEx(bi, ei, 'sets', e.target.value)} placeholder="series" className="w-12 bg-bg-secondary border-[0.5px] border-border rounded px-1.5 py-1 text-[12px] text-text-primary text-center" />
