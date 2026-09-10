@@ -93,6 +93,11 @@ const FICHA_STEPS: GuideStep[] = [
     title: 'Atención de hoy',
     body: 'Marcás cómo llegó (mejor / igual / peor) y Reason te sugiere un ajuste. Podés retocar la carga en el momento, y queda una línea de continuidad que lee el próximo profesional. Si el síntoma empeora, te avisa para reevaluar.',
   },
+  {
+    target: 'ficha-portal',
+    title: 'Portal del paciente (online)',
+    body: 'Generá un link y compartíselo: el paciente sigue su plan de ejercicios desde el celular, ve los videos y registra cómo le fue en cada sesión (RPE y dolor). Ideal para quienes entrenan a distancia — lo que registran vuelve a tu monitoreo de carga.',
+  },
 ]
 
 const ATENCION_STEPS: GuideStep[] = [
@@ -186,7 +191,7 @@ const GUIDES: GuideDef[] = [
   { key: 'atencion', paths: ['/dashboard/agenda/atencion'], steps: ATENCION_STEPS },
   { key: 'pacientes-v2', paths: ['/dashboard/pacientes'], steps: PACIENTES_STEPS },
   // Ficha del paciente: /dashboard/pacientes/<uuid> (no confundir con /activar-kine).
-  { key: 'ficha', paths: [], steps: FICHA_STEPS, match: p => /^\/dashboard\/pacientes\/[0-9a-fA-F-]{8,}$/.test(p) },
+  { key: 'ficha-v2', paths: [], steps: FICHA_STEPS, match: p => /^\/dashboard\/pacientes\/[0-9a-fA-F-]{8,}$/.test(p) },
   { key: 'dashboard', paths: ['/dashboard'], steps: DASHBOARD_STEPS },
   { key: 'ejercicios', paths: ['/dashboard/ejercicios/biblioteca'], steps: EJERCICIOS_STEPS },
   { key: 'recursos', paths: ['/recursos'], steps: RECURSOS_STEPS },

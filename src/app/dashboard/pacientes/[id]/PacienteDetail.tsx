@@ -744,7 +744,7 @@ export default function PacienteDetail({ patient: initialPatient, userId, initia
       </div>
 
       {/* PORTAL */}
-      <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-5">
+      <div data-tour="ficha-portal" className="bg-bg-primary border-[0.5px] border-border rounded-xl p-5">
         <div className="flex justify-between items-center mb-3">
           <h2 className="text-[14px] font-medium">Portal del Paciente</h2>
         </div>

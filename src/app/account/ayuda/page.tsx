@@ -39,6 +39,15 @@ const sections = [
     ],
   },
   {
+    title: 'Portal del paciente (online)',
+    description: '¿Tus pacientes pueden seguir el plan a distancia? Sí, desde su celular.',
+    steps: [
+      'Dentro del paciente, en "Portal del Paciente", generás un link único y se lo compartís (por WhatsApp, por ejemplo).',
+      'El paciente abre ese link desde el celular, ve su plan con los videos de cada ejercicio y lo sigue sin instalar nada.',
+      'Registra cómo le fue en cada sesión (RPE y dolor) y eso vuelve a tu monitoreo de carga, así seguís su evolución aunque entrene a distancia.',
+    ],
+  },
+  {
     title: 'Monitoreo de Carga',
     description: 'Decisiones de progresión con datos, sesión a sesión.',
     steps: [
