@@ -15,11 +15,29 @@ export interface WeekMilestone {
 }
 
 const STORAGE_KEY = 'week_milestones_dismissed'
+const COLLAPSE_KEY = 'week_milestones_collapsed'
 const DISMISS_TTL_MS = 7 * 24 * 60 * 60 * 1000 // 7 días (una semana)
 
 export default function WeekMilestonesBanner({ milestones }: { milestones: WeekMilestone[] }) {
   const [visible, setVisible] = useState(false)
   const [items, setItems] = useState<WeekMilestone[]>([])
+  // Plegado por defecto: con muchos recordatorios el bloque tapaba el dashboard.
+  // Se recuerda la preferencia (abierto/cerrado) entre visitas.
+  const [collapsed, setCollapsed] = useState(true)
+
+  useEffect(() => {
+    try {
+      setCollapsed(localStorage.getItem(COLLAPSE_KEY) !== 'false')
+    } catch {}
+  }, [])
+
+  const toggleCollapsed = () => {
+    setCollapsed(prev => {
+      const next = !prev
+      try { localStorage.setItem(COLLAPSE_KEY, next ? 'true' : 'false') } catch {}
+      return next
+    })
+  }
 
   useEffect(() => {
     try {
@@ -73,18 +91,31 @@ export default function WeekMilestonesBanner({ milestones }: { milestones: WeekM
 
   return (
     <div className="bg-bg-secondary border-[0.5px] border-border rounded-xl p-5 mb-8">
-      <div className="flex justify-between items-start gap-4 mb-3">
-        <div>
-          <p className="text-[14px] font-medium text-text-primary mb-0.5">
-            {items.length === 1
-              ? 'Un recordatorio'
-              : `${items.length} recordatorios`}
-          </p>
-          <p className="text-[12px] text-text-secondary">
-            Hitos de esta semana y evaluaciones programadas pendientes.
-          </p>
-        </div>
-        {items.length > 1 && (
+      <div className={`flex justify-between items-start gap-4 ${collapsed ? '' : 'mb-3'}`}>
+        <button
+          onClick={toggleCollapsed}
+          className="flex items-start gap-2 text-left group"
+          aria-expanded={!collapsed}
+        >
+          <svg
+            className={`w-3.5 h-3.5 mt-1 text-text-secondary shrink-0 transition-transform ${collapsed ? '' : 'rotate-90'}`}
+            viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+            strokeLinecap="round" strokeLinejoin="round"
+          >
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+          <span>
+            <span className="block text-[14px] font-medium text-text-primary mb-0.5 group-hover:underline">
+              {items.length === 1
+                ? 'Un recordatorio'
+                : `${items.length} recordatorios`}
+            </span>
+            <span className="block text-[12px] text-text-secondary">
+              Hitos de esta semana y evaluaciones programadas pendientes.
+            </span>
+          </span>
+        </button>
+        {!collapsed && items.length > 1 && (
           <button
             onClick={dismissAll}
             className="text-[12px] text-text-secondary hover:text-text-primary shrink-0 mt-0.5"
@@ -94,7 +125,7 @@ export default function WeekMilestonesBanner({ milestones }: { milestones: WeekM
         )}
       </div>
 
-      <div className="space-y-1.5">
+      <div className={`space-y-1.5 ${collapsed ? 'hidden' : ''}`}>
         {items.map(m => (
           <div
             key={m.key}
