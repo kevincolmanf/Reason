@@ -891,6 +891,15 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
             </>
           )}
 
+          <Link
+            href={`/dashboard/agenda/atencion?day=${toDayParam(selectedDay)}`}
+            className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors flex items-center gap-1.5"
+            title="Atención de hoy: los pacientes de kinesiología del bloque, con check rápido de síntoma"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            <span className="hidden sm:inline">Atención de hoy</span>
+          </Link>
+
           {canEdit && (
             <Link
               data-tour="agenda-recordatorios"
