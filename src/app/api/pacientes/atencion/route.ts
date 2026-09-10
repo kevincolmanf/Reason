@@ -14,13 +14,14 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  let body: { patientId?: string; symptom?: string | null; manageSymptoms?: boolean; modalities?: string[]; note?: string }
+  let body: { patientId?: string; symptom?: string | null; manageSymptoms?: boolean; modalities?: string[]; note?: string; adjustedSession?: boolean }
   try { body = await request.json() } catch { return NextResponse.json({ error: 'Body inválido' }, { status: 400 }) }
   const { patientId } = body
   const symptom = body.symptom ?? null
   const manageSymptoms = body.manageSymptoms === true
   const modalities = Array.isArray(body.modalities) ? body.modalities.filter(m => m in MODALITIES) : []
   const note = (body.note ?? '').trim().slice(0, 1000)
+  const adjustedSession = body.adjustedSession === true
 
   if (!patientId) return NextResponse.json({ error: 'Falta patientId' }, { status: 400 })
   if (symptom !== null && !SYMPTOMS.includes(symptom)) return NextResponse.json({ error: 'Síntoma inválido' }, { status: 400 })
@@ -63,6 +64,7 @@ export async function POST(request: Request) {
   const actions: string[] = []
   if (manageSymptoms) actions.push('manejo de síntomas (sin carga)')
   for (const m of modalities) actions.push(MODALITIES[m])
+  if (adjustedSession) actions.push('ajustó la sesión')
   if (actions.length) parts.push(actions.join(' · '))
   const autoSummary = parts.length ? parts.join(' · ') : 'Atención registrada'
 
