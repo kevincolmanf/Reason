@@ -62,6 +62,19 @@ export default async function PacientePage({ params }: { params: { id: string } 
     .eq('patient_id', params.id)
   const patientHasTurnos = (turnosCount ?? 0) > 0
 
+  // Bitácora de "Atención de hoy": solo se consulta si el paciente está en modo
+  // kine (los alumnos/entrenamiento no tienen ni usan esta tabla).
+  let initialAttentions: unknown[] = []
+  if (patient.kine_mode) {
+    const { data: att } = await supabase
+      .from('kine_attentions')
+      .select('id, attended_on, professional_name, symptom, manage_symptoms, modalities, auto_summary, note, created_at')
+      .eq('patient_id', params.id)
+      .order('created_at', { ascending: false })
+      .limit(20)
+    initialAttentions = att ?? []
+  }
+
   // Profesionales del equipo, para elegir el profesional habitual del paciente.
   // Solo aplica a pacientes de una organización (equipos con varios profesionales).
   let professionals: { id: string; full_name: string | null }[] = []
@@ -92,7 +105,7 @@ export default async function PacientePage({ params }: { params: { id: string } 
           </Link>
         </div>
 
-        <PacienteDetail patient={patient} userId={user.id} initialEvents={events ?? []} treatmentStart={firstPlan?.created_at ?? null} professionals={professionals} hasFicha={hasFicha} patientHasTurnos={patientHasTurnos} />
+        <PacienteDetail patient={patient} userId={user.id} initialEvents={events ?? []} treatmentStart={firstPlan?.created_at ?? null} professionals={professionals} hasFicha={hasFicha} patientHasTurnos={patientHasTurnos} initialAttentions={initialAttentions as never} />
       </main>
     </div>
   )

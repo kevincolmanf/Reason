@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import QuickSessionSheet from '@/components/QuickSessionSheet'
 import { EVENT_TYPES, eventMeta, type PatientEvent } from '@/lib/patientEvents'
+import AtencionDeHoy, { type Attention } from './AtencionDeHoy'
 import { useConfirm, useToast } from '@/components/Dialogs'
 import { softDeleteRecord } from '@/lib/softDelete'
 
@@ -96,7 +97,7 @@ function treatmentDuration(start: string | null): string | null {
   return `Semana ${week} · Mes ${month} de tratamiento`
 }
 
-export default function PacienteDetail({ patient: initialPatient, userId, initialEvents = [], treatmentStart = null, professionals = [], hasFicha = false, patientHasTurnos = false }: { patient: Patient; userId: string; initialEvents?: PatientEvent[]; treatmentStart?: string | null; professionals?: { id: string; full_name: string | null }[]; hasFicha?: boolean; patientHasTurnos?: boolean }) {
+export default function PacienteDetail({ patient: initialPatient, userId, initialEvents = [], treatmentStart = null, professionals = [], hasFicha = false, patientHasTurnos = false, initialAttentions = [] }: { patient: Patient; userId: string; initialEvents?: PatientEvent[]; treatmentStart?: string | null; professionals?: { id: string; full_name: string | null }[]; hasFicha?: boolean; patientHasTurnos?: boolean; initialAttentions?: Attention[] }) {
   const isOwner = initialPatient.user_id === userId
   // Sugerencia del Modo Kinesiología: el paciente tiene turnos en la agenda.
   const hasTurnos = patientHasTurnos
@@ -464,6 +465,11 @@ export default function PacienteDetail({ patient: initialPatient, userId, initia
           </div>
         )}
       </div>
+
+      {/* ATENCIÓN DE HOY — solo en pacientes en modo kinesiología. */}
+      {patient.kine_mode && (
+        <AtencionDeHoy patientId={patient.id} initialAttentions={initialAttentions} />
+      )}
 
       {sessionSheet && (
         <QuickSessionSheet
