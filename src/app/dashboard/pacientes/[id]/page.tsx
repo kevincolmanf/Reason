@@ -65,6 +65,7 @@ export default async function PacientePage({ params }: { params: { id: string } 
   // Bitácora de "Atención de hoy": solo se consulta si el paciente está en modo
   // kine (los alumnos/entrenamiento no tienen ni usan esta tabla).
   let initialAttentions: unknown[] = []
+  let kineSession: unknown = null
   if (patient.kine_mode) {
     const { data: att } = await supabase
       .from('kine_attentions')
@@ -73,6 +74,52 @@ export default async function PacientePage({ params }: { params: { id: string } 
       .order('created_at', { ascending: false })
       .limit(20)
     initialAttentions = att ?? []
+
+    // Sesión del plan para hoy (precargada del calendario). Si no hay sesión hoy,
+    // se busca la próxima (para "traer a hoy") o la última como plantilla.
+    const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' })
+    const { data: kinePlan } = await supabase
+      .from('exercise_plans')
+      .select('id, name')
+      .eq('patient_id', params.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (kinePlan) {
+      const { data: todaySession } = await supabase
+        .from('scheduled_sessions')
+        .select('id, scheduled_date, session_name, session_data, completed')
+        .eq('plan_id', kinePlan.id)
+        .eq('scheduled_date', todayStr)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle()
+
+      let pending: { date: string; kind: 'upcoming' | 'last' } | null = null
+      if (!todaySession) {
+        const { data: upcoming } = await supabase
+          .from('scheduled_sessions')
+          .select('scheduled_date')
+          .eq('plan_id', kinePlan.id)
+          .gt('scheduled_date', todayStr)
+          .order('scheduled_date', { ascending: true })
+          .limit(1)
+          .maybeSingle()
+        if (upcoming) pending = { date: upcoming.scheduled_date, kind: 'upcoming' }
+        else {
+          const { data: last } = await supabase
+            .from('scheduled_sessions')
+            .select('scheduled_date')
+            .eq('plan_id', kinePlan.id)
+            .lt('scheduled_date', todayStr)
+            .order('scheduled_date', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+          if (last) pending = { date: last.scheduled_date, kind: 'last' }
+        }
+      }
+      kineSession = { planId: kinePlan.id, today: todayStr, todaySession: todaySession ?? null, pending }
+    }
   }
 
   // Profesionales del equipo, para elegir el profesional habitual del paciente.
@@ -105,7 +152,7 @@ export default async function PacientePage({ params }: { params: { id: string } 
           </Link>
         </div>
 
-        <PacienteDetail patient={patient} userId={user.id} initialEvents={events ?? []} treatmentStart={firstPlan?.created_at ?? null} professionals={professionals} hasFicha={hasFicha} patientHasTurnos={patientHasTurnos} initialAttentions={initialAttentions as never} />
+        <PacienteDetail patient={patient} userId={user.id} initialEvents={events ?? []} treatmentStart={firstPlan?.created_at ?? null} professionals={professionals} hasFicha={hasFicha} patientHasTurnos={patientHasTurnos} initialAttentions={initialAttentions as never} kineSession={kineSession as never} />
       </main>
     </div>
   )

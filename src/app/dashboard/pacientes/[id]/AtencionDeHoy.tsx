@@ -19,6 +19,23 @@ export interface Attention {
   created_at: string
 }
 
+interface SessionExerciseLite { exercise_name?: string; sets?: string; reps?: string; load?: string }
+interface SessionBlockLite { name?: string; exercises?: SessionExerciseLite[] }
+interface KineSessionData { blocks?: SessionBlockLite[] }
+export interface ScheduledSessionLite {
+  id: string
+  scheduled_date: string
+  session_name: string | null
+  session_data: KineSessionData | null
+  completed?: boolean
+}
+export interface KineSession {
+  planId: string
+  today: string
+  todaySession: ScheduledSessionLite | null
+  pending: { date: string; kind: 'upcoming' | 'last' } | null
+}
+
 type Symptom = 'mejor' | 'igual' | 'peor'
 
 const SYM_META: Record<Symptom, { label: string; sub: string; color: string; soft: string }> = {
@@ -50,7 +67,7 @@ function symTagStyle(sym: string | null) {
   return m ? { color: m.color, background: m.soft } : { color: 'var(--text-secondary)', background: 'transparent' }
 }
 
-export default function AtencionDeHoy({ patientId, initialAttentions = [] }: { patientId: string; initialAttentions?: Attention[] }) {
+export default function AtencionDeHoy({ patientId, initialAttentions = [], kineSession = null }: { patientId: string; initialAttentions?: Attention[]; kineSession?: KineSession | null }) {
   const [attentions, setAttentions] = useState<Attention[]>(initialAttentions)
   const [symptom, setSymptom] = useState<Symptom | null>(null)
   const [manage, setManage] = useState(false)
@@ -59,6 +76,32 @@ export default function AtencionDeHoy({ patientId, initialAttentions = [] }: { p
   const [saving, setSaving] = useState(false)
   const [status, setStatus] = useState<'idle' | 'saved' | 'error'>('idle')
   const [showAll, setShowAll] = useState(false)
+
+  // Sesión del plan para hoy (precargada del calendario).
+  const [session, setSession] = useState<ScheduledSessionLite | null>(kineSession?.todaySession ?? null)
+  const [pending, setPending] = useState(kineSession?.pending ?? null)
+  const [bringing, setBringing] = useState(false)
+  const [bringError, setBringError] = useState<string | null>(null)
+  const planId = kineSession?.planId ?? null
+
+  const bringToToday = async () => {
+    setBringing(true); setBringError(null)
+    try {
+      const res = await fetch('/api/sessions/bring-to-today', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patientId }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json?.error || 'error')
+      setSession(json.session as ScheduledSessionLite)
+      setPending(null)
+    } catch (e) {
+      setBringError(e instanceof Error ? e.message : 'No se pudo traer la sesión')
+    } finally {
+      setBringing(false)
+    }
+  }
 
   const toggleMod = (id: string) => {
     setModalities(prev => {
@@ -195,6 +238,53 @@ export default function AtencionDeHoy({ patientId, initialAttentions = [] }: { p
           <div className="text-[11px] text-text-secondary mt-2.5">Es una sugerencia — confirmás o corregís vos. Nada se aplica solo.</div>
         </div>
       )}
+
+      {/* SESIÓN DE HOY (precargada del plan) */}
+      <div className="mb-4">
+        <div className="text-[11px] uppercase tracking-[0.08em] text-text-secondary mb-2">Sesión de hoy</div>
+        {session ? (
+          <div className={`border-[0.5px] border-border rounded-lg overflow-hidden transition-opacity ${manage ? 'opacity-60' : ''}`}>
+            <div className="flex items-center gap-2 px-3 py-2 bg-bg-primary border-b-[0.5px] border-border">
+              <span className="text-[12.5px] font-medium">{session.session_name || 'Sesión'}</span>
+              <span className="text-[10.5px] text-text-secondary border-[0.5px] border-border rounded-full px-2 py-0.5">precargada del plan</span>
+              {planId && <a href={`/dashboard/ejercicios/plan/${planId}`} className="ml-auto text-[12px] text-accent no-underline hover:underline">Abrir plan</a>}
+            </div>
+            {(session.session_data?.blocks ?? []).length === 0 ? (
+              <p className="text-[12.5px] text-text-secondary p-3">La sesión no tiene ejercicios cargados. Abrí el plan para armarla.</p>
+            ) : (
+              (session.session_data!.blocks ?? []).map((b, bi) => (
+                <div key={bi} className={bi > 0 ? 'border-t-[0.5px] border-border' : ''}>
+                  {b.name && <div className="text-[11px] text-text-secondary px-3 pt-2">{b.name}</div>}
+                  {(b.exercises ?? []).map((ex, ei) => (
+                    <div key={ei} className="flex items-center gap-3 px-3 py-2 text-[13px]">
+                      <span className="flex-1">{ex.exercise_name || 'Ejercicio'}</span>
+                      <span className="text-[12.5px] text-text-secondary">{[[ex.sets, ex.reps].filter(Boolean).join(' × '), ex.load].filter(Boolean).join(' · ')}</span>
+                    </div>
+                  ))}
+                </div>
+              ))
+            )}
+            {manage && <div className="text-[12px] text-text-secondary px-3 py-2 border-t-[0.5px] border-border" style={{ background: 'rgba(248,113,113,0.08)' }}>Día de manejo de síntomas: no se carga. La progresión del plan no se rompe.</div>}
+            <div className="text-[11px] text-text-secondary px-3 py-2 border-t-[0.5px] border-border">Son los ejercicios que ya viven en el calendario del plan. El ajuste fino se hace desde el plan.</div>
+          </div>
+        ) : pending ? (
+          <div className="flex items-center gap-3 rounded-lg px-3.5 py-3 border-[0.5px]" style={{ borderColor: 'rgba(45,216,168,0.35)', background: 'rgba(45,216,168,0.08)' }}>
+            <div className="text-[12.5px] text-text-primary">
+              {pending.kind === 'upcoming'
+                ? <>La próxima sesión está agendada para <b className="text-accent capitalize">{dateLabel(pending.date)}</b>, pero el paciente vino hoy.</>
+                : <>No hay sesión para hoy. Podés traer la última (<span className="capitalize">{dateLabel(pending.date)}</span>) al día de hoy.</>}
+            </div>
+            <button onClick={bringToToday} disabled={bringing} className="ml-auto shrink-0 bg-accent text-bg-primary px-3 py-1.5 rounded-lg text-[12px] font-medium hover:opacity-90 disabled:opacity-50">
+              {bringing ? 'Trayendo…' : 'Traer a hoy'}
+            </button>
+          </div>
+        ) : planId ? (
+          <p className="text-[12.5px] text-text-secondary">Este plan todavía no tiene sesiones. <a href={`/dashboard/ejercicios/plan/${planId}`} className="text-accent no-underline hover:underline">Abrí el plan</a> para armar la primera.</p>
+        ) : (
+          <p className="text-[12.5px] text-text-secondary">El paciente todavía no tiene un plan de ejercicios.</p>
+        )}
+        {bringError && <p className="text-[12px] text-warning mt-1.5">{bringError}</p>}
+      </div>
 
       {/* MODALIDADES + MANEJO DE SÍNTOMAS */}
       <div className="flex flex-wrap gap-2 mb-3">
