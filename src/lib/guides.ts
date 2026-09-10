@@ -180,9 +180,11 @@ const GUIDES: GuideDef[] = [
   { key: 'equipo', paths: ['/account/equipo'], steps: EQUIPO_STEPS },
   { key: 'panel', paths: ['/account/crm'], steps: PANEL_STEPS },
   { key: 'caja', paths: ['/dashboard/caja'], steps: CAJA_STEPS },
-  { key: 'agenda', paths: ['/dashboard/agenda'], steps: AGENDA_STEPS },
+  // -v2: se refrescó el contenido (sep 2026); la key nueva reabre la guía
+  // completa aunque el usuario ya hubiera visto la versión anterior.
+  { key: 'agenda-v2', paths: ['/dashboard/agenda'], steps: AGENDA_STEPS },
   { key: 'atencion', paths: ['/dashboard/agenda/atencion'], steps: ATENCION_STEPS },
-  { key: 'pacientes', paths: ['/dashboard/pacientes'], steps: PACIENTES_STEPS },
+  { key: 'pacientes-v2', paths: ['/dashboard/pacientes'], steps: PACIENTES_STEPS },
   // Ficha del paciente: /dashboard/pacientes/<uuid> (no confundir con /activar-kine).
   { key: 'ficha', paths: [], steps: FICHA_STEPS, match: p => /^\/dashboard\/pacientes\/[0-9a-fA-F-]{8,}$/.test(p) },
   { key: 'dashboard', paths: ['/dashboard'], steps: DASHBOARD_STEPS },
