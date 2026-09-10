@@ -8,6 +8,7 @@ import type { Method as CashMethod, Preset as CashPreset } from '../caja/CajaCon
 import AgendaSettings from './AgendaSettings'
 import MiniCalendar from './MiniCalendar'
 import QuickSessionSheet from '@/components/QuickSessionSheet'
+import QuickAtencionSheet from '@/components/QuickAtencionSheet'
 import QuickCajaSheet from '@/components/QuickCajaSheet'
 import Link from 'next/link'
 import { buildWhatsAppUrl, buildConfirmUrl } from './whatsapp'
@@ -420,6 +421,9 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
   }>({ open: false })
   const [cloneModal, setCloneModal] = useState<Turno | null>(null)
   const [sessionSheet, setSessionSheet] = useState<{ patientId: string; patientName: string; turnoId: string } | null>(null)
+  const [atencionSheet, setAtencionSheet] = useState<{ patientId: string; patientName: string } | null>(null)
+  // Pacientes visibles que están en modo kine (para la "Atención de hoy" rápida).
+  const [kinePatientIds, setKinePatientIds] = useState<Set<string>>(new Set())
   const [cajaSheet, setCajaSheet] = useState<{ patientId: string | null; patientName: string; area: string; turnoId: string } | null>(null)
   // Claves "patient_id|YYYY-MM-DD" con sesión de carga registrada, para marcar en
   // la agenda si ya se cargó la sesión del paciente (recordatorio antes de irse).
@@ -525,6 +529,19 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
       setRegisteredKeys(new Set((ls ?? []).map(r => `${r.patient_id}|${r.session_date}`)))
     } else {
       setRegisteredKeys(new Set())
+    }
+
+    // Marca de "modo kine": qué pacientes visibles están en modo kine, para
+    // ofrecer la "Atención de hoy" rápida desde el turno sin entrar a la ficha.
+    if (patIds.length > 0) {
+      const { data: km } = await supabaseRef.current
+        .from('patients')
+        .select('id')
+        .in('id', patIds)
+        .eq('kine_mode', true)
+      setKinePatientIds(new Set((km ?? []).map(r => r.id as string)))
+    } else {
+      setKinePatientIds(new Set())
     }
 
     // Marca de "pago cargado" ($): cobros de caja enlazados a estos turnos (por
@@ -1197,6 +1214,14 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                 + Registrar sesión
               </button>
             )}
+            {!quickMenu.turno.is_blocked && quickMenu.turno.patient_id && kinePatientIds.has(quickMenu.turno.patient_id) && (
+              <button
+                onClick={() => { setAtencionSheet({ patientId: quickMenu.turno.patient_id!, patientName: quickMenu.turno.patient_name }); setQuickMenu(null) }}
+                className="w-full text-left px-3 py-2 text-[13px] text-accent font-medium hover:bg-bg-primary transition-colors"
+              >
+                Atención de hoy (kine)
+              </button>
+            )}
             {canRegisterCash && !quickMenu.turno.is_blocked && (
               <button
                 onClick={() => { const t = quickMenu.turno; setCajaSheet({ patientId: t.patient_id, patientName: t.patient_name, area: t.area, turnoId: t.id }); setQuickMenu(null) }}
@@ -1328,6 +1353,15 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
           canMarkPresent
           onClose={() => setSessionSheet(null)}
           onSaved={() => fetchTurnos()}
+        />
+      )}
+
+      {/* ATENCIÓN DE HOY RÁPIDA (modo kine, desde el turno) */}
+      {atencionSheet && (
+        <QuickAtencionSheet
+          patientId={atencionSheet.patientId}
+          patientName={atencionSheet.patientName}
+          onClose={() => setAtencionSheet(null)}
         />
       )}
 
