@@ -52,6 +52,76 @@ export default async function PacientePage({ params }: { params: { id: string } 
     .maybeSingle()
   const hasFicha = !!fichaRow?.ficha_data && Object.keys(fichaRow.ficha_data as Record<string, unknown>).length > 0
 
+  // ¿El paciente tiene turnos en la agenda? En centros de kinesiología esto suele
+  // distinguir a un paciente (tiene turnos) de un alumno de entrenamiento (solo
+  // plan, sin turnos). Se usa para sugerir el Modo Kinesiología, nunca para
+  // activarlo solo.
+  const { count: turnosCount } = await supabase
+    .from('turnos')
+    .select('id', { count: 'exact', head: true })
+    .eq('patient_id', params.id)
+  const patientHasTurnos = (turnosCount ?? 0) > 0
+
+  // Bitácora de "Atención de hoy": solo se consulta si el paciente está en modo
+  // kine (los alumnos/entrenamiento no tienen ni usan esta tabla).
+  let initialAttentions: unknown[] = []
+  let kineSession: unknown = null
+  if (patient.kine_mode) {
+    const { data: att } = await supabase
+      .from('kine_attentions')
+      .select('id, attended_on, professional_name, symptom, manage_symptoms, modalities, auto_summary, note, created_at')
+      .eq('patient_id', params.id)
+      .order('created_at', { ascending: false })
+      .limit(20)
+    initialAttentions = att ?? []
+
+    // Sesión del plan para hoy (precargada del calendario). Si no hay sesión hoy,
+    // se busca la próxima (para "traer a hoy") o la última como plantilla.
+    const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' })
+    const { data: kinePlan } = await supabase
+      .from('exercise_plans')
+      .select('id, name')
+      .eq('patient_id', params.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (kinePlan) {
+      const { data: todaySession } = await supabase
+        .from('scheduled_sessions')
+        .select('id, scheduled_date, session_name, session_data, completed')
+        .eq('plan_id', kinePlan.id)
+        .eq('scheduled_date', todayStr)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle()
+
+      let pending: { date: string; kind: 'upcoming' | 'last' } | null = null
+      if (!todaySession) {
+        const { data: upcoming } = await supabase
+          .from('scheduled_sessions')
+          .select('scheduled_date')
+          .eq('plan_id', kinePlan.id)
+          .gt('scheduled_date', todayStr)
+          .order('scheduled_date', { ascending: true })
+          .limit(1)
+          .maybeSingle()
+        if (upcoming) pending = { date: upcoming.scheduled_date, kind: 'upcoming' }
+        else {
+          const { data: last } = await supabase
+            .from('scheduled_sessions')
+            .select('scheduled_date')
+            .eq('plan_id', kinePlan.id)
+            .lt('scheduled_date', todayStr)
+            .order('scheduled_date', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+          if (last) pending = { date: last.scheduled_date, kind: 'last' }
+        }
+      }
+      kineSession = { planId: kinePlan.id, today: todayStr, todaySession: todaySession ?? null, pending }
+    }
+  }
+
   // Profesionales del equipo, para elegir el profesional habitual del paciente.
   // Solo aplica a pacientes de una organización (equipos con varios profesionales).
   let professionals: { id: string; full_name: string | null }[] = []
@@ -82,7 +152,7 @@ export default async function PacientePage({ params }: { params: { id: string } 
           </Link>
         </div>
 
-        <PacienteDetail patient={patient} userId={user.id} initialEvents={events ?? []} treatmentStart={firstPlan?.created_at ?? null} professionals={professionals} hasFicha={hasFicha} />
+        <PacienteDetail patient={patient} userId={user.id} initialEvents={events ?? []} treatmentStart={firstPlan?.created_at ?? null} professionals={professionals} hasFicha={hasFicha} patientHasTurnos={patientHasTurnos} initialAttentions={initialAttentions as never} kineSession={kineSession as never} />
       </main>
     </div>
   )

@@ -57,6 +57,10 @@ export default async function PacientesPage({ searchParams }: { searchParams: { 
               ? 'Pacientes compartidos con todos los integrantes de tu equipo.'
               : 'Gestioná tu listado de pacientes y asociá sus planes de ejercicio.'}
           </p>
+          <Link href="/dashboard/pacientes/activar-kine" className="inline-flex items-center gap-1.5 mt-4 text-[13px] text-text-secondary hover:text-text-primary no-underline">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            Activar modo kine en tanda
+          </Link>
         </div>
 
         <PacientesClient userId={user.id} isActiveUser={isActiveUser} isPro={isPro} orgId={orgId} orgName={orgName} autoOpen={searchParams.new === '1'} />
