@@ -17,49 +17,51 @@ export default async function PacientePage({ params }: { params: { id: string } 
 
   await verifyPatientAccess(params.id, user.id)
 
-  const { data: patient, error } = await supabase
-    .from('patients')
-    .select('*')
-    .eq('id', params.id)
-    .single()
+  // Todas estas consultas dependen solo de params.id (no del contenido de la fila
+  // `patient`), así que van en paralelo para bajar el TTFB de la ficha —la página
+  // central del kine en tablet—. El acceso ya quedó verificado arriba con
+  // verifyPatientAccess, y la RLS protege cada tabla por su cuenta.
+  //  - patient: la fila del paciente (para el guard y kine_mode / org_id).
+  //  - events: hitos del tratamiento (evaluación, RTP, alta, competencia, etc.).
+  //  - firstPlan: día en que se cargó el primer plan (inicio del tratamiento).
+  //  - fichaRow: ¿la ficha tiene contenido? (al abrirla por primera vez se crea
+  //    una fila vacía, así que "tiene ficha" = ficha_data no vacío).
+  //  - turnosCount: ¿el paciente tiene turnos? Distingue paciente de alumno de
+  //    entrenamiento; se usa para sugerir el Modo Kinesiología, nunca para activarlo.
+  const [
+    { data: patient, error },
+    { data: events },
+    { data: firstPlan },
+    { data: fichaRow },
+    { count: turnosCount },
+  ] = await Promise.all([
+    supabase.from('patients').select('*').eq('id', params.id).single(),
+    supabase
+      .from('patient_events')
+      .select('id, event_date, type, title, note')
+      .eq('patient_id', params.id)
+      .order('event_date', { ascending: true }),
+    supabase
+      .from('exercise_plans')
+      .select('created_at')
+      .eq('patient_id', params.id)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from('patient_fichas')
+      .select('ficha_data')
+      .eq('patient_id', params.id)
+      .maybeSingle(),
+    supabase
+      .from('turnos')
+      .select('id', { count: 'exact', head: true })
+      .eq('patient_id', params.id),
+  ])
 
   if (error || !patient) redirect('/dashboard/pacientes')
 
-  // Hitos del tratamiento (evaluación, RTP, alta, competencia, etc.)
-  const { data: events } = await supabase
-    .from('patient_events')
-    .select('id, event_date, type, title, note')
-    .eq('patient_id', params.id)
-    .order('event_date', { ascending: true })
-
-  // Inicio del tratamiento: el día en que se cargó el primer plan de entrenamiento.
-  // Desde ahí se cuentan las semanas y meses de trabajo.
-  const { data: firstPlan } = await supabase
-    .from('exercise_plans')
-    .select('created_at')
-    .eq('patient_id', params.id)
-    .order('created_at', { ascending: true })
-    .limit(1)
-    .maybeSingle()
-
-  // ¿La ficha tiene contenido? Ojo: al abrir la ficha por primera vez se crea una
-  // fila vacía en patient_fichas, así que "tiene ficha" = fila con ficha_data no vacío.
-  // Se usa para el bloque de "primeros pasos" de un paciente recién creado.
-  const { data: fichaRow } = await supabase
-    .from('patient_fichas')
-    .select('ficha_data')
-    .eq('patient_id', params.id)
-    .maybeSingle()
   const hasFicha = !!fichaRow?.ficha_data && Object.keys(fichaRow.ficha_data as Record<string, unknown>).length > 0
-
-  // ¿El paciente tiene turnos en la agenda? En centros de kinesiología esto suele
-  // distinguir a un paciente (tiene turnos) de un alumno de entrenamiento (solo
-  // plan, sin turnos). Se usa para sugerir el Modo Kinesiología, nunca para
-  // activarlo solo.
-  const { count: turnosCount } = await supabase
-    .from('turnos')
-    .select('id', { count: 'exact', head: true })
-    .eq('patient_id', params.id)
   const patientHasTurnos = (turnosCount ?? 0) > 0
 
   // Bitácora de "Atención de hoy": solo se consulta si el paciente está en modo
@@ -67,24 +69,29 @@ export default async function PacientePage({ params }: { params: { id: string } 
   let initialAttentions: unknown[] = []
   let kineSession: unknown = null
   if (patient.kine_mode) {
-    const { data: att } = await supabase
-      .from('kine_attentions')
-      .select('id, attended_on, professional_name, symptom, manage_symptoms, modalities, auto_summary, note, created_at')
-      .eq('patient_id', params.id)
-      .order('created_at', { ascending: false })
-      .limit(20)
+    // La bitácora y el plan más reciente son independientes entre sí (ambos solo
+    // dependen de params.id) → en paralelo. La cadena de sesiones que sigue sí es
+    // condicional (hoy → próxima → última) y queda secuencial.
+    const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' })
+    const [{ data: att }, { data: kinePlan }] = await Promise.all([
+      supabase
+        .from('kine_attentions')
+        .select('id, attended_on, professional_name, symptom, manage_symptoms, modalities, auto_summary, note, created_at')
+        .eq('patient_id', params.id)
+        .order('created_at', { ascending: false })
+        .limit(20),
+      supabase
+        .from('exercise_plans')
+        .select('id, name')
+        .eq('patient_id', params.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ])
     initialAttentions = att ?? []
 
     // Sesión del plan para hoy (precargada del calendario). Si no hay sesión hoy,
     // se busca la próxima (para "traer a hoy") o la última como plantilla.
-    const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' })
-    const { data: kinePlan } = await supabase
-      .from('exercise_plans')
-      .select('id, name')
-      .eq('patient_id', params.id)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
     if (kinePlan) {
       const { data: todaySession } = await supabase
         .from('scheduled_sessions')
