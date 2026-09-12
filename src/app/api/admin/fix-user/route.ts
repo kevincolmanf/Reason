@@ -93,16 +93,18 @@ export async function POST(request: Request) {
     })
   }
 
-  // Fallback: use DB subscription if active
+  // Fallback: use DB subscription if active. La columna real es `plan`
+  // (monthly|annual) — no `mp_plan_id`, que no existe. El enum de plan no
+  // distingue Pro, así que preservamos el rol Pro si el usuario ya lo tenía.
   const { data: dbSub } = await admin
     .from('subscriptions')
-    .select('mp_plan_id, status, expires_at')
+    .select('plan, status, expires_at')
     .eq('user_id', userId)
-    .single()
+    .maybeSingle()
 
   if (dbSub && dbSub.status === 'active') {
-    const isPro = dbSub.mp_plan_id === 'pro_monthly' || dbSub.mp_plan_id === 'pro_annual'
-    const newRole = isPro ? 'pro' : 'subscriber'
+    const { data: currentUser } = await admin.from('users').select('role').eq('id', userId).maybeSingle()
+    const newRole = currentUser?.role === 'pro' ? 'pro' : 'subscriber'
     await admin.from('users').upsert(
       { id: userId, email: targetAuth.email ?? '', role: newRole },
       { onConflict: 'id' }
@@ -112,7 +114,7 @@ export async function POST(request: Request) {
       source: 'db_only',
       email: targetAuth.email,
       role: newRole,
-      plan: dbSub.mp_plan_id,
+      plan: dbSub.plan,
       status: dbSub.status,
       expires_at: dbSub.expires_at,
       warning: 'No se encontró la suscripción en Mercado Pago. Se usaron datos de la DB.',

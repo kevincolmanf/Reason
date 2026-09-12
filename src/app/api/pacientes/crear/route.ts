@@ -29,6 +29,32 @@ export async function POST(request: Request) {
   const limit = LIMITS[role] ?? 1
   const isOrgContext = !!orgId
 
+  // Si se pide crear dentro de una organización, verificar que el usuario sea
+  // miembro o dueño de ESA org. Sin este chequeo, cualquiera podría insertar
+  // pacientes en una org ajena (o saltear el límite del plan) mandando un orgId.
+  // Mismo criterio que /api/pacientes/modalidad y /kine-mode.
+  if (isOrgContext) {
+    let allowed = false
+    const { count: memberCount } = await admin
+      .from('organization_members')
+      .select('*', { count: 'exact', head: true })
+      .eq('org_id', orgId)
+      .eq('user_id', user.id)
+    if ((memberCount ?? 0) > 0) allowed = true
+    if (!allowed) {
+      const { data: ownedOrg } = await admin
+        .from('organizations')
+        .select('id')
+        .eq('id', orgId)
+        .eq('owner_id', user.id)
+        .maybeSingle()
+      if (ownedOrg) allowed = true
+    }
+    if (!allowed) {
+      return NextResponse.json({ error: 'Sin acceso a esta organización' }, { status: 403 })
+    }
+  }
+
   // Count existing patients (org or personal)
   const countQuery = isOrgContext
     ? admin.from('patients').select('id', { count: 'exact', head: true }).eq('org_id', orgId)

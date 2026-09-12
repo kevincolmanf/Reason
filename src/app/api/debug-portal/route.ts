@@ -3,16 +3,21 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { createClient } from '@/utils/supabase/server'
 
 export async function GET(request: Request) {
-  // Solo accesible si el kine está autenticado
+  // Endpoint de diagnóstico: usa el cliente admin (se salta la RLS), así que lo
+  // restringimos a admins. Antes bastaba con estar logueado, y cualquier usuario
+  // con un load_share_token podía leer datos de pacientes ajenos.
   const userSupabase = createClient()
   const { data: { user } } = await userSupabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
 
+  const supabase = createAdminClient()
+
+  const { data: me } = await supabase.from('users').select('role').eq('id', user.id).single()
+  if (me?.role !== 'admin') return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
+
   const { searchParams } = new URL(request.url)
   const token = searchParams.get('token')
   if (!token) return NextResponse.json({ error: 'Falta token' }, { status: 400 })
-
-  const supabase = createAdminClient()
 
   const { data: patient, error: patientError } = await supabase
     .from('patients')
