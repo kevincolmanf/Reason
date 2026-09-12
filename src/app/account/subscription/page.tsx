@@ -17,11 +17,22 @@ export default async function SubscriptionPage() {
     .from('subscriptions')
     .select('*')
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
+
+  // El rol vive en public.users; la "pro-idad" no se puede inferir del plan
+  // (el enum de subscriptions es solo monthly|annual), así que lo leemos de ahí.
+  const { data: userRow } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', user.id)
+    .maybeSingle()
+  const isPro = userRow?.role === 'pro'
 
   // Valores por defecto si no hay suscripción
   const status = subscription?.status || 'free'
-  const planName = subscription?.mp_plan_id === 'annual' ? 'Anual' : 'Mensual'
+  // La columna real es `plan` (monthly|annual), no `mp_plan_id`.
+  const intervalName = subscription?.plan === 'annual' ? 'Anual' : 'Mensual'
+  const planName = isPro ? `Pro · ${intervalName}` : intervalName
   
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('es-AR', {
