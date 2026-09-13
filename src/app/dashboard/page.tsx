@@ -264,7 +264,7 @@ export default async function DashboardPage() {
                     Tu período de prueba terminó
                   </p>
                   <p className="text-[13px] text-text-secondary">
-                    Seguís con 1 paciente gratuito. Suscribite para desbloquear todo.
+                    Seguís con hasta 3 pacientes gratis. Suscribite para desbloquear todo.
                   </p>
                 </>
               )}
