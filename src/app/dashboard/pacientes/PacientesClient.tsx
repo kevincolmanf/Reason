@@ -64,7 +64,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
   const supabaseRef = useRef(createClient())
 
   const isOrgContext = !!orgId
-  const atFreeLimit = !isActiveUser && patients.length >= 1
+  const atFreeLimit = !isActiveUser && patients.length >= 3
   const atSubscriberLimit = isActiveUser && !isPro && !isOrgContext && patients.length >= 20
 
   const fetchPatients = useCallback(async () => {
@@ -271,7 +271,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
       {atFreeLimit && (
         <div className="bg-accent/5 border-[0.5px] border-accent/30 rounded-xl px-5 py-4 mb-6 flex items-center justify-between gap-4">
           <div>
-            <p className="text-[14px] font-medium mb-0.5">Plan gratuito — 1 paciente</p>
+            <p className="text-[14px] font-medium mb-0.5">Plan gratuito — 3 pacientes</p>
             <p className="text-[13px] text-text-secondary">Suscribite para agregar hasta 20 pacientes.</p>
           </div>
           <Link href="/paywall" className="shrink-0 bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity">Ver planes</Link>
@@ -423,7 +423,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((p, idx) => {
-            const locked = !isOrgContext && atFreeLimit && idx > 0
+            const locked = !isOrgContext && atFreeLimit && idx > 2
             if (locked) {
               return (
                 <div key={p.id} className="relative rounded-xl overflow-hidden cursor-default select-none">
