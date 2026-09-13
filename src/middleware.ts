@@ -115,7 +115,7 @@ export async function middleware(request: NextRequest) {
   const isAuthRoute = authRoutes.some(route => pathname.startsWith(route))
 
   // Rutas que requieren suscripción activa (o trial vigente)
-  // /dashboard/ejercicios/plan y /calendario son accesibles para free (1 paciente)
+  // /dashboard/ejercicios/plan y /calendario son accesibles para free (hasta 3 pacientes)
   const subscriberRoutes = ['/library', '/content', '/recursos', '/ficha', '/dashboard/ejercicios/biblioteca']
 
   // Rutas exclusivas para Pro/admin o miembros de org (agenda)
@@ -123,8 +123,11 @@ export async function middleware(request: NextRequest) {
   const isProRoute = proRoutes.some(route => pathname.startsWith(route))
   const isSubscriberRoute = subscriberRoutes.some(route => pathname.startsWith(route))
 
-  // Módulos avanzados dentro del dashboard de pacientes — bloqueados para free sin trial
-  // /calendario no está bloqueado: usuarios free pueden ver el calendario de su único paciente
+  // Módulos avanzados dentro del dashboard de pacientes — bloqueados para free sin trial.
+  // /calendario no está bloqueado: el free puede ver el calendario de sus pacientes.
+  // Nota: la ficha PRINCIPAL (/ficha, singular) queda abierta al free a propósito —
+  // como gancho, acotada por el tope de pacientes. Lo pago es el historial de fichas
+  // guardadas (/fichas, plural), que sí entra acá.
   const advancedModulePatterns = ['/carga', '/rts', '/fichas']
   const isAdvancedModule =
     pathname.startsWith('/dashboard/pacientes/') &&
