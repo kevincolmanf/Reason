@@ -22,6 +22,12 @@ const SYM: { id: Symptom; label: string; color: string; soft: string }[] = [
   { id: 'mejor', label: 'Mejor', color: '#4ade80', soft: 'rgba(74,222,128,0.12)' },
 ]
 
+const MODALITIES: { id: string; label: string }[] = [
+  { id: 'manual', label: 'Terapia manual' },
+  { id: 'reeval', label: 'Reevaluación' },
+  { id: 'cuest', label: 'Cuestionario' },
+]
+
 interface RecentAtt { symptom: string | null; auto_summary: string | null; note: string | null; attended_on: string; professional_name: string | null }
 
 // Sesión del plan (misma forma que en la ficha / AtencionDeHoy).
@@ -40,6 +46,7 @@ export default function QuickAtencionSheet({ patientId, patientName, onClose, on
   const [recent, setRecent] = useState<RecentAtt[] | null>(null)
   const [symptom, setSymptom] = useState<Symptom | null>(null)
   const [manage, setManage] = useState(false)
+  const [modalities, setModalities] = useState<Set<string>>(new Set())
   const [note, setNote] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -177,13 +184,21 @@ export default function QuickAtencionSheet({ patientId, patientName, onClose, on
     }
   }
 
+  const toggleMod = (id: string) => {
+    setModalities(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
+
   const register = async () => {
     if (!symptom) { setError('Marcá cómo llegó hoy.'); return }
     setSaving(true); setError(null)
     try {
       const res = await fetch('/api/pacientes/atencion', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ patientId, symptom, manageSymptoms: manage, modalities: [], note, adjustedSession: sessionEdited }),
+        body: JSON.stringify({ patientId, symptom, manageSymptoms: manage, modalities: Array.from(modalities), note, adjustedSession: sessionEdited }),
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json?.error || 'error')
@@ -243,6 +258,22 @@ export default function QuickAtencionSheet({ patientId, patientName, onClose, on
                     className="rounded-lg py-3 text-[14px] font-medium border-[0.5px] transition-colors"
                     style={on ? { borderColor: s.color, background: s.soft, color: s.color } : { borderColor: 'var(--border)', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
                     {s.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Modalidades */}
+          <div>
+            <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-2">Modalidades</label>
+            <div className="flex flex-wrap gap-2">
+              {MODALITIES.map(m => {
+                const on = modalities.has(m.id)
+                return (
+                  <button key={m.id} onClick={() => toggleMod(m.id)}
+                    className={`text-[11.5px] font-medium px-3 py-1.5 rounded-full border-[0.5px] transition-colors ${on ? 'text-accent border-accent/40 bg-accent/10' : 'text-text-secondary border-border bg-bg-primary hover:text-text-primary'}`}>
+                    {m.label}
                   </button>
                 )
               })}
