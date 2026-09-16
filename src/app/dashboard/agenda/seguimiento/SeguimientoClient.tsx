@@ -233,7 +233,7 @@ export default function SeguimientoClient({ userId, orgId, orgName, thresholdDay
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <Link
-                      href={`/dashboard/pacientes/${p.patient_id}`}
+                      href={`/dashboard/pacientes/${p.patient_id}?from=seguimiento`}
                       className="text-[14px] font-medium text-text-primary hover:text-accent transition-colors no-underline truncate block"
                     >
                       {p.name}

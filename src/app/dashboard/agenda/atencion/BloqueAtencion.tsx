@@ -55,7 +55,7 @@ function PacienteCard({ p }: { p: BloquePaciente }) {
     <div className="bg-bg-primary border-[0.5px] border-border rounded-lg p-3.5">
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="min-w-0">
-          <Link href={`/dashboard/pacientes/${p.patientId}`} className="text-[14px] font-medium text-text-primary no-underline hover:underline">
+          <Link href={`/dashboard/pacientes/${p.patientId}?from=atencion`} className="text-[14px] font-medium text-text-primary no-underline hover:underline">
             {p.name}
           </Link>
           <div className="text-[11.5px] text-text-secondary mt-0.5 truncate">
@@ -94,7 +94,7 @@ function PacienteCard({ p }: { p: BloquePaciente }) {
             >
               {saving ? 'Registrando…' : 'Registrar'}
             </button>
-            <Link href={`/dashboard/pacientes/${p.patientId}`} className="text-[12px] text-text-secondary hover:text-text-primary no-underline">
+            <Link href={`/dashboard/pacientes/${p.patientId}?from=atencion`} className="text-[12px] text-text-secondary hover:text-text-primary no-underline">
               Abrir ficha para ajustar el plan →
             </Link>
             {error && <span className="text-[11.5px] text-warning">No se pudo — reintentá</span>}
@@ -103,7 +103,7 @@ function PacienteCard({ p }: { p: BloquePaciente }) {
       )}
 
       {attended && (
-        <Link href={`/dashboard/pacientes/${p.patientId}`} className="text-[12px] text-accent no-underline hover:underline">
+        <Link href={`/dashboard/pacientes/${p.patientId}?from=atencion`} className="text-[12px] text-accent no-underline hover:underline">
           Abrir ficha →
         </Link>
       )}

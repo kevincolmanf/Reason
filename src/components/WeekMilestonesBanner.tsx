@@ -133,7 +133,7 @@ export default function WeekMilestonesBanner({ milestones }: { milestones: WeekM
           >
             <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: m.color }} />
             <Link
-              href={`/dashboard/pacientes/${m.patientId}`}
+              href={`/dashboard/pacientes/${m.patientId}?from=dashboard`}
               className="text-[13px] font-medium text-text-primary no-underline hover:underline shrink-0"
             >
               {m.patientName}

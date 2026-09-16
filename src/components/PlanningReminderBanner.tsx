@@ -83,7 +83,7 @@ export default function PlanningReminderBanner({ patients }: { patients: AlertPa
             {filtered.map(p => (
               <div key={p.id} className="flex items-center gap-1.5 bg-amber-100 border-[0.5px] border-amber-300 rounded-lg px-3 py-1.5">
                 <Link
-                  href={`/dashboard/pacientes/${p.id}`}
+                  href={`/dashboard/pacientes/${p.id}?from=dashboard`}
                   className="text-[13px] font-medium text-amber-900 no-underline hover:underline"
                 >
                   {p.name}

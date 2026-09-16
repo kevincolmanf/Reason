@@ -1240,7 +1240,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
             )}
             {quickMenu.turno.patient_id && (
               <a
-                href={`/dashboard/pacientes/${quickMenu.turno.patient_id}`}
+                href={`/dashboard/pacientes/${quickMenu.turno.patient_id}?from=agenda`}
                 onClick={() => setQuickMenu(null)}
                 className="block px-3 py-2 text-[13px] hover:bg-bg-primary transition-colors"
               >

@@ -4,12 +4,13 @@ import PacienteDetail from './PacienteDetail'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { verifyPatientAccess } from '@/utils/patient-access'
+import { resolveBack } from '@/lib/backTargets'
 
 export const metadata = {
   title: 'Paciente | Reason',
 }
 
-export default async function PacientePage({ params }: { params: { id: string } }) {
+export default async function PacientePage({ params, searchParams }: { params: { id: string }; searchParams: { from?: string } }) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -154,9 +155,14 @@ export default async function PacientePage({ params }: { params: { id: string } 
       <Header />
       <main className="flex-grow w-full max-w-[1200px] mx-auto px-8 py-12">
         <div className="mb-8">
-          <Link href="/dashboard/pacientes" className="text-[13px] text-text-secondary hover:text-text-primary transition-colors no-underline flex items-center gap-2 mb-6">
-            ← Volver a Mis Pacientes
-          </Link>
+          {(() => {
+            const back = resolveBack(searchParams?.from, { href: '/dashboard/pacientes', label: 'Mis Pacientes' })
+            return (
+              <Link href={back.href} className="text-[13px] text-text-secondary hover:text-text-primary transition-colors no-underline flex items-center gap-2 mb-6">
+                ← Volver a {back.label}
+              </Link>
+            )
+          })()}
         </div>
 
         <PacienteDetail patient={patient} userId={user.id} initialEvents={events ?? []} treatmentStart={firstPlan?.created_at ?? null} professionals={professionals} hasFicha={hasFicha} patientHasTurnos={patientHasTurnos} initialAttentions={initialAttentions as never} kineSession={kineSession as never} />

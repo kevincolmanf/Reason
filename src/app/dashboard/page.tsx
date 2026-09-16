@@ -307,7 +307,7 @@ export default async function DashboardPage() {
                 </div>
               </Link>
               {recentPatients.map(p => (
-                <Link key={p.id} href={`/dashboard/pacientes/${p.id}`} className="block no-underline">
+                <Link key={p.id} href={`/dashboard/pacientes/${p.id}?from=dashboard`} className="block no-underline">
                   <div className="bg-bg-primary border-[0.5px] border-border rounded-xl px-4 py-5 hover:bg-bg-secondary transition-colors h-full">
                     <div className="text-[15px] font-medium mb-1 truncate">{p.name}</div>
                     <div className="text-[12px] text-text-secondary truncate">
