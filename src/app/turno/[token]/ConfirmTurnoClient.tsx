@@ -13,14 +13,19 @@ interface Props {
   whatsappUrl: string | null
 }
 
+// Fijamos el timezone de Argentina para que el detalle coincida siempre con el
+// horario real agendado, tanto en el render del servidor (UTC en Vercel) como
+// si el paciente entra desde un dispositivo con otra zona horaria.
+const AR_TZ = 'America/Argentina/Buenos_Aires'
+
 function formatFecha(iso: string): string {
   const d = new Date(iso)
-  const s = d.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })
+  const s = d.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: AR_TZ })
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
 function formatHora(iso: string): string {
-  return new Date(iso).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
+  return new Date(iso).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', timeZone: AR_TZ })
 }
 
 export default function ConfirmTurnoClient({

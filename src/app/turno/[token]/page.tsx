@@ -4,6 +4,8 @@ import ConfirmTurnoClient from './ConfirmTurnoClient'
 
 export const dynamic = 'force-dynamic'
 
+const AR_TZ = 'America/Argentina/Buenos_Aires'
+
 // Normaliza un teléfono argentino al formato que espera wa.me (sin +, con 54).
 function formatArgentinePhone(phone: string): string {
   let n = phone.replace(/\D/g, '')
@@ -18,8 +20,11 @@ function formatArgentinePhone(phone: string): string {
 // incluye los datos del turno. El paciente solo completa el motivo.
 function buildWhatsAppUrl(phone: string, patientName: string, start: string): string {
   const clean = formatArgentinePhone(phone)
-  const fecha = new Date(start).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })
-  const hora = new Date(start).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
+  // Esta página es un server component: en Vercel corre en UTC, así que hay que
+  // fijar el timezone de Argentina o el mensaje mostraría una hora corrida
+  // respecto del horario real agendado.
+  const fecha = new Date(start).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: AR_TZ })
+  const hora = new Date(start).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', timeZone: AR_TZ })
   const msg =
     `Hola, soy ${patientName}. ` +
     `Tengo turno el ${fecha} a las ${hora} y no voy a poder asistir. ` +
