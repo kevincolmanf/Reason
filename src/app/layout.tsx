@@ -3,8 +3,22 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://reason.com.ar"),
   title: "Reason — Criterio clínico aplicado",
   description: "Reason traduce evidencia en decisiones de consultorio. Para kinesiólogos que ya están atendiendo y quieren decidir mejor.",
+  openGraph: {
+    title: "Reason — Criterio clínico aplicado",
+    description: "Reason traduce evidencia en decisiones de consultorio. Para kinesiólogos que ya están atendiendo y quieren decidir mejor.",
+    url: "https://reason.com.ar",
+    siteName: "Reason",
+    locale: "es_AR",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Reason — Criterio clínico aplicado",
+    description: "Reason traduce evidencia en decisiones de consultorio. Para kinesiólogos que ya están atendiendo y quieren decidir mejor.",
+  },
 };
 
 export default function RootLayout({
