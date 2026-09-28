@@ -505,11 +505,15 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
   }
 
   // Semana de inicio: la elegida por el kine si sigue siendo válida; si no, la
-  // del día seleccionado en el calendario; si no, la primera semana del plan.
+  // del día seleccionado en el calendario; si no, la semana ACTUAL del plan (no
+  // la primera cargada). La primera semana suele ser un borrador sin
+  // series×reps todavía cargadas, así que arrancar ahí imprimía la planilla en
+  // blanco aunque las semanas siguientes ya tuvieran la dosificación completa.
   const selectedDateMonday = selectedDate ? toDateStr(getMondayOfWeek(new Date(selectedDate + 'T00:00:00'))) : null
+  const todayMonday = toDateStr(getMondayOfWeek(new Date()))
   const defaultStartMonday = (selectedDateMonday && planWeekMondays.includes(selectedDateMonday))
     ? selectedDateMonday
-    : (planWeekMondays[0] ?? null)
+    : (planWeekMondays.find(m => m >= todayMonday) ?? planWeekMondays[planWeekMondays.length - 1] ?? null)
   const startMonday = (printStartMonday && planWeekMondays.includes(printStartMonday))
     ? printStartMonday
     : defaultStartMonday
