@@ -71,6 +71,16 @@ export default async function SeguimientoPage() {
 
   if (!canEdit) redirect('/dashboard/agenda')
 
+  // Mismo criterio de normalización que usa el cliente para armar el param de
+  // la RPC: todas las áreas seleccionadas (o ninguna) → null (= todas). Se
+  // replica acá para que la carga inicial server-side coincida exactamente con
+  // lo que el cliente pediría en el primer render, y así evitar un refetch.
+  const initialAreaParam = (!trackedAreas || trackedAreas.length === 0 || trackedAreas.length >= areas.length)
+    ? null
+    : trackedAreas
+  const { data: initialRows } = await supabase
+    .rpc('get_lapsing_patients', { p_threshold_days: THRESHOLD_DAYS, p_areas: initialAreaParam })
+
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
       <Header />
@@ -83,6 +93,7 @@ export default async function SeguimientoPage() {
           areas={areas}
           trackedAreas={trackedAreas}
           canConfig={canEdit}
+          initialRows={initialRows ?? []}
         />
       </main>
     </div>

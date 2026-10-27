@@ -24,6 +24,7 @@ interface Props {
   areas: string[]
   trackedAreas: string[] | null // null = todas
   canConfig: boolean
+  initialRows: LapsingPatient[]
 }
 
 const SNOOZE_DAYS = 30
@@ -47,13 +48,13 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
-export default function SeguimientoClient({ userId, orgId, orgName, thresholdDays, areas, trackedAreas, canConfig }: Props) {
+export default function SeguimientoClient({ userId, orgId, orgName, thresholdDays, areas, trackedAreas, canConfig, initialRows }: Props) {
   const { confirm, confirmDialog } = useConfirm()
   const { notify, toast } = useToast()
   const supabaseRef = useRef(createClient())
 
-  const [rows, setRows] = useState<LapsingPatient[]>([])
-  const [loading, setLoading] = useState(true)
+  const [rows, setRows] = useState<LapsingPatient[]>(initialRows)
+  const [loading, setLoading] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
   // Áreas en las que se siguen ausencias (config del centro). Sin config = todas.
   const [selectedAreas, setSelectedAreas] = useState<Set<string>>(() => new Set(trackedAreas ?? areas))
@@ -78,7 +79,14 @@ export default function SeguimientoClient({ userId, orgId, orgName, thresholdDay
     setLoading(false)
   }, [thresholdDays, notify])
 
-  useEffect(() => { fetchRows(areaParam) }, [fetchRows, areaParam])
+  // El primer render ya viene servido por el server (initialRows, con el mismo
+  // areaParam efectivo) — se salta el primer fetch para no duplicar la carga.
+  // Cambios posteriores de área (toggleArea) sí refetchean desde el cliente.
+  const skippedInitialFetch = useRef(false)
+  useEffect(() => {
+    if (!skippedInitialFetch.current) { skippedInitialFetch.current = true; return }
+    fetchRows(areaParam)
+  }, [fetchRows, areaParam])
 
   // Elegir en qué áreas se siguen ausencias. Guarda en la organización (solo dueño).
   const toggleArea = (area: string) => {
