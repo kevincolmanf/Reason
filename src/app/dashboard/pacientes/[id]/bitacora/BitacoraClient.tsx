@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
@@ -43,50 +43,24 @@ export default function BitacoraClient({
 
   const [entries, setEntries] = useState<Entry[]>(initialEntries)
   const [date, setDate] = useState(todayStr())
-  const [chips, setChips] = useState<ExerciseRef[]>([])
-  const [note, setNote] = useState('')
+  const [text, setText] = useState('')
   const [saving, setSaving] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [graduateWeeks, setGraduateWeeks] = useState(initialGraduateWeeks)
 
   const authorName = (id: string | null) => (id ? (authorNames[id] ?? '—') : '—')
 
-  // Buscador de ejercicios (biblioteca + propios), para sumar por nombre
-  const [q, setQ] = useState('')
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [results, setResults] = useState<any[]>([])
   const [gradSaving, setGradSaving] = useState(false)
 
-  useEffect(() => {
-    if (!q.trim()) { setResults([]); return }
-    const t = setTimeout(async () => {
-      const res = await fetch(`/api/exercises?q=${encodeURIComponent(q)}`)
-      const curated = res.ok ? await res.json() : []
-      const { data: mine } = await supabaseRef.current
-        .from('user_exercises').select('id, name').eq('user_id', userId).ilike('name', `%${q}%`).limit(20)
-      setResults([...(mine ?? []), ...curated].slice(0, 8))
-    }, 300)
-    return () => clearTimeout(t)
-  }, [q, userId])
+  const canSave = text.trim().length > 0
 
-  const addChip = (ex: ExerciseRef) => {
-    if (!ex.name.trim()) return
-    if (chips.some(c => c.name.toLowerCase() === ex.name.toLowerCase())) return
-    setChips(prev => [...prev, { id: ex.id, name: ex.name.trim() }])
-    setQ(''); setResults([])
-  }
-  const removeChip = (name: string) => setChips(prev => prev.filter(c => c.name !== name))
-
-  const canSave = chips.length > 0 || note.trim().length > 0
-
-  const resetForm = () => { setChips([]); setNote(''); setDate(todayStr()); setEditingId(null); setQ(''); setResults([]) }
+  const resetForm = () => { setText(''); setDate(todayStr()); setEditingId(null) }
 
   const startEdit = (e: Entry) => {
     setEditingId(e.id)
     setDate(e.activity_date)
-    setChips(e.exercises ?? [])
-    setNote(e.note ?? '')
-    setQ(''); setResults([])
+    const legacyExercises = (e.exercises ?? []).map(ex => ex.name).join(', ')
+    setText([legacyExercises, e.note].filter(Boolean).join(legacyExercises && e.note ? '\n\n' : ''))
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -97,7 +71,7 @@ export default function BitacoraClient({
       // Editar (cualquier profesional del equipo puede; no se cambia el autor original)
       const { data, error } = await supabaseRef.current
         .from('simple_activity_log')
-        .update({ activity_date: date, exercises: chips, note: note.trim() || null })
+        .update({ activity_date: date, exercises: [], note: text.trim() })
         .eq('id', editingId)
         .select('id, activity_date, exercises, note, created_at, user_id')
         .single()
@@ -110,7 +84,7 @@ export default function BitacoraClient({
     }
     const { data, error } = await supabaseRef.current
       .from('simple_activity_log')
-      .insert({ patient_id: patientId, user_id: userId, activity_date: date, exercises: chips, note: note.trim() || null })
+      .insert({ patient_id: patientId, user_id: userId, activity_date: date, exercises: [], note: text.trim() })
       .select('id, activity_date, exercises, note, created_at, user_id')
       .single()
     setSaving(false)
@@ -220,44 +194,11 @@ export default function BitacoraClient({
             className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-2.5 py-1.5 text-[13px] focus:outline-none focus:border-accent" />
         </div>
 
-        {/* Ejercicios elegidos */}
-        {chips.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mb-2">
-            {chips.map(c => (
-              <span key={c.name} className="inline-flex items-center rounded-full border-[0.5px] border-accent/35 bg-accent/10 overflow-hidden">
-                <span className="text-[12px] pl-2.5 pr-1.5 py-1.5 text-accent">{c.name}</span>
-                <button onClick={() => removeChip(c.name)} className="text-[13px] leading-none px-1.5 py-1.5 text-accent/60 hover:text-warning hover:bg-accent/20 transition-colors">×</button>
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* Buscador / agregar ejercicio */}
-        <div className="relative mb-3">
-          <input
-            value={q}
-            onChange={e => setQ(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && q.trim()) { e.preventDefault(); addChip({ name: q }) } }}
-            placeholder="Agregar ejercicio (buscá en tu biblioteca o escribí el nombre y Enter)…"
-            className="w-full bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:border-accent"
-          />
-          {results.length > 0 && (
-            <div className="absolute z-10 left-0 right-0 mt-1 bg-bg-primary border-[0.5px] border-border rounded-lg shadow-lg max-h-[220px] overflow-y-auto">
-              {results.map((r, i) => (
-                <button key={r.id ?? i} onClick={() => addChip({ id: r.id, name: r.name })}
-                  className="w-full text-left px-3 py-2 text-[13px] hover:bg-bg-secondary transition-colors">
-                  {r.name}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
         <textarea
-          value={note}
-          onChange={e => setNote(e.target.value)}
-          rows={2}
-          placeholder="Nota (opcional): cómo le fue, observaciones…"
+          value={text}
+          onChange={e => setText(e.target.value)}
+          rows={3}
+          placeholder="¿Qué hicieron hoy? Ejercicios, observaciones, cómo le fue…"
           className="w-full bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:border-accent resize-y mb-3"
         />
 
@@ -300,7 +241,7 @@ export default function BitacoraClient({
                   ))}
                 </div>
               )}
-              {e.note && <p className="text-[13px] text-text-secondary">{e.note}</p>}
+              {e.note && <p className="text-[13px] text-text-secondary whitespace-pre-wrap">{e.note}</p>}
             </div>
           ))}
         </div>

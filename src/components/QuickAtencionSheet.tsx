@@ -35,6 +35,7 @@ interface SessionExerciseLite { exercise_name?: string; sets?: string; reps?: st
 interface SessionBlockLite { name?: string; exercises?: SessionExerciseLite[] }
 interface KineSessionData { blocks?: SessionBlockLite[] }
 interface ScheduledSessionLite { id: string; scheduled_date: string; session_name: string | null; session_data: KineSessionData | null; completed?: boolean }
+interface BitacoraEntryLite { id: string; activity_date: string; note: string | null }
 
 function dLabel(d: string): string {
   try { return new Date(d + 'T12:00:00').toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' }) } catch { return d }
@@ -59,6 +60,9 @@ export default function QuickAtencionSheet({ patientId, patientName, onClose, on
   const [loadingSession, setLoadingSession] = useState(true)
   const [bringing, setBringing] = useState(false)
   const [bringError, setBringError] = useState<string | null>(null)
+  // Bitácora (seguimiento simple): reemplaza la sesión del plan cuando el
+  // paciente está en plan_mode='simple' (sin exercise_plans/scheduled_sessions).
+  const [bitacora, setBitacora] = useState<BitacoraEntryLite[] | null>(null)
 
   // Edición inline de la sesión.
   const [editing, setEditing] = useState(false)
@@ -78,11 +82,31 @@ export default function QuickAtencionSheet({ patientId, patientName, onClose, on
   }, [patientId])
 
   // Cargar plan + sesión de hoy (o próxima/última como pending), igual que la ficha.
+  // En plan_mode='simple' no hay plan/sesiones: se muestra la bitácora, solo lectura.
   useEffect(() => {
     let cancelled = false
     const load = async () => {
       const supabase = createClient()
       const today = todayAR()
+
+      const { data: patient } = await supabase
+        .from('patients').select('plan_mode').eq('id', patientId).single()
+      if (cancelled) return
+
+      if (patient?.plan_mode === 'simple') {
+        const { data: recent } = await supabase
+          .from('simple_activity_log')
+          .select('id, activity_date, note')
+          .eq('patient_id', patientId)
+          .order('activity_date', { ascending: false })
+          .order('created_at', { ascending: false })
+          .limit(3)
+        if (cancelled) return
+        setBitacora(recent ?? [])
+        setLoadingSession(false)
+        return
+      }
+
       const { data: plan } = await supabase
         .from('exercise_plans')
         .select('id, name')
@@ -290,6 +314,30 @@ export default function QuickAtencionSheet({ patientId, patientName, onClose, on
             <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1.5">Sesión de hoy</label>
             {loadingSession ? (
               <p className="text-[12.5px] text-text-secondary">Cargando entrenamiento…</p>
+            ) : bitacora ? (
+              <div className="border-[0.5px] border-border rounded-lg overflow-hidden">
+                <div className="flex items-center gap-2 px-3 py-2 bg-bg-primary border-b-[0.5px] border-border">
+                  <span className="text-[12.5px] font-medium">Bitácora</span>
+                  <span className="text-[10.5px] text-text-secondary border-[0.5px] border-border rounded-full px-2 py-0.5">solo lectura acá</span>
+                  <a href={`/dashboard/pacientes/${patientId}/bitacora`} className="ml-auto text-[12px] text-accent no-underline hover:underline shrink-0">Abrir →</a>
+                </div>
+                {bitacora.length === 0 ? (
+                  <p className="text-[12.5px] text-text-secondary p-3">Todavía no hay registros en la bitácora.</p>
+                ) : (
+                  bitacora.map((entry, i) => (
+                    <div key={entry.id} className={`px-3 py-2.5 ${i > 0 ? 'border-t-[0.5px] border-border' : ''}`}>
+                      <div className="text-[11px] text-text-secondary capitalize mb-0.5">
+                        {entry.activity_date === todayAR() ? 'Hoy' : dLabel(entry.activity_date)}
+                      </div>
+                      {entry.note ? (
+                        <p className="text-[12.5px] text-text-primary whitespace-pre-wrap">{entry.note}</p>
+                      ) : (
+                        <p className="text-[12.5px] text-text-secondary">(sin notas)</p>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
             ) : session ? (
               <div className={`border-[0.5px] border-border rounded-lg overflow-hidden transition-opacity ${manage ? 'opacity-60' : ''}`}>
                 <div className="flex items-center gap-2 px-3 py-2 bg-bg-primary border-b-[0.5px] border-border">

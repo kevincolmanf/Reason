@@ -69,64 +69,88 @@ export default async function PacientePage({ params, searchParams }: { params: {
   // kine (los alumnos/entrenamiento no tienen ni usan esta tabla).
   let initialAttentions: unknown[] = []
   let kineSession: unknown = null
+  let kineBitacora: unknown = null
   if (patient.kine_mode) {
-    // La bitácora y el plan más reciente son independientes entre sí (ambos solo
-    // dependen de params.id) → en paralelo. La cadena de sesiones que sigue sí es
-    // condicional (hoy → próxima → última) y queda secuencial.
     const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' })
-    const [{ data: att }, { data: kinePlan }] = await Promise.all([
-      supabase
-        .from('kine_attentions')
-        .select('id, attended_on, professional_name, symptom, manage_symptoms, modalities, auto_summary, note, created_at')
-        .eq('patient_id', params.id)
-        .order('created_at', { ascending: false })
-        .limit(20),
-      supabase
-        .from('exercise_plans')
-        .select('id, name')
-        .eq('patient_id', params.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-    ])
-    initialAttentions = att ?? []
 
-    // Sesión del plan para hoy (precargada del calendario). Si no hay sesión hoy,
-    // se busca la próxima (para "traer a hoy") o la última como plantilla.
-    if (kinePlan) {
-      const { data: todaySession } = await supabase
-        .from('scheduled_sessions')
-        .select('id, scheduled_date, session_name, session_data, completed')
-        .eq('plan_id', kinePlan.id)
-        .eq('scheduled_date', todayStr)
-        .order('created_at', { ascending: true })
-        .limit(1)
-        .maybeSingle()
+    if (patient.plan_mode === 'simple') {
+      // En seguimiento simple no hay exercise_plans/scheduled_sessions: la
+      // "sesión de hoy" se lee de la bitácora (simple_activity_log), solo lectura.
+      const [{ data: att }, { data: recent }] = await Promise.all([
+        supabase
+          .from('kine_attentions')
+          .select('id, attended_on, professional_name, symptom, manage_symptoms, modalities, auto_summary, note, created_at')
+          .eq('patient_id', params.id)
+          .order('created_at', { ascending: false })
+          .limit(20),
+        supabase
+          .from('simple_activity_log')
+          .select('id, activity_date, note')
+          .eq('patient_id', params.id)
+          .order('activity_date', { ascending: false })
+          .order('created_at', { ascending: false })
+          .limit(3),
+      ])
+      initialAttentions = att ?? []
+      kineBitacora = { today: todayStr, recent: recent ?? [] }
+    } else {
+      // La bitácora y el plan más reciente son independientes entre sí (ambos solo
+      // dependen de params.id) → en paralelo. La cadena de sesiones que sigue sí es
+      // condicional (hoy → próxima → última) y queda secuencial.
+      const [{ data: att }, { data: kinePlan }] = await Promise.all([
+        supabase
+          .from('kine_attentions')
+          .select('id, attended_on, professional_name, symptom, manage_symptoms, modalities, auto_summary, note, created_at')
+          .eq('patient_id', params.id)
+          .order('created_at', { ascending: false })
+          .limit(20),
+        supabase
+          .from('exercise_plans')
+          .select('id, name')
+          .eq('patient_id', params.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ])
+      initialAttentions = att ?? []
 
-      let pending: { date: string; kind: 'upcoming' | 'last' } | null = null
-      if (!todaySession) {
-        const { data: upcoming } = await supabase
+      // Sesión del plan para hoy (precargada del calendario). Si no hay sesión hoy,
+      // se busca la próxima (para "traer a hoy") o la última como plantilla.
+      if (kinePlan) {
+        const { data: todaySession } = await supabase
           .from('scheduled_sessions')
-          .select('scheduled_date')
+          .select('id, scheduled_date, session_name, session_data, completed')
           .eq('plan_id', kinePlan.id)
-          .gt('scheduled_date', todayStr)
-          .order('scheduled_date', { ascending: true })
+          .eq('scheduled_date', todayStr)
+          .order('created_at', { ascending: true })
           .limit(1)
           .maybeSingle()
-        if (upcoming) pending = { date: upcoming.scheduled_date, kind: 'upcoming' }
-        else {
-          const { data: last } = await supabase
+
+        let pending: { date: string; kind: 'upcoming' | 'last' } | null = null
+        if (!todaySession) {
+          const { data: upcoming } = await supabase
             .from('scheduled_sessions')
             .select('scheduled_date')
             .eq('plan_id', kinePlan.id)
-            .lt('scheduled_date', todayStr)
-            .order('scheduled_date', { ascending: false })
+            .gt('scheduled_date', todayStr)
+            .order('scheduled_date', { ascending: true })
             .limit(1)
             .maybeSingle()
-          if (last) pending = { date: last.scheduled_date, kind: 'last' }
+          if (upcoming) pending = { date: upcoming.scheduled_date, kind: 'upcoming' }
+          else {
+            const { data: last } = await supabase
+              .from('scheduled_sessions')
+              .select('scheduled_date')
+              .eq('plan_id', kinePlan.id)
+              .lt('scheduled_date', todayStr)
+              .order('scheduled_date', { ascending: false })
+              .limit(1)
+              .maybeSingle()
+            if (last) pending = { date: last.scheduled_date, kind: 'last' }
+          }
         }
+        kineSession = { planId: kinePlan.id, today: todayStr, todaySession: todaySession ?? null, pending }
       }
-      kineSession = { planId: kinePlan.id, today: todayStr, todaySession: todaySession ?? null, pending }
     }
   }
 
@@ -165,7 +189,7 @@ export default async function PacientePage({ params, searchParams }: { params: {
           })()}
         </div>
 
-        <PacienteDetail patient={patient} userId={user.id} initialEvents={events ?? []} treatmentStart={firstPlan?.created_at ?? null} professionals={professionals} hasFicha={hasFicha} patientHasTurnos={patientHasTurnos} initialAttentions={initialAttentions as never} kineSession={kineSession as never} />
+        <PacienteDetail patient={patient} userId={user.id} initialEvents={events ?? []} treatmentStart={firstPlan?.created_at ?? null} professionals={professionals} hasFicha={hasFicha} patientHasTurnos={patientHasTurnos} initialAttentions={initialAttentions as never} kineSession={kineSession as never} kineBitacora={kineBitacora as never} />
       </main>
     </div>
   )

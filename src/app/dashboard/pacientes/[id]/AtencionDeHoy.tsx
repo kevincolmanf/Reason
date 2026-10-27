@@ -36,6 +36,12 @@ export interface KineSession {
   pending: { date: string; kind: 'upcoming' | 'last' } | null
 }
 
+interface BitacoraEntryLite { id: string; activity_date: string; note: string | null }
+export interface KineBitacora {
+  today: string
+  recent: BitacoraEntryLite[]
+}
+
 type Symptom = 'mejor' | 'igual' | 'peor'
 
 const SYM_META: Record<Symptom, { label: string; sub: string; color: string; soft: string }> = {
@@ -71,7 +77,7 @@ function symTagStyle(sym: string | null) {
   return m ? { color: m.color, background: m.soft } : { color: 'var(--text-secondary)', background: 'transparent' }
 }
 
-export default function AtencionDeHoy({ patientId, initialAttentions = [], kineSession = null }: { patientId: string; initialAttentions?: Attention[]; kineSession?: KineSession | null }) {
+export default function AtencionDeHoy({ patientId, initialAttentions = [], kineSession = null, kineBitacora = null }: { patientId: string; initialAttentions?: Attention[]; kineSession?: KineSession | null; kineBitacora?: KineBitacora | null }) {
   const [attentions, setAttentions] = useState<Attention[]>(initialAttentions)
   const [symptom, setSymptom] = useState<Symptom | null>(null)
   const [manage, setManage] = useState(false)
@@ -340,7 +346,31 @@ export default function AtencionDeHoy({ patientId, initialAttentions = [], kineS
       {/* SESIÓN DE HOY (precargada del plan) */}
       <div className="mb-4">
         <div className="text-[11px] uppercase tracking-[0.08em] text-text-secondary mb-2">Sesión de hoy</div>
-        {session ? (
+        {kineBitacora ? (
+          <div className="border-[0.5px] border-border rounded-lg overflow-hidden">
+            <div className="flex items-center gap-2 px-3 py-2 bg-bg-primary border-b-[0.5px] border-border">
+              <span className="text-[12.5px] font-medium">Bitácora (seguimiento simple)</span>
+              <span className="text-[10.5px] text-text-secondary border-[0.5px] border-border rounded-full px-2 py-0.5">solo lectura acá</span>
+              <a href={`/dashboard/pacientes/${patientId}/bitacora`} className="ml-auto text-[12px] text-accent no-underline hover:underline">Abrir bitácora →</a>
+            </div>
+            {kineBitacora.recent.length === 0 ? (
+              <p className="text-[12.5px] text-text-secondary p-3">Todavía no hay registros en la bitácora.</p>
+            ) : (
+              kineBitacora.recent.map((entry, i) => (
+                <div key={entry.id} className={`px-3 py-2.5 ${i > 0 ? 'border-t-[0.5px] border-border' : ''}`}>
+                  <div className="text-[11px] text-text-secondary capitalize mb-0.5">
+                    {entry.activity_date === kineBitacora.today ? 'Hoy' : dateLabel(entry.activity_date)}
+                  </div>
+                  {entry.note ? (
+                    <p className="text-[12.5px] text-text-primary whitespace-pre-wrap">{entry.note}</p>
+                  ) : (
+                    <p className="text-[12.5px] text-text-secondary">(sin notas)</p>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        ) : session ? (
           <div className={`border-[0.5px] border-border rounded-lg overflow-hidden transition-opacity ${manage ? 'opacity-60' : ''}`}>
             <div className="flex items-center gap-2 px-3 py-2 bg-bg-primary border-b-[0.5px] border-border">
               <span className="text-[12.5px] font-medium">{session.session_name || 'Sesión'}</span>
