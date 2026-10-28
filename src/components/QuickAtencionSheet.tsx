@@ -81,6 +81,7 @@ export default function QuickAtencionSheet({ patientId, patientName, userId, onC
   const [bringingBitacora, setBringingBitacora] = useState(false)
   const todayBitacora = bitacoraEntries.find(e => e.activity_date === today) ?? null
   const priorBitacora = bitacoraEntries.find(e => e.activity_date !== today) ?? null
+  const bitacoraHistory = bitacoraEntries.filter(e => e.activity_date !== today).slice(0, 3)
 
   useEffect(() => {
     const supabase = createClient()
@@ -458,6 +459,18 @@ export default function QuickAtencionSheet({ patientId, patientName, userId, onC
                   <a href={`/dashboard/pacientes/${patientId}/bitacora`} className="text-[12px] text-accent no-underline hover:underline shrink-0">Ver bitácora →</a>
                 </div>
                 {bitacoraErr && <div className="text-[12px] text-warning px-3 pb-2">{bitacoraErr}</div>}
+                {bitacoraHistory.length > 0 && (
+                  <div className="border-t-[0.5px] border-border">
+                    <div className="text-[10.5px] uppercase tracking-[0.05em] text-text-secondary px-3 pt-2">Bitácora reciente</div>
+                    {bitacoraHistory.map(e => (
+                      <div key={e.id} className="px-3 py-1.5 text-[12px] text-text-secondary">
+                        <span className="capitalize text-text-tertiary">{dLabel(e.activity_date)}</span>
+                        {e.exercises.length > 0 && <span> · {e.exercises.map(x => x.name).join(', ')}</span>}
+                        {e.note && <div className="italic">“{e.note}”</div>}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
             {bringError && <p className="text-[12px] text-warning mt-1.5">{bringError}</p>}
