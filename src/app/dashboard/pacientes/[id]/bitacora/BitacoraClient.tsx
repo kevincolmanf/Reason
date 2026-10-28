@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
@@ -51,42 +51,28 @@ export default function BitacoraClient({
 
   const authorName = (id: string | null) => (id ? (authorNames[id] ?? '—') : '—')
 
-  // Buscador de ejercicios (biblioteca + propios), para sumar por nombre
+  // Carga libre de ejercicios por nombre (sin autocompletar de biblioteca)
   const [q, setQ] = useState('')
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [results, setResults] = useState<any[]>([])
   const [gradSaving, setGradSaving] = useState(false)
-
-  useEffect(() => {
-    if (!q.trim()) { setResults([]); return }
-    const t = setTimeout(async () => {
-      const res = await fetch(`/api/exercises?q=${encodeURIComponent(q)}`)
-      const curated = res.ok ? await res.json() : []
-      const { data: mine } = await supabaseRef.current
-        .from('user_exercises').select('id, name').eq('user_id', userId).ilike('name', `%${q}%`).limit(20)
-      setResults([...(mine ?? []), ...curated].slice(0, 8))
-    }, 300)
-    return () => clearTimeout(t)
-  }, [q, userId])
 
   const addChip = (ex: ExerciseRef) => {
     if (!ex.name.trim()) return
     if (chips.some(c => c.name.toLowerCase() === ex.name.toLowerCase())) return
-    setChips(prev => [...prev, { id: ex.id, name: ex.name.trim() }])
-    setQ(''); setResults([])
+    setChips(prev => [...prev, { name: ex.name.trim() }])
+    setQ('')
   }
   const removeChip = (name: string) => setChips(prev => prev.filter(c => c.name !== name))
 
   const canSave = chips.length > 0 || note.trim().length > 0
 
-  const resetForm = () => { setChips([]); setNote(''); setDate(todayStr()); setEditingId(null); setQ(''); setResults([]) }
+  const resetForm = () => { setChips([]); setNote(''); setDate(todayStr()); setEditingId(null); setQ('') }
 
   const startEdit = (e: Entry) => {
     setEditingId(e.id)
     setDate(e.activity_date)
     setChips(e.exercises ?? [])
     setNote(e.note ?? '')
-    setQ(''); setResults([])
+    setQ('')
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -232,25 +218,15 @@ export default function BitacoraClient({
           </div>
         )}
 
-        {/* Buscador / agregar ejercicio */}
-        <div className="relative mb-3">
+        {/* Agregar ejercicio (texto libre) */}
+        <div className="mb-3">
           <input
             value={q}
             onChange={e => setQ(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && q.trim()) { e.preventDefault(); addChip({ name: q }) } }}
-            placeholder="Agregar ejercicio (buscá en tu biblioteca o escribí el nombre y Enter)…"
+            placeholder="Agregar ejercicio (escribí el nombre y Enter)…"
             className="w-full bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:border-accent"
           />
-          {results.length > 0 && (
-            <div className="absolute z-10 left-0 right-0 mt-1 bg-bg-primary border-[0.5px] border-border rounded-lg shadow-lg max-h-[220px] overflow-y-auto">
-              {results.map((r, i) => (
-                <button key={r.id ?? i} onClick={() => addChip({ id: r.id, name: r.name })}
-                  className="w-full text-left px-3 py-2 text-[13px] hover:bg-bg-secondary transition-colors">
-                  {r.name}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
 
         <textarea
