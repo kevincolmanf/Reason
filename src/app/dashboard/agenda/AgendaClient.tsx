@@ -1361,6 +1361,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
         <QuickAtencionSheet
           patientId={atencionSheet.patientId}
           patientName={atencionSheet.patientName}
+          userId={userId}
           onClose={() => setAtencionSheet(null)}
         />
       )}

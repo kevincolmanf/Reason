@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { createClient } from '@/utils/supabase/client'
 
 // Capa "Atención de hoy" del Modo Kinesiología. Se muestra solo en pacientes con
 // kine_mode = true. Resuelve el ajuste del día en 1–2 toques: check de síntoma →
@@ -71,7 +72,15 @@ function symTagStyle(sym: string | null) {
   return m ? { color: m.color, background: m.soft } : { color: 'var(--text-secondary)', background: 'transparent' }
 }
 
-export default function AtencionDeHoy({ patientId, initialAttentions = [], kineSession = null }: { patientId: string; initialAttentions?: Attention[]; kineSession?: KineSession | null }) {
+function todayAR(): string {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' })
+}
+
+// Bitácora (seguimiento simple) — solo se usa cuando el paciente no tiene plan detallado.
+interface ExerciseRef { name: string }
+interface BitacoraEntryLite { id: string; activity_date: string; exercises: ExerciseRef[]; note: string | null }
+
+export default function AtencionDeHoy({ patientId, userId, initialAttentions = [], kineSession = null }: { patientId: string; userId: string; initialAttentions?: Attention[]; kineSession?: KineSession | null }) {
   const [attentions, setAttentions] = useState<Attention[]>(initialAttentions)
   const [symptom, setSymptom] = useState<Symptom | null>(null)
   const [manage, setManage] = useState(false)
@@ -110,6 +119,84 @@ export default function AtencionDeHoy({ patientId, initialAttentions = [], kineS
   const [savingSession, setSavingSession] = useState(false)
   const [sessionErr, setSessionErr] = useState<string | null>(null)
   const [sessionEdited, setSessionEdited] = useState(false)
+
+  // Bitácora de hoy (seguimiento simple) — solo si el paciente no tiene plan detallado.
+  const today = todayAR()
+  const [bitacoraEntries, setBitacoraEntries] = useState<BitacoraEntryLite[]>([])
+  const [bq, setBq] = useState('')
+  const [savingBitacora, setSavingBitacora] = useState(false)
+  const [bitacoraErr, setBitacoraErr] = useState<string | null>(null)
+  const [bringingBitacora, setBringingBitacora] = useState(false)
+  const todayBitacora = bitacoraEntries.find(e => e.activity_date === today) ?? null
+  const priorBitacora = bitacoraEntries.find(e => e.activity_date !== today) ?? null
+
+  useEffect(() => {
+    if (planId) return
+    let cancelled = false
+    const supabase = createClient()
+    supabase.from('simple_activity_log')
+      .select('id, activity_date, exercises, note')
+      .eq('patient_id', patientId)
+      .order('activity_date', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(5)
+      .then(({ data }) => { if (!cancelled) setBitacoraEntries((data ?? []) as BitacoraEntryLite[]) })
+    return () => { cancelled = true }
+  }, [patientId, planId])
+
+  const addBitacoraExercise = async () => {
+    const name = bq.trim()
+    if (!name) return
+    if (todayBitacora?.exercises.some(x => x.name.toLowerCase() === name.toLowerCase())) { setBq(''); return }
+    setSavingBitacora(true); setBitacoraErr(null)
+    try {
+      const supabase = createClient()
+      if (todayBitacora) {
+        const nextExercises = [...todayBitacora.exercises, { name }]
+        const { error } = await supabase.from('simple_activity_log').update({ exercises: nextExercises }).eq('id', todayBitacora.id)
+        if (error) throw error
+        setBitacoraEntries(prev => prev.map(e => e.id === todayBitacora.id ? { ...e, exercises: nextExercises } : e))
+      } else {
+        const { data, error } = await supabase.from('simple_activity_log')
+          .insert({ patient_id: patientId, user_id: userId, activity_date: today, exercises: [{ name }] })
+          .select('id, activity_date, exercises, note')
+          .single()
+        if (error || !data) throw error ?? new Error()
+        setBitacoraEntries(prev => [data as BitacoraEntryLite, ...prev])
+      }
+      setBq('')
+    } catch {
+      setBitacoraErr('No se pudo agregar el ejercicio')
+    } finally {
+      setSavingBitacora(false)
+    }
+  }
+
+  const removeBitacoraExercise = async (name: string) => {
+    if (!todayBitacora) return
+    const nextExercises = todayBitacora.exercises.filter(x => x.name !== name)
+    setBitacoraEntries(prev => prev.map(e => e.id === todayBitacora.id ? { ...e, exercises: nextExercises } : e))
+    const supabase = createClient()
+    await supabase.from('simple_activity_log').update({ exercises: nextExercises }).eq('id', todayBitacora.id)
+  }
+
+  const bringBitacoraToToday = async () => {
+    if (!priorBitacora) return
+    setBringingBitacora(true); setBitacoraErr(null)
+    try {
+      const supabase = createClient()
+      const { data, error } = await supabase.from('simple_activity_log')
+        .insert({ patient_id: patientId, user_id: userId, activity_date: today, exercises: priorBitacora.exercises })
+        .select('id, activity_date, exercises, note')
+        .single()
+      if (error || !data) throw error ?? new Error()
+      setBitacoraEntries(prev => [data as BitacoraEntryLite, ...prev])
+    } catch {
+      setBitacoraErr('No se pudo traer la bitácora a hoy')
+    } finally {
+      setBringingBitacora(false)
+    }
+  }
 
   const startEdit = () => {
     setDraft(JSON.parse(JSON.stringify(session?.session_data?.blocks ?? [])))
@@ -402,7 +489,35 @@ export default function AtencionDeHoy({ patientId, initialAttentions = [], kineS
         ) : planId ? (
           <p className="text-[12.5px] text-text-secondary">Este plan todavía no tiene sesiones. <a href={`/dashboard/ejercicios/plan/${planId}`} className="text-accent no-underline hover:underline">Abrí el plan</a> para armar la primera.</p>
         ) : (
-          <p className="text-[12.5px] text-text-secondary">El paciente todavía no tiene un plan de ejercicios.</p>
+          <div className="border-[0.5px] border-border rounded-lg overflow-hidden">
+            {todayBitacora && todayBitacora.exercises.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 px-3 py-2.5 border-b-[0.5px] border-border">
+                {todayBitacora.exercises.map(ex => (
+                  <span key={ex.name} className="inline-flex items-center rounded-full border-[0.5px] border-accent/35 bg-accent/10 overflow-hidden">
+                    <span className="text-[12px] pl-2.5 pr-1.5 py-1 text-accent">{ex.name}</span>
+                    <button onClick={() => removeBitacoraExercise(ex.name)} className="text-[12px] leading-none px-1.5 py-1 text-accent/60 hover:text-warning transition-colors">×</button>
+                  </span>
+                ))}
+              </div>
+            )}
+            {!todayBitacora && priorBitacora && (
+              <div className="flex items-center gap-3 px-3 py-2.5 border-b-[0.5px] border-border" style={{ background: 'rgba(45,216,168,0.08)' }}>
+                <span className="text-[12.5px] text-text-primary">Sin bitácora hoy. Traer la de <span className="capitalize">{dateLabel(priorBitacora.activity_date)}</span>?</span>
+                <button onClick={bringBitacoraToToday} disabled={bringingBitacora} className="ml-auto shrink-0 bg-accent text-bg-primary px-3 py-1.5 rounded-lg text-[12px] font-medium hover:opacity-90 disabled:opacity-50">
+                  {bringingBitacora ? 'Trayendo…' : 'Traer a hoy'}
+                </button>
+              </div>
+            )}
+            <div className="flex items-center gap-2 px-3 py-2 bg-bg-primary">
+              <input value={bq} onChange={e => setBq(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && bq.trim()) { e.preventDefault(); addBitacoraExercise() } }}
+                disabled={savingBitacora}
+                placeholder="Agregar ejercicio a la bitácora de hoy (Enter)…"
+                className="flex-1 min-w-0 bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-1.5 text-[12.5px] text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-accent" />
+              <a href={`/dashboard/pacientes/${patientId}/bitacora`} className="text-[12px] text-accent no-underline hover:underline shrink-0">Ver bitácora →</a>
+            </div>
+            {bitacoraErr && <div className="text-[12px] text-warning px-3 pb-2">{bitacoraErr}</div>}
+          </div>
         )}
         {bringError && <p className="text-[12px] text-warning mt-1.5">{bringError}</p>}
       </div>

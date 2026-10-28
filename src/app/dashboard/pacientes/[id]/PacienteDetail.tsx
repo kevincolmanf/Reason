@@ -469,7 +469,7 @@ export default function PacienteDetail({ patient: initialPatient, userId, initia
 
       {/* ATENCIÓN DE HOY — solo en pacientes en modo kinesiología. */}
       {patient.kine_mode && (
-        <AtencionDeHoy patientId={patient.id} initialAttentions={initialAttentions} kineSession={kineSession} />
+        <AtencionDeHoy patientId={patient.id} userId={userId} initialAttentions={initialAttentions} kineSession={kineSession} />
       )}
 
       {sessionSheet && (
