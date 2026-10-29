@@ -99,16 +99,19 @@ export default function QuickAtencionSheet({ patientId, patientName, userId, onC
     const load = async () => {
       const supabase = createClient()
       const today = todayAR()
-      const { data: plan } = await supabase
-        .from('exercise_plans')
-        .select('id, name')
-        .eq('patient_id', patientId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
+
+      // El modo del paciente (plan_mode) es explícito y manda: si está en modo
+      // simple, la bitácora es la fuente de verdad acá, incluso si quedó un plan
+      // detallado viejo de antes de cambiar de modo. Igual que en la ficha.
+      const { data: patientRow } = await supabase
+        .from('patients')
+        .select('plan_mode')
+        .eq('id', patientId)
+        .single()
       if (cancelled) return
-      if (!plan) {
-        // Sin plan detallado: el paciente lleva bitácora (seguimiento simple).
+      const simpleMode = (patientRow?.plan_mode ?? 'detallado') === 'simple'
+
+      const loadBitacora = async () => {
         const { data: entries } = await supabase
           .from('simple_activity_log')
           .select('id, activity_date, exercises, note')
@@ -119,6 +122,24 @@ export default function QuickAtencionSheet({ patientId, patientName, userId, onC
         if (cancelled) return
         setBitacoraEntries((entries ?? []) as BitacoraEntryLite[])
         setLoadingSession(false)
+      }
+
+      if (simpleMode) {
+        await loadBitacora()
+        return
+      }
+
+      const { data: plan } = await supabase
+        .from('exercise_plans')
+        .select('id, name')
+        .eq('patient_id', patientId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (cancelled) return
+      if (!plan) {
+        // Sin plan detallado todavía: dejá anotar en la bitácora mientras tanto.
+        await loadBitacora()
         return
       }
       setPlanId(plan.id)

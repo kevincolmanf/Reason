@@ -80,7 +80,7 @@ function todayAR(): string {
 interface ExerciseRef { name: string }
 interface BitacoraEntryLite { id: string; activity_date: string; exercises: ExerciseRef[]; note: string | null }
 
-export default function AtencionDeHoy({ patientId, userId, initialAttentions = [], kineSession = null }: { patientId: string; userId: string; initialAttentions?: Attention[]; kineSession?: KineSession | null }) {
+export default function AtencionDeHoy({ patientId, userId, initialAttentions = [], kineSession = null, planMode = 'detallado' }: { patientId: string; userId: string; initialAttentions?: Attention[]; kineSession?: KineSession | null; planMode?: string | null }) {
   const [attentions, setAttentions] = useState<Attention[]>(initialAttentions)
   const [symptom, setSymptom] = useState<Symptom | null>(null)
   const [manage, setManage] = useState(false)
@@ -112,6 +112,14 @@ export default function AtencionDeHoy({ patientId, userId, initialAttentions = [
   const [bringing, setBringing] = useState(false)
   const [bringError, setBringError] = useState<string | null>(null)
   const planId = kineSession?.planId ?? null
+  // Modo simple (bitácora) es explícito en el paciente (plan_mode) y puede
+  // activarse incluso si ya existe un plan detallado viejo: en ese caso la
+  // bitácora manda y la sesión del plan se ignora acá, igual que en el resto
+  // de la ficha (cards, "primeros pasos", /bitacora).
+  const simpleMode = (planMode ?? 'detallado') === 'simple'
+  const effSession = simpleMode ? null : session
+  const effPending = simpleMode ? null : pending
+  const effPlanId = simpleMode ? null : planId
 
   // Edición inline de la sesión (Fase 2c)
   const [editing, setEditing] = useState(false)
@@ -132,7 +140,7 @@ export default function AtencionDeHoy({ patientId, userId, initialAttentions = [
   const bitacoraHistory = bitacoraEntries.filter(e => e.activity_date !== today).slice(0, 3)
 
   useEffect(() => {
-    if (planId) return
+    if (effPlanId) return
     let cancelled = false
     const supabase = createClient()
     supabase.from('simple_activity_log')
@@ -143,7 +151,7 @@ export default function AtencionDeHoy({ patientId, userId, initialAttentions = [
       .limit(5)
       .then(({ data }) => { if (!cancelled) setBitacoraEntries((data ?? []) as BitacoraEntryLite[]) })
     return () => { cancelled = true }
-  }, [patientId, planId])
+  }, [patientId, effPlanId])
 
   const addBitacoraExercise = async () => {
     const name = bq.trim()
@@ -324,7 +332,7 @@ export default function AtencionDeHoy({ patientId, userId, initialAttentions = [
               <p className="text-[12px] text-text-secondary mt-0.5">Buen momento para reevaluar o tomar un cuestionario auto-reportado y medir dónde está parado.</p>
               <div className="flex items-center gap-3 mt-2 flex-wrap">
                 <a href={`/recursos/cuestionarios?paciente=${patientId}&from=/dashboard/pacientes/${patientId}`} className="text-[12px] font-medium text-accent no-underline hover:underline">Tomar cuestionario →</a>
-                {planId && <a href={`/dashboard/ejercicios/plan/${planId}`} className="text-[12px] text-text-secondary no-underline hover:text-text-primary">Programar reevaluación en el plan →</a>}
+                {effPlanId && <a href={`/dashboard/ejercicios/plan/${effPlanId}`} className="text-[12px] text-text-secondary no-underline hover:text-text-primary">Programar reevaluación en el plan →</a>}
               </div>
             </div>
           </div>
@@ -428,16 +436,16 @@ export default function AtencionDeHoy({ patientId, userId, initialAttentions = [
       {/* SESIÓN DE HOY (precargada del plan) */}
       <div className="mb-4">
         <div className="text-[11px] uppercase tracking-[0.08em] text-text-secondary mb-2">Sesión de hoy</div>
-        {session ? (
+        {effSession ? (
           <div className={`border-[0.5px] border-border rounded-lg overflow-hidden transition-opacity ${manage ? 'opacity-60' : ''}`}>
             <div className="flex items-center gap-2 px-3 py-2 bg-bg-primary border-b-[0.5px] border-border">
-              <span className="text-[12.5px] font-medium">{session.session_name || 'Sesión'}</span>
+              <span className="text-[12.5px] font-medium">{effSession.session_name || 'Sesión'}</span>
               {sessionEdited && !editing && <span className="text-[10.5px] text-accent border-[0.5px] border-accent/30 bg-accent/10 rounded-full px-2 py-0.5">ajustada hoy</span>}
               {!sessionEdited && <span className="text-[10.5px] text-text-secondary border-[0.5px] border-border rounded-full px-2 py-0.5">precargada del plan</span>}
               {!editing ? (
                 <div className="ml-auto flex items-center gap-3">
-                  {(session.session_data?.blocks ?? []).length > 0 && <button onClick={startEdit} className="text-[12px] text-text-secondary hover:text-text-primary">Ajustar carga</button>}
-                  {planId && <a href={`/dashboard/ejercicios/plan/${planId}`} className="text-[12px] text-accent no-underline hover:underline">Abrir plan</a>}
+                  {(effSession.session_data?.blocks ?? []).length > 0 && <button onClick={startEdit} className="text-[12px] text-text-secondary hover:text-text-primary">Ajustar carga</button>}
+                  {effPlanId && <a href={`/dashboard/ejercicios/plan/${effPlanId}`} className="text-[12px] text-accent no-underline hover:underline">Abrir plan</a>}
                 </div>
               ) : (
                 <div className="ml-auto flex items-center gap-2">
@@ -446,10 +454,10 @@ export default function AtencionDeHoy({ patientId, userId, initialAttentions = [
                 </div>
               )}
             </div>
-            {(session.session_data?.blocks ?? []).length === 0 ? (
+            {(effSession.session_data?.blocks ?? []).length === 0 ? (
               <p className="text-[12.5px] text-text-secondary p-3">La sesión no tiene ejercicios cargados. Abrí el plan para armarla.</p>
             ) : (
-              (editing ? (draft ?? []) : (session.session_data!.blocks ?? [])).map((b, bi) => (
+              (editing ? (draft ?? []) : (effSession.session_data!.blocks ?? [])).map((b, bi) => (
                 <div key={bi} className={bi > 0 ? 'border-t-[0.5px] border-border' : ''}>
                   {b.name && <div className="text-[11px] text-text-secondary px-3 pt-2">{b.name}</div>}
                   {(b.exercises ?? []).map((ex, ei) => (
@@ -476,19 +484,19 @@ export default function AtencionDeHoy({ patientId, userId, initialAttentions = [
               {editing ? 'Editás series × reps · carga. Se guarda en la sesión del calendario del plan.' : 'Ajustá la carga acá o abrí el plan para cambios más finos (ejercicios, bloques).'}
             </div>
           </div>
-        ) : pending ? (
+        ) : effPending ? (
           <div className="flex items-center gap-3 rounded-lg px-3.5 py-3 border-[0.5px]" style={{ borderColor: 'rgba(45,216,168,0.35)', background: 'rgba(45,216,168,0.08)' }}>
             <div className="text-[12.5px] text-text-primary">
-              {pending.kind === 'upcoming'
-                ? <>La próxima sesión está agendada para <b className="text-accent capitalize">{dateLabel(pending.date)}</b>, pero el paciente vino hoy.</>
-                : <>No hay sesión para hoy. Podés traer la última (<span className="capitalize">{dateLabel(pending.date)}</span>) al día de hoy.</>}
+              {effPending.kind === 'upcoming'
+                ? <>La próxima sesión está agendada para <b className="text-accent capitalize">{dateLabel(effPending.date)}</b>, pero el paciente vino hoy.</>
+                : <>No hay sesión para hoy. Podés traer la última (<span className="capitalize">{dateLabel(effPending.date)}</span>) al día de hoy.</>}
             </div>
             <button onClick={bringToToday} disabled={bringing} className="ml-auto shrink-0 bg-accent text-bg-primary px-3 py-1.5 rounded-lg text-[12px] font-medium hover:opacity-90 disabled:opacity-50">
               {bringing ? 'Trayendo…' : 'Traer a hoy'}
             </button>
           </div>
-        ) : planId ? (
-          <p className="text-[12.5px] text-text-secondary">Este plan todavía no tiene sesiones. <a href={`/dashboard/ejercicios/plan/${planId}`} className="text-accent no-underline hover:underline">Abrí el plan</a> para armar la primera.</p>
+        ) : effPlanId ? (
+          <p className="text-[12.5px] text-text-secondary">Este plan todavía no tiene sesiones. <a href={`/dashboard/ejercicios/plan/${effPlanId}`} className="text-accent no-underline hover:underline">Abrí el plan</a> para armar la primera.</p>
         ) : (
           <div className="border-[0.5px] border-border rounded-lg overflow-hidden">
             {todayBitacora && todayBitacora.exercises.length > 0 && (
