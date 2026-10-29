@@ -424,6 +424,9 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
   const [atencionSheet, setAtencionSheet] = useState<{ patientId: string; patientName: string } | null>(null)
   // Pacientes visibles que están en modo kine (para la "Atención de hoy" rápida).
   const [kinePatientIds, setKinePatientIds] = useState<Set<string>>(new Set())
+  // plan_mode de esos mismos pacientes (detallado | simple), para que la hoja
+  // rápida sepa si mostrar la bitácora sin tener que consultarlo ella misma.
+  const [planModeByPatient, setPlanModeByPatient] = useState<Record<string, string>>({})
   const [cajaSheet, setCajaSheet] = useState<{ patientId: string | null; patientName: string; area: string; turnoId: string } | null>(null)
   // Claves "patient_id|YYYY-MM-DD" con sesión de carga registrada, para marcar en
   // la agenda si ya se cargó la sesión del paciente (recordatorio antes de irse).
@@ -536,12 +539,14 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
     if (patIds.length > 0) {
       const { data: km } = await supabaseRef.current
         .from('patients')
-        .select('id')
+        .select('id, plan_mode')
         .in('id', patIds)
         .eq('kine_mode', true)
       setKinePatientIds(new Set((km ?? []).map(r => r.id as string)))
+      setPlanModeByPatient(Object.fromEntries((km ?? []).map(r => [r.id as string, (r.plan_mode as string | null) ?? 'detallado'])))
     } else {
       setKinePatientIds(new Set())
+      setPlanModeByPatient({})
     }
 
     // Marca de "pago cargado" ($): cobros de caja enlazados a estos turnos (por
@@ -1362,6 +1367,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
           patientId={atencionSheet.patientId}
           patientName={atencionSheet.patientName}
           userId={userId}
+          planMode={planModeByPatient[atencionSheet.patientId] ?? 'detallado'}
           onClose={() => setAtencionSheet(null)}
         />
       )}

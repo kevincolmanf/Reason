@@ -12,6 +12,7 @@ interface Props {
   patientId: string
   patientName: string
   userId: string
+  planMode?: string
   onClose: () => void
   onSaved?: () => void
 }
@@ -47,7 +48,7 @@ function dLabel(d: string): string {
 function upperName(s?: string): string { return (s ?? '').toUpperCase() }
 function todayAR(): string { return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' }) }
 
-export default function QuickAtencionSheet({ patientId, patientName, userId, onClose, onSaved }: Props) {
+export default function QuickAtencionSheet({ patientId, patientName, userId, planMode = 'detallado', onClose, onSaved }: Props) {
   const [recent, setRecent] = useState<RecentAtt[] | null>(null)
   const [symptom, setSymptom] = useState<Symptom | null>(null)
   const [manage, setManage] = useState(false)
@@ -100,16 +101,11 @@ export default function QuickAtencionSheet({ patientId, patientName, userId, onC
       const supabase = createClient()
       const today = todayAR()
 
-      // El modo del paciente (plan_mode) es explícito y manda: si está en modo
-      // simple, la bitácora es la fuente de verdad acá, incluso si quedó un plan
-      // detallado viejo de antes de cambiar de modo. Igual que en la ficha.
-      const { data: patientRow } = await supabase
-        .from('patients')
-        .select('plan_mode')
-        .eq('id', patientId)
-        .single()
-      if (cancelled) return
-      const simpleMode = (patientRow?.plan_mode ?? 'detallado') === 'simple'
+      // El modo del paciente (plan_mode, recibido como prop desde la agenda) es
+      // explícito y manda: si está en modo simple, la bitácora es la fuente de
+      // verdad acá, incluso si quedó un plan detallado viejo de antes de cambiar
+      // de modo. Igual que en la ficha.
+      const simpleMode = planMode === 'simple'
 
       const loadBitacora = async () => {
         const { data: entries } = await supabase
@@ -185,7 +181,7 @@ export default function QuickAtencionSheet({ patientId, patientName, userId, onC
     }
     load()
     return () => { cancelled = true }
-  }, [patientId])
+  }, [patientId, planMode])
 
   const startEdit = () => {
     setDraft(JSON.parse(JSON.stringify(session?.session_data?.blocks ?? [])))
