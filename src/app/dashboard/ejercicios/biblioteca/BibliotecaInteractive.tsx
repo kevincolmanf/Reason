@@ -35,7 +35,7 @@ const CATEGORIES = [
   { value: 'adjuntos', label: 'Adjuntos (Build)' },
 ]
 
-export default function BibliotecaInteractive({ equipments, userId }: { equipments: string[], userId: string }) {
+export default function BibliotecaInteractive({ equipments, userId, orgId }: { equipments: string[], userId: string, orgId: string | null }) {
   const { notify, toast } = useToast()
   const [view, setView] = useState<'biblioteca' | 'mis_ejercicios'>('biblioteca')
 
@@ -106,15 +106,14 @@ export default function BibliotecaInteractive({ equipments, userId }: { equipmen
 
   const fetchUserExercises = useCallback(async () => {
     setUserLoading(true)
-    const { data, error } = await supabaseRef.current
-      .from('user_exercises')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
+    let query = supabaseRef.current.from('user_exercises').select('*')
+    // Compartidos con todo el equipo del centro, no solo los propios.
+    query = orgId ? query.or(`user_id.eq.${userId},org_id.eq.${orgId}`) : query.eq('user_id', userId)
+    const { data, error } = await query.order('created_at', { ascending: false })
     if (!error && data) setUserExercises(data)
     setUserLoading(false)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId])
+  }, [userId, orgId])
 
   useEffect(() => {
     if (view === 'mis_ejercicios') {
@@ -127,6 +126,7 @@ export default function BibliotecaInteractive({ equipments, userId }: { equipmen
     setSaving(true)
     const { error } = await supabaseRef.current.from('user_exercises').insert({
       user_id: userId,
+      org_id: orgId,
       name: newName.trim(),
       youtube_url: newUrl.trim() || null,
     })
@@ -181,13 +181,14 @@ export default function BibliotecaInteractive({ equipments, userId }: { equipmen
     }
     let cancelled = false
     ;(async () => {
-      let q = supabaseRef.current.from('user_exercises').select('*').eq('user_id', userId)
+      let q = supabaseRef.current.from('user_exercises').select('*')
+      q = orgId ? q.or(`user_id.eq.${userId},org_id.eq.${orgId}`) : q.eq('user_id', userId)
       for (const t of search.trim().split(/\s+/)) q = q.ilike('name', `%${t}%`)
       const { data } = await q.order('created_at', { ascending: false })
       if (!cancelled && data) setBibUserMatches(data as UserExercise[])
     })()
     return () => { cancelled = true }
-  }, [view, search, category, equipment, userId])
+  }, [view, search, category, equipment, userId, orgId])
 
   const formatCategory = (cat: string) => {
     return CATEGORIES.find(c => c.value === cat)?.label || cat
