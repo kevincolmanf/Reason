@@ -4,6 +4,7 @@ import PlanEditor from './PlanEditor'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { verifyPlanAccess } from '@/utils/patient-access'
+import { resolveDefaultContext } from '@/lib/context/resolveDefaultContext'
 
 export const metadata = {
   title: 'Editor de Planes / Calendario | Reason',
@@ -53,6 +54,9 @@ export default async function PlanEditorPage({ params }: { params: { id: string 
   const backHref = plan.patient_id ? `/dashboard/pacientes/${plan.patient_id}` : '/dashboard/pacientes'
   const backLabel = patientName ? `← Volver a ${patientName}` : '← Volver a Pacientes'
 
+  // Org estable del profesional, para que "Mis Ejercicios" se comparta con el equipo.
+  const { orgId } = await resolveDefaultContext(user.id, supabase)
+
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
       <Header />
@@ -66,7 +70,7 @@ export default async function PlanEditorPage({ params }: { params: { id: string 
           </div>
         </div>
 
-        <PlanEditor initialPlan={plan} userId={user.id} initialEvents={events} rtsEvals={rtsEvals} dynEvals={dynEvals} qEvals={qEvals} />
+        <PlanEditor initialPlan={plan} userId={user.id} orgId={orgId} initialEvents={events} rtsEvals={rtsEvals} dynEvals={dynEvals} qEvals={qEvals} />
       </main>
     </div>
   )

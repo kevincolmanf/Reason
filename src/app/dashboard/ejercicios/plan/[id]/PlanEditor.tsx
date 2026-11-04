@@ -200,7 +200,7 @@ function schedLabel(s: SchedEval): string {
   return EVAL_META[s.kind].label
 }
 
-export default function PlanEditor({ initialPlan, userId, initialEvents = [], rtsEvals = [], dynEvals = [], qEvals = [] }: { initialPlan: ExercisePlan, userId: string, initialEvents?: PatientEvent[], rtsEvals?: RtsEval[], dynEvals?: DynEval[], qEvals?: QEval[] }) {
+export default function PlanEditor({ initialPlan, userId, orgId, initialEvents = [], rtsEvals = [], dynEvals = [], qEvals = [] }: { initialPlan: ExercisePlan, userId: string, orgId: string | null, initialEvents?: PatientEvent[], rtsEvals?: RtsEval[], dynEvals?: DynEval[], qEvals?: QEval[] }) {
   const router = useRouter()
   const { confirm, confirmDialog } = useConfirm()
   const { notify, toast } = useToast()
@@ -749,7 +749,9 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
       if (!isSearchOpen) return
       setIsSearching(true)
       if (searchCategory === 'mis_ejercicios') {
-        let query = supabaseRef.current.from('user_exercises').select('id, name, youtube_url').eq('user_id', userId).limit(50)
+        let query = supabaseRef.current.from('user_exercises').select('id, name, youtube_url')
+        query = orgId ? query.or(`user_id.eq.${userId},org_id.eq.${orgId}`) : query.eq('user_id', userId)
+        query = query.limit(50)
         if (searchQuery) query = query.ilike('name', `%${searchQuery}%`)
         const { data } = await query
         if (data) setSearchResults(data.map(e => ({ ...e, category: 'mis_ejercicios', equipment: null })))
@@ -763,7 +765,9 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
         // matchean, arriba de los curados. Con una categoría curada específica no,
         // porque los propios no tienen categoría.
         if (searchCategory === '') {
-          let mineQuery = supabaseRef.current.from('user_exercises').select('id, name, youtube_url').eq('user_id', userId).limit(50)
+          let mineQuery = supabaseRef.current.from('user_exercises').select('id, name, youtube_url')
+          mineQuery = orgId ? mineQuery.or(`user_id.eq.${userId},org_id.eq.${orgId}`) : mineQuery.eq('user_id', userId)
+          mineQuery = mineQuery.limit(50)
           if (searchQuery) mineQuery = mineQuery.ilike('name', `%${searchQuery}%`)
           const { data: mineData } = await mineQuery
           const mine = (mineData ?? []).map(e => ({ ...e, category: 'mis_ejercicios', equipment: null }))
@@ -776,7 +780,7 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
     }
     const debounce = setTimeout(searchExercises, 300)
     return () => clearTimeout(debounce)
-  }, [searchQuery, searchCategory, isSearchOpen, userId])
+  }, [searchQuery, searchCategory, isSearchOpen, userId, orgId])
 
   // Cargar logs
   useEffect(() => {
@@ -1142,7 +1146,7 @@ export default function PlanEditor({ initialPlan, userId, initialEvents = [], rt
     setCreating(true)
     const { data, error } = await supabaseRef.current
       .from('user_exercises')
-      .insert({ user_id: userId, name: createName.trim(), youtube_url: createUrl.trim() || null })
+      .insert({ user_id: userId, org_id: orgId, name: createName.trim(), youtube_url: createUrl.trim() || null })
       .select()
       .single()
     if (!error && data) {

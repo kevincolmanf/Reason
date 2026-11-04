@@ -1,6 +1,7 @@
 import Header from '@/components/Header'
 import BibliotecaInteractive from './BibliotecaInteractive'
 import { createClient } from '@/utils/supabase/server'
+import { resolveDefaultContext } from '@/lib/context/resolveDefaultContext'
 import { redirect } from 'next/navigation'
 
 export const metadata = {
@@ -23,6 +24,10 @@ export default async function BibliotecaPage() {
   
   const uniqueEquipment = Array.from(new Set((equipmentData || []).map(e => e.equipment).filter(e => e && e !== 'nan'))).sort()
 
+  // Org estable del profesional (dueño o integrante), independiente del toggle
+  // personal/centro: "Mis Ejercicios" se comparte con el equipo siempre.
+  const { orgId } = await resolveDefaultContext(user.id, supabase)
+
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
       <Header />
@@ -40,7 +45,7 @@ export default async function BibliotecaPage() {
           </div>
         </div>
 
-        <BibliotecaInteractive equipments={uniqueEquipment as string[]} userId={user.id} />
+        <BibliotecaInteractive equipments={uniqueEquipment as string[]} userId={user.id} orgId={orgId} />
       </main>
     </div>
   )
