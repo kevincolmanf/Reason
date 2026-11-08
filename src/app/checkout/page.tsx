@@ -57,7 +57,7 @@ const PLAN_META: Record<PlanType, { name: string; price: string; interval: strin
 export default async function CheckoutPage({
   searchParams,
 }: {
-  searchParams: { plan?: string }
+  searchParams: { plan?: string; promoError?: string }
 }) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -69,6 +69,7 @@ export default async function CheckoutPage({
   const rawPlan = searchParams.plan || 'monthly'
   const plan: PlanType = (rawPlan in PLAN_META) ? rawPlan as PlanType : 'monthly'
   const meta = PLAN_META[plan]
+  const promoError = searchParams.promoError || null
 
   return (
     <div className="min-h-screen bg-bg-secondary flex flex-col">
@@ -103,8 +104,27 @@ export default async function CheckoutPage({
               ))}
             </ul>
 
+            {promoError && (
+              <p className="text-[12px] text-red-400 bg-red-400/10 border-[0.5px] border-red-400/30 rounded-lg px-3 py-2 mb-4">
+                {promoError}
+              </p>
+            )}
+
             <form action={createSubscriptionPreference}>
               <input type="hidden" name="planType" value={plan} />
+              {plan === 'monthly' && (
+                <div className="mb-6">
+                  <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">
+                    ¿Tenés un código de descuento? (opcional)
+                  </label>
+                  <input
+                    type="text"
+                    name="promoCode"
+                    placeholder="Ej: KEVINCOLMAN"
+                    className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent"
+                  />
+                </div>
+              )}
               <button
                 type="submit"
                 className="w-full bg-[#009EE3] text-white py-[14px] rounded-lg text-[15px] font-medium no-underline hover:opacity-90 transition-opacity flex justify-center items-center gap-2 border-none cursor-pointer"

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { runReconcile, type ReconcileResult } from '@/lib/subscription-reconcile'
+import { runPromoRestore, type PromoRestoreResult } from '@/lib/promo-restore'
 import { sendEmail } from '@/lib/notify-email'
 
 // Cron diario de Vercel (ver vercel.json). Verifica cada suscripción en vivo
@@ -22,7 +23,33 @@ function authorized(request: Request): boolean {
   return url.searchParams.get('secret') === secret
 }
 
-function buildEmailHtml(result: ReconcileResult): string {
+function buildPromoHtml(promo: PromoRestoreResult): string {
+  if (promo.changes.length === 0 && promo.errors.length === 0) return ''
+  const rows = promo.changes
+    .map(
+      (c) =>
+        `<tr><td style="padding:4px 8px;border:1px solid #ddd">${c.userId}</td>` +
+        `<td style="padding:4px 8px;border:1px solid #ddd">${c.mpSubscriptionId}</td>` +
+        `<td style="padding:4px 8px;border:1px solid #ddd">$${c.fullAmount}</td></tr>`
+    )
+    .join('')
+  const errorsHtml = promo.errors.length
+    ? `<p style="color:#a00"><b>Revisar manualmente (${promo.errors.length}):</b></p><ul>` +
+      promo.errors.map((e) => `<li>${e.userId ?? ''} (${e.mpSubscriptionId ?? ''}): ${e.message}</li>`).join('') +
+      `</ul>`
+    : ''
+  return `
+    <h2>Reason · Descuento de campaña vencido</h2>
+    <p>Se volvieron a precio completo <b>${promo.changes.length}</b> suscripción(es) con el descuento de campaña cumplido.</p>
+    ${rows ? `<table style="border-collapse:collapse"><thead><tr>
+      <th style="padding:4px 8px;border:1px solid #ddd;text-align:left">Usuario</th>
+      <th style="padding:4px 8px;border:1px solid #ddd;text-align:left">Suscripción MP</th>
+      <th style="padding:4px 8px;border:1px solid #ddd;text-align:left">Precio restaurado</th>
+    </tr></thead><tbody>${rows}</tbody></table>` : ''}
+    ${errorsHtml}`
+}
+
+function buildEmailHtml(result: ReconcileResult, promo: PromoRestoreResult): string {
   const rows = result.changes
     .map(
       (c) =>
@@ -51,6 +78,7 @@ function buildEmailHtml(result: ReconcileResult): string {
         : '<p>Sin cambios de rol.</p>'}
       ${errorsHtml}
       <p style="color:#888;font-size:12px">${result.runAt}${result.dryRun ? ' · (dry-run, sin aplicar)' : ''}</p>
+      ${buildPromoHtml(promo)}
     </div>`
 }
 
@@ -64,20 +92,21 @@ async function handle(request: Request) {
 
   try {
     const result = await runReconcile({ dryRun })
+    const promo = await runPromoRestore({ dryRun })
 
     // Avisar por email solo si hubo cambios o algo para revisar.
     let email: Awaited<ReturnType<typeof sendEmail>> | { sent: false; skipped: string } = {
       sent: false,
       skipped: 'sin cambios',
     }
-    if (result.changes.length > 0 || result.errors.length > 0) {
+    if (result.changes.length > 0 || result.errors.length > 0 || promo.changes.length > 0 || promo.errors.length > 0) {
       email = await sendEmail({
         subject: `Reason · ${result.changes.length} suscripción(es) corregida(s)${result.dryRun ? ' [dry-run]' : ''}`,
-        html: buildEmailHtml(result),
+        html: buildEmailHtml(result, promo),
       })
     }
 
-    return NextResponse.json({ ...result, email })
+    return NextResponse.json({ ...result, promo, email })
   } catch (error) {
     return NextResponse.json({ error: (error as Error).message }, { status: 500 })
   }
