@@ -16,7 +16,7 @@ const PLAN_CONFIG: Record<PlanType, { reason: string; frequency: number; amount:
 
 // Descuento de campaña 50% x 3 meses, solo Suscriptor mensual, altas hasta el
 // 14/11/2026. Ver doc "Primer uso y descuento de lanzamiento" (8/11/2026).
-const PROMO_CODE = 'NICHO50'
+const PROMO_CODE = 'KEVINCOLMAN'
 const PROMO_CUTOFF = new Date('2026-11-15T00:00:00-03:00') // exclusivo: válido hasta el 14/11 inclusive, hora Argentina
 const PROMO_MONTHS = 3
 

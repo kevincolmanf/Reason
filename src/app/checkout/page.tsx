@@ -120,7 +120,7 @@ export default async function CheckoutPage({
                   <input
                     type="text"
                     name="promoCode"
-                    placeholder="Ej: NICHO50"
+                    placeholder="Ej: KEVINCOLMAN"
                     className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent"
                   />
                 </div>
