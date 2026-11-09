@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { runReconcile, type ReconcileResult } from '@/lib/subscription-reconcile'
-import { runPromoRestore, type PromoRestoreResult } from '@/lib/promo-restore'
+import { runPromoRestore, runPromoReminders, type PromoRestoreResult, type PromoReminderResult } from '@/lib/promo-restore'
 import { sendEmail } from '@/lib/notify-email'
 
 // Cron diario de Vercel (ver vercel.json). Verifica cada suscripción en vivo
@@ -49,7 +49,20 @@ function buildPromoHtml(promo: PromoRestoreResult): string {
     ${errorsHtml}`
 }
 
-function buildEmailHtml(result: ReconcileResult, promo: PromoRestoreResult): string {
+function buildPromoReminderHtml(reminders: PromoReminderResult): string {
+  if (reminders.sent === 0 && reminders.errors.length === 0) return ''
+  const errorsHtml = reminders.errors.length
+    ? `<p style="color:#a00"><b>Revisar manualmente (${reminders.errors.length}):</b></p><ul>` +
+      reminders.errors.map((e) => `<li>${e.userId ?? ''}: ${e.message}</li>`).join('') +
+      `</ul>`
+    : ''
+  return `
+    <h2>Reason · Avisos de descuento por vencer</h2>
+    <p>Se avisó por mail a <b>${reminders.sent}</b> suscripción(es) con el descuento de campaña por vencer en los próximos 5 días.</p>
+    ${errorsHtml}`
+}
+
+function buildEmailHtml(result: ReconcileResult, promo: PromoRestoreResult, reminders: PromoReminderResult): string {
   const rows = result.changes
     .map(
       (c) =>
@@ -79,6 +92,7 @@ function buildEmailHtml(result: ReconcileResult, promo: PromoRestoreResult): str
       ${errorsHtml}
       <p style="color:#888;font-size:12px">${result.runAt}${result.dryRun ? ' · (dry-run, sin aplicar)' : ''}</p>
       ${buildPromoHtml(promo)}
+      ${buildPromoReminderHtml(reminders)}
     </div>`
 }
 
@@ -93,20 +107,25 @@ async function handle(request: Request) {
   try {
     const result = await runReconcile({ dryRun })
     const promo = await runPromoRestore({ dryRun })
+    const reminders = await runPromoReminders({ dryRun })
 
     // Avisar por email solo si hubo cambios o algo para revisar.
     let email: Awaited<ReturnType<typeof sendEmail>> | { sent: false; skipped: string } = {
       sent: false,
       skipped: 'sin cambios',
     }
-    if (result.changes.length > 0 || result.errors.length > 0 || promo.changes.length > 0 || promo.errors.length > 0) {
+    if (
+      result.changes.length > 0 || result.errors.length > 0 ||
+      promo.changes.length > 0 || promo.errors.length > 0 ||
+      reminders.sent > 0 || reminders.errors.length > 0
+    ) {
       email = await sendEmail({
         subject: `Reason · ${result.changes.length} suscripción(es) corregida(s)${result.dryRun ? ' [dry-run]' : ''}`,
-        html: buildEmailHtml(result, promo),
+        html: buildEmailHtml(result, promo, reminders),
       })
     }
 
-    return NextResponse.json({ ...result, promo, email })
+    return NextResponse.json({ ...result, promo, reminders, email })
   } catch (error) {
     return NextResponse.json({ error: (error as Error).message }, { status: 500 })
   }

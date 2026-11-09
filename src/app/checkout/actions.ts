@@ -4,6 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { redirect } from 'next/navigation'
 import { MercadoPagoConfig, PreApproval } from 'mercadopago'
+import { sendEmail } from '@/lib/notify-email'
 
 type PlanType = 'monthly' | 'annual' | 'pro_monthly' | 'pro_annual'
 
@@ -76,10 +77,20 @@ export async function createSubscriptionPreference(formData: FormData) {
 
   let initPoint = ''
 
+  const restoreAt = new Date()
+  restoreAt.setMonth(restoreAt.getMonth() + PROMO_MONTHS)
+  const restoreDateLabel = restoreAt.toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })
+
+  // El payer ve este texto en la pantalla de autorización de MP y en su
+  // resumen de cobros — es donde queda registrado que el precio es promocional.
+  const reason = promo.apply
+    ? `${config.reason} — promo 50% los primeros ${PROMO_MONTHS} meses (desde el ${restoreDateLabel}, $${config.amount.toLocaleString('es-AR')}/mes)`
+    : config.reason
+
   try {
     const result = await preApproval.create({
       body: {
-        reason: config.reason,
+        reason,
         // Codificamos userId|planType para que el webhook pueda asignar el rol correcto
         external_reference: `${user.id}|${planType}`,
         payer_email: user.email || '',
@@ -99,8 +110,6 @@ export async function createSubscriptionPreference(formData: FormData) {
       initPoint = result.init_point
       if (promo.apply && result.id) {
         const admin = createAdminClient()
-        const restoreAt = new Date()
-        restoreAt.setMonth(restoreAt.getMonth() + PROMO_MONTHS)
         await admin.from('promo_redemptions').insert({
           user_id: user.id,
           code: PROMO_CODE,
@@ -110,6 +119,24 @@ export async function createSubscriptionPreference(formData: FormData) {
           mp_subscription_id: result.id,
           restore_at: restoreAt.toISOString(),
         })
+
+        if (user.email) {
+          await sendEmail({
+            to: user.email,
+            subject: 'Tu descuento Reason — $9.000/mes por 3 meses',
+            html: `
+              <div style="font-family:system-ui,sans-serif;max-width:520px;margin:0 auto;color:#201c17">
+                <p style="font-size:20px;font-weight:600">reason<span style="color:#c25a2c">.</span></p>
+                <p>¡Listo! Tu suscripción quedó con el código <strong>${PROMO_CODE}</strong> aplicado:</p>
+                <ul style="padding-left:20px">
+                  <li>Pagás <strong>$${promo.amount.toLocaleString('es-AR')}/mes</strong> los primeros ${PROMO_MONTHS} meses.</li>
+                  <li>Desde el <strong>${restoreDateLabel}</strong>, vuelve al precio normal: <strong>$${config.amount.toLocaleString('es-AR')}/mes</strong>.</li>
+                  <li>Cancelás cuando quieras desde tu cuenta, sin compromiso.</li>
+                </ul>
+                <p style="font-size:12px;color:#a89f88;margin-top:28px">Reason — la plataforma clínica para kinesiólogos.</p>
+              </div>`,
+          })
+        }
       }
     } else {
       throw new Error('Mercado Pago no devolvió un link de pago válido')
