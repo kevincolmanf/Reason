@@ -124,7 +124,7 @@ export default async function CheckoutPage({
                     className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent"
                   />
                   <p className="text-[11px] text-text-tertiary mt-1.5">
-                    Con un código válido pagás 50% menos los primeros 3 meses. Después, se cobra el precio normal.
+                    Con un código válido pagás $9.000/mes los primeros 3 meses. Después, vuelve a $18.000/mes.
                   </p>
                 </div>
               )}

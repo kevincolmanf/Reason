@@ -15,10 +15,13 @@ const PLAN_CONFIG: Record<PlanType, { reason: string; frequency: number; amount:
   pro_annual:  { reason: 'Suscripción Pro Anual Reason',   frequency: 12, amount: 1350000  },
 }
 
-// Descuento de campaña 50% x 3 meses, solo Suscriptor mensual, altas hasta el
-// 14/11/2026. Ver doc "Primer uso y descuento de lanzamiento" (8/11/2026).
+// Descuento de campaña 50% x 3 meses, solo Suscriptor mensual, vigente del
+// 15/11/2026 al 30/11/2026 (contenido promocional sale el 15/11). Ver doc
+// "Primer uso y descuento de lanzamiento" (8/11/2026, ventana movida 9/11/2026).
+// Único lugar donde vive esta fecha: no está duplicada en otro archivo de código.
 const PROMO_CODE = 'KEVINCOLMAN'
-const PROMO_CUTOFF = new Date('2026-11-15T00:00:00-03:00') // exclusivo: válido hasta el 14/11 inclusive, hora Argentina
+const PROMO_WINDOW_START = new Date('2026-11-15T00:00:00-03:00') // inclusivo, hora Argentina
+const PROMO_CUTOFF = new Date('2026-12-01T00:00:00-03:00') // exclusivo: válido hasta el 30/11 inclusive, hora Argentina
 const PROMO_MONTHS = 3
 
 async function resolvePromo(
@@ -34,6 +37,9 @@ async function resolvePromo(
   }
   if (code !== PROMO_CODE) {
     return { amount: PLAN_CONFIG[planType].amount, error: 'Código inválido.', apply: false }
+  }
+  if (Date.now() < PROMO_WINDOW_START.getTime()) {
+    return { amount: PLAN_CONFIG[planType].amount, error: 'Esta promoción todavía no está disponible.', apply: false }
   }
   if (Date.now() >= PROMO_CUTOFF.getTime()) {
     return { amount: PLAN_CONFIG[planType].amount, error: 'La promoción ya venció.', apply: false }
@@ -84,7 +90,7 @@ export async function createSubscriptionPreference(formData: FormData) {
   // El payer ve este texto en la pantalla de autorización de MP y en su
   // resumen de cobros — es donde queda registrado que el precio es promocional.
   const reason = promo.apply
-    ? `${config.reason} — promo 50% los primeros ${PROMO_MONTHS} meses (desde el ${restoreDateLabel}, $${config.amount.toLocaleString('es-AR')}/mes)`
+    ? `${config.reason} — promo: $${promo.amount.toLocaleString('es-AR')}/mes los primeros ${PROMO_MONTHS} meses, después $${config.amount.toLocaleString('es-AR')}/mes (desde el ${restoreDateLabel})`
     : config.reason
 
   try {
