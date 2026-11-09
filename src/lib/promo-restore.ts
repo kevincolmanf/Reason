@@ -72,7 +72,7 @@ export async function runPromoReminders(opts: { dryRun: boolean }): Promise<Prom
   const windowEnd = new Date(Date.now() + REMINDER_DAYS_BEFORE * 24 * 60 * 60 * 1000)
   const { data: rows, error } = await admin
     .from('promo_redemptions')
-    .select('user_id, full_amount, restore_at')
+    .select('user_id, discounted_amount, full_amount, restore_at')
     .is('restored_at', null)
     .is('reminder_sent_at', null)
     .lte('restore_at', windowEnd.toISOString())
@@ -100,7 +100,7 @@ export async function runPromoReminders(opts: { dryRun: boolean }): Promise<Prom
           html: `
             <div style="font-family:system-ui,sans-serif;max-width:520px;margin:0 auto;color:#201c17">
               <p style="font-size:20px;font-weight:600">reason<span style="color:#c25a2c">.</span></p>
-              <p>Este es un aviso: tu descuento de campaña termina el <strong>${restoreDateLabel}</strong>.</p>
+              <p>Este es un aviso: tu descuento de campaña (venís pagando <strong>$${row.discounted_amount.toLocaleString('es-AR')}/mes</strong>) termina el <strong>${restoreDateLabel}</strong>.</p>
               <p>Desde esa fecha, tu suscripción pasa a cobrarse a precio normal: <strong>$${row.full_amount.toLocaleString('es-AR')}/mes</strong>.</p>
               <p>Si no querés continuar, podés cancelar antes desde tu cuenta — sin compromiso.</p>
               <p style="font-size:12px;color:#a89f88;margin-top:28px">Reason — la plataforma clínica para kinesiólogos.</p>

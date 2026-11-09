@@ -1,6 +1,7 @@
 -- Descuento 50% x 3 meses para Suscriptores individuales nuevos (campaña con
--- código, altas hasta el 14/11/2026). Tabla aditiva, no toca nada existente.
--- Ver doc "Primer uso y descuento de lanzamiento" (8/11/2026).
+-- código, vigente 15/11/2026-30/11/2026). Tabla aditiva, no toca nada existente.
+-- Ver doc "Primer uso y descuento de lanzamiento" (8/11/2026, ventana movida 9/11/2026).
+-- La fecha vive en código en src/app/checkout/actions.ts (PROMO_WINDOW_START / PROMO_CUTOFF).
 
 create table public.promo_redemptions (
   id uuid default gen_random_uuid() primary key,
