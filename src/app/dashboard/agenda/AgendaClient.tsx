@@ -424,6 +424,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
   const [atencionSheet, setAtencionSheet] = useState<{ patientId: string; patientName: string } | null>(null)
   // Pacientes visibles que están en modo kine (para la "Atención de hoy" rápida).
   const [kinePatientIds, setKinePatientIds] = useState<Set<string>>(new Set())
+  const [advancedLoadPatientIds, setAdvancedLoadPatientIds] = useState<Set<string>>(new Set())
   // plan_mode de esos mismos pacientes (detallado | simple), para que la hoja
   // rápida sepa si mostrar la bitácora sin tener que consultarlo ella misma.
   const [planModeByPatient, setPlanModeByPatient] = useState<Record<string, string>>({})
@@ -534,18 +535,20 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
       setRegisteredKeys(new Set())
     }
 
-    // Marca de "modo kine": qué pacientes visibles están en modo kine, para
-    // ofrecer la "Atención de hoy" rápida desde el turno sin entrar a la ficha.
+    // Marca de "modo kine" y "carga avanzada": qué pacientes visibles tienen
+    // cada modo prendido, para ofrecer los accesos rápidos correctos desde el
+    // turno sin entrar a la ficha.
     if (patIds.length > 0) {
       const { data: km } = await supabaseRef.current
         .from('patients')
-        .select('id, plan_mode')
+        .select('id, plan_mode, kine_mode, advanced_load_mode')
         .in('id', patIds)
-        .eq('kine_mode', true)
-      setKinePatientIds(new Set((km ?? []).map(r => r.id as string)))
+      setKinePatientIds(new Set((km ?? []).filter(r => r.kine_mode).map(r => r.id as string)))
+      setAdvancedLoadPatientIds(new Set((km ?? []).filter(r => r.advanced_load_mode).map(r => r.id as string)))
       setPlanModeByPatient(Object.fromEntries((km ?? []).map(r => [r.id as string, (r.plan_mode as string | null) ?? 'detallado'])))
     } else {
       setKinePatientIds(new Set())
+      setAdvancedLoadPatientIds(new Set())
       setPlanModeByPatient({})
     }
 
@@ -1211,7 +1214,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
             {/* Registrar sesión: cualquier integrante con acceso a la agenda (no solo
                 el dueño) puede registrar la sesión del paciente ahí mismo. El API
                 /api/carga/registrar-kine valida el acceso por membresía de la org. */}
-            {!quickMenu.turno.is_blocked && quickMenu.turno.patient_id && (
+            {!quickMenu.turno.is_blocked && quickMenu.turno.patient_id && advancedLoadPatientIds.has(quickMenu.turno.patient_id) && (
               <button
                 onClick={() => { setSessionSheet({ patientId: quickMenu.turno.patient_id!, patientName: quickMenu.turno.patient_name, turnoId: quickMenu.turno.id }); setQuickMenu(null) }}
                 className="w-full text-left px-3 py-2 text-[13px] text-accent font-medium hover:bg-bg-primary transition-colors"
