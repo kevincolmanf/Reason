@@ -4,17 +4,13 @@ import { redirect } from 'next/navigation'
 import Header from '@/components/Header'
 import SeguimientoClient from './SeguimientoClient'
 import { getActiveContext } from '@/lib/context'
+import { DEFAULT_AREAS } from '@/lib/agendaAreas'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Seguimiento de ausencias | Reason' }
 
 // Umbral por defecto: aparece si hace >= 7 días que no viene y no tiene turno.
 const THRESHOLD_DAYS = 7
-
-const DEFAULT_AREAS = [
-  'Kinesiología', 'Entrenamiento adultos', 'Entrenamiento niños', 'RPG',
-  'Pilates', 'Yoga', 'Nutrición', 'Traumatología', 'Análisis de la marcha',
-]
 
 export default async function SeguimientoPage() {
   const supabase = createClient()

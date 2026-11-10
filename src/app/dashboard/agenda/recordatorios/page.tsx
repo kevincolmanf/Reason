@@ -4,21 +4,10 @@ import { redirect } from 'next/navigation'
 import Header from '@/components/Header'
 import RecordatoriosClient from './RecordatoriosClient'
 import { getActiveContext } from '@/lib/context'
+import { DEFAULT_AREAS } from '@/lib/agendaAreas'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Recordatorios | Reason' }
-
-const DEFAULT_AREAS = [
-  'Kinesiología',
-  'Entrenamiento adultos',
-  'Entrenamiento niños',
-  'RPG',
-  'Pilates',
-  'Yoga',
-  'Nutrición',
-  'Traumatología',
-  'Análisis de la marcha',
-]
 
 export default async function RecordatoriosPage({ searchParams }: { searchParams: { day?: string; area?: string } }) {
   const supabase = createClient()

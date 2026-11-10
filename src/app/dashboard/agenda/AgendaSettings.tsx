@@ -5,6 +5,7 @@ import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/components/Dialogs'
 import { setMemberAgendaLevel, type AgendaLevel } from '@/app/account/equipo/actions'
 import { savePersonalAgendaConfig } from './actions'
+import { DEFAULT_AREAS } from '@/lib/agendaAreas'
 
 // Envuelve un <select> nativo para darle un chevron propio y un look consistente.
 // Sin esto, el <select> toma el chrome del sistema operativo y se ve desalineado
@@ -22,18 +23,6 @@ function SelectWrap({ children, className = '' }: { children: React.ReactNode; c
     </div>
   )
 }
-
-const DEFAULT_AREAS = [
-  'Kinesiología',
-  'Entrenamiento adultos',
-  'Entrenamiento niños',
-  'RPG',
-  'Pilates',
-  'Yoga',
-  'Nutrición',
-  'Traumatología',
-  'Análisis de la marcha',
-]
 
 interface Member {
   id: string
