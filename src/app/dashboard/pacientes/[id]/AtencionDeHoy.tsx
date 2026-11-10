@@ -314,7 +314,7 @@ export default function AtencionDeHoy({ patientId, userId, initialAttentions = [
   const visible = showAll ? attentions : attentions.slice(0, 1)
 
   return (
-    <section data-tour="ficha-atencion" className="bg-bg-secondary border-[0.5px] border-border rounded-xl p-5 mb-8">
+    <section id="atencion-de-hoy" data-tour="ficha-atencion" className="bg-bg-secondary border-[0.5px] border-border rounded-xl p-5 mb-8">
       <div className="flex items-center justify-between gap-3 mb-4">
         <div>
           <h2 className="text-[16px] font-medium">Atención de hoy</h2>
@@ -425,6 +425,8 @@ export default function AtencionDeHoy({ patientId, userId, initialAttentions = [
         </div>
       </div>
 
+      {symptom && (
+      <>
       {/* SUGERENCIA */}
       {sug && (
         <div className="rounded-lg p-3.5 mb-4 border-[0.5px]" style={{ borderColor: sugColor + '66', background: sugSoft }}>
@@ -605,6 +607,8 @@ export default function AtencionDeHoy({ patientId, userId, initialAttentions = [
         {status === 'saved' && <span className="text-[12px] text-[#4ade80]">✓ Registrada — la continuidad quedó lista</span>}
         {status === 'error' && <span className="text-[12px] text-warning">No se pudo registrar — reintentá</span>}
       </div>
+      </>
+      )}
     </section>
   )
 }

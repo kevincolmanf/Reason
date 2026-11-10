@@ -31,17 +31,11 @@ export default async function PacientePage({ params, searchParams }: { params: {
   //    entrenamiento; se usa para sugerir el Modo Kinesiología, nunca para activarlo.
   const [
     { data: patient, error },
-    { data: events },
     { data: firstPlan },
     { data: fichaRow },
     { count: turnosCount },
   ] = await Promise.all([
     supabase.from('patients').select('*').eq('id', params.id).single(),
-    supabase
-      .from('patient_events')
-      .select('id, event_date, type, title, note')
-      .eq('patient_id', params.id)
-      .order('event_date', { ascending: true }),
     supabase
       .from('exercise_plans')
       .select('created_at')
@@ -165,7 +159,7 @@ export default async function PacientePage({ params, searchParams }: { params: {
           })()}
         </div>
 
-        <PacienteDetail patient={patient} userId={user.id} initialEvents={events ?? []} treatmentStart={firstPlan?.created_at ?? null} professionals={professionals} hasFicha={hasFicha} patientHasTurnos={patientHasTurnos} initialAttentions={initialAttentions as never} kineSession={kineSession as never} />
+        <PacienteDetail patient={patient} userId={user.id} treatmentStart={firstPlan?.created_at ?? null} professionals={professionals} hasFicha={hasFicha} patientHasTurnos={patientHasTurnos} initialAttentions={initialAttentions as never} kineSession={kineSession as never} />
       </main>
     </div>
   )

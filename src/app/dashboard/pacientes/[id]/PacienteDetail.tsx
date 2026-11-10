@@ -6,10 +6,8 @@ import ObraSocialField from '@/components/ObraSocialField'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import QuickSessionSheet from '@/components/QuickSessionSheet'
-import { EVENT_TYPES, eventMeta, type PatientEvent } from '@/lib/patientEvents'
 import AtencionDeHoy, { type Attention, type KineSession } from './AtencionDeHoy'
 import { useConfirm, useToast } from '@/components/Dialogs'
-import { softDeleteRecord } from '@/lib/softDelete'
 
 interface Patient {
   id: string
@@ -45,44 +43,6 @@ function calcAge(birth_date: string | null): number | null {
 
 interface PatientSource { id: string; label: string }
 
-// ── Historial de turnos ──────────────────────────────────────────────────────
-interface TurnoHist {
-  id: string
-  start_time: string
-  end_time: string
-  area: string | null
-  status: string
-  professional_name: string | null
-}
-
-// Etiqueta + color por estado, alineado con los colores de la agenda.
-const TURNO_STATUS: Record<string, { label: string; color: string }> = {
-  presente:   { label: 'Presente',   color: '#4ade80' },
-  confirmado: { label: 'Confirmado', color: '#38bdf8' },
-  programado: { label: 'Programado', color: '#94a3b8' },
-  ausente:    { label: 'Ausente',    color: '#f87171' },
-  cancelado:  { label: 'Cancelado',  color: '#9ca3af' },
-  sobreturno: { label: 'Sobreturno', color: '#fbbf24' },
-}
-
-// Diferencia en días calendario (positivo = en el pasado). Para el "hace X días".
-function dayDiff(dateStr: string): number {
-  const d = new Date(dateStr)
-  const now = new Date()
-  const d0 = new Date(d.getFullYear(), d.getMonth(), d.getDate())
-  const n0 = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  return Math.round((n0.getTime() - d0.getTime()) / 86400000)
-}
-
-function relativeDay(dateStr: string): string {
-  const diff = dayDiff(dateStr)
-  if (diff === 0) return 'hoy'
-  if (diff === 1) return 'ayer'
-  if (diff > 1) return `hace ${diff} días`
-  if (diff === -1) return 'mañana'
-  return `en ${-diff} días`
-}
-
 // Tiempo de tratamiento desde el día en que se cargó el primer plan. Contamos
 // desde el día 1: recién cargado muestra "Semana 1 · Mes 1".
 function treatmentDuration(start: string | null): string | null {
@@ -98,7 +58,7 @@ function treatmentDuration(start: string | null): string | null {
   return `Semana ${week} · Mes ${month} de tratamiento`
 }
 
-export default function PacienteDetail({ patient: initialPatient, userId, initialEvents = [], treatmentStart = null, professionals = [], hasFicha = false, patientHasTurnos = false, initialAttentions = [], kineSession = null }: { patient: Patient; userId: string; initialEvents?: PatientEvent[]; treatmentStart?: string | null; professionals?: { id: string; full_name: string | null }[]; hasFicha?: boolean; patientHasTurnos?: boolean; initialAttentions?: Attention[]; kineSession?: KineSession | null }) {
+export default function PacienteDetail({ patient: initialPatient, userId, treatmentStart = null, professionals = [], hasFicha = false, patientHasTurnos = false, initialAttentions = [], kineSession = null }: { patient: Patient; userId: string; treatmentStart?: string | null; professionals?: { id: string; full_name: string | null }[]; hasFicha?: boolean; patientHasTurnos?: boolean; initialAttentions?: Attention[]; kineSession?: KineSession | null }) {
   const isOwner = initialPatient.user_id === userId
   // Sugerencia del Modo Kinesiología: el paciente tiene turnos en la agenda.
   const hasTurnos = patientHasTurnos
@@ -124,68 +84,8 @@ export default function PacienteDetail({ patient: initialPatient, userId, initia
   const [sources, setSources] = useState<PatientSource[]>([])
   const [saving, setSaving] = useState(false)
   const [dniError, setDniError] = useState<string | null>(null)
-  const [generatingToken, setGeneratingToken] = useState(false)
-  const [modeSaving, setModeSaving] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [sessionSheet, setSessionSheet] = useState(false)
   const [sessionSaved, setSessionSaved] = useState(false)
-
-  // ── Hitos del tratamiento ──────────────────────────────────────────────────
-  const [events, setEvents] = useState<PatientEvent[]>(initialEvents)
-  const [showEventForm, setShowEventForm] = useState(false)
-  const [evType, setEvType] = useState('evaluacion')
-  const [evDate, setEvDate] = useState(() => new Date().toISOString().split('T')[0])
-  const [evTitle, setEvTitle] = useState('')
-  const [evNote, setEvNote] = useState('')
-  const [evSaving, setEvSaving] = useState(false)
-
-  const addEvent = async () => {
-    if (!evDate) return
-    setEvSaving(true)
-    const { data, error } = await supabaseRef.current
-      .from('patient_events')
-      .insert({ patient_id: patient.id, user_id: userId, event_date: evDate, type: evType, title: evTitle.trim() || null, note: evNote.trim() || null })
-      .select('id, event_date, type, title, note')
-      .single()
-    if (!error && data) {
-      setEvents(prev => [...prev, data as PatientEvent].sort((a, b) => a.event_date.localeCompare(b.event_date)))
-      setEvTitle(''); setEvNote(''); setShowEventForm(false)
-    }
-    setEvSaving(false)
-  }
-
-  const deleteEvent = async (id: string) => {
-    if (!(await confirm({ title: 'Borrar hito', message: 'El hito se moverá a la papelera. Podés restaurarlo por 30 días.', danger: true, confirmLabel: 'Borrar' }))) return
-    const { error } = await softDeleteRecord(supabaseRef.current, {
-      table: 'patient_events', id, userId, patientId: patient.id, patientName: patient.name,
-    })
-    if (error) { notify('No se pudo borrar: ' + error, 'error'); return }
-    setEvents(prev => prev.filter(e => e.id !== id))
-    notify('Hito movido a la papelera')
-  }
-
-  // ── Historial de turnos ────────────────────────────────────────────────────
-  // Se carga bajo demanda al abrir la sección para no pesar la carga del perfil.
-  const [showTurnos, setShowTurnos] = useState(false)
-  const [turnos, setTurnos] = useState<TurnoHist[] | null>(null) // null = aún no cargado
-  const [loadingTurnos, setLoadingTurnos] = useState(false)
-
-  const loadTurnos = async () => {
-    setLoadingTurnos(true)
-    const { data } = await supabaseRef.current
-      .from('turnos')
-      .select('id, start_time, end_time, area, status, professional_name')
-      .eq('patient_id', patient.id)
-      .order('start_time', { ascending: false })
-      .limit(200)
-    setTurnos((data ?? []) as TurnoHist[])
-    setLoadingTurnos(false)
-  }
-
-  const toggleTurnos = () => {
-    const next = !showTurnos
-    setShowTurnos(next)
-    if (next && turnos === null && !loadingTurnos) loadTurnos()
-  }
 
   const router = useRouter()
   const supabaseRef = useRef(createClient())
@@ -196,50 +96,6 @@ export default function PacienteDetail({ patient: initialPatient, userId, initia
       : '/api/pacientes/fuentes'
     fetch(url).then(r => r.ok ? r.json() : []).then(setSources)
   }, [initialPatient.org_id])
-
-  const generatePortalToken = async () => {
-    setGeneratingToken(true)
-    const token = crypto.randomUUID()
-    const { data, error } = await supabaseRef.current
-      .from('patients')
-      .update({ load_share_token: token })
-      .eq('id', patient.id)
-      .select()
-      .single()
-    if (!error && data) setPatient(data)
-    setGeneratingToken(false)
-  }
-
-  const revokePortalToken = async () => {
-    if (!(await confirm({ title: 'Revocar link del portal', message: 'El paciente ya no podrá acceder con el link actual. ¿Revocar?', danger: true, confirmLabel: 'Revocar' }))) return
-    const { data, error } = await supabaseRef.current
-      .from('patients')
-      .update({ load_share_token: null })
-      .eq('id', patient.id)
-      .select()
-      .single()
-    if (!error && data) setPatient(data)
-  }
-
-  const setFollowUpMode = async (mode: 'presencial' | 'online' | 'hibrido') => {
-    const prev = patient.follow_up_mode ?? 'presencial'
-    if (mode === prev) return
-    setPatient(p => ({ ...p, follow_up_mode: mode })) // optimista
-    setModeSaving('saving')
-    try {
-      const res = await fetch('/api/pacientes/modalidad', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ patientId: patient.id, mode }),
-      })
-      if (!res.ok) throw new Error()
-      setModeSaving('saved')
-      setTimeout(() => setModeSaving('idle'), 2500)
-    } catch {
-      setPatient(p => ({ ...p, follow_up_mode: prev }))
-      setModeSaving('error')
-    }
-  }
 
   // Modo Kinesiología: enciende la capa "Atención de hoy" para este paciente.
   // No afecta a nadie más — es un flag por paciente, default apagado.
@@ -529,6 +385,12 @@ export default function PacienteDetail({ patient: initialPatient, userId, initia
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-5-5h-3"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>
           Ficha
         </Link>
+        {patient.kine_mode && (
+          <Link href={`/dashboard/pacientes/${patient.id}#atencion-de-hoy`} className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-[13px] font-medium text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline whitespace-nowrap">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M9 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3"/><path d="m9 14 2 2 4-4"/></svg>
+            Atención
+          </Link>
+        )}
         {(patient.plan_mode ?? 'detallado') === 'simple' ? (
           <Link href={`/dashboard/pacientes/${patient.id}/bitacora`} className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-[13px] font-medium text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline whitespace-nowrap">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M9 16l2 2 4-4"/></svg>
@@ -540,6 +402,18 @@ export default function PacienteDetail({ patient: initialPatient, userId, initia
             Plan
           </Link>
         )}
+        <Link href={`/dashboard/pacientes/${patient.id}/hitos`} className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-[13px] font-medium text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline whitespace-nowrap">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 4h12l-3 4 3 4H4"/><line x1="4" y1="2" x2="4" y2="22"/></svg>
+          Hitos
+        </Link>
+        <Link href={`/dashboard/pacientes/${patient.id}/historial`} className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-[13px] font-medium text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline whitespace-nowrap">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+          Historial
+        </Link>
+        <Link href={`/dashboard/pacientes/${patient.id}/portal`} className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-[13px] font-medium text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline whitespace-nowrap">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+          Portal
+        </Link>
         <Link href={`/dashboard/pacientes/${patient.id}/rts`} className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-[13px] font-medium text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline whitespace-nowrap">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>
           RTS
@@ -607,224 +481,6 @@ export default function PacienteDetail({ patient: initialPatient, userId, initia
         </div>
       )}
 
-      {/* HITOS DEL TRATAMIENTO */}
-      <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-5 mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-[16px] font-medium">Hitos del tratamiento</h2>
-          <button onClick={() => setShowEventForm(v => !v)} className="text-[13px] font-medium text-accent hover:opacity-80">
-            {showEventForm ? 'Cerrar' : '+ Agregar hito'}
-          </button>
-        </div>
-
-        {showEventForm && (
-          <div className="bg-bg-secondary border-[0.5px] border-border rounded-xl p-4 mb-4 space-y-3">
-            <div>
-              <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-2">Tipo</label>
-              <div className="flex flex-wrap gap-1.5">
-                {EVENT_TYPES.map(t => (
-                  <button key={t.value} onClick={() => setEvType(t.value)}
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[12px] font-medium border-[0.5px] transition-colors ${evType === t.value ? 'text-white' : 'bg-bg-primary border-border text-text-secondary hover:text-text-primary'}`}
-                    style={evType === t.value ? { backgroundColor: t.color, borderColor: t.color } : {}}>
-                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: evType === t.value ? '#fff' : t.color }} />
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Fecha</label>
-                <input type="date" value={evDate} onChange={e => setEvDate(e.target.value)} className="w-full bg-bg-primary border-[0.5px] border-border rounded-lg p-2.5 text-[14px] focus:outline-none focus:border-accent" />
-              </div>
-              <div>
-                <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Título (opcional)</label>
-                <input type="text" value={evTitle} onChange={e => setEvTitle(e.target.value)} placeholder="Ej: Reeval. LCA, torneo regional…" className="w-full bg-bg-primary border-[0.5px] border-border rounded-lg p-2.5 text-[14px] focus:outline-none focus:border-accent" />
-              </div>
-            </div>
-            <div>
-              <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Nota (opcional)</label>
-              <input type="text" value={evNote} onChange={e => setEvNote(e.target.value)} placeholder="Detalle del hito…" className="w-full bg-bg-primary border-[0.5px] border-border rounded-lg p-2.5 text-[14px] focus:outline-none focus:border-accent" />
-            </div>
-            <button onClick={addEvent} disabled={evSaving || !evDate}
-              className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity">
-              {evSaving ? 'Guardando…' : 'Agregar hito'}
-            </button>
-          </div>
-        )}
-
-        {events.length === 0 ? (
-          <p className="text-[13px] text-text-secondary bg-bg-secondary border-[0.5px] border-dashed border-border rounded-xl px-4 py-5 text-center">
-            Sin hitos todavía. Marcá evaluaciones, RTP, altas o competencias para ver el proceso completo del paciente.
-          </p>
-        ) : (
-          <div className="border-[0.5px] border-border rounded-xl overflow-hidden divide-y-[0.5px] divide-border">
-            {events.map(ev => {
-              const meta = eventMeta(ev.type)
-              const past = ev.event_date < new Date().toISOString().split('T')[0]
-              return (
-                <div key={ev.id} className={`flex items-center gap-3 px-4 py-3 ${past ? 'opacity-60' : ''}`}>
-                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: meta.color }} />
-                  <div className="w-[92px] shrink-0 text-[12px] text-text-secondary tabular-nums">
-                    {new Date(ev.event_date + 'T12:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: '2-digit' })}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <span className="text-[13px] font-medium" style={{ color: meta.color }}>{meta.label}</span>
-                    {ev.title && <span className="text-[13px] text-text-primary"> · {ev.title}</span>}
-                    {ev.note && <p className="text-[12px] text-text-secondary truncate">{ev.note}</p>}
-                  </div>
-                  <button onClick={() => deleteEvent(ev.id)} className="text-text-secondary hover:text-warning text-[14px] shrink-0 transition-colors" title="Eliminar hito">×</button>
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* HISTORIAL DE TURNOS */}
-      <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-5 mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <h2 className="text-[16px] font-medium">Historial de turnos</h2>
-            {turnos !== null && <span className="text-[12px] text-text-secondary">({turnos.length})</span>}
-          </div>
-          <button onClick={toggleTurnos} className="text-[13px] font-medium text-accent hover:opacity-80">
-            {showTurnos ? 'Ocultar' : 'Ver'}
-          </button>
-        </div>
-
-        {showTurnos && (
-          loadingTurnos ? (
-            <p className="text-[13px] text-text-secondary bg-bg-secondary border-[0.5px] border-dashed border-border rounded-xl px-4 py-5 text-center">
-              Cargando turnos…
-            </p>
-          ) : !turnos || turnos.length === 0 ? (
-            <p className="text-[13px] text-text-secondary bg-bg-secondary border-[0.5px] border-dashed border-border rounded-xl px-4 py-5 text-center">
-              Este paciente no tiene turnos registrados en la agenda.
-            </p>
-          ) : (() => {
-            const nowIso = new Date().toISOString()
-            // Última visita: el turno pasado más reciente al que asistió (no ausente/cancelado).
-            const lastVisit = turnos.find(t => t.start_time <= nowIso && t.status !== 'cancelado' && t.status !== 'ausente')
-            // Próximo turno: el futuro más cercano que no esté cancelado.
-            const upcoming = turnos.filter(t => t.start_time > nowIso && t.status !== 'cancelado')
-            const nextTurno = upcoming.length ? upcoming[upcoming.length - 1] : null
-            return (
-              <>
-                {(lastVisit || nextTurno) && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-                    <div className="bg-bg-secondary border-[0.5px] border-border rounded-xl px-4 py-3">
-                      <div className="text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Última visita</div>
-                      {lastVisit ? (
-                        <div className="text-[14px] font-medium">
-                          {new Date(lastVisit.start_time).toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
-                          <span className="text-[13px] text-text-secondary font-normal"> · {relativeDay(lastVisit.start_time)}</span>
-                        </div>
-                      ) : <div className="text-[14px] text-text-secondary">Sin visitas registradas</div>}
-                    </div>
-                    <div className="bg-bg-secondary border-[0.5px] border-border rounded-xl px-4 py-3">
-                      <div className="text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Próximo turno</div>
-                      {nextTurno ? (
-                        <div className="text-[14px] font-medium">
-                          {new Date(nextTurno.start_time).toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
-                          <span className="text-[13px] text-text-secondary font-normal"> · {relativeDay(nextTurno.start_time)}</span>
-                        </div>
-                      ) : <div className="text-[14px] text-text-secondary">Sin turnos agendados</div>}
-                    </div>
-                  </div>
-                )}
-
-                <div className="border-[0.5px] border-border rounded-xl overflow-hidden divide-y-[0.5px] divide-border">
-                  {turnos.map(t => {
-                    const meta = TURNO_STATUS[t.status] ?? { label: t.status, color: '#94a3b8' }
-                    const past = t.start_time <= nowIso
-                    const start = new Date(t.start_time)
-                    return (
-                      <div key={t.id} className={`flex items-center gap-3 px-4 py-3 ${past ? 'opacity-70' : ''}`}>
-                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: meta.color }} />
-                        <div className="w-[132px] shrink-0 text-[12px] text-text-secondary tabular-nums">
-                          {start.toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: '2-digit' })}
-                          {' · '}
-                          {start.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <span className="text-[13px] text-text-primary">{t.area || 'Turno'}</span>
-                          {t.professional_name && <span className="text-[12px] text-text-secondary"> · {t.professional_name}</span>}
-                        </div>
-                        <span className="text-[11px] font-medium shrink-0" style={{ color: meta.color }}>{meta.label}</span>
-                      </div>
-                    )
-                  })}
-                </div>
-              </>
-            )
-          })()
-        )}
-      </div>
-
-      {/* PORTAL */}
-      <div data-tour="ficha-portal" className="bg-bg-primary border-[0.5px] border-border rounded-xl p-5">
-        <div className="flex justify-between items-center mb-3">
-          <h2 className="text-[14px] font-medium">Portal del Paciente</h2>
-        </div>
-
-        {/* Modalidad de seguimiento: define qué se le pide al paciente. Se muestra
-            igual que el resto de la sección Portal (sin exigir ser el creador del
-            registro): en un equipo, cualquiera que gestiona al paciente la ve. */}
-        {(() => {
-          const mode = patient.follow_up_mode ?? 'presencial'
-          const opts: { value: 'presencial' | 'online' | 'hibrido'; label: string; desc: string }[] = [
-            { value: 'presencial', label: 'Presencial', desc: 'Lo ves en el centro. El registro lo llevás vos con notas — al paciente no se le pide cargar sesiones.' },
-            { value: 'online',     label: 'Online',     desc: 'Se entrena a distancia. Registra un check-in corto desde su portal.' },
-            { value: 'hibrido',    label: 'Híbrido',    desc: 'Combina presencial y a distancia. Registra el check-in corto los días que no viene.' },
-          ]
-          return (
-            <div className="mb-4 pb-4 border-b-[0.5px] border-border">
-              <div className="flex items-center gap-2 mb-2">
-                <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary">Modalidad de seguimiento</label>
-                {modeSaving === 'saving' && <span className="text-[11px] text-text-secondary">Guardando…</span>}
-                {modeSaving === 'saved' && <span className="text-[11px] text-[#4ade80]">✓ Guardado</span>}
-                {modeSaving === 'error' && <span className="text-[11px] text-warning">Error al guardar — reintentá</span>}
-              </div>
-              <div className="flex gap-1.5 mb-2">
-                {opts.map(o => (
-                  <button key={o.value} onClick={() => setFollowUpMode(o.value)}
-                    className={`flex-1 px-3 py-2 rounded-lg text-[13px] font-medium border-[0.5px] transition-colors ${mode === o.value ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-secondary border-border text-text-secondary hover:text-text-primary'}`}>
-                    {o.label}
-                  </button>
-                ))}
-              </div>
-              <p className="text-[12px] text-text-secondary">{opts.find(o => o.value === mode)?.desc}</p>
-            </div>
-          )
-        })()}
-        {patient.load_share_token ? (
-          <div>
-            <p className="text-[13px] text-text-secondary mb-3">
-              Compartí este link con {patient.name} para que vea sus ejercicios y registre sesiones desde el celular.
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/paciente/${patient.load_share_token}`); notify('Link copiado') }}
-                className="bg-[#24342A] border-[0.5px] border-[#34D399]/50 text-[#34D399] px-4 py-2 rounded-lg text-[13px] font-medium flex-grow truncate"
-              >
-                Enviar link al paciente
-              </button>
-              <button onClick={revokePortalToken} className="bg-bg-secondary border-[0.5px] border-border px-3 py-2 rounded-lg text-[13px] text-text-secondary hover:text-warning" title="Revocar">
-                X
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div>
-            <p className="text-[13px] text-text-secondary mb-3">
-              Generá un link único para que {patient.name} pueda ver sus ejercicios y registrar sus sesiones desde el celular.
-            </p>
-            <button onClick={generatePortalToken} disabled={generatingToken} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40">
-              {generatingToken ? 'Generando...' : 'Generar link para el paciente'}
-            </button>
-          </div>
-        )}
-      </div>
     </div>
   )
 }
