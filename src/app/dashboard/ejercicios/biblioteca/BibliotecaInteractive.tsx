@@ -21,7 +21,10 @@ interface UserExercise {
   name: string
   youtube_url: string | null
   created_at: string
+  folder: string | null
 }
+
+const SIN_CARPETA = 'Sin carpeta'
 
 const CATEGORIES = [
   { value: 'lower_body', label: 'Lower Body' },
@@ -63,6 +66,14 @@ export default function BibliotecaInteractive({ equipments, userId, orgId }: { e
   const [savingEdit, setSavingEdit] = useState(false)
   // Ejercicios propios que matchean la búsqueda dentro de la vista Biblioteca
   const [bibUserMatches, setBibUserMatches] = useState<UserExercise[]>([])
+
+  // Carpetas de "Mis Ejercicios" — array configurable (misma idea que las áreas
+  // de agenda), por organización si hay equipo, si no por usuario.
+  const [folders, setFolders] = useState<string[]>([])
+  const [newFolderName, setNewFolderName] = useState('')
+  const [savingFolders, setSavingFolders] = useState(false)
+  const [newExerciseFolder, setNewExerciseFolder] = useState('')
+  const [editFolderInput, setEditFolderInput] = useState('')
 
   const PAGE_SIZE = 50
   const supabaseRef = useRef(createClient())
@@ -115,11 +126,44 @@ export default function BibliotecaInteractive({ equipments, userId, orgId }: { e
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, orgId])
 
+  const fetchFolders = useCallback(async () => {
+    if (orgId) {
+      const { data } = await supabaseRef.current.from('organizations').select('exercise_folders').eq('id', orgId).single()
+      setFolders(data?.exercise_folders ?? [])
+    } else {
+      const { data } = await supabaseRef.current.from('users').select('exercise_folders').eq('id', userId).single()
+      setFolders(data?.exercise_folders ?? [])
+    }
+  }, [userId, orgId])
+
   useEffect(() => {
     if (view === 'mis_ejercicios') {
       fetchUserExercises()
+      fetchFolders()
     }
-  }, [view, fetchUserExercises])
+  }, [view, fetchUserExercises, fetchFolders])
+
+  const persistFolders = async (next: string[]) => {
+    setSavingFolders(true)
+    if (orgId) {
+      await supabaseRef.current.from('organizations').update({ exercise_folders: next }).eq('id', orgId)
+    } else {
+      await supabaseRef.current.from('users').update({ exercise_folders: next }).eq('id', userId)
+    }
+    setFolders(next)
+    setSavingFolders(false)
+  }
+
+  const addFolder = async () => {
+    const name = newFolderName.trim()
+    if (!name || folders.includes(name)) return
+    await persistFolders([...folders, name])
+    setNewFolderName('')
+  }
+
+  const removeFolder = async (name: string) => {
+    await persistFolders(folders.filter(f => f !== name))
+  }
 
   const handleAddExercise = async () => {
     if (!newName.trim()) return
@@ -129,10 +173,12 @@ export default function BibliotecaInteractive({ equipments, userId, orgId }: { e
       org_id: orgId,
       name: newName.trim(),
       youtube_url: newUrl.trim() || null,
+      folder: newExerciseFolder || null,
     })
     if (!error) {
       setNewName('')
       setNewUrl('')
+      setNewExerciseFolder('')
       await fetchUserExercises()
     }
     setSaving(false)
@@ -150,12 +196,14 @@ export default function BibliotecaInteractive({ equipments, userId, orgId }: { e
     setEditingId(ex.id)
     setEditNameInput(ex.name)
     setEditUrlInput(ex.youtube_url ?? '')
+    setEditFolderInput(ex.folder ?? '')
   }
 
   const cancelEdit = () => {
     setEditingId(null)
     setEditNameInput('')
     setEditUrlInput('')
+    setEditFolderInput('')
   }
 
   const handleSaveEdit = async (id: string) => {
@@ -163,10 +211,11 @@ export default function BibliotecaInteractive({ equipments, userId, orgId }: { e
     if (!name) return
     setSavingEdit(true)
     const url = editUrlInput.trim() || null
-    const { error } = await supabaseRef.current.from('user_exercises').update({ name, youtube_url: url }).eq('id', id)
+    const folder = editFolderInput || null
+    const { error } = await supabaseRef.current.from('user_exercises').update({ name, youtube_url: url, folder }).eq('id', id)
     if (!error) {
-      setUserExercises(prev => prev.map(e => e.id === id ? { ...e, name, youtube_url: url } : e))
-      setBibUserMatches(prev => prev.map(e => e.id === id ? { ...e, name, youtube_url: url } : e))
+      setUserExercises(prev => prev.map(e => e.id === id ? { ...e, name, youtube_url: url, folder } : e))
+      setBibUserMatches(prev => prev.map(e => e.id === id ? { ...e, name, youtube_url: url, folder } : e))
       cancelEdit()
     }
     setSavingEdit(false)
@@ -200,6 +249,13 @@ export default function BibliotecaInteractive({ equipments, userId, orgId }: { e
     const match = url.match(regExp);
     return (match && match[2].length === 11) ? match[2] : null;
   }
+
+  // Agrupa "Mis Ejercicios" por carpeta configurada (en el orden en que se
+  // crearon), con "Sin carpeta" al final para los que no tienen asignada.
+  const groupedUserExercises: [string, UserExercise[]][] = [
+    ...folders.map((f): [string, UserExercise[]] => [f, userExercises.filter(e => e.folder === f)]),
+    [SIN_CARPETA, userExercises.filter(e => !e.folder || !folders.includes(e.folder))] as [string, UserExercise[]],
+  ].filter(([, list]) => list.length > 0)
 
   return (
     <div>
@@ -358,10 +414,39 @@ export default function BibliotecaInteractive({ equipments, userId, orgId }: { e
       {/* VISTA MIS EJERCICIOS */}
       {view === 'mis_ejercicios' && (
         <div>
+          {/* CARPETAS — array configurable propio/de la organización, para
+              agrupar "Mis Ejercicios" como cada uno prefiera (por región, por
+              tipo, etc.) en vez de una categoría fija prototipada. */}
+          <div className="bg-bg-secondary p-5 rounded-xl border-[0.5px] border-border mb-6">
+            <h2 className="text-[13px] font-medium uppercase tracking-[0.05em] text-text-secondary mb-3">Carpetas</h2>
+            <div className="flex flex-wrap gap-2 mb-3">
+              {folders.map(f => (
+                <span key={f} className="inline-flex items-center gap-1.5 bg-bg-primary border-[0.5px] border-border rounded-full pl-3 pr-1.5 py-1">
+                  <span className="text-[13px] text-text-primary">{f}</span>
+                  <button onClick={() => removeFolder(f)} disabled={savingFolders} className="text-text-secondary hover:text-warning text-[14px] leading-none px-1" title="Quitar carpeta">×</button>
+                </span>
+              ))}
+              {folders.length === 0 && <span className="text-[13px] text-text-secondary">Sin carpetas todavía — son opcionales.</span>}
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newFolderName}
+                onChange={e => setNewFolderName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && addFolder()}
+                placeholder="Ej: Miembro inferior, Hombro, Niños..."
+                className="flex-grow bg-bg-primary border-[0.5px] border-border-strong rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:border-accent"
+              />
+              <button onClick={addFolder} disabled={savingFolders || !newFolderName.trim()} className="bg-bg-primary border-[0.5px] border-border text-text-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:border-border-strong disabled:opacity-40 transition-colors">
+                + Carpeta
+              </button>
+            </div>
+          </div>
+
           {/* FORM AGREGAR */}
           <div className="bg-bg-secondary p-6 rounded-xl border-[0.5px] border-border mb-8">
             <h2 className="text-[16px] font-medium mb-4">Agregar ejercicio propio</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
               <div className="md:col-span-1">
                 <label className="block text-[12px] uppercase tracking-[0.05em] text-text-secondary mb-2">Nombre *</label>
                 <input
@@ -384,6 +469,17 @@ export default function BibliotecaInteractive({ equipments, userId, orgId }: { e
                   className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent"
                 />
               </div>
+              <div className="md:col-span-1">
+                <label className="block text-[12px] uppercase tracking-[0.05em] text-text-secondary mb-2">Carpeta (opcional)</label>
+                <select
+                  value={newExerciseFolder}
+                  onChange={e => setNewExerciseFolder(e.target.value)}
+                  className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent"
+                >
+                  <option value="">{SIN_CARPETA}</option>
+                  {folders.map(f => <option key={f} value={f}>{f}</option>)}
+                </select>
+              </div>
               <div>
                 <button
                   onClick={handleAddExercise}
@@ -405,8 +501,14 @@ export default function BibliotecaInteractive({ equipments, userId, orgId }: { e
               <p className="text-[13px] text-text-secondary">Usá el formulario de arriba para agregar el primero.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {userExercises.map(ex => (
+            <div className="space-y-8">
+            {groupedUserExercises.map(([folderName, items]) => (
+            <div key={folderName}>
+              {groupedUserExercises.length > 1 && (
+                <h3 className="text-[13px] font-medium uppercase tracking-[0.05em] text-text-secondary mb-3">{folderName} <span className="text-text-tertiary normal-case">({items.length})</span></h3>
+              )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {items.map(ex => (
                 <div key={ex.id} className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 flex flex-col hover:border-border-strong transition-colors">
                   <div className="mb-4">
                     <span className="inline-block bg-bg-secondary text-text-secondary text-[10px] py-1 px-2 rounded-full uppercase tracking-[0.05em] border-[0.5px] border-border font-medium">
@@ -434,6 +536,15 @@ export default function BibliotecaInteractive({ equipments, userId, orgId }: { e
                         placeholder="https://youtube.com/watch?v=..."
                         className="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded-lg p-2 text-[13px] focus:outline-none focus:border-accent mb-3"
                       />
+                      <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1.5">Carpeta</label>
+                      <select
+                        value={editFolderInput}
+                        onChange={e => setEditFolderInput(e.target.value)}
+                        className="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded-lg p-2 text-[13px] focus:outline-none focus:border-accent mb-3"
+                      >
+                        <option value="">{SIN_CARPETA}</option>
+                        {folders.map(f => <option key={f} value={f}>{f}</option>)}
+                      </select>
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleSaveEdit(ex.id)}
@@ -508,6 +619,9 @@ export default function BibliotecaInteractive({ equipments, userId, orgId }: { e
                   )}
                 </div>
               ))}
+              </div>
+            </div>
+            ))}
             </div>
           )}
         </div>
