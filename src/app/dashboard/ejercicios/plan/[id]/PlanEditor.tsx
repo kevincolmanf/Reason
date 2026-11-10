@@ -444,6 +444,14 @@ export default function PlanEditor({ initialPlan, userId, orgId, initialEvents =
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [createName, setCreateName] = useState('')
   const [createUrl, setCreateUrl] = useState('')
+
+  // Agregar video inline a un ejercicio del bloque que no tiene (sin pasar por
+  // "Reelegir"). Si el ejercicio viene del catálogo general (solo lectura), se
+  // crea una entrada propia en Mis Ejercicios con el mismo nombre — el catálogo
+  // general no se puede editar desde el cliente.
+  const [addingVideoFor, setAddingVideoFor] = useState<string | null>(null)
+  const [videoDraft, setVideoDraft] = useState('')
+  const [savingVideoId, setSavingVideoId] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
 
   // Drag state
@@ -963,6 +971,49 @@ export default function PlanEditor({ initialPlan, userId, orgId, initialEvents =
     }))
     setIsSearchOpen(false)
     setTargetBlock(null)
+  }
+
+  const saveVideoForExercise = async (blockIdx: number, exIdx: number) => {
+    const url = videoDraft.trim()
+    if (!url) return
+    const ex = selectedSession?.session_data?.blocks[blockIdx]?.exercises[exIdx]
+    if (!ex) return
+    setSavingVideoId(ex.id)
+    try {
+      const { data: updated } = await supabaseRef.current
+        .from('user_exercises')
+        .update({ youtube_url: url })
+        .eq('id', ex.exercise_id)
+        .select('id, name, youtube_url')
+        .maybeSingle()
+
+      let finalId = ex.exercise_id
+      let finalUrl = url
+      if (!updated) {
+        const { data: created, error } = await supabaseRef.current
+          .from('user_exercises')
+          .insert({ user_id: userId, org_id: orgId, name: ex.exercise_name, youtube_url: url })
+          .select('id, name, youtube_url')
+          .single()
+        if (error || !created) throw error ?? new Error('No se pudo guardar')
+        finalId = created.id
+        finalUrl = created.youtube_url ?? url
+      }
+
+      updateSelectedSession(data => ({
+        ...data,
+        blocks: data.blocks.map((b, bi) => bi !== blockIdx ? b : {
+          ...b,
+          exercises: b.exercises.map((e, ei) => ei !== exIdx ? e : { ...e, exercise_id: finalId, youtube_url: finalUrl }),
+        }),
+      }))
+      setAddingVideoFor(null)
+      setVideoDraft('')
+    } catch {
+      notify('No se pudo guardar el video.', 'error')
+    } finally {
+      setSavingVideoId(null)
+    }
   }
 
   const removeExercise = async (blockIdx: number, exIdx: number) => {
@@ -1833,10 +1884,39 @@ export default function PlanEditor({ initialPlan, userId, orgId, initialEvents =
                                         )
                                       })()}
                                     </div>
-                                    {ex.youtube_url && (
+                                    {ex.youtube_url ? (
                                       <a href={ex.youtube_url} target="_blank" rel="noreferrer" className="text-[12px] text-accent hover:underline mt-1 inline-block">
                                         Ver video original
                                       </a>
+                                    ) : addingVideoFor === ex.id ? (
+                                      <div className="flex items-center gap-1.5 mt-1">
+                                        <input
+                                          type="text"
+                                          autoFocus
+                                          value={videoDraft}
+                                          onChange={e => setVideoDraft(e.target.value)}
+                                          onKeyDown={e => { if (e.key === 'Enter') saveVideoForExercise(bIdx, exIdx); if (e.key === 'Escape') { setAddingVideoFor(null); setVideoDraft('') } }}
+                                          placeholder="https://youtube.com/watch?v=..."
+                                          className="bg-bg-primary border-[0.5px] border-border-strong rounded px-2 py-1 text-[12px] text-text-primary w-[220px] focus:outline-none focus:border-accent"
+                                        />
+                                        <button
+                                          onClick={() => saveVideoForExercise(bIdx, exIdx)}
+                                          disabled={savingVideoId === ex.id || !videoDraft.trim()}
+                                          className="text-[12px] text-accent font-medium hover:opacity-80 disabled:opacity-40"
+                                        >
+                                          {savingVideoId === ex.id ? 'Guardando…' : 'Guardar'}
+                                        </button>
+                                        <button onClick={() => { setAddingVideoFor(null); setVideoDraft('') }} className="text-[12px] text-text-secondary hover:text-text-primary">
+                                          Cancelar
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <button
+                                        onClick={() => { setAddingVideoFor(ex.id); setVideoDraft('') }}
+                                        className="text-[12px] text-text-secondary hover:text-accent mt-1 inline-block"
+                                      >
+                                        + Agregar video
+                                      </button>
                                     )}
                                   </div>
                                   <div className="flex items-center gap-1 shrink-0">
