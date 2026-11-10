@@ -307,7 +307,7 @@ export default function AtencionDeHoy({ patientId, userId, initialAttentions = [
   if (previewActions.length) previewParts.push(previewActions.join(' · '))
   const preview = previewParts.length ? previewParts.join(' · ') : 'Atención registrada'
 
-  const visible = showAll ? attentions : attentions.slice(0, 3)
+  const visible = showAll ? attentions : attentions.slice(0, 1)
 
   return (
     <section data-tour="ficha-atencion" className="bg-bg-secondary border-[0.5px] border-border rounded-xl p-5 mb-8">
@@ -385,7 +385,7 @@ export default function AtencionDeHoy({ patientId, userId, initialAttentions = [
                   </div>
                 </div>
               ))}
-              {attentions.length > 3 && (
+              {attentions.length > 1 && (
                 <button onClick={() => setShowAll(v => !v)} className="text-[11.5px] text-text-secondary hover:text-text-primary px-3 py-2 border-t-[0.5px] border-border w-full text-left">
                   {showAll ? 'Ver menos' : `Ver las ${attentions.length} atenciones`}
                 </button>
