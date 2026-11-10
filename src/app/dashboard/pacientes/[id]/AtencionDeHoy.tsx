@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
+import AttributionPicker, { type AttributedProfessional } from '@/components/AttributionPicker'
 
 // Capa "Atención de hoy" del Modo Kinesiología. Se muestra solo en pacientes con
 // kine_mode = true. Resuelve el ajuste del día en 1–2 toques: check de síntoma →
@@ -83,6 +84,7 @@ interface BitacoraEntryLite { id: string; activity_date: string; exercises: Exer
 
 export default function AtencionDeHoy({ patientId, userId, initialAttentions = [], kineSession = null, planMode = 'detallado' }: { patientId: string; userId: string; initialAttentions?: Attention[]; kineSession?: KineSession | null; planMode?: string | null }) {
   const [attentions, setAttentions] = useState<Attention[]>(initialAttentions)
+  const [attributed, setAttributed] = useState<AttributedProfessional | null>(null)
   const [symptom, setSymptom] = useState<Symptom | null>(null)
   const [manage, setManage] = useState(false)
   const [modalities, setModalities] = useState<Set<string>>(new Set())
@@ -169,7 +171,7 @@ export default function AtencionDeHoy({ patientId, userId, initialAttentions = [
         setBitacoraEntries(prev => prev.map(e => e.id === todayBitacora.id ? { ...e, exercises: nextExercises } : e))
       } else {
         const { data, error } = await supabase.from('simple_activity_log')
-          .insert({ patient_id: patientId, user_id: userId, activity_date: today, exercises: [{ name }] })
+          .insert({ patient_id: patientId, user_id: userId, activity_date: today, exercises: [{ name }], attributed_professional_id: attributed?.id ?? null, attributed_professional_name: attributed?.name ?? null })
           .select('id, activity_date, exercises, note')
           .single()
         if (error || !data) throw error ?? new Error()
@@ -197,7 +199,7 @@ export default function AtencionDeHoy({ patientId, userId, initialAttentions = [
     try {
       const supabase = createClient()
       const { data, error } = await supabase.from('simple_activity_log')
-        .insert({ patient_id: patientId, user_id: userId, activity_date: today, exercises: priorBitacora.exercises })
+        .insert({ patient_id: patientId, user_id: userId, activity_date: today, exercises: priorBitacora.exercises, attributed_professional_id: attributed?.id ?? null, attributed_professional_name: attributed?.name ?? null })
         .select('id, activity_date, exercises, note')
         .single()
       if (error || !data) throw error ?? new Error()
@@ -281,7 +283,7 @@ export default function AtencionDeHoy({ patientId, userId, initialAttentions = [
       const res = await fetch('/api/pacientes/atencion', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ patientId, symptom, manageSymptoms: manage, modalities: Array.from(modalities), note, adjustedSession: sessionEdited }),
+        body: JSON.stringify({ patientId, symptom, manageSymptoms: manage, modalities: Array.from(modalities), note, adjustedSession: sessionEdited, attributedProfessionalId: attributed?.id }),
       })
       if (!res.ok) throw new Error()
       const { attention } = await res.json()
@@ -396,6 +398,8 @@ export default function AtencionDeHoy({ patientId, userId, initialAttentions = [
           )}
         </div>
       </div>
+
+      <AttributionPicker patientId={patientId} fallbackUserId={userId} onChange={setAttributed} />
 
       {/* CHECK DE SÍNTOMA */}
       <div className="mb-4">
