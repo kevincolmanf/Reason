@@ -29,6 +29,7 @@ interface Patient {
   follow_up_mode?: string | null
   plan_mode?: string | null
   kine_mode?: boolean | null
+  advanced_load_mode?: boolean | null
   habitual_professional_id?: string | null
   user_id: string
 }
@@ -263,6 +264,31 @@ export default function PacienteDetail({ patient: initialPatient, userId, initia
     }
   }
 
+  // Monitoreo de carga avanzado: enciende la card de Carga, el botón "+
+  // Registrar sesión" (ficha y agenda) y el acceso a RPE/VAS/ACWR para este
+  // paciente. Pensado para deportistas — el default es false, así que el flujo
+  // diario con pacientes comunes no muestra nada de esto.
+  const [advLoadSaving, setAdvLoadSaving] = useState(false)
+  const setAdvancedLoadMode = async (enabled: boolean) => {
+    if ((patient.advanced_load_mode ?? false) === enabled) return
+    setPatient(p => ({ ...p, advanced_load_mode: enabled })) // optimista
+    setAdvLoadSaving(true)
+    try {
+      const res = await fetch('/api/pacientes/advanced-load-mode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patientId: patient.id, enabled }),
+      })
+      if (!res.ok) throw new Error()
+      notify(enabled ? 'Monitoreo de carga avanzado activado' : 'Monitoreo de carga avanzado desactivado')
+    } catch {
+      setPatient(p => ({ ...p, advanced_load_mode: !enabled }))
+      notify('No se pudo cambiar el monitoreo de carga avanzado.', 'error')
+    } finally {
+      setAdvLoadSaving(false)
+    }
+  }
+
   const setPlanMode = async (mode: 'detallado' | 'simple') => {
     const prev = patient.plan_mode ?? 'detallado'
     if (mode === prev) return
@@ -402,6 +428,20 @@ export default function PacienteDetail({ patient: initialPatient, userId, initia
                   <p className="text-[11px] text-text-secondary mt-1">Se cargará por defecto al darle turno a este paciente.</p>
                 </div>
               )}
+              <div className="sm:col-span-2">
+                <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Modo de planificación</label>
+                <div className="flex items-center gap-1.5">
+                  <button type="button" onClick={() => setPlanMode('detallado')}
+                    className={`px-3 py-2 rounded-lg text-[13px] font-medium border-[0.5px] transition-colors ${(patient.plan_mode ?? 'detallado') !== 'simple' ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-secondary border-border text-text-secondary hover:text-text-primary'}`}>
+                    Detallado
+                  </button>
+                  <button type="button" onClick={() => setPlanMode('simple')}
+                    className={`px-3 py-2 rounded-lg text-[13px] font-medium border-[0.5px] transition-colors ${(patient.plan_mode ?? 'detallado') === 'simple' ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-secondary border-border text-text-secondary hover:text-text-primary'}`}>
+                    Simple
+                  </button>
+                </div>
+                <p className="text-[11px] text-text-secondary mt-1">Detallado: plan de ejercicio con series/reps en el calendario. Simple: bitácora de actividad, sin dosificación.</p>
+              </div>
             </div>
             <div className="flex gap-3">
               <button onClick={handleSaveEdit} disabled={saving || !editForm.name.trim() || !editForm.dni.trim()} className="bg-accent text-bg-primary px-5 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40">
@@ -442,9 +482,11 @@ export default function PacienteDetail({ patient: initialPatient, userId, initia
             </div>
             <div className="flex gap-2 shrink-0 items-center flex-wrap">
               {sessionSaved && <span className="text-[12px] text-[#4ade80]">✓ Sesión registrada</span>}
-              <button onClick={() => setSessionSheet(true)} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity">
-                + Registrar sesión
-              </button>
+              {(patient.advanced_load_mode ?? false) && (
+                <button onClick={() => setSessionSheet(true)} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity">
+                  + Registrar sesión
+                </button>
+              )}
               <button
                 data-tour="ficha-modo-kine"
                 onClick={() => setKineMode(!(patient.kine_mode ?? false))}
@@ -459,6 +501,18 @@ export default function PacienteDetail({ patient: initialPatient, userId, initia
                 {patient.kine_mode
                   ? 'Modo kine activo'
                   : (hasTurnos ? 'Activar modo kine · sugerido' : 'Activar modo kine')}
+              </button>
+              <button
+                onClick={() => setAdvancedLoadMode(!(patient.advanced_load_mode ?? false))}
+                disabled={advLoadSaving}
+                title="Monitoreo de carga avanzado: RPE, dolor y ACWR por sesión. Pensado para deportistas — no afecta a los demás pacientes."
+                className={`px-4 py-2 rounded-lg text-[13px] border-[0.5px] transition-colors disabled:opacity-50 ${
+                  patient.advanced_load_mode
+                    ? 'bg-accent/10 border-accent/40 text-accent hover:bg-accent/15'
+                    : 'bg-bg-secondary border-border text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                {patient.advanced_load_mode ? 'Carga avanzada activa' : 'Activar carga avanzada'}
               </button>
               <button onClick={() => setEditing(true)} className="bg-bg-secondary border-[0.5px] border-border text-text-secondary px-4 py-2 rounded-lg text-[13px] hover:text-text-primary transition-colors">Editar</button>
               {isOwner && <button onClick={handleDelete} className="bg-bg-secondary border-[0.5px] border-border text-text-secondary px-4 py-2 rounded-lg text-[13px] hover:text-warning transition-colors">Eliminar</button>}
