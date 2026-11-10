@@ -6,6 +6,7 @@ import Header from '@/components/Header'
 import PlanningReminderBanner from '@/components/PlanningReminderBanner'
 import WeekMilestonesBanner, { type WeekMilestone } from '@/components/WeekMilestonesBanner'
 import OnboardingGuide from '@/components/OnboardingGuide'
+import WhatsNewBanner from '@/components/WhatsNewBanner'
 import { eventMeta } from '@/lib/patientEvents'
 import { getActiveContext } from '@/lib/context'
 
@@ -241,6 +242,7 @@ export default async function DashboardPage() {
         </div>
 
         <OnboardingGuide variant={onboardingVariant} />
+        <WhatsNewBanner />
 
         {showTrialBanner && (
           <div className={`flex items-center justify-between gap-4 rounded-xl border-[0.5px] px-5 py-4 mb-6 ${
