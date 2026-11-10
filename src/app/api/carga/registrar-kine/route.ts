@@ -53,7 +53,7 @@ export async function POST(request: Request) {
 
   const today = new Date().toISOString().split('T')[0]
   const { data: inserted, error } = await admin.from('load_sessions').insert({
-    user_id: patient.user_id, // dueño de los datos del paciente
+    user_id: user.id, // quien carga la sesión, no el dueño del paciente
     patient_id: patientId,
     session_date: today,
     activity: null,
