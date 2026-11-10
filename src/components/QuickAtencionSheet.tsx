@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
+import AttributionPicker, { type AttributedProfessional } from '@/components/AttributionPicker'
 
 // Hoja rápida para cargar la "Atención de hoy" (modo kine) desde la agenda, sin
 // entrar a la ficha. Muestra un resumen de las últimas atenciones + check de
@@ -50,6 +51,7 @@ function todayAR(): string { return new Date().toLocaleDateString('en-CA', { tim
 
 export default function QuickAtencionSheet({ patientId, patientName, userId, planMode = 'detallado', onClose, onSaved }: Props) {
   const [recent, setRecent] = useState<RecentAtt[] | null>(null)
+  const [attributed, setAttributed] = useState<AttributedProfessional | null>(null)
   const [symptom, setSymptom] = useState<Symptom | null>(null)
   const [manage, setManage] = useState(false)
   const [modalities, setModalities] = useState<Set<string>>(new Set())
@@ -244,7 +246,7 @@ export default function QuickAtencionSheet({ patientId, patientName, userId, pla
         setBitacoraEntries(prev => prev.map(e => e.id === todayBitacora.id ? { ...e, exercises: nextExercises } : e))
       } else {
         const { data, error } = await supabase.from('simple_activity_log')
-          .insert({ patient_id: patientId, user_id: userId, activity_date: today, exercises: [{ name }] })
+          .insert({ patient_id: patientId, user_id: userId, activity_date: today, exercises: [{ name }], attributed_professional_id: attributed?.id ?? null, attributed_professional_name: attributed?.name ?? null })
           .select('id, activity_date, exercises, note')
           .single()
         if (error || !data) throw error ?? new Error()
@@ -272,7 +274,7 @@ export default function QuickAtencionSheet({ patientId, patientName, userId, pla
     try {
       const supabase = createClient()
       const { data, error } = await supabase.from('simple_activity_log')
-        .insert({ patient_id: patientId, user_id: userId, activity_date: today, exercises: priorBitacora.exercises })
+        .insert({ patient_id: patientId, user_id: userId, activity_date: today, exercises: priorBitacora.exercises, attributed_professional_id: attributed?.id ?? null, attributed_professional_name: attributed?.name ?? null })
         .select('id, activity_date, exercises, note')
         .single()
       if (error || !data) throw error ?? new Error()
@@ -298,7 +300,7 @@ export default function QuickAtencionSheet({ patientId, patientName, userId, pla
     try {
       const res = await fetch('/api/pacientes/atencion', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ patientId, symptom, manageSymptoms: manage, modalities: Array.from(modalities), note, adjustedSession: sessionEdited }),
+        body: JSON.stringify({ patientId, symptom, manageSymptoms: manage, modalities: Array.from(modalities), note, adjustedSession: sessionEdited, attributedProfessionalId: attributed?.id }),
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json?.error || 'error')
@@ -346,6 +348,8 @@ export default function QuickAtencionSheet({ patientId, patientName, userId, pla
               </div>
             )}
           </div>
+
+          <AttributionPicker patientId={patientId} fallbackUserId={userId} onChange={setAttributed} />
 
           {/* Check de síntoma */}
           <div>
