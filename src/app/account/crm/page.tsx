@@ -138,7 +138,7 @@ export default async function CRMPage() {
   const monthTo = nextMonthStart.toISOString()
   type OpRow = { professional_id: string; professional_name: string; turnos: number; presentes: number; ausentes: number; cancelados: number; nuevos: number; horas: number; dias: number; pacientes: number }
   type RetRow = { professional_id: string; activos: number; altas: number; abandonos: number; oportunidad: number; completan: number; duracion_dias: number | null; en_riesgo: number }
-  type CliRow = { professional_id: string; fichas_mes: number; planes_mes: number; evals_mes: number; planes_desactualizados: number }
+  type CliRow = { professional_id: string; fichas_mes: number; planes_mes: number; evals_mes: number; planes_desactualizados: number; fichas_pendientes: number }
   type MemberRow = { user_id: string; profession: string | null; specialty: string | null; vinculo: string | null; users: { id: string; full_name: string | null; email: string | null } | null }
 
   const [opRes, retRes, cliRes, membersRes] = await Promise.all([
@@ -202,6 +202,7 @@ export default async function CRMPage() {
       planesMes: c?.planes_mes ?? 0,
       evalsMes: c?.evals_mes ?? 0,
       planesDesact: c?.planes_desactualizados ?? 0,
+      fichasPend: c?.fichas_pendientes ?? 0,
     }
   }).sort((a, b) => b.activos - a.activos)
 
