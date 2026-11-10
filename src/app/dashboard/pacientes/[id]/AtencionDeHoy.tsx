@@ -420,6 +420,8 @@ export default function AtencionDeHoy({ patientId, userId, initialAttentions = [
         </div>
       </div>
 
+      {symptom && (
+      <>
       {/* SUGERENCIA */}
       {sug && (
         <div className="rounded-lg p-3.5 mb-4 border-[0.5px]" style={{ borderColor: sugColor + '66', background: sugSoft }}>
@@ -600,6 +602,8 @@ export default function AtencionDeHoy({ patientId, userId, initialAttentions = [
         {status === 'saved' && <span className="text-[12px] text-[#4ade80]">✓ Registrada — la continuidad quedó lista</span>}
         {status === 'error' && <span className="text-[12px] text-warning">No se pudo registrar — reintentá</span>}
       </div>
+      </>
+      )}
     </section>
   )
 }
