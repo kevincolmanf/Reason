@@ -12,6 +12,7 @@ export interface Attention {
   id: string
   attended_on: string
   professional_name: string | null
+  attributed_professional_name: string | null
   symptom: string | null
   manage_symptoms: boolean
   modalities: string[]
@@ -356,7 +357,7 @@ export default function AtencionDeHoy({ patientId, userId, initialAttentions = [
                 <div key={a.id} className={`flex gap-3 px-3 py-2.5 items-start ${i > 0 ? 'border-t-[0.5px] border-border' : ''}`}>
                   <div className="shrink-0 w-[104px]">
                     <div className="text-[11.5px] text-text-secondary capitalize">{dateLabel(a.attended_on)}</div>
-                    <div className="text-[11px] text-text-secondary/70 truncate">{a.professional_name ?? 'Profesional'}</div>
+                    <div className="text-[11px] text-text-secondary/70 truncate">{a.attributed_professional_name ?? a.professional_name ?? 'Profesional'}</div>
                   </div>
                   <div className="min-w-0">
                     <div className="flex flex-wrap gap-1.5 items-center">

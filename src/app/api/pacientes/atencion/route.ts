@@ -14,9 +14,9 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  let body: { patientId?: string; symptom?: string | null; manageSymptoms?: boolean; modalities?: string[]; note?: string; adjustedSession?: boolean }
+  let body: { patientId?: string; symptom?: string | null; manageSymptoms?: boolean; modalities?: string[]; note?: string; adjustedSession?: boolean; attributedProfessionalId?: string }
   try { body = await request.json() } catch { return NextResponse.json({ error: 'Body inválido' }, { status: 400 }) }
-  const { patientId } = body
+  const { patientId, attributedProfessionalId } = body
   const symptom = body.symptom ?? null
   const manageSymptoms = body.manageSymptoms === true
   const modalities = Array.isArray(body.modalities) ? body.modalities.filter(m => m in MODALITIES) : []
@@ -57,6 +57,22 @@ export async function POST(request: Request) {
   const { data: prof } = await admin.from('users').select('full_name, email').eq('id', user.id).maybeSingle()
   const professionalName = prof?.full_name || prof?.email || null
 
+  // Atribución real (por turno del día, resuelta en el cliente) — se valida
+  // que pertenezca a la misma organización antes de confiar en ella.
+  let attributedId: string | null = null
+  let attributedName: string | null = null
+  if (attributedProfessionalId && patient.org_id) {
+    const isMember = attributedProfessionalId === patient.user_id || (await admin
+      .from('organization_members')
+      .select('*', { count: 'exact', head: true })
+      .eq('org_id', patient.org_id)
+      .eq('user_id', attributedProfessionalId)).count! > 0
+    if (isMember) {
+      const { data: attrUser } = await admin.from('users').select('full_name, email').eq('id', attributedProfessionalId).maybeSingle()
+      if (attrUser) { attributedId = attributedProfessionalId; attributedName = attrUser.full_name || attrUser.email || null }
+    }
+  }
+
   // Línea de continuidad: síntoma + lo que se hizo. No inventa un "ajuste" que el
   // profesional no marcó; el diff fino de ejercicios se sumará al integrar el plan.
   const parts: string[] = []
@@ -74,13 +90,15 @@ export async function POST(request: Request) {
       patient_id: patientId,
       user_id: user.id,
       professional_name: professionalName,
+      attributed_professional_id: attributedId,
+      attributed_professional_name: attributedName,
       symptom,
       manage_symptoms: manageSymptoms,
       modalities,
       auto_summary: autoSummary,
       note: note || null,
     })
-    .select('id, attended_on, professional_name, symptom, manage_symptoms, modalities, auto_summary, note, created_at')
+    .select('id, attended_on, professional_name, attributed_professional_name, symptom, manage_symptoms, modalities, auto_summary, note, created_at')
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
