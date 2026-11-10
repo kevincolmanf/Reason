@@ -521,6 +521,37 @@ export default function PacienteDetail({ patient: initialPatient, userId, initia
         )}
       </div>
 
+      {/* BARRA DE ACCESOS — compacta, siempre arriba de "Atención de hoy" para
+          que nunca quede escondida por el tamaño de esa sección. Links de
+          salida (no hay "activo": cada uno lleva a una página distinta). */}
+      <nav className="inline-flex items-center gap-0.5 bg-bg-tertiary border-[0.5px] border-border-strong rounded-2xl p-1 mb-6 shadow-sm overflow-x-auto max-w-full">
+        <Link href={`/dashboard/pacientes/${patient.id}/ficha`} className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-[13px] font-medium text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline whitespace-nowrap">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-5-5h-3"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>
+          Ficha
+        </Link>
+        {(patient.plan_mode ?? 'detallado') === 'simple' ? (
+          <Link href={`/dashboard/pacientes/${patient.id}/bitacora`} className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-[13px] font-medium text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline whitespace-nowrap">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M9 16l2 2 4-4"/></svg>
+            Bitácora
+          </Link>
+        ) : (
+          <Link href={`/dashboard/ejercicios/plan?paciente=${patient.id}`} className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-[13px] font-medium text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline whitespace-nowrap">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M9 16l2 2 4-4"/></svg>
+            Plan
+          </Link>
+        )}
+        <Link href={`/dashboard/pacientes/${patient.id}/rts`} className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-[13px] font-medium text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline whitespace-nowrap">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+          RTS
+        </Link>
+        {(patient.advanced_load_mode ?? false) && (
+          <Link href={`/dashboard/pacientes/${patient.id}/carga`} className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-[13px] font-medium text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline whitespace-nowrap">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 3v18h18M7 15l3-4 3 2 4-6"/></svg>
+            Carga
+          </Link>
+        )}
+      </nav>
+
       {/* ATENCIÓN DE HOY — solo en pacientes en modo kinesiología. */}
       {patient.kine_mode && (
         <AtencionDeHoy patientId={patient.id} userId={userId} initialAttentions={initialAttentions} kineSession={kineSession} planMode={patient.plan_mode} />
@@ -575,73 +606,6 @@ export default function PacienteDetail({ patient: initialPatient, userId, initia
           </Link>
         </div>
       )}
-
-      {/* 3 CARDS PRINCIPALES */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-        <Link href={`/dashboard/pacientes/${patient.id}/ficha`} className="block no-underline group">
-          <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 hover:bg-bg-secondary transition-colors h-full">
-            <div className="text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-3">Expediente clínico</div>
-            <div className="text-[18px] font-medium mb-1">Ficha Kinésica</div>
-            <div className="text-[13px] text-text-secondary">Anamnesis, diagnóstico, goniometría, cuestionarios, dinamometría</div>
-            <div className="mt-5 text-accent text-[13px] font-medium opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity">Abrir →</div>
-          </div>
-        </Link>
-
-        <Link href={`/dashboard/pacientes/${patient.id}/carga`} className="block no-underline group">
-          <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 hover:bg-bg-secondary transition-colors h-full">
-            <div className="text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-3">Seguimiento</div>
-            <div className="text-[18px] font-medium mb-1">Monitoreo de Carga</div>
-            <div className="text-[13px] text-text-secondary">Sesiones, ACWR, VAS, RPE y consejo semanal</div>
-            <div className="mt-5 text-accent text-[13px] font-medium opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity">Abrir →</div>
-          </div>
-        </Link>
-
-        {/* Planificación: según el modo del paciente, editor de planes (detallado)
-            o bitácora simple. El toggle de abajo cambia el modo (default detallado,
-            así nadie deja de progresar a quien lo necesita). */}
-        {(() => {
-          const isSimple = (patient.plan_mode ?? 'detallado') === 'simple'
-          return (
-            <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 h-full flex flex-col">
-              {isSimple ? (
-                <Link href={`/dashboard/pacientes/${patient.id}/bitacora`} className="block no-underline group flex-grow">
-                  <div className="text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-3">Planificación · Modo simple</div>
-                  <div className="text-[18px] font-medium mb-1">Bitácora de actividad</div>
-                  <div className="text-[13px] text-text-secondary">Registro simple del día a día, sin dosificación. Ideal para pacientes agudos; visible para el equipo.</div>
-                  <div className="mt-5 text-accent text-[13px] font-medium opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity">Abrir →</div>
-                </Link>
-              ) : (
-                <Link href={`/dashboard/ejercicios/plan?paciente=${patient.id}`} className="block no-underline group flex-grow">
-                  <div className="text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-3">Planificación</div>
-                  <div className="text-[18px] font-medium mb-1">Plan de Ejercicio / Calendario</div>
-                  <div className="text-[13px] text-text-secondary">Armá el plan, programá las sesiones en el calendario y marcá los hitos del tratamiento</div>
-                  <div className="mt-5 text-accent text-[13px] font-medium opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity">Abrir →</div>
-                </Link>
-              )}
-              <div className="mt-4 pt-3 border-t-[0.5px] border-border flex items-center gap-1.5">
-                <span className="text-[10px] uppercase tracking-[0.05em] text-text-secondary mr-1" title="Cómo planificás a este paciente">Modo</span>
-                <button onClick={() => setPlanMode('detallado')}
-                  className={`px-2.5 py-1 rounded-md text-[12px] font-medium border-[0.5px] transition-colors ${!isSimple ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-secondary border-border text-text-secondary hover:text-text-primary'}`}>
-                  Detallado
-                </button>
-                <button onClick={() => setPlanMode('simple')}
-                  className={`px-2.5 py-1 rounded-md text-[12px] font-medium border-[0.5px] transition-colors ${isSimple ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-secondary border-border text-text-secondary hover:text-text-primary'}`}>
-                  Simple
-                </button>
-              </div>
-            </div>
-          )
-        })()}
-
-        <Link href={`/dashboard/pacientes/${patient.id}/rts`} className="block no-underline group">
-          <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 hover:bg-bg-secondary transition-colors h-full">
-            <div className="text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-3">Protocolos RTS</div>
-            <div className="text-[18px] font-medium mb-1">Retorno al Deporte</div>
-            <div className="text-[13px] text-text-secondary">LCA, isquiotibiales, tobillo, femoropatelar, tendinopatía, inguinal, hombro</div>
-            <div className="mt-5 text-accent text-[13px] font-medium opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity">Abrir →</div>
-          </div>
-        </Link>
-      </div>
 
       {/* HITOS DEL TRATAMIENTO */}
       <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-5 mb-6">
