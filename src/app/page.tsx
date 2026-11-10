@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import Image from 'next/image'
 import LandingHero from '@/components/LandingHero'
 
 export default function LandingPage({
@@ -434,7 +435,7 @@ export default function LandingPage({
         <div className="w-full max-w-[1080px] mx-auto px-8">
           <div className="grid grid-cols-1 md:grid-cols-[200px_1fr] gap-12 items-center">
             <div className="w-[200px] h-[200px] rounded-xl overflow-hidden flex-shrink-0">
-              <img src="/Photoroom_20240929_222601 2.JPG" alt="Kevin Colman" className="w-full h-full object-cover object-top" />
+              <Image src="/Photoroom_20240929_222601 2.JPG" alt="Kevin Colman" width={200} height={200} className="w-full h-full object-cover object-top" />
             </div>
             <div>
               <h2 className="text-[32px] font-medium tracking-[-0.02em] mb-3">
