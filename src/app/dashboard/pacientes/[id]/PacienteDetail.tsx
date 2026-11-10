@@ -385,6 +385,12 @@ export default function PacienteDetail({ patient: initialPatient, userId, treatm
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-5-5h-3"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>
           Ficha
         </Link>
+        {patient.kine_mode && (
+          <Link href={`/dashboard/pacientes/${patient.id}#atencion-de-hoy`} className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-[13px] font-medium text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline whitespace-nowrap">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M9 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3"/><path d="m9 14 2 2 4-4"/></svg>
+            Atención
+          </Link>
+        )}
         {(patient.plan_mode ?? 'detallado') === 'simple' ? (
           <Link href={`/dashboard/pacientes/${patient.id}/bitacora`} className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-[13px] font-medium text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline whitespace-nowrap">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M9 16l2 2 4-4"/></svg>
@@ -396,6 +402,18 @@ export default function PacienteDetail({ patient: initialPatient, userId, treatm
             Plan
           </Link>
         )}
+        <Link href={`/dashboard/pacientes/${patient.id}/hitos`} className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-[13px] font-medium text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline whitespace-nowrap">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 4h12l-3 4 3 4H4"/><line x1="4" y1="2" x2="4" y2="22"/></svg>
+          Hitos
+        </Link>
+        <Link href={`/dashboard/pacientes/${patient.id}/historial`} className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-[13px] font-medium text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline whitespace-nowrap">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+          Historial
+        </Link>
+        <Link href={`/dashboard/pacientes/${patient.id}/portal`} className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-[13px] font-medium text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline whitespace-nowrap">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+          Portal
+        </Link>
         <Link href={`/dashboard/pacientes/${patient.id}/rts`} className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-[13px] font-medium text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline whitespace-nowrap">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>
           RTS
