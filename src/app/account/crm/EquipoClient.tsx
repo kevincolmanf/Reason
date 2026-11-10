@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import Link from 'next/link'
 
 export type TeamMember = {
   id: string
@@ -129,7 +130,7 @@ export default function EquipoClient({ team, monthLabel }: { team: TeamMember[];
   return (
     <div>
       <p className="text-[13px] text-text-secondary mb-4">
-        Un vistazo de cada profesional para conversar cara a cara. Tocá una fila para ver su resumen 1:1. Operación y trabajo clínico son del mes de <span className="text-text-primary">{monthLabel}</span>; retención y duración, sobre todo el historial. La categoría se edita en <span className="text-text-primary">Mi Equipo</span>.
+        Un vistazo de cada profesional para conversar cara a cara. Tocá una fila para ver su resumen 1:1. Operación y trabajo clínico son del mes de <span className="text-text-primary">{monthLabel}</span>; retención y duración, sobre todo el historial. La categoría se edita en <Link href="/account/equipo" className="text-accent hover:underline no-underline">Mi Equipo →</Link>.
       </p>
 
       {(hasHonorarios || hasTerciarizados) && (
