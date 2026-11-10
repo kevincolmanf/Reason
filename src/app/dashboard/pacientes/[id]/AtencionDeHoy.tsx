@@ -91,6 +91,7 @@ export default function AtencionDeHoy({ patientId, userId, initialAttentions = [
   const [showAll, setShowAll] = useState(false)
   const [confirmDel, setConfirmDel] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [showMoreOptions, setShowMoreOptions] = useState(false)
 
   const deleteAttention = async (id: string) => {
     setDeleting(id)
@@ -284,7 +285,7 @@ export default function AtencionDeHoy({ patientId, userId, initialAttentions = [
       if (!res.ok) throw new Error()
       const { attention } = await res.json()
       setAttentions(prev => [attention as Attention, ...prev])
-      setSymptom(null); setManage(false); setModalities(new Set()); setNote(''); setSessionEdited(false)
+      setSymptom(null); setManage(false); setModalities(new Set()); setNote(''); setSessionEdited(false); setShowMoreOptions(false)
       setStatus('saved'); setTimeout(() => setStatus('idle'), 2500)
     } catch {
       setStatus('error')
@@ -543,25 +544,34 @@ export default function AtencionDeHoy({ patientId, userId, initialAttentions = [
         {bringError && <p className="text-[12px] text-warning mt-1.5">{bringError}</p>}
       </div>
 
-      {/* MODALIDADES + MANEJO DE SÍNTOMAS */}
-      <div className="flex flex-wrap gap-2 mb-3">
-        {MODALITIES.map(m => {
-          const on = modalities.has(m.id)
-          return (
-            <button
-              key={m.id}
-              onClick={() => toggleMod(m.id)}
-              className={`text-[11.5px] font-medium px-3 py-1.5 rounded-full border-[0.5px] transition-colors ${on ? 'text-accent border-accent/40 bg-accent/10' : 'text-text-secondary border-border bg-bg-primary hover:text-text-primary'}`}
-            >
-              {m.label}
-            </button>
-          )
-        })}
-      </div>
-      <label className="flex items-center gap-2 mb-4 text-[12.5px] text-text-secondary cursor-pointer w-fit">
-        <input type="checkbox" checked={manage} onChange={e => setManage(e.target.checked)} style={{ accentColor: '#f87171' }} />
-        Manejo de síntomas (sin carga) — no rompe la progresión del plan
-      </label>
+      {/* MODALIDADES + MANEJO DE SÍNTOMAS — colapsado por defecto: no se usa en
+          cada paciente, y agregaba 4 controles siempre visibles sin necesidad. */}
+      {!showMoreOptions && modalities.size === 0 && !manage ? (
+        <button onClick={() => setShowMoreOptions(true)} className="text-[12px] text-text-secondary hover:text-text-primary mb-4 w-fit">
+          + opciones (modalidades, manejo de síntomas)
+        </button>
+      ) : (
+        <>
+          <div className="flex flex-wrap gap-2 mb-3">
+            {MODALITIES.map(m => {
+              const on = modalities.has(m.id)
+              return (
+                <button
+                  key={m.id}
+                  onClick={() => toggleMod(m.id)}
+                  className={`text-[11.5px] font-medium px-3 py-1.5 rounded-full border-[0.5px] transition-colors ${on ? 'text-accent border-accent/40 bg-accent/10' : 'text-text-secondary border-border bg-bg-primary hover:text-text-primary'}`}
+                >
+                  {m.label}
+                </button>
+              )
+            })}
+          </div>
+          <label className="flex items-center gap-2 mb-4 text-[12.5px] text-text-secondary cursor-pointer w-fit">
+            <input type="checkbox" checked={manage} onChange={e => setManage(e.target.checked)} style={{ accentColor: '#f87171' }} />
+            Manejo de síntomas (sin carga) — no rompe la progresión del plan
+          </label>
+        </>
+      )}
 
       {/* NOTA OPCIONAL + REGISTRAR */}
       <div className="border-[0.5px] border-dashed border-border rounded-lg p-3 mb-4">
