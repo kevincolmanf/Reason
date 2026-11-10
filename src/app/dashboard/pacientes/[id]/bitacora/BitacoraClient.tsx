@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
 import { useConfirm, useToast } from '@/components/Dialogs'
+import AttributionPicker, { type AttributedProfessional } from '@/components/AttributionPicker'
 
 interface ExerciseRef { id?: string; name: string }
 interface Entry {
@@ -14,6 +15,7 @@ interface Entry {
   note: string | null
   created_at: string
   user_id: string | null
+  attributed_professional_name: string | null
 }
 
 function todayStr(): string {
@@ -42,6 +44,7 @@ export default function BitacoraClient({
   const supabaseRef = useRef(createClient())
 
   const [entries, setEntries] = useState<Entry[]>(initialEntries)
+  const [attributed, setAttributed] = useState<AttributedProfessional | null>(null)
   const [date, setDate] = useState(todayStr())
   const [chips, setChips] = useState<ExerciseRef[]>([])
   const [note, setNote] = useState('')
@@ -85,7 +88,7 @@ export default function BitacoraClient({
         .from('simple_activity_log')
         .update({ activity_date: date, exercises: chips, note: note.trim() || null })
         .eq('id', editingId)
-        .select('id, activity_date, exercises, note, created_at, user_id')
+        .select('id, activity_date, exercises, note, created_at, user_id, attributed_professional_name')
         .single()
       setSaving(false)
       if (error || !data) { notify('No se pudo guardar el cambio: ' + (error?.message ?? 'error'), 'error'); return }
@@ -96,8 +99,8 @@ export default function BitacoraClient({
     }
     const { data, error } = await supabaseRef.current
       .from('simple_activity_log')
-      .insert({ patient_id: patientId, user_id: userId, activity_date: date, exercises: chips, note: note.trim() || null })
-      .select('id, activity_date, exercises, note, created_at, user_id')
+      .insert({ patient_id: patientId, user_id: userId, activity_date: date, exercises: chips, note: note.trim() || null, attributed_professional_id: attributed?.id ?? null, attributed_professional_name: attributed?.name ?? null })
+      .select('id, activity_date, exercises, note, created_at, user_id, attributed_professional_name')
       .single()
     setSaving(false)
     if (error || !data) { notify('No se pudo guardar: ' + (error?.message ?? 'error'), 'error'); return }
@@ -198,6 +201,7 @@ export default function BitacoraClient({
 
       {/* Alta rápida */}
       <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-5 mb-8">
+        <AttributionPicker patientId={patientId} fallbackUserId={userId} onChange={setAttributed} />
         <div className="flex flex-wrap items-center gap-3 mb-3">
           <label className="text-[11px] uppercase tracking-[0.05em] text-text-secondary">
             {editingId ? 'Editando registro · Día' : 'Día'}
@@ -262,7 +266,7 @@ export default function BitacoraClient({
               <div className="flex items-start justify-between gap-3 mb-2">
                 <div>
                   <span className="text-[13px] font-medium text-text-primary capitalize">{formatDate(e.activity_date)}</span>
-                  <span className="text-[11px] text-text-secondary ml-2">· cargado por {authorName(e.user_id)}</span>
+                  <span className="text-[11px] text-text-secondary ml-2">· cargado por {e.attributed_professional_name ?? authorName(e.user_id)}</span>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <button onClick={() => startEdit(e)} className="text-text-secondary hover:text-accent text-[12px]" title="Editar">Editar</button>

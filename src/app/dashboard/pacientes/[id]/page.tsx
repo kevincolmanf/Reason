@@ -77,7 +77,7 @@ export default async function PacientePage({ params, searchParams }: { params: {
     const [{ data: att }, { data: kinePlan }] = await Promise.all([
       supabase
         .from('kine_attentions')
-        .select('id, attended_on, professional_name, symptom, manage_symptoms, modalities, auto_summary, note, created_at')
+        .select('id, attended_on, professional_name, attributed_professional_name, symptom, manage_symptoms, modalities, auto_summary, note, created_at')
         .eq('patient_id', params.id)
         .order('created_at', { ascending: false })
         .limit(20),

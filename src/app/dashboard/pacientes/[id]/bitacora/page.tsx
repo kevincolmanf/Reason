@@ -26,7 +26,7 @@ export default async function BitacoraPage({ params }: { params: { id: string } 
 
   const { data: entries } = await supabase
     .from('simple_activity_log')
-    .select('id, activity_date, exercises, note, created_at, user_id')
+    .select('id, activity_date, exercises, note, created_at, user_id, attributed_professional_name')
     .eq('patient_id', patient.id)
     .order('activity_date', { ascending: false })
     .order('created_at', { ascending: false })
