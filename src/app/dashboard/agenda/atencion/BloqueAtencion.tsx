@@ -14,6 +14,7 @@ export interface BloquePaciente {
   status: string
   professionalName: string | null
   attended: boolean
+  kineMode: boolean
 }
 export interface Bloque {
   time: string
@@ -28,10 +29,58 @@ const SYM: { id: Symptom; label: string; color: string; soft: string }[] = [
 ]
 
 function PacienteCard({ p }: { p: BloquePaciente }) {
+  const [kineMode, setKineMode] = useState(p.kineMode)
+  const [activating, setActivating] = useState(false)
+  const [activateError, setActivateError] = useState(false)
   const [symptom, setSymptom] = useState<Symptom | null>(null)
   const [saving, setSaving] = useState(false)
   const [attended, setAttended] = useState(p.attended)
   const [error, setError] = useState(false)
+
+  const activateKine = async () => {
+    setActivating(true); setActivateError(false)
+    try {
+      const res = await fetch('/api/pacientes/kine-mode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patientId: p.patientId, enabled: true }),
+      })
+      if (!res.ok) throw new Error()
+      setKineMode(true)
+    } catch {
+      setActivateError(true)
+    } finally {
+      setActivating(false)
+    }
+  }
+
+  // Sin modo kine: tarjeta compacta — nombre + un toque para sumarlo al
+  // flujo, en vez del check completo de síntoma (que no le corresponde
+  // hasta que lo prenda).
+  if (!kineMode) {
+    return (
+      <div className="bg-bg-primary border-[0.5px] border-dashed border-border rounded-lg px-3.5 py-2.5 flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <Link href={`/dashboard/pacientes/${p.patientId}?from=atencion`} className="text-[13.5px] font-medium text-text-primary no-underline hover:underline">
+            {p.name}
+          </Link>
+          <div className="text-[11px] text-text-secondary mt-0.5 truncate">
+            {p.area || 'Sin área'}{p.professionalName ? ` · ${p.professionalName}` : ''}
+          </div>
+        </div>
+        <div className="shrink-0 flex items-center gap-2">
+          {activateError && <span className="text-[11px] text-warning">Reintentá</span>}
+          <button
+            onClick={activateKine}
+            disabled={activating}
+            className="text-[11.5px] font-medium px-2.5 py-1.5 rounded-lg border-[0.5px] border-border text-text-secondary hover:text-text-primary hover:border-accent transition-colors disabled:opacity-50"
+          >
+            {activating ? 'Activando…' : '+ Modo kine'}
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   const register = async () => {
     if (!symptom) return
@@ -117,8 +166,8 @@ export default function BloqueAtencion({ bloques }: { bloques: Bloque[] }) {
   if (total === 0) {
     return (
       <div className="bg-bg-secondary border-[0.5px] border-border rounded-xl p-8 text-center">
-        <p className="text-[14px] text-text-primary font-medium mb-1">No hay pacientes de kinesiología con turno este día</p>
-        <p className="text-[13px] text-text-secondary">Aparecen acá los pacientes en modo kine que tengan turno. Prendé el modo kine desde la ficha del paciente.</p>
+        <p className="text-[14px] text-text-primary font-medium mb-1">No hay turnos con paciente asignado este día</p>
+        <p className="text-[13px] text-text-secondary">Acá aparecen todos los pacientes con turno hoy, agrupados por horario.</p>
       </div>
     )
   }

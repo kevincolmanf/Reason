@@ -67,9 +67,12 @@ export default async function AtencionDelBloquePage({ searchParams }: { searchPa
   }
 
   // Agrupar por bloque horario (misma hora de inicio = en simultáneo).
+  // Entran TODOS los pacientes con turno hoy, no solo los de modo kine — antes
+  // quedaban invisibles acá los que todavía no lo tenían prendido, aunque
+  // tuvieran turno. Para esos se ofrece activarlo con un toque desde la tarjeta.
   const byBlock = new Map<string, BloquePaciente[]>()
   for (const t of turnos ?? []) {
-    if (!t.patient_id || !kineIds.has(t.patient_id)) continue
+    if (!t.patient_id) continue
     const key = hhmm(t.start_time)
     const arr = byBlock.get(key) ?? []
     // Evitar duplicar el mismo paciente si tuviera dos turnos en el mismo bloque.
@@ -81,6 +84,7 @@ export default async function AtencionDelBloquePage({ searchParams }: { searchPa
         status: t.status,
         professionalName: t.professional_name,
         attended: attendedToday.has(t.patient_id),
+        kineMode: kineIds.has(t.patient_id),
       })
     }
     byBlock.set(key, arr)

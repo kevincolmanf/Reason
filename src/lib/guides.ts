@@ -94,7 +94,7 @@ const ATENCION_STEPS: GuideStep[] = [
   {
     target: 'atencion-bloques',
     title: 'El día, por bloques',
-    body: 'Tus pacientes de kinesiología con turno hoy, agrupados por horario (los que atendés en simultáneo, juntos). Aparecen solo los que tienen el modo kine prendido.',
+    body: 'Todos los pacientes con turno hoy, agrupados por horario (los que atendés en simultáneo, juntos). Si alguno todavía no tiene el modo kine prendido, lo activás con un toque desde la misma tarjeta — nadie queda afuera.',
   },
   {
     target: 'atencion-bloques',
