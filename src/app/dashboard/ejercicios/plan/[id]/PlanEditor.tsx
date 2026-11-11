@@ -427,6 +427,42 @@ export default function PlanEditor({ initialPlan, userId, orgId, initialEvents =
   const [bulkLoadDone, setBulkLoadDone] = useState(0)
   const [bulkLoadError, setBulkLoadError] = useState<string | null>(null)
   const [showDupWeek, setShowDupWeek] = useState(false)
+
+  // Acciones secundarias de la sesión (copiar, pegar, eliminar, +hito/+RTS/
+  // +dinamo/+cuest) agrupadas en un desplegable "Más" — sueltas llegaban a
+  // ser hasta 8 botones en la misma fila, alargando mucho la vista en tablet.
+  // "Guardar sesión" queda siempre visible por ser la acción frecuente.
+  const [sessionActionsOpen, setSessionActionsOpen] = useState(false)
+  const sessionActionsRef = useRef<HTMLDivElement>(null)
+  const sessionActionsBtnRef = useRef<HTMLButtonElement>(null)
+  // Posición calculada en vez de anclar con left-0/right-0: a diferencia de
+  // los otros dos desplegables de esta sesión, este botón "Más" convive con
+  // "Guardar sesión" (ancho variable según el estado) en una fila que
+  // wrappea, así que puede terminar tanto pegado a la izquierda como al
+  // centro de la pantalla según el caso — un anclaje fijo se desborda en
+  // alguno de los dos. Medimos el botón al abrir y clampeamos dentro del
+  // viewport.
+  const [sessionActionsPos, setSessionActionsPos] = useState<{ top: number; left: number } | null>(null)
+  const toggleSessionActions = () => {
+    setSessionActionsOpen(v => {
+      const next = !v
+      if (next && sessionActionsBtnRef.current) {
+        const rect = sessionActionsBtnRef.current.getBoundingClientRect()
+        const panelWidth = 240
+        const margin = 16
+        const left = Math.min(Math.max(rect.left, margin), window.innerWidth - panelWidth - margin)
+        setSessionActionsPos({ top: rect.bottom + 8, left })
+      }
+      return next
+    })
+  }
+  useEffect(() => {
+    function handleClickOutside(e: globalThis.MouseEvent) {
+      if (sessionActionsRef.current && !sessionActionsRef.current.contains(e.target as Node)) setSessionActionsOpen(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
   const [dupWeeks, setDupWeeks] = useState(3)
   const [dupState, setDupState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
 
@@ -1635,53 +1671,58 @@ export default function PlanEditor({ initialPlan, userId, orgId, initialEvents =
                       {sessionSaveStatus === 'idle' && 'Guardar sesión'}
                     </button>
 
-                    {/* Copiar */}
-                    <button
-                      onClick={handleCopySession}
-                      className={`bg-bg-secondary border-[0.5px] text-text-secondary px-3 py-1.5 rounded-lg text-[12px] hover:text-text-primary hover:border-accent transition-colors flex items-center gap-1.5 ${copiedFromDate === selectedDate ? 'border-accent text-accent' : 'border-border'}`}
-                      title="Copiar sesión"
-                    >
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                      {copiedFromDate === selectedDate ? 'Copiado' : 'Copiar'}
-                    </button>
-
-                    {/* Pegar (mismo plan, otro día) */}
-                    {copiedSessionData && copiedFromPlanId === plan.id && copiedFromDate !== selectedDate && (
+                    {/* MÁS — copiar, pegar, eliminar, +hito/+RTS/+dinamo/+cuest */}
+                    <div ref={sessionActionsRef}>
                       <button
-                        onClick={handlePasteSession}
-                        className="bg-accent/10 border-[0.5px] border-accent/40 text-accent px-3 py-1.5 rounded-lg text-[12px] font-medium hover:bg-accent/20 transition-colors flex items-center gap-1.5"
-                        title="Pegar sesión copiada"
+                        ref={sessionActionsBtnRef}
+                        onClick={toggleSessionActions}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] border-[0.5px] transition-colors ${sessionActionsOpen ? 'border-accent text-accent bg-accent/10' : 'bg-bg-secondary border-border text-text-secondary hover:text-text-primary'}`}
                       >
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
-                        Pegar
+                        Más
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform ${sessionActionsOpen ? 'rotate-180' : ''}`}><polyline points="6 9 12 15 18 9"/></svg>
                       </button>
-                    )}
-                    {/* Pegar (de otro paciente) */}
-                    {copiedSessionData && copiedFromPlanId !== plan.id && (
-                      <button
-                        onClick={handlePasteSession}
-                        className="bg-accent/10 border-[0.5px] border-accent/40 text-accent px-3 py-1.5 rounded-lg text-[12px] font-medium hover:bg-accent/20 transition-colors flex items-center gap-1.5"
-                        title="Pegar sesión copiada de otro paciente"
-                      >
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
-                        Pegar (de otro paciente)
-                      </button>
-                    )}
-
-                    {/* Eliminar */}
-                    <button
-                      onClick={deleteSession}
-                      className="bg-bg-secondary border-[0.5px] border-border text-text-secondary px-3 py-1.5 rounded-lg text-[12px] hover:text-warning hover:border-warning/50 transition-colors"
-                    >
-                      Eliminar sesión
-                    </button>
-
-                    {/* Hito / RTS también en un día que ya tiene sesión */}
-                    <span className="w-px h-4 bg-border mx-0.5" />
-                    <button onClick={openAddEvent} className="bg-bg-secondary border-[0.5px] border-border text-text-secondary px-3 py-1.5 rounded-lg text-[12px] hover:text-text-primary hover:border-accent transition-colors">+ Hito</button>
-                    <button onClick={() => openEvalModal('rts', selectedDate ?? todayStr)} className="bg-bg-secondary border-[0.5px] px-3 py-1.5 rounded-lg text-[12px] transition-colors" style={{ borderColor: RTS_COLOR + '66', color: RTS_COLOR }}>+ RTS</button>
-                    {plan.patient_id && <button onClick={() => openEvalModal('dyn', selectedDate ?? todayStr)} className="bg-bg-secondary border-[0.5px] px-3 py-1.5 rounded-lg text-[12px] transition-colors" style={{ borderColor: DYN_COLOR + '66', color: DYN_COLOR }}>+ Dinamo</button>}
-                    {plan.patient_id && <button onClick={() => openEvalModal('quest', selectedDate ?? todayStr)} className="bg-bg-secondary border-[0.5px] px-3 py-1.5 rounded-lg text-[12px] transition-colors" style={{ borderColor: Q_COLOR + '66', color: Q_COLOR }}>+ Cuest</button>}
+                      {sessionActionsOpen && sessionActionsPos && (
+                        <div className="fixed w-60 max-w-[calc(100vw-32px)] bg-bg-primary border-[0.5px] border-border rounded-xl shadow-lg py-2 z-20 animate-menu-pop-in" style={{ top: sessionActionsPos.top, left: sessionActionsPos.left, transformOrigin: 'top left' }}>
+                          <button
+                            onClick={() => { handleCopySession(); setSessionActionsOpen(false) }}
+                            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left text-[13px] text-text-primary hover:bg-bg-secondary transition-colors"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-text-secondary"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                            {copiedFromDate === selectedDate ? 'Copiado ✓' : 'Copiar sesión'}
+                          </button>
+                          {copiedSessionData && copiedFromPlanId === plan.id && copiedFromDate !== selectedDate && (
+                            <button
+                              onClick={() => { handlePasteSession(); setSessionActionsOpen(false) }}
+                              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left text-[13px] text-accent hover:bg-bg-secondary transition-colors"
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
+                              Pegar sesión copiada
+                            </button>
+                          )}
+                          {copiedSessionData && copiedFromPlanId !== plan.id && (
+                            <button
+                              onClick={() => { handlePasteSession(); setSessionActionsOpen(false) }}
+                              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left text-[13px] text-accent hover:bg-bg-secondary transition-colors"
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
+                              Pegar (de otro paciente)
+                            </button>
+                          )}
+                          <div className="border-t-[0.5px] border-border my-1" />
+                          <button onClick={() => { openAddEvent(); setSessionActionsOpen(false) }} className="w-full flex items-center px-4 py-2.5 text-left text-[13px] text-text-primary hover:bg-bg-secondary transition-colors">+ Hito</button>
+                          <button onClick={() => { openEvalModal('rts', selectedDate ?? todayStr); setSessionActionsOpen(false) }} className="w-full flex items-center px-4 py-2.5 text-left text-[13px] hover:bg-bg-secondary transition-colors" style={{ color: RTS_COLOR }}>+ RTS</button>
+                          {plan.patient_id && <button onClick={() => { openEvalModal('dyn', selectedDate ?? todayStr); setSessionActionsOpen(false) }} className="w-full flex items-center px-4 py-2.5 text-left text-[13px] hover:bg-bg-secondary transition-colors" style={{ color: DYN_COLOR }}>+ Dinamo</button>}
+                          {plan.patient_id && <button onClick={() => { openEvalModal('quest', selectedDate ?? todayStr); setSessionActionsOpen(false) }} className="w-full flex items-center px-4 py-2.5 text-left text-[13px] hover:bg-bg-secondary transition-colors" style={{ color: Q_COLOR }}>+ Cuest</button>}
+                          <div className="border-t-[0.5px] border-border my-1" />
+                          <button
+                            onClick={() => { deleteSession(); setSessionActionsOpen(false) }}
+                            className="w-full flex items-center px-4 py-2.5 text-left text-[13px] text-text-secondary hover:text-warning hover:bg-bg-secondary transition-colors"
+                          >
+                            Eliminar sesión
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ) : null}
               </div>
