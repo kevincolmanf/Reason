@@ -31,9 +31,14 @@ const config: Config = {
         mono: ['Geist Mono', 'monospace'],
       },
       keyframes: {
+        // El estado final resuelve en transform:none (no translateY(0)): un
+        // transform distinto de "none", aunque sea un no-op visual, vuelve a
+        // este elemento containing block de sus descendientes position:fixed
+        // mientras el fill-mode "both" lo mantenga activo — rompe cualquier
+        // modal/dropdown fixed anidado adentro.
         fadeInUp: {
           '0%': { opacity: '0', transform: 'translateY(8px)' },
-          '100%': { opacity: '1', transform: 'translateY(0)' },
+          '100%': { opacity: '1', transform: 'none' },
         },
       },
       animation: {

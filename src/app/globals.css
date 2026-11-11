@@ -40,10 +40,14 @@ body {
   100% { background-position: -150% 0; }
 }
 
-/* Menú/dropdown contextual: entra con un leve pop en vez de aparecer de golpe. */
+/* Menú/dropdown contextual: entra con un leve pop en vez de aparecer de golpe.
+   OJO: el estado final tiene que resolver en transform:none (no translateY(0)
+   ni scale(1)) — cualquier transform distinto de "none", aunque sea un no-op
+   visual, convierte este elemento en containing block de sus descendientes
+   position:fixed para siempre mientras el fill-mode "both" lo mantenga activo. */
 @keyframes menu-pop-in {
   0% { opacity: 0; transform: scale(0.96) translateY(-4px); }
-  100% { opacity: 1; transform: scale(1) translateY(0); }
+  100% { opacity: 1; transform: none; }
 }
 .animate-menu-pop-in {
   animation: menu-pop-in 0.15s cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -52,13 +56,17 @@ body {
 
 /* Transición de página (ver src/app/template.tsx): rápida y sutil — esto es
    una herramienta de trabajo clínico, no una landing, así que no debe
-   notarse como "espera". */
+   notarse como "espera". Solo opacity, nunca transform: este wrapper envuelve
+   TODA página de la app, así que cualquier transform (incluso translateY(0),
+   que sigue sin ser "none") lo convertiría en containing block permanente de
+   cualquier modal/overlay position:fixed anidado en cualquier parte de la
+   app — exactamente el bug que rompía los diálogos de confirmar/guardar. */
 @keyframes page-enter {
-  0% { opacity: 0; transform: translateY(4px); }
-  100% { opacity: 1; transform: translateY(0); }
+  0% { opacity: 0; }
+  100% { opacity: 1; }
 }
 .animate-page-enter {
-  animation: page-enter 0.22s ease-out both;
+  animation: page-enter 0.18s ease-out both;
 }
 
 /* Inputs de fecha/hora: el picker nativo y su ícono usan el esquema oscuro,
