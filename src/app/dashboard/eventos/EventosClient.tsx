@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 
 interface EventRow {
@@ -137,6 +137,32 @@ export default function EventosClient({ userId, orgId, initialEvents, initialCou
 
   // Envío de certificados (solo a los presentes) con datos del template.
   const [certEventId, setCertEventId] = useState<string | null>(null)
+
+  // Acciones ocasionales por evento (ver página, editar, exportar,
+  // certificados) agrupadas en un desplegable "Más" — sueltas eran 6 botones
+  // en la misma fila, por cada evento de la lista. Igual que en el editor de
+  // Plan, la posición del botón "Más" varía según el ancho de los botones
+  // frecuentes que lo preceden, así que se mide y clampea al abrir en vez de
+  // anclarla fija con CSS.
+  const [eventMenuOpen, setEventMenuOpen] = useState<string | null>(null)
+  const [eventMenuPos, setEventMenuPos] = useState<{ top: number; left: number } | null>(null)
+  const eventMenuRef = useRef<HTMLDivElement>(null)
+  const toggleEventMenu = (eventId: string, btn: HTMLButtonElement) => {
+    if (eventMenuOpen === eventId) { setEventMenuOpen(null); return }
+    const rect = btn.getBoundingClientRect()
+    const panelWidth = 220
+    const margin = 16
+    const left = Math.min(Math.max(rect.left, margin), window.innerWidth - panelWidth - margin)
+    setEventMenuPos({ top: rect.bottom + 8, left })
+    setEventMenuOpen(eventId)
+  }
+  useEffect(() => {
+    function handleClickOutside(e: globalThis.MouseEvent) {
+      if (eventMenuRef.current && !eventMenuRef.current.contains(e.target as Node)) setEventMenuOpen(null)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
   const [cert, setCert] = useState({ entity: '', signer: '', role: '' })
   const [certSending, setCertSending] = useState(false)
   const [certMsg, setCertMsg] = useState('')
@@ -279,11 +305,24 @@ export default function EventosClient({ userId, orgId, initialEvents, initialCou
               </div>
               <div className="flex flex-wrap items-center gap-2 px-4 pb-4">
                 <button onClick={() => copyLink(e.public_token)} className={chip}>{copied === e.public_token ? '¡Copiado!' : 'Copiar link de inscripción'}</button>
-                <a href={publicUrl(e.public_token)} target="_blank" rel="noopener noreferrer" className="text-[12px] text-text-secondary hover:text-text-primary no-underline px-1">Ver página →</a>
-                <button onClick={() => openEdit(e)} className="text-[12px] text-text-secondary hover:text-text-primary px-1">Editar</button>
                 <button onClick={() => toggleRegs(e.id)} className="text-[12px] text-text-secondary hover:text-text-primary px-1">{openRegs === e.id ? 'Ocultar inscriptos' : 'Ver inscriptos'}</button>
-                <button onClick={() => exportCsv(e)} disabled={exporting === e.id} className="text-[12px] text-text-secondary hover:text-text-primary px-1 disabled:opacity-40">{exporting === e.id ? 'Exportando…' : 'Exportar a Excel'}</button>
-                <button onClick={() => openCert(e)} className="text-[12px] text-text-secondary hover:text-text-primary px-1">Certificados</button>
+                <div ref={eventMenuOpen === e.id ? eventMenuRef : undefined}>
+                  <button
+                    onClick={ev => toggleEventMenu(e.id, ev.currentTarget)}
+                    className={`flex items-center gap-1 text-[12px] px-2 py-0.5 rounded-md border-[0.5px] transition-colors ${eventMenuOpen === e.id ? 'border-accent text-accent bg-accent/10' : 'border-transparent text-text-secondary hover:text-text-primary'}`}
+                  >
+                    Más
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform ${eventMenuOpen === e.id ? 'rotate-180' : ''}`}><polyline points="6 9 12 15 18 9"/></svg>
+                  </button>
+                  {eventMenuOpen === e.id && eventMenuPos && (
+                    <div className="fixed w-[220px] max-w-[calc(100vw-32px)] bg-bg-primary border-[0.5px] border-border rounded-xl shadow-lg py-2 z-20 animate-menu-pop-in" style={{ top: eventMenuPos.top, left: eventMenuPos.left, transformOrigin: 'top left' }}>
+                      <a href={publicUrl(e.public_token)} target="_blank" rel="noopener noreferrer" className="w-full flex items-center px-4 py-2.5 text-left text-[13px] text-text-primary hover:bg-bg-secondary transition-colors no-underline">Ver página →</a>
+                      <button onClick={() => { openEdit(e); setEventMenuOpen(null) }} className="w-full flex items-center px-4 py-2.5 text-left text-[13px] text-text-primary hover:bg-bg-secondary transition-colors">Editar</button>
+                      <button onClick={() => { exportCsv(e); setEventMenuOpen(null) }} disabled={exporting === e.id} className="w-full flex items-center px-4 py-2.5 text-left text-[13px] text-text-primary hover:bg-bg-secondary transition-colors disabled:opacity-40">{exporting === e.id ? 'Exportando…' : 'Exportar a Excel'}</button>
+                      <button onClick={() => { openCert(e); setEventMenuOpen(null) }} className="w-full flex items-center px-4 py-2.5 text-left text-[13px] text-text-primary hover:bg-bg-secondary transition-colors">Certificados</button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {certEventId === e.id && (
