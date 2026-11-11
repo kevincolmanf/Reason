@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Cell, PieChart, Pie, LineChart, Line, Legend,
+  ResponsiveContainer, Cell, PieChart, Pie, LineChart, Line, Legend, Sector,
 } from 'recharts'
 import type { Analytics, RawTurno } from './CRMPageClient'
 
@@ -14,6 +14,7 @@ const GRAY     = '#6b7280'
 const BLUE     = '#3b82f6'
 const AXIS_CLR = '#6b6b65'
 const GRID_CLR = '#2a2a28'
+const BAR_CURSOR = { fill: 'rgba(255,255,255,0.04)' }
 
 // Distinct colors for line chart series (up to 6 professionals)
 const PROF_COLORS = ['#c47c5a', '#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899']
@@ -38,7 +39,7 @@ function KPICard({ label, value, prev, prevLabel, higherIsBetter = true }: {
   const d = delta(value, prev)
   const cls = deltaColor(value, prev, higherIsBetter)
   return (
-    <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">
+    <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 transition-all duration-200 hover:border-border-strong hover:-translate-y-0.5">
       <div className="text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em] mb-3">{label}</div>
       <div className="font-mono text-[32px] font-medium text-text-primary tracking-[-0.02em]">{value}</div>
       <div className={`text-[12px] mt-2 ${cls}`}>
@@ -60,6 +61,34 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
         <p key={p.name} style={{ color: p.color ?? p.fill ?? p.stroke }}>{p.name}: {p.value}</p>
       ))}
     </div>
+  )
+}
+
+// Dona interactiva: al pasar el mouse, el segmento se expande y su nombre/valor
+// aparece en el centro — reemplaza las etiquetas fijas, que se amontonaban y se
+// pisaban entre sí cuando una vía dominaba la distribución (ej. "Sin especificar 93%").
+type ActiveShapeProps = {
+  cx?: number; cy?: number; innerRadius?: number; outerRadius?: number
+  startAngle?: number; endAngle?: number; fill?: string
+  payload?: { name?: string }; percent?: number; value?: number
+}
+
+function renderActiveShape(props: ActiveShapeProps) {
+  const { cx = 0, cy = 0, innerRadius = 0, outerRadius = 0, startAngle, endAngle, fill, payload, percent = 0, value } = props
+  return (
+    <g>
+      <text x={cx} y={cy - 8} textAnchor="middle" fill="#F5F4F0" fontSize={13} fontWeight={500}>
+        {payload?.name}
+      </text>
+      <text x={cx} y={cy + 12} textAnchor="middle" fill="#A6A49C" fontSize={12}>
+        {value} · {Math.round(percent * 100)}%
+      </text>
+      <Sector
+        cx={cx} cy={cy} innerRadius={innerRadius} outerRadius={outerRadius + 8}
+        startAngle={startAngle} endAngle={endAngle} fill={fill}
+        style={{ transition: 'all 0.2s ease-out' }}
+      />
+    </g>
   )
 }
 
@@ -210,6 +239,8 @@ export default function AnalyticsClient({ analytics }: { analytics: Analytics })
 
   const [selectedArea, setSelectedArea] = useState<string>('all')
   const [threshold, setThreshold] = useState<number>(3)
+  const [activeSourceIdx, setActiveSourceIdx] = useState<number | undefined>(undefined)
+  const [activeStateIdx, setActiveStateIdx] = useState<number | undefined>(undefined)
 
   const filtered = useMemo(() =>
     selectedArea === 'all' ? rawTurnos : rawTurnos.filter(t => t.area === selectedArea),
@@ -272,7 +303,7 @@ export default function AnalyticsClient({ analytics }: { analytics: Analytics })
   ].filter(d => d.value > 0)
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-10 animate-fade-in-up">
 
       {/* Selector de mes */}
       <div className="flex items-center gap-3 flex-wrap">
@@ -330,7 +361,7 @@ export default function AnalyticsClient({ analytics }: { analytics: Analytics })
           <KPICard label="Ausentes" value={t.ausentes} prev={l.ausentes} prevLabel={prevMonthLabel} higherIsBetter={false} />
           <KPICard label="Cancelados" value={t.cancelados} prev={l.cancelados} prevLabel={prevMonthLabel} higherIsBetter={false} />
           {isCurrentMonth && (
-            <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">
+            <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 transition-all duration-200 hover:border-border-strong hover:-translate-y-0.5">
               <div className="text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em] mb-3">Pendientes del mes</div>
               <div className="font-mono text-[32px] font-medium text-accent tracking-[-0.02em]">{upcoming}</div>
               <div className="text-[12px] mt-2 text-text-tertiary">turnos agendados restantes</div>
@@ -342,18 +373,18 @@ export default function AnalyticsClient({ analytics }: { analytics: Analytics })
       {/* Pacientes — only in overall view */}
       {selectedArea === 'all' && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">
+          <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 transition-all duration-200 hover:border-border-strong hover:-translate-y-0.5">
             <div className="text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em] mb-3">Pacientes totales</div>
             <div className="font-mono text-[32px] font-medium text-text-primary tracking-[-0.02em]">{totalPatients}</div>
           </div>
-          <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">
+          <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 transition-all duration-200 hover:border-border-strong hover:-translate-y-0.5">
             <div className="text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em] mb-3">Activos (últimos 30 días)</div>
             <div className="font-mono text-[32px] font-medium text-emerald-400 tracking-[-0.02em]">{activePatients}</div>
             <div className="text-[12px] mt-2 text-text-tertiary">
               {totalPatients > 0 ? Math.round((activePatients / totalPatients) * 100) : 0}% del total
             </div>
           </div>
-          <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">
+          <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 transition-all duration-200 hover:border-border-strong hover:-translate-y-0.5">
             <div className="text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em] mb-3">% Ausencia del mes<span className="normal-case tracking-normal text-text-tertiary"> · sobre turnos realizados</span></div>
             <div className={`font-mono text-[32px] font-medium tracking-[-0.02em] ${ausenteRate > 20 ? 'text-red-400' : 'text-text-primary'}`}>{ausenteRate}%</div>
             <div className={`text-[12px] mt-2 ${ausenteRate > prevAusenteRate ? 'text-red-400' : 'text-emerald-400'}`}>
@@ -366,7 +397,7 @@ export default function AnalyticsClient({ analytics }: { analytics: Analytics })
       {/* % Ausencia in area view */}
       {selectedArea !== 'all' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">
+          <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 transition-all duration-200 hover:border-border-strong hover:-translate-y-0.5">
             <div className="text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em] mb-3">% Ausencia del mes<span className="normal-case tracking-normal text-text-tertiary"> · sobre turnos realizados</span></div>
             <div className={`font-mono text-[32px] font-medium tracking-[-0.02em] ${ausenteRate > 20 ? 'text-red-400' : 'text-text-primary'}`}>{ausenteRate}%</div>
             <div className={`text-[12px] mt-2 ${ausenteRate > prevAusenteRate ? 'text-red-400' : 'text-emerald-400'}`}>
@@ -381,7 +412,7 @@ export default function AnalyticsClient({ analytics }: { analytics: Analytics })
         <div>
           <h2 className="text-[16px] font-medium mb-4">Origen de pacientes</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">
+            <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 transition-all duration-200 hover:border-border-strong hover:-translate-y-0.5">
               <div className="text-[12px] text-text-secondary mb-4">Distribución por vía de llegada</div>
               <ResponsiveContainer width="100%" height={220}>
                 <PieChart>
@@ -391,21 +422,28 @@ export default function AnalyticsClient({ analytics }: { analytics: Analytics })
                     nameKey="name"
                     cx="50%"
                     cy="50%"
+                    innerRadius={55}
                     outerRadius={80}
-                    label={({ name, percent }: { name?: string; percent?: number }) =>
-                      `${name ?? ''} ${Math.round((percent ?? 0) * 100)}%`
-                    }
-                    labelLine={false}
+                    paddingAngle={2}
+                    activeShape={renderActiveShape}
+                    onMouseEnter={(_, i) => setActiveSourceIdx(i)}
+                    onMouseLeave={() => setActiveSourceIdx(undefined)}
                   >
                     {sourceDist.map((_, i) => (
-                      <Cell key={i} fill={PROF_COLORS[i % PROF_COLORS.length]} />
+                      <Cell
+                        key={i}
+                        fill={PROF_COLORS[i % PROF_COLORS.length]}
+                        stroke="var(--color-bg-primary)"
+                        strokeWidth={2}
+                        style={{ cursor: 'pointer', transition: 'opacity 0.15s' }}
+                        opacity={activeSourceIdx === undefined || activeSourceIdx === i ? 1 : 0.45}
+                      />
                     ))}
                   </Pie>
-                  <Tooltip content={<CustomTooltip />} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
-            <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">
+            <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 transition-all duration-200 hover:border-border-strong hover:-translate-y-0.5">
               <div className="text-[12px] text-text-secondary mb-4">Ranking de vías</div>
               <div className="space-y-3">
                 {sourceDist.map((s, i) => {
@@ -451,14 +489,14 @@ export default function AnalyticsClient({ analytics }: { analytics: Analytics })
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">
+            <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 transition-all duration-200 hover:border-border-strong hover:-translate-y-0.5">
               <div className="text-[12px] text-text-secondary mb-4">Turnos cargados (excl. cancelados)</div>
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={byProfessional} margin={{ left: -20 }}>
                   <CartesianGrid vertical={false} stroke={GRID_CLR} />
                   <XAxis dataKey="name" tick={{ fontSize: 11, fill: AXIS_CLR }} />
                   <YAxis tick={{ fontSize: 11, fill: AXIS_CLR }} allowDecimals={false} />
-                  <Tooltip content={<CustomTooltip />} cursor={{ fill: '#2a2a2800' }} />
+                  <Tooltip content={<CustomTooltip />} cursor={BAR_CURSOR} />
                   <Bar dataKey="cargados" name="Cargados" radius={[4, 4, 0, 0]}>
                     {byProfessional.map((_, i) => <Cell key={i} fill={ACCENT} />)}
                   </Bar>
@@ -466,14 +504,14 @@ export default function AnalyticsClient({ analytics }: { analytics: Analytics })
               </ResponsiveContainer>
             </div>
 
-            <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">
+            <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 transition-all duration-200 hover:border-border-strong hover:-translate-y-0.5">
               <div className="text-[12px] text-text-secondary mb-4">Presentes vs ausentes</div>
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={byProfessional} margin={{ left: -20 }}>
                   <CartesianGrid vertical={false} stroke={GRID_CLR} />
                   <XAxis dataKey="name" tick={{ fontSize: 11, fill: AXIS_CLR }} />
                   <YAxis tick={{ fontSize: 11, fill: AXIS_CLR }} allowDecimals={false} />
-                  <Tooltip content={<CustomTooltip />} />
+                  <Tooltip content={<CustomTooltip />} cursor={BAR_CURSOR} />
                   <Bar dataKey="presentes" name="Presentes" stackId="a" fill={EMERALD} />
                   <Bar dataKey="ausentes" name="Ausentes" stackId="a" fill={RED} radius={[4, 4, 0, 0]} />
                 </BarChart>
@@ -523,7 +561,7 @@ export default function AnalyticsClient({ analytics }: { analytics: Analytics })
       {trendProfNames.length > 0 && (
         <div>
           <h2 className="text-[16px] font-medium mb-4">Tendencia — turnos/hora últimos 5 meses{selectedArea !== 'all' ? ` — ${selectedArea}` : ''}</h2>
-          <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">
+          <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 transition-all duration-200 hover:border-border-strong hover:-translate-y-0.5">
             <div className="text-[12px] text-text-secondary mb-4">Turnos cargados ÷ horas trabajadas por mes</div>
             <ResponsiveContainer width="100%" height={260}>
               <LineChart data={monthlyTrend.map(row => ({ ...row, month: monthLabel(row.month as string) }))} margin={{ left: -10, right: 10 }}>
@@ -559,14 +597,14 @@ export default function AnalyticsClient({ analytics }: { analytics: Analytics })
       {/* Distribución por día de la semana */}
       {byDayOfWeek.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">
+          <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 transition-all duration-200 hover:border-border-strong hover:-translate-y-0.5">
             <div className="text-[12px] text-text-secondary mb-4">Carga por día de la semana — {selMonthLabel}{selectedArea !== 'all' ? ` — ${selectedArea}` : ''}</div>
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={byDayOfWeek} margin={{ left: -20 }}>
                 <CartesianGrid vertical={false} stroke={GRID_CLR} />
                 <XAxis dataKey="day" tick={{ fontSize: 11, fill: AXIS_CLR }} />
                 <YAxis tick={{ fontSize: 11, fill: AXIS_CLR }} allowDecimals={false} />
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip content={<CustomTooltip />} cursor={BAR_CURSOR} />
                 <Bar dataKey="count" name="Turnos" radius={[3, 3, 0, 0]}>
                   {byDayOfWeek.map((d, i) => {
                     const max = Math.max(...byDayOfWeek.map(h => h.count))
@@ -579,14 +617,35 @@ export default function AnalyticsClient({ analytics }: { analytics: Analytics })
 
           {/* Estado de turnos — pie */}
           {t.total > 0 && (
-            <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">
+            <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 transition-all duration-200 hover:border-border-strong hover:-translate-y-0.5">
               <div className="text-[12px] text-text-secondary mb-4">Distribución de estados — {selMonthLabel}{selectedArea !== 'all' ? ` — ${selectedArea}` : ''}</div>
               <ResponsiveContainer width="100%" height={200}>
                 <PieChart>
-                  <Pie data={breakdownData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={75} label={({ name, percent }: { name?: string; percent?: number }) => `${name ?? ''} ${Math.round((percent ?? 0) * 100)}%`} labelLine={false}>
-                    {breakdownData.map((d, i) => <Cell key={i} fill={d.fill} />)}
+                  <Pie
+                    data={breakdownData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={48}
+                    outerRadius={75}
+                    paddingAngle={2}
+                    activeShape={renderActiveShape}
+                    onMouseEnter={(_, i) => setActiveStateIdx(i)}
+                    onMouseLeave={() => setActiveStateIdx(undefined)}
+                  >
+                    {breakdownData.map((d, i) => (
+                      <Cell
+                        key={i}
+                        fill={d.fill}
+                        stroke="var(--color-bg-primary)"
+                        strokeWidth={2}
+                        style={{ cursor: 'pointer', transition: 'opacity 0.15s' }}
+                        opacity={activeStateIdx === undefined || activeStateIdx === i ? 1 : 0.45}
+                      />
+                    ))}
                   </Pie>
-                  <Tooltip content={<CustomTooltip />} />
+                  <Legend wrapperStyle={{ fontSize: 12, color: AXIS_CLR }} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -596,14 +655,14 @@ export default function AnalyticsClient({ analytics }: { analytics: Analytics })
 
       {/* Horas pico */}
       {t.total > 0 && (
-        <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">
+        <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 transition-all duration-200 hover:border-border-strong hover:-translate-y-0.5">
           <div className="text-[12px] text-text-secondary mb-4">Horas pico — {selMonthLabel}{selectedArea !== 'all' ? ` — ${selectedArea}` : ''}</div>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={byHour} margin={{ left: -24 }}>
               <CartesianGrid vertical={false} stroke={GRID_CLR} />
               <XAxis dataKey="hour" tick={{ fontSize: 10, fill: AXIS_CLR }} interval={1} />
               <YAxis tick={{ fontSize: 11, fill: AXIS_CLR }} allowDecimals={false} />
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip content={<CustomTooltip />} cursor={BAR_CURSOR} />
               <Bar dataKey="count" name="Turnos" radius={[3, 3, 0, 0]}>
                 {byHour.map((d, i) => {
                   const max = Math.max(...byHour.map(h => h.count))
