@@ -53,7 +53,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
   const [search, setSearch] = useState('')
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
-  const [form, setForm] = useState({ name: '', dni: '', birth_date: '', phone: '', email: '', obra_social: '', affiliate_number: '', occupation: '', source: '' })
+  const [form, setForm] = useState({ name: '', dni: '', birth_date: '', phone: '', email: '', obra_social: '', affiliate_number: '', occupation: '', source: '', plan_mode: 'detallado' as 'detallado' | 'simple' })
   const [dniError, setDniError] = useState<string | null>(null)
   const [limitError, setLimitError] = useState<string | null>(null)
   const [sources, setSources] = useState<PatientSource[]>([])
@@ -144,6 +144,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
         affiliate_number: form.affiliate_number.trim() || null,
         occupation: form.occupation.trim() || null,
         source: form.source || null,
+        plan_mode: form.plan_mode,
         orgId: isOrgContext ? orgId : null,
       }),
     })
@@ -165,7 +166,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
       return
     }
 
-    setForm({ name: '', dni: '', birth_date: '', phone: '', email: '', obra_social: '', affiliate_number: '', occupation: '', source: '' })
+    setForm({ name: '', dni: '', birth_date: '', phone: '', email: '', obra_social: '', affiliate_number: '', occupation: '', source: '', plan_mode: 'detallado' as 'detallado' | 'simple' })
     setShowForm(false)
     await fetchPatients()
     setSaving(false)
@@ -179,7 +180,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
     await fetchPatients()
   }
 
-  const closeForm = () => { setShowForm(false); setForm({ name: '', dni: '', birth_date: '', phone: '', email: '', obra_social: '', affiliate_number: '', occupation: '', source: '' }); setDniError(null); setLimitError(null) }
+  const closeForm = () => { setShowForm(false); setForm({ name: '', dni: '', birth_date: '', phone: '', email: '', obra_social: '', affiliate_number: '', occupation: '', source: '', plan_mode: 'detallado' as 'detallado' | 'simple' }); setDniError(null); setLimitError(null) }
 
   const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
   const filtered = search.trim()
@@ -357,6 +358,20 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
                 </select>
               </div>
             )}
+            <div className="sm:col-span-2">
+              <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Modo de planificación</label>
+              <div className="flex items-center gap-1.5">
+                <button type="button" onClick={() => setForm(f => ({ ...f, plan_mode: 'detallado' }))}
+                  className={`px-3 py-2 rounded-lg text-[13px] font-medium border-[0.5px] transition-colors ${form.plan_mode !== 'simple' ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-primary border-border-strong text-text-secondary hover:text-text-primary'}`}>
+                  Detallado
+                </button>
+                <button type="button" onClick={() => setForm(f => ({ ...f, plan_mode: 'simple' }))}
+                  className={`px-3 py-2 rounded-lg text-[13px] font-medium border-[0.5px] transition-colors ${form.plan_mode === 'simple' ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-primary border-border-strong text-text-secondary hover:text-text-primary'}`}>
+                  Simple
+                </button>
+              </div>
+              <p className="text-[11px] text-text-secondary mt-1">Detallado: plan de ejercicio con series/reps en el calendario. Simple: bitácora de actividad, sin dosificación. Se puede cambiar después.</p>
+            </div>
           </div>
           <div className="flex gap-3">
             <button onClick={handleCreate} disabled={saving || !form.name.trim() || !form.dni.trim()} className="bg-accent text-bg-primary px-5 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-all active:scale-[0.97]">

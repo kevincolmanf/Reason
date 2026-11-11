@@ -284,20 +284,6 @@ export default function PacienteDetail({ patient: initialPatient, userId, treatm
                   <p className="text-[11px] text-text-secondary mt-1">Se cargará por defecto al darle turno a este paciente.</p>
                 </div>
               )}
-              <div className="sm:col-span-2">
-                <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Modo de planificación</label>
-                <div className="flex items-center gap-1.5">
-                  <button type="button" onClick={() => setPlanMode('detallado')}
-                    className={`px-3 py-2 rounded-lg text-[13px] font-medium border-[0.5px] transition-colors ${(patient.plan_mode ?? 'detallado') !== 'simple' ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-secondary border-border text-text-secondary hover:text-text-primary'}`}>
-                    Detallado
-                  </button>
-                  <button type="button" onClick={() => setPlanMode('simple')}
-                    className={`px-3 py-2 rounded-lg text-[13px] font-medium border-[0.5px] transition-colors ${(patient.plan_mode ?? 'detallado') === 'simple' ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-secondary border-border text-text-secondary hover:text-text-primary'}`}>
-                    Simple
-                  </button>
-                </div>
-                <p className="text-[11px] text-text-secondary mt-1">Detallado: plan de ejercicio con series/reps en el calendario. Simple: bitácora de actividad, sin dosificación.</p>
-              </div>
             </div>
             <div className="flex gap-3">
               <button onClick={handleSaveEdit} disabled={saving || !editForm.name.trim() || !editForm.dni.trim()} className="bg-accent text-bg-primary px-5 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 active:scale-[0.97] disabled:opacity-40">
@@ -369,6 +355,13 @@ export default function PacienteDetail({ patient: initialPatient, userId, treatm
                 }`}
               >
                 {patient.advanced_load_mode ? 'Carga avanzada activa' : 'Activar carga avanzada'}
+              </button>
+              <button
+                onClick={() => setPlanMode((patient.plan_mode ?? 'detallado') === 'simple' ? 'detallado' : 'simple')}
+                title="Detallado: plan de ejercicio con series/reps en el calendario. Simple: bitácora de actividad, sin dosificación."
+                className="px-4 py-2 rounded-lg text-[13px] border-[0.5px] transition-colors bg-bg-secondary border-border text-text-secondary hover:text-text-primary"
+              >
+                {(patient.plan_mode ?? 'detallado') === 'simple' ? 'Modo: Bitácora simple' : 'Modo: Plan detallado'}
               </button>
               <button onClick={() => setEditing(true)} className="bg-bg-secondary border-[0.5px] border-border text-text-secondary px-4 py-2 rounded-lg text-[13px] hover:text-text-primary transition-colors">Editar</button>
               {isOwner && <button onClick={handleDelete} className="bg-bg-secondary border-[0.5px] border-border text-text-secondary px-4 py-2 rounded-lg text-[13px] hover:text-warning transition-colors">Eliminar</button>}

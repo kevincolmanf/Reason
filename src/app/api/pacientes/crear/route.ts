@@ -19,10 +19,13 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
   const body = await request.json()
-  const { name, dni, birth_date, phone, email, obra_social, affiliate_number, occupation, source, orgId } = body
+  const { name, dni, birth_date, phone, email, obra_social, affiliate_number, occupation, source, plan_mode, orgId } = body
 
   if (!name?.trim() || !dni?.trim()) {
     return NextResponse.json({ error: 'Nombre y DNI son obligatorios' }, { status: 400 })
+  }
+  if (plan_mode !== undefined && !['detallado', 'simple'].includes(plan_mode)) {
+    return NextResponse.json({ error: 'Modo de planificación inválido' }, { status: 400 })
   }
 
   const admin = createAdminClient()
@@ -101,6 +104,7 @@ export async function POST(request: Request) {
     affiliate_number: affiliate_number?.trim() || null,
     occupation: occupation?.trim() || null,
     source: source?.trim() || null,
+    plan_mode: plan_mode ?? 'detallado',
   }).select('id').single()
 
   if (error) {
