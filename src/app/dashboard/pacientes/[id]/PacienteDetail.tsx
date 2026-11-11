@@ -361,7 +361,7 @@ export default function PacienteDetail({ patient: initialPatient, userId, treatm
                 title="Detallado: plan de ejercicio con series/reps en el calendario. Simple: bitácora de actividad, sin dosificación."
                 className="px-4 py-2 rounded-lg text-[13px] border-[0.5px] transition-colors bg-bg-secondary border-border text-text-secondary hover:text-text-primary"
               >
-                {(patient.plan_mode ?? 'detallado') === 'simple' ? 'Modo: Bitácora simple' : 'Modo: Plan detallado'}
+                {(patient.plan_mode ?? 'detallado') === 'simple' ? 'Bitácora simple' : 'Plan detallado'}
               </button>
               <button onClick={() => setEditing(true)} className="bg-bg-secondary border-[0.5px] border-border text-text-secondary px-4 py-2 rounded-lg text-[13px] hover:text-text-primary transition-colors">Editar</button>
               {isOwner && <button onClick={handleDelete} className="bg-bg-secondary border-[0.5px] border-border text-text-secondary px-4 py-2 rounded-lg text-[13px] hover:text-warning transition-colors">Eliminar</button>}
