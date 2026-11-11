@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import AttributionPicker, { type AttributedProfessional } from '@/components/AttributionPicker'
 
@@ -277,6 +277,20 @@ export default function AtencionDeHoy({ patientId, userId, initialAttentions = [
   }
   const setSym = (s: Symptom) => setSymptom(s)
 
+  // Al elegir síntoma se despliega un bloque largo (sugerencia, sesión,
+  // registrar) debajo de los 3 botones. En celular, si el usuario ya estaba
+  // scrolleado, ese bloque queda fuera de la pantalla y no hay ninguna pista
+  // de que hay que bajar — se ve como que "no pasó nada". Lo corregimos
+  // llevando la vista justo lo necesario para que se vea.
+  const expandRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!symptom) return
+    const id = requestAnimationFrame(() => {
+      expandRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    })
+    return () => cancelAnimationFrame(id)
+  }, [symptom])
+
   const register = async () => {
     setSaving(true); setStatus('idle')
     try {
@@ -426,7 +440,7 @@ export default function AtencionDeHoy({ patientId, userId, initialAttentions = [
       </div>
 
       {symptom && (
-      <>
+      <div ref={expandRef}>
       {/* SUGERENCIA */}
       {sug && (
         <div className="rounded-lg p-3.5 mb-4 border-[0.5px]" style={{ borderColor: sugColor + '66', background: sugSoft }}>
@@ -607,7 +621,7 @@ export default function AtencionDeHoy({ patientId, userId, initialAttentions = [
         {status === 'saved' && <span className="text-[12px] text-[#4ade80]">✓ Registrada — la continuidad quedó lista</span>}
         {status === 'error' && <span className="text-[12px] text-warning">No se pudo registrar — reintentá</span>}
       </div>
-      </>
+      </div>
       )}
     </section>
   )
