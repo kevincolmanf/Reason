@@ -43,19 +43,9 @@ const AGENDA_STEPS: GuideStep[] = [
     body: 'Si tu centro trabaja varias especialidades, con estas pestañas ves solo el área que te interesa. El número es la cantidad de turnos de ese día.',
   },
   {
-    target: 'agenda-atencion',
-    title: 'Atención de hoy (kinesiología)',
-    body: 'Abre la vista del día para los pacientes en modo kinesiología: los ves agrupados por horario y registrás cómo llegó cada uno (mejor / igual / peor) en un par de toques.',
-  },
-  {
-    target: 'agenda-recordatorios',
-    title: 'Recordatorios por WhatsApp',
-    body: 'Enviás los recordatorios del día uno por uno, con un click. Es lo que más baja el ausentismo.',
-  },
-  {
-    target: 'agenda-config',
-    title: 'Configurá tu agenda',
-    body: 'Definís tus horarios, las áreas y la duración de cada turno. En un centro, también elegís qué agenda ve cada integrante.',
+    target: 'agenda-mas',
+    title: 'Más herramientas',
+    body: 'Desde acá vas a "Atención de hoy" (pacientes en modo kinesiología, agrupados por horario, para registrar cómo llegó cada uno en un par de toques), mandás los recordatorios del día por WhatsApp, y configurás horarios, áreas y duración de turno.',
   },
 ]
 

@@ -407,6 +407,19 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
   const [dayStart, setDayStart] = useState(initialDayStart)
   const [dayEnd, setDayEnd] = useState(initialDayEnd)
   const [settingsOpen, setSettingsOpen] = useState(false)
+
+  // Acciones secundarias (exportar, recordatorios, ausencias, configurar)
+  // agrupadas en un desplegable "Más" — sueltas en la toolbar la hacían
+  // demasiado larga, sobre todo en tablet.
+  const [toolsOpen, setToolsOpen] = useState(false)
+  const toolsRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    function handleClickOutside(e: globalThis.MouseEvent) {
+      if (toolsRef.current && !toolsRef.current.contains(e.target as Node)) setToolsOpen(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
   const [remindedIds, setRemindedIds] = useState<Set<string>>(() => {
     if (typeof window === 'undefined') return new Set()
     try { return new Set(JSON.parse(localStorage.getItem('wa_reminded') ?? '[]')) }
@@ -850,19 +863,6 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
             <button onClick={() => setView('day')} className={`px-3 py-2 text-[13px] transition-colors ${view === 'day' ? 'bg-accent text-bg-primary' : 'text-text-secondary hover:text-text-primary'}`}>Día</button>
             <button onClick={() => setView('week')} className={`px-3 py-2 text-[13px] transition-colors ${view === 'week' ? 'bg-accent text-bg-primary' : 'text-text-secondary hover:text-text-primary'}`}>Semana</button>
           </div>
-          {view === 'week' && (
-            <button
-              onClick={() => setShowWeekend(v => {
-                const next = !v
-                localStorage.setItem('agenda_show_weekend', String(next))
-                return next
-              })}
-              className={`px-3 py-2 text-[13px] border-[0.5px] rounded-lg transition-colors ${showWeekend ? 'border-accent text-accent bg-accent/10' : 'border-border text-text-secondary hover:text-text-primary'}`}
-            >
-              Fin de semana
-            </button>
-          )}
-
           {professionals.length > 0 && (
             <select
               value={filterProf}
@@ -905,55 +905,87 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
             )}
           </div>
 
-          {view === 'day' && (
-            <>
-              <button onClick={() => exportDay(dayTurnos, selectedDay)} className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors" title={filterArea !== 'all' ? `Exportar ${filterArea} en CSV` : 'Exportar día en CSV'}>
-                CSV
-              </button>
-              <button onClick={() => exportDayPdf(dayTurnos, selectedDay, orgName, filterArea)} className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors" title="Exportar día en PDF (nombre y área por profesional) para imprimir y entregar">
-                PDF
-              </button>
-            </>
-          )}
-
-          <Link
-            data-tour="agenda-atencion"
-            href={`/dashboard/agenda/atencion?day=${toDayParam(selectedDay)}`}
-            className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors flex items-center gap-1.5"
-            title="Atención de hoy: los pacientes de kinesiología del bloque, con check rápido de síntoma"
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-            <span className="hidden sm:inline">Atención de hoy</span>
-          </Link>
-
-          {canEdit && (
-            <Link
-              data-tour="agenda-recordatorios"
-              href={`/dashboard/agenda/recordatorios?day=${toDayParam(selectedDay)}${filterArea !== 'all' ? `&area=${encodeURIComponent(filterArea)}` : ''}`}
-              className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors flex items-center gap-1.5"
-              title="Enviar recordatorios del día uno por uno"
+          {/* MÁS — agrupa exportar, recordatorios, ausencias y configuración:
+              son acciones ocasionales, no hace falta que compitan por espacio
+              con la navegación del día a día. */}
+          <div className="relative" ref={toolsRef}>
+            <button
+              data-tour="agenda-mas"
+              onClick={() => setToolsOpen(v => !v)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[13px] border-[0.5px] transition-colors ${toolsOpen ? 'border-accent text-accent bg-accent/10' : 'bg-bg-secondary border-border text-text-secondary hover:text-text-primary'}`}
             >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
-              <span className="hidden sm:inline">Recordatorios</span>
-            </Link>
-          )}
-
-          {canEdit && (
-            <Link
-              href="/dashboard/agenda/seguimiento"
-              className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors flex items-center gap-1.5"
-              title="Pacientes que hace días no vienen y no tienen próximo turno"
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-              <span className="hidden sm:inline">Ausencias</span>
-            </Link>
-          )}
-
-          {isOwner && (
-            <button data-tour="agenda-config" onClick={() => setSettingsOpen(true)} className="bg-bg-secondary border-[0.5px] border-border rounded-lg px-3 py-2 text-[13px] text-text-secondary hover:text-text-primary transition-colors flex items-center" title="Configurar agenda">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              Más
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform ${toolsOpen ? 'rotate-180' : ''}`}><polyline points="6 9 12 15 18 9"/></svg>
             </button>
-          )}
+            {toolsOpen && (
+              <div className="absolute left-0 mt-2 w-[260px] max-w-[calc(100vw-32px)] bg-bg-primary border-[0.5px] border-border rounded-xl shadow-lg py-2 z-20 animate-menu-pop-in" style={{ transformOrigin: 'top left' }}>
+                {view === 'week' && (
+                  <button
+                    onClick={() => setShowWeekend(v => {
+                      const next = !v
+                      localStorage.setItem('agenda_show_weekend', String(next))
+                      return next
+                    })}
+                    className="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left hover:bg-bg-secondary transition-colors"
+                  >
+                    <span className="text-[13px] text-text-primary">Fin de semana</span>
+                    <span className={`text-[11px] px-2 py-0.5 rounded-full border-[0.5px] shrink-0 ${showWeekend ? 'text-accent border-accent/40 bg-accent/10' : 'text-text-tertiary border-border'}`}>
+                      {showWeekend ? 'Visible' : 'Oculto'}
+                    </span>
+                  </button>
+                )}
+                {view === 'day' && (
+                  <>
+                    <button onClick={() => { exportDay(dayTurnos, selectedDay); setToolsOpen(false) }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left text-[13px] text-text-primary hover:bg-bg-secondary transition-colors" title={filterArea !== 'all' ? `Exportar ${filterArea} en CSV` : 'Exportar día en CSV'}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-text-secondary"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 15h6M9 11h6"/></svg>
+                      Exportar CSV
+                    </button>
+                    <button onClick={() => { exportDayPdf(dayTurnos, selectedDay, orgName, filterArea); setToolsOpen(false) }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left text-[13px] text-text-primary hover:bg-bg-secondary transition-colors" title="Exportar día en PDF (nombre y área por profesional) para imprimir y entregar">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-text-secondary"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 15h6M9 11h6"/></svg>
+                      Exportar PDF
+                    </button>
+                  </>
+                )}
+                <Link
+                  href={`/dashboard/agenda/atencion?day=${toDayParam(selectedDay)}`}
+                  onClick={() => setToolsOpen(false)}
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left text-[13px] text-text-primary hover:bg-bg-secondary transition-colors no-underline"
+                  title="Atención de hoy: los pacientes de kinesiología del bloque, con check rápido de síntoma"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-text-secondary"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                  Atención de hoy
+                </Link>
+                {canEdit && (
+                  <Link
+                    href={`/dashboard/agenda/recordatorios?day=${toDayParam(selectedDay)}${filterArea !== 'all' ? `&area=${encodeURIComponent(filterArea)}` : ''}`}
+                    onClick={() => setToolsOpen(false)}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left text-[13px] text-text-primary hover:bg-bg-secondary transition-colors no-underline"
+                    title="Enviar recordatorios del día uno por uno"
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-text-secondary"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+                    Recordatorios
+                  </Link>
+                )}
+                {canEdit && (
+                  <Link
+                    href="/dashboard/agenda/seguimiento"
+                    onClick={() => setToolsOpen(false)}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left text-[13px] text-text-primary hover:bg-bg-secondary transition-colors no-underline"
+                    title="Pacientes que hace días no vienen y no tienen próximo turno"
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-text-secondary"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                    Ausencias
+                  </Link>
+                )}
+                {isOwner && (
+                  <button onClick={() => { setSettingsOpen(true); setToolsOpen(false) }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left text-[13px] text-text-primary hover:bg-bg-secondary transition-colors border-t-[0.5px] border-border mt-1 pt-2.5" title="Configurar agenda">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-text-secondary"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                    Configurar agenda
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
 
           {canEdit ? (
             <button data-tour="agenda-nuevo" onClick={() => openNew()} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-all active:scale-[0.97]">
