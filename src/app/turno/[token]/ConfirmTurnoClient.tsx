@@ -122,7 +122,7 @@ export default function ConfirmTurnoClient({
             <button
               onClick={confirmar}
               disabled={loading}
-              className="w-full rounded-xl bg-accent text-white text-[15px] font-medium py-3.5 transition-opacity hover:opacity-90 disabled:opacity-50"
+              className="w-full rounded-xl bg-accent text-white text-[15px] font-medium py-3.5 transition-all hover:opacity-90 active:scale-[0.97] disabled:opacity-50"
             >
               {loading ? 'Guardando…' : 'Confirmo que asistiré'}
             </button>

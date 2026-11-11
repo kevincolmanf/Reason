@@ -55,7 +55,7 @@ export default function LoginPage({
               </div>
               <button
                 type="submit"
-                className="w-full py-4 mt-1 bg-accent text-bg-primary rounded-lg text-[15px] font-medium hover:opacity-90 transition-opacity"
+                className="w-full py-4 mt-1 bg-accent text-bg-primary rounded-lg text-[15px] font-medium hover:opacity-90 transition-all active:scale-[0.97]"
               >
                 Entrar
               </button>
@@ -83,7 +83,7 @@ export default function LoginPage({
               </div>
               <button
                 type="submit"
-                className="w-full py-4 mt-1 bg-accent text-bg-primary rounded-lg text-[15px] font-medium hover:opacity-90 transition-opacity"
+                className="w-full py-4 mt-1 bg-accent text-bg-primary rounded-lg text-[15px] font-medium hover:opacity-90 transition-all active:scale-[0.97]"
               >
                 Enviarme el código
               </button>
@@ -132,7 +132,7 @@ export default function LoginPage({
 
               <button
                 type="submit"
-                className="w-full py-4 mt-2 bg-accent text-bg-primary rounded-lg text-[15px] font-medium hover:opacity-90 transition-opacity"
+                className="w-full py-4 mt-2 bg-accent text-bg-primary rounded-lg text-[15px] font-medium hover:opacity-90 transition-all active:scale-[0.97]"
               >
                 Entrar
               </button>

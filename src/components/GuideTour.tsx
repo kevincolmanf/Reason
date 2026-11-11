@@ -181,7 +181,7 @@ export default function GuideTour({
           )}
           <button
             onClick={goNext}
-            className="text-[13px] font-medium text-bg-primary bg-accent hover:opacity-90 rounded-lg px-4 py-2 transition-opacity"
+            className="text-[13px] font-medium text-bg-primary bg-accent hover:opacity-90 active:scale-[0.97] rounded-lg px-4 py-2 transition-all"
           >{i === n - 1 ? 'Listo' : 'Siguiente'}</button>
         </div>
       </div>

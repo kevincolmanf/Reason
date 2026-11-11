@@ -300,7 +300,7 @@ export default function PacienteDetail({ patient: initialPatient, userId, treatm
               </div>
             </div>
             <div className="flex gap-3">
-              <button onClick={handleSaveEdit} disabled={saving || !editForm.name.trim() || !editForm.dni.trim()} className="bg-accent text-bg-primary px-5 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40">
+              <button onClick={handleSaveEdit} disabled={saving || !editForm.name.trim() || !editForm.dni.trim()} className="bg-accent text-bg-primary px-5 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 active:scale-[0.97] disabled:opacity-40">
                 {saving ? 'Guardando...' : 'Guardar'}
               </button>
               <button onClick={() => setEditing(false)} className="text-text-secondary px-4 py-2 rounded-lg text-[13px] hover:text-text-primary">
@@ -339,7 +339,7 @@ export default function PacienteDetail({ patient: initialPatient, userId, treatm
             <div className="flex gap-2 shrink-0 items-center flex-wrap">
               {sessionSaved && <span className="text-[12px] text-[#4ade80]">✓ Sesión registrada</span>}
               {(patient.advanced_load_mode ?? false) && (
-                <button onClick={() => setSessionSheet(true)} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity">
+                <button onClick={() => setSessionSheet(true)} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-all active:scale-[0.97]">
                   + Registrar sesión
                 </button>
               )}
@@ -449,7 +449,7 @@ export default function PacienteDetail({ patient: initialPatient, userId, treatm
           </div>
           <p className="text-[13px] text-text-secondary mb-4">Paciente recién creado. El camino habitual: completar la ficha y armar el plan.</p>
           <div className="flex flex-wrap items-center gap-3">
-            <Link href={`/dashboard/pacientes/${patient.id}/ficha`} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity no-underline">
+            <Link href={`/dashboard/pacientes/${patient.id}/ficha`} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-all active:scale-[0.97] no-underline">
               1 · Completar la ficha kinésica
             </Link>
             <Link
@@ -474,7 +474,7 @@ export default function PacienteDetail({ patient: initialPatient, userId, treatm
             href={(patient.plan_mode ?? 'detallado') === 'simple'
               ? `/dashboard/pacientes/${patient.id}/bitacora`
               : `/dashboard/ejercicios/plan?paciente=${patient.id}`}
-            className="shrink-0 bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity no-underline"
+            className="shrink-0 bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-all active:scale-[0.97] no-underline"
           >
             Armar el plan →
           </Link>

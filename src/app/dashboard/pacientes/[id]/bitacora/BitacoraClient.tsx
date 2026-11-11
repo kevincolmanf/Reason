@@ -183,7 +183,7 @@ export default function BitacoraClient({
             <p className="text-[12px] text-text-secondary">¿Es momento de pasar a un plan detallado con dosificación y progresión?</p>
           </div>
           <button onClick={graduate} disabled={gradSaving}
-            className="shrink-0 bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity">
+            className="shrink-0 bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-all active:scale-[0.97]">
             {gradSaving ? '…' : 'Crear plan detallado'}
           </button>
         </div>
@@ -243,7 +243,7 @@ export default function BitacoraClient({
 
         <div className="flex items-center gap-2">
           <button onClick={saveEntry} disabled={!canSave || saving}
-            className="bg-accent text-bg-primary px-5 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity">
+            className="bg-accent text-bg-primary px-5 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-all active:scale-[0.97]">
             {saving ? 'Guardando…' : editingId ? 'Guardar cambios' : 'Registrar día'}
           </button>
           {editingId && (

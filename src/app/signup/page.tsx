@@ -87,7 +87,7 @@ export default function SignupPage({
 
           <button
             type="submit"
-            className="w-full py-4 mt-2 bg-accent text-bg-primary rounded-lg text-[15px] font-medium hover:opacity-90 transition-opacity"
+            className="w-full py-4 mt-2 bg-accent text-bg-primary rounded-lg text-[15px] font-medium hover:opacity-90 transition-all active:scale-[0.97]"
           >
             Crear cuenta y suscribirme
           </button>

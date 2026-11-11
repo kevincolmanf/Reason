@@ -787,7 +787,7 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
               <div className="flex gap-2">
                 <button
                   onClick={() => handleSubmit(true)}
-                  className="flex-1 bg-accent text-bg-primary py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity"
+                  className="flex-1 bg-accent text-bg-primary py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 transition-all active:scale-[0.97]"
                 >
                   Sí, guardar igual
                 </button>
@@ -804,7 +804,7 @@ export default function PatientPortalClient({ patient, token, recentSessions, sc
           {/* Submit */}
           <button onClick={() => handleSubmit()}
             disabled={submitStatus === 'loading' || !formDate}
-            className="w-full bg-accent text-bg-primary py-3.5 rounded-xl text-[15px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
+            className="w-full bg-accent text-bg-primary py-3.5 rounded-xl text-[15px] font-medium hover:opacity-90 disabled:opacity-40 transition-all active:scale-[0.97]"
           >
             {submitStatus === 'loading' ? 'Registrando...'
               : submitStatus === 'success' ? '✓ Sesión registrada'
@@ -1050,7 +1050,7 @@ function SessionExercisesInline({ session, portalToken, loadOverrides }: { sessi
                         <div className="flex gap-2">
                           <button onClick={() => submitInlineLog(ex)}
                             disabled={!logRpe || logStatus === 'loading'}
-                            className="flex-1 bg-accent text-bg-primary py-2 rounded-lg text-[12px] font-medium hover:opacity-90 disabled:opacity-40">
+                            className="flex-1 bg-accent text-bg-primary py-2 rounded-lg text-[12px] font-medium hover:opacity-90 active:scale-[0.97] disabled:opacity-40">
                             {logStatus === 'loading' ? 'Guardando...' : 'Guardar'}
                           </button>
                           <button onClick={() => setExpandedLogId(null)}

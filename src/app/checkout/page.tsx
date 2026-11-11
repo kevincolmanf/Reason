@@ -130,7 +130,7 @@ export default async function CheckoutPage({
               )}
               <button
                 type="submit"
-                className="w-full bg-[#009EE3] text-white py-[14px] rounded-lg text-[15px] font-medium no-underline hover:opacity-90 transition-opacity flex justify-center items-center gap-2 border-none cursor-pointer"
+                className="w-full bg-[#009EE3] text-white py-[14px] rounded-lg text-[15px] font-medium no-underline hover:opacity-90 transition-all active:scale-[0.97] flex justify-center items-center gap-2 border-none cursor-pointer"
               >
                 Pagar con Mercado Pago
               </button>

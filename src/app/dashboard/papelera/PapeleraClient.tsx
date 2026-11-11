@@ -113,7 +113,7 @@ export default function PapeleraClient() {
                   <button
                     onClick={() => handleRestore(r)}
                     disabled={busyId === r.id}
-                    className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
+                    className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-all active:scale-[0.97]"
                   >
                     {busyId === r.id ? '…' : 'Restaurar'}
                   </button>

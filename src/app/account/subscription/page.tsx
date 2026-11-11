@@ -116,7 +116,7 @@ export default async function SubscriptionPage() {
             {(status === 'free' || status === 'expired' || status === 'cancelled') && (
               <Link 
                 href="/paywall"
-                className="bg-accent text-bg-primary px-5 py-[10px] rounded-lg text-[13px] font-medium no-underline hover:opacity-90 transition-opacity border-none cursor-pointer"
+                className="bg-accent text-bg-primary px-5 py-[10px] rounded-lg text-[13px] font-medium no-underline hover:opacity-90 transition-all active:scale-[0.97] border-none cursor-pointer"
               >
                 Suscribirme a Reason
               </Link>

@@ -489,7 +489,7 @@ export default function RtsDashboard({ evaluation, previousEvals, onNewEvaluatio
           <button
             onClick={onSave}
             disabled={isSaving}
-            className="bg-accent text-bg-primary px-6 py-2.5 rounded-lg text-[14px] font-medium hover:opacity-90 disabled:opacity-40"
+            className="bg-accent text-bg-primary px-6 py-2.5 rounded-lg text-[14px] font-medium hover:opacity-90 active:scale-[0.97] disabled:opacity-40"
           >
             {isSaving ? 'Guardando...' : 'Guardar evaluación'}
           </button>

@@ -407,7 +407,7 @@ export default function QuickAtencionSheet({ patientId, patientName, userId, pla
                   ) : (
                     <div className="ml-auto flex items-center gap-2 shrink-0">
                       <button onClick={cancelEdit} className="text-[12px] text-text-secondary hover:text-text-primary">Cancelar</button>
-                      <button onClick={saveSession} disabled={savingSession} className="bg-accent text-bg-primary px-2.5 py-1 rounded text-[12px] font-medium hover:opacity-90 disabled:opacity-50">{savingSession ? 'Guardando…' : 'Guardar'}</button>
+                      <button onClick={saveSession} disabled={savingSession} className="bg-accent text-bg-primary px-2.5 py-1 rounded text-[12px] font-medium hover:opacity-90 active:scale-[0.97] disabled:opacity-50">{savingSession ? 'Guardando…' : 'Guardar'}</button>
                     </div>
                   )}
                 </div>
@@ -445,7 +445,7 @@ export default function QuickAtencionSheet({ patientId, patientName, userId, pla
                     ? <>La próxima sesión está agendada para <b className="text-accent capitalize">{dLabel(pending.date)}</b>, pero el paciente vino hoy.</>
                     : <>No hay sesión para hoy. Podés traer la última (<span className="capitalize">{dLabel(pending.date)}</span>) al día de hoy.</>}
                 </div>
-                <button onClick={bringToToday} disabled={bringing} className="ml-auto shrink-0 bg-accent text-bg-primary px-3 py-1.5 rounded-lg text-[12px] font-medium hover:opacity-90 disabled:opacity-50">
+                <button onClick={bringToToday} disabled={bringing} className="ml-auto shrink-0 bg-accent text-bg-primary px-3 py-1.5 rounded-lg text-[12px] font-medium hover:opacity-90 active:scale-[0.97] disabled:opacity-50">
                   {bringing ? 'Trayendo…' : 'Traer a hoy'}
                 </button>
               </div>
@@ -466,7 +466,7 @@ export default function QuickAtencionSheet({ patientId, patientName, userId, pla
                 {!todayBitacora && priorBitacora && (
                   <div className="flex items-center gap-3 px-3 py-2.5 border-b-[0.5px] border-border" style={{ background: 'rgba(45,216,168,0.08)' }}>
                     <span className="text-[12.5px] text-text-primary">Sin bitácora hoy. Traer la de <span className="capitalize">{dLabel(priorBitacora.activity_date)}</span>?</span>
-                    <button onClick={bringBitacoraToToday} disabled={bringingBitacora} className="ml-auto shrink-0 bg-accent text-bg-primary px-3 py-1.5 rounded-lg text-[12px] font-medium hover:opacity-90 disabled:opacity-50">
+                    <button onClick={bringBitacoraToToday} disabled={bringingBitacora} className="ml-auto shrink-0 bg-accent text-bg-primary px-3 py-1.5 rounded-lg text-[12px] font-medium hover:opacity-90 active:scale-[0.97] disabled:opacity-50">
                       {bringingBitacora ? 'Trayendo…' : 'Traer a hoy'}
                     </button>
                   </div>
@@ -508,7 +508,7 @@ export default function QuickAtencionSheet({ patientId, patientName, userId, pla
 
           <div className="flex items-center gap-3">
             <button onClick={register} disabled={saving || done}
-              className="flex-1 bg-accent text-bg-primary px-4 py-2.5 rounded-lg text-[14px] font-medium hover:opacity-90 transition-opacity disabled:opacity-50">
+              className="flex-1 bg-accent text-bg-primary px-4 py-2.5 rounded-lg text-[14px] font-medium hover:opacity-90 transition-all active:scale-[0.97] disabled:opacity-50">
               {done ? '✓ Registrada' : saving ? 'Registrando…' : 'Registrar atención'}
             </button>
             <a href={`/dashboard/pacientes/${patientId}`} className="text-[12.5px] text-text-secondary hover:text-text-primary no-underline shrink-0">Abrir ficha →</a>

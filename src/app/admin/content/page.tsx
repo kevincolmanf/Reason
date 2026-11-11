@@ -18,7 +18,7 @@ export default async function AdminContentPage() {
         </h1>
         <Link 
           href="/admin/content/new"
-          className="bg-accent text-bg-primary px-5 py-[10px] rounded-lg text-[14px] font-medium no-underline hover:opacity-90 transition-opacity"
+          className="bg-accent text-bg-primary px-5 py-[10px] rounded-lg text-[14px] font-medium no-underline hover:opacity-90 transition-all active:scale-[0.97]"
         >
           Nuevo contenido
         </Link>

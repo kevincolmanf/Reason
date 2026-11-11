@@ -90,7 +90,7 @@ function PacienteCard({ p }: { p: BloquePaciente }) {
             <button
               onClick={register}
               disabled={!symptom || saving}
-              className="bg-accent text-bg-primary px-3 py-1.5 rounded-lg text-[12px] font-medium hover:opacity-90 transition-opacity disabled:opacity-40"
+              className="bg-accent text-bg-primary px-3 py-1.5 rounded-lg text-[12px] font-medium hover:opacity-90 transition-all active:scale-[0.97] disabled:opacity-40"
             >
               {saving ? 'Registrando…' : 'Registrar'}
             </button>

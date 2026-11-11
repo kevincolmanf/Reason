@@ -7,7 +7,7 @@ import { updateOwnProfile, updateOwnPassword } from './actions'
 const label = 'text-[11px] text-text-secondary uppercase tracking-[0.05em] mb-1'
 const inputCls = 'w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg px-3 py-2.5 text-[15px] focus:outline-none focus:border-accent'
 const linkBtn = 'text-[14px] text-accent hover:opacity-80 transition-opacity bg-transparent border-none cursor-pointer p-0'
-const primaryBtn = 'bg-accent text-bg-primary px-4 py-2 rounded-lg text-[14px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity'
+const primaryBtn = 'bg-accent text-bg-primary px-4 py-2 rounded-lg text-[14px] font-medium hover:opacity-90 disabled:opacity-40 transition-all active:scale-[0.97]'
 
 export default function ProfileEditor({ fullName, email, joinDate, role }: {
   fullName: string

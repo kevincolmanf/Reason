@@ -843,7 +843,7 @@ export default function RtsEvaluationForm({
               <button
                 type="button"
                 onClick={importDynamoData}
-                className="px-4 py-1.5 text-[13px] bg-accent text-bg-primary rounded-lg hover:opacity-90"
+                className="px-4 py-1.5 text-[13px] bg-accent text-bg-primary rounded-lg hover:opacity-90 active:scale-[0.97]"
               >
                 Usar estos datos
               </button>
@@ -1152,7 +1152,7 @@ export default function RtsEvaluationForm({
               {lastKoos.score !== null && <span className="ml-1">· score {lastKoos.score}</span>}
             </div>
             <div className="flex gap-2">
-              <button type="button" onClick={importKoosData} className="px-4 py-1.5 text-[13px] bg-accent text-bg-primary rounded-lg hover:opacity-90">Usar</button>
+              <button type="button" onClick={importKoosData} className="px-4 py-1.5 text-[13px] bg-accent text-bg-primary rounded-lg hover:opacity-90 active:scale-[0.97]">Usar</button>
               <button type="button" onClick={() => setKoosMode('manual')} className="px-4 py-1.5 text-[13px] bg-bg-primary border-[0.5px] border-border text-text-secondary rounded-lg hover:text-text-primary">Ingresar manualmente</button>
             </div>
           </div>
@@ -1167,7 +1167,7 @@ export default function RtsEvaluationForm({
               {lastAclRsi.score !== null && <span className="ml-1">· score {lastAclRsi.score}</span>}
             </div>
             <div className="flex gap-2">
-              <button type="button" onClick={importAclRsiData} className="px-4 py-1.5 text-[13px] bg-accent text-bg-primary rounded-lg hover:opacity-90">Usar</button>
+              <button type="button" onClick={importAclRsiData} className="px-4 py-1.5 text-[13px] bg-accent text-bg-primary rounded-lg hover:opacity-90 active:scale-[0.97]">Usar</button>
               <button type="button" onClick={() => setAclRsiMode('manual')} className="px-4 py-1.5 text-[13px] bg-bg-primary border-[0.5px] border-border text-text-secondary rounded-lg hover:text-text-primary">Ingresar manualmente</button>
             </div>
           </div>
@@ -1250,7 +1250,7 @@ export default function RtsEvaluationForm({
         <button
           type="button"
           onClick={handleViewAnalysis}
-          className="bg-accent text-bg-primary px-8 py-3 rounded-xl text-[15px] font-medium hover:opacity-90 transition-opacity"
+          className="bg-accent text-bg-primary px-8 py-3 rounded-xl text-[15px] font-medium hover:opacity-90 transition-all active:scale-[0.97]"
         >
           Ver Análisis Completo →
         </button>

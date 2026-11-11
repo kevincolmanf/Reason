@@ -163,7 +163,7 @@ export default function QuickSessionSheet({ patientId, patientName, onClose, onS
 
         <div className="flex gap-2 p-5 pt-0">
           <button onClick={handleSave} disabled={saving}
-            className="flex-1 bg-accent text-bg-primary py-3 rounded-lg text-[14px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity">
+            className="flex-1 bg-accent text-bg-primary py-3 rounded-lg text-[14px] font-medium hover:opacity-90 disabled:opacity-40 transition-all active:scale-[0.97]">
             {saving ? 'Guardando…' : 'Guardar sesión'}
           </button>
           <button onClick={onClose} className="px-4 py-3 text-[13px] text-text-secondary hover:text-text-primary">Cancelar</button>

@@ -664,7 +664,7 @@ export default function FichaClient({
           <h3 className="text-[17px] font-medium mb-2">Tenés cambios sin guardar</h3>
           <p className="text-[13px] text-text-secondary mb-5">Si salís de la ficha ahora, se perderá lo que cargaste. ¿Querés guardar antes de salir?</p>
           <div className="flex flex-col gap-2">
-            <button onClick={saveAndLeave} disabled={saveStatus === 'saving'} className="w-full bg-accent text-bg-primary py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity">
+            <button onClick={saveAndLeave} disabled={saveStatus === 'saving'} className="w-full bg-accent text-bg-primary py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-all active:scale-[0.97]">
               {saveStatus === 'saving' ? 'Guardando…' : 'Guardar y salir'}
             </button>
             <div className="flex items-center gap-2">
@@ -767,7 +767,7 @@ export default function FichaClient({
           <button
             onClick={handleSave}
             disabled={saveStatus === 'saving' || !hasChanges}
-            className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
+            className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-all active:scale-[0.97]"
           >
             {saveStatus === 'saving' ? 'Guardando...' : 'Guardar'}
           </button>
@@ -1027,7 +1027,7 @@ export default function FichaClient({
             <div className="flex justify-end mb-4">
               <button
                 onClick={() => { setShowGonioForm(v => !v); setGonioValues({}) }}
-                className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90"
+                className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 active:scale-[0.97]"
               >
                 {showGonioForm ? 'Cancelar' : '+ Nueva medición'}
               </button>
@@ -1121,7 +1121,7 @@ export default function FichaClient({
                   />
                 </div>
 
-                <button onClick={handleSaveGonio} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90">
+                <button onClick={handleSaveGonio} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 active:scale-[0.97]">
                   Guardar medición
                 </button>
               </div>
@@ -1364,7 +1364,7 @@ export default function FichaClient({
             <button
               onClick={handleAddActualizacion}
               disabled={!nuevaActTexto.trim()}
-              className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
+              className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-all active:scale-[0.97]"
             >
               + Agregar actualización
             </button>
@@ -1405,7 +1405,7 @@ export default function FichaClient({
           <button
             onClick={handleSave}
             disabled={saveStatus === 'saving' || !hasChanges}
-            className="bg-accent text-bg-primary px-5 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
+            className="bg-accent text-bg-primary px-5 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-all active:scale-[0.97]"
           >
             {saveStatus === 'saving' ? 'Guardando...' : 'Guardar cambios'}
           </button>

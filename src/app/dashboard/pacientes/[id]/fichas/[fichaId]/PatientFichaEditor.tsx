@@ -271,7 +271,7 @@ Documento generado con Reason — reason.com.ar`
         </button>
         <button
           onClick={handleExportPDF}
-          className="bg-accent text-bg-primary px-5 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity"
+          className="bg-accent text-bg-primary px-5 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-all active:scale-[0.97]"
         >
           Exportar a PDF
         </button>

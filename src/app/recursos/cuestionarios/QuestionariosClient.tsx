@@ -1322,7 +1322,7 @@ export default function QuestionariosClient({ userId, lockedPatient, initialDate
       {!result && (
         <button
           onClick={handleSubmit}
-          className="bg-accent text-bg-primary px-6 py-2.5 rounded-lg text-[14px] font-medium hover:opacity-90 transition-opacity"
+          className="bg-accent text-bg-primary px-6 py-2.5 rounded-lg text-[14px] font-medium hover:opacity-90 transition-all active:scale-[0.97]"
         >
           Calcular resultado
         </button>
@@ -1462,7 +1462,7 @@ export default function QuestionariosClient({ userId, lockedPatient, initialDate
                   <button
                     onClick={handleSave}
                     disabled={saving}
-                    className="bg-accent text-bg-primary px-5 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
+                    className="bg-accent text-bg-primary px-5 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 active:scale-[0.97] disabled:opacity-50 transition-all"
                   >
                     {saving ? 'Guardando...' : `Guardar en ${lockedPatient.name}`}
                   </button>
@@ -1482,7 +1482,7 @@ export default function QuestionariosClient({ userId, lockedPatient, initialDate
                     <button
                       onClick={handleSave}
                       disabled={saving}
-                      className="bg-accent text-bg-primary px-5 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
+                      className="bg-accent text-bg-primary px-5 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 active:scale-[0.97] disabled:opacity-50 transition-all"
                     >
                       {saving ? 'Guardando...' : 'Guardar resultado'}
                     </button>

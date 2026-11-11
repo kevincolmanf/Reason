@@ -325,7 +325,7 @@ export default function DinamometroClient({ userId, initialPatient, initialDate,
           <button
             onClick={handleSave}
             disabled={saving || !hasAnyData}
-            className="bg-accent text-bg-primary px-6 py-2.5 rounded-lg text-[14px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
+            className="bg-accent text-bg-primary px-6 py-2.5 rounded-lg text-[14px] font-medium hover:opacity-90 disabled:opacity-40 transition-all active:scale-[0.97]"
           >
             {saving ? 'Guardando...' : editId ? 'Actualizar evaluación' : 'Guardar evaluación'}
           </button>

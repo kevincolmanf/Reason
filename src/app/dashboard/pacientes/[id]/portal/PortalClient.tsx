@@ -120,7 +120,7 @@ export default function PortalClient({
             <p className="text-[13px] text-text-secondary mb-3">
               Generá un link único para que {patientName} pueda ver sus ejercicios y registrar sus sesiones desde el celular.
             </p>
-            <button onClick={generatePortalToken} disabled={generatingToken} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40">
+            <button onClick={generatePortalToken} disabled={generatingToken} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 active:scale-[0.97] disabled:opacity-40">
               {generatingToken ? 'Generando...' : 'Generar link para el paciente'}
             </button>
           </div>

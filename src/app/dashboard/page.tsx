@@ -273,7 +273,7 @@ export default async function DashboardPage() {
             </div>
             <Link
               href="/paywall"
-              className="shrink-0 bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity no-underline"
+              className="shrink-0 bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-all active:scale-[0.97] no-underline"
             >
               Ver planes
             </Link>
@@ -323,7 +323,7 @@ export default async function DashboardPage() {
             <div className="bg-bg-secondary rounded-xl p-12 text-center border-[0.5px] border-dashed border-border">
               <p className="text-[16px] font-medium mb-2">Todavía no tenés pacientes</p>
               <p className="text-[13px] text-text-secondary mb-5">Creá tu primer paciente para empezar a trabajar clínicamente con Reason.</p>
-              <Link href="/dashboard/pacientes?new=1" className="bg-accent text-bg-primary px-5 py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 inline-block no-underline">
+              <Link href="/dashboard/pacientes?new=1" className="bg-accent text-bg-primary px-5 py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 active:scale-[0.97] inline-block no-underline">
                 + Crear primer paciente
               </Link>
             </div>

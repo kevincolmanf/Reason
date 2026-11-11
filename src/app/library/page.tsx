@@ -113,7 +113,7 @@ export default async function LibraryPage({
                 {query ? `No se encontraron resultados para "${query}"` : 'No se encontraron resultados'}
               </p>
               <p className="text-[14px] text-text-secondary">Intentá cambiar los filtros o el término de búsqueda.</p>
-              <Link href="/library" className="inline-block mt-6 text-[13px] text-bg-primary bg-accent px-4 py-2 rounded-lg no-underline hover:opacity-90 transition-opacity">
+              <Link href="/library" className="inline-block mt-6 text-[13px] text-bg-primary bg-accent px-4 py-2 rounded-lg no-underline hover:opacity-90 transition-all active:scale-[0.97]">
                 Limpiar filtros
               </Link>
             </div>

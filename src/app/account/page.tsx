@@ -58,7 +58,7 @@ export default async function AccountPage() {
             </div>
             <Link
               href="/account/subscription"
-              className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium no-underline hover:opacity-90 transition-opacity"
+              className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium no-underline hover:opacity-90 transition-all active:scale-[0.97]"
             >
               Ver suscripción
             </Link>
@@ -72,7 +72,7 @@ export default async function AccountPage() {
               </div>
               <Link
                 href="/account/equipo"
-                className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium no-underline hover:opacity-90 transition-opacity"
+                className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium no-underline hover:opacity-90 transition-all active:scale-[0.97]"
               >
                 Ver equipo
               </Link>
@@ -86,7 +86,7 @@ export default async function AccountPage() {
               </div>
               <Link
                 href="/account/crm"
-                className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium no-underline hover:opacity-90 transition-opacity"
+                className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium no-underline hover:opacity-90 transition-all active:scale-[0.97]"
               >
                 Ver panel
               </Link>

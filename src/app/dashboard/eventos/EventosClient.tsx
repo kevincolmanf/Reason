@@ -194,7 +194,7 @@ export default function EventosClient({ userId, orgId, initialEvents, initialCou
           <p className="text-[14px] text-text-secondary mt-1">Creá una jornada o curso; cada inscripción entra a Reason.</p>
         </div>
         {!showForm && (
-          <button onClick={openCreate} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity">+ Nuevo evento</button>
+          <button onClick={openCreate} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-all active:scale-[0.97]">+ Nuevo evento</button>
         )}
       </div>
 
@@ -254,7 +254,7 @@ export default function EventosClient({ userId, orgId, initialEvents, initialCou
           </div>
           {error && <p className="text-[13px] text-red-400 mt-3">{error}</p>}
           <div className="flex gap-2 mt-4">
-            <button onClick={saveEvent} disabled={saving} className="bg-accent text-bg-primary px-5 py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40">{saving ? 'Guardando…' : (editingId ? 'Guardar cambios' : 'Crear evento')}</button>
+            <button onClick={saveEvent} disabled={saving} className="bg-accent text-bg-primary px-5 py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 active:scale-[0.97] disabled:opacity-40">{saving ? 'Guardando…' : (editingId ? 'Guardar cambios' : 'Crear evento')}</button>
             {(events.length > 0 || editingId) && <button onClick={closeForm} className="text-[13px] text-text-secondary hover:text-text-primary px-2">Cancelar</button>}
           </div>
         </div>
@@ -296,7 +296,7 @@ export default function EventosClient({ userId, orgId, initialEvents, initialCou
                     <input value={cert.role} onChange={ev => setCert(c => ({ ...c, role: ev.target.value }))} placeholder="Cargo (ej. Director)" className={inputCls} />
                   </div>
                   {certMsg && <p className={`text-[13px] mb-2 ${certMsg.startsWith('✓') ? 'text-[#6FAE7E]' : 'text-red-400'}`}>{certMsg}</p>}
-                  <button onClick={sendCerts} disabled={certSending} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40">{certSending ? 'Enviando…' : 'Enviar a los presentes'}</button>
+                  <button onClick={sendCerts} disabled={certSending} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 active:scale-[0.97] disabled:opacity-40">{certSending ? 'Enviando…' : 'Enviar a los presentes'}</button>
                 </div>
               )}
               {openRegs === e.id && (

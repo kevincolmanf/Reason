@@ -337,7 +337,7 @@ export default function CajaClient({ userId, orgId, orgName, isOwner, areas, tod
         <button
           onClick={handleAdd}
           disabled={saving}
-          className="bg-accent text-bg-primary px-5 py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
+          className="bg-accent text-bg-primary px-5 py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-all active:scale-[0.97]"
         >
           {saving ? 'Guardando…' : 'Agregar movimiento'}
         </button>
@@ -447,7 +447,7 @@ function EditRow({ editForm, setEditForm, methodNames, areas, onSave, onCancel }
         )}
       </div>
       <div className="flex gap-2">
-        <button onClick={onSave} className="bg-accent text-bg-primary px-4 py-1.5 rounded-lg text-[12px] font-medium hover:opacity-90">Guardar</button>
+        <button onClick={onSave} className="bg-accent text-bg-primary px-4 py-1.5 rounded-lg text-[12px] font-medium hover:opacity-90 active:scale-[0.97]">Guardar</button>
         <button onClick={onCancel} className="px-4 py-1.5 rounded-lg text-[12px] text-text-secondary hover:text-text-primary">Cancelar</button>
       </div>
     </div>

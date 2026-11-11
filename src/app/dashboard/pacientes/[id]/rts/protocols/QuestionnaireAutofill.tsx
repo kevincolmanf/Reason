@@ -69,7 +69,7 @@ export function QuestionnaireAutofill({
               <button
                 type="button"
                 onClick={() => { onApply(spec.formKey, value); dismiss(spec.type) }}
-                className="px-4 py-1.5 text-[13px] bg-accent text-bg-primary rounded-lg hover:opacity-90"
+                className="px-4 py-1.5 text-[13px] bg-accent text-bg-primary rounded-lg hover:opacity-90 active:scale-[0.97]"
               >
                 Usar
               </button>

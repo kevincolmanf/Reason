@@ -956,7 +956,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
           )}
 
           {canEdit ? (
-            <button data-tour="agenda-nuevo" onClick={() => openNew()} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity">
+            <button data-tour="agenda-nuevo" onClick={() => openNew()} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-all active:scale-[0.97]">
               + Nuevo turno
             </button>
           ) : (

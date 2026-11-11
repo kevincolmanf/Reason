@@ -116,7 +116,7 @@ export default function ObraSocialField({ value, onChange, orgId, userId, inputC
             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAdd() } if (e.key === 'Escape') { setAdding(false); setNewName('') } }}
             placeholder="Nueva obra social" className={inputClassName + ' flex-1'}
           />
-          <button type="button" onClick={handleAdd} disabled={busy || !newName.trim()} className="bg-accent text-bg-primary px-3 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 shrink-0">Agregar</button>
+          <button type="button" onClick={handleAdd} disabled={busy || !newName.trim()} className="bg-accent text-bg-primary px-3 rounded-lg text-[13px] font-medium hover:opacity-90 active:scale-[0.97] disabled:opacity-40 shrink-0">Agregar</button>
           <button type="button" onClick={() => { setAdding(false); setNewName('') }} className="text-[13px] text-text-secondary hover:text-text-primary px-1 shrink-0">Cancelar</button>
         </div>
       ) : (

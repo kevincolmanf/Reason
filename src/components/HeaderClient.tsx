@@ -98,7 +98,7 @@ export default function HeaderClient({ userMetadata, hasAgendaAccess, isProOrAdm
         onClick={handleHelp}
         aria-label="Ayuda de esta sección"
         title="Ayuda de esta sección"
-        className="flex items-center justify-center w-8 h-8 rounded-full bg-bg-secondary border-[0.5px] border-border text-[14px] font-medium text-text-secondary hover:text-text-primary hover:border-border-strong transition-colors focus:outline-none"
+        className="flex items-center justify-center w-8 h-8 rounded-full bg-bg-secondary border-[0.5px] border-border text-[14px] font-medium text-text-secondary hover:text-text-primary hover:border-border-strong transition-all active:scale-90 focus:outline-none"
       >
         ?
       </button>
@@ -107,7 +107,7 @@ export default function HeaderClient({ userMetadata, hasAgendaAccess, isProOrAdm
       <button
         onClick={toggleMenu}
         aria-label="Menú"
-        className="flex items-center justify-center w-8 h-8 rounded-full bg-bg-secondary border-[0.5px] border-border text-[12px] font-medium text-text-primary hover:border-border-strong transition-colors focus:outline-none"
+        className="flex items-center justify-center w-8 h-8 rounded-full bg-bg-secondary border-[0.5px] border-border text-[12px] font-medium text-text-primary hover:border-border-strong transition-all active:scale-90 focus:outline-none"
       >
         {/* En mobile mostramos un ícono de menú para que la navegación sea descubrible;
             en desktop, las iniciales del usuario. */}
@@ -116,7 +116,7 @@ export default function HeaderClient({ userMetadata, hasAgendaAccess, isProOrAdm
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-56 bg-bg-primary border-[0.5px] border-border rounded-xl shadow-lg py-2 z-20">
+        <div className="absolute right-0 mt-2 w-56 bg-bg-primary border-[0.5px] border-border rounded-xl shadow-lg py-2 z-20 animate-menu-pop-in">
           <div className="px-4 py-2 border-b-[0.5px] border-border mb-2">
             <p className="text-[13px] font-medium text-text-primary truncate">{name}</p>
           </div>

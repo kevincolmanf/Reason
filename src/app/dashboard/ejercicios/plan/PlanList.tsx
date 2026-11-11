@@ -165,7 +165,7 @@ export default function PlanList({ userId, patientId }: { userId: string; patien
         <button
           onClick={handleCreatePlan}
           disabled={busy}
-          className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+          className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
         >
           {busy ? 'Creando…' : '+ Crear Nuevo Plan'}
         </button>

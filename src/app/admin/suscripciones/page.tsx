@@ -123,7 +123,7 @@ export default function SuscripcionesPage() {
           <button
             onClick={fixUser}
             disabled={fixLoading || !fixEmail.trim()}
-            className="px-4 py-2 bg-accent text-bg-primary rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity disabled:opacity-40"
+            className="px-4 py-2 bg-accent text-bg-primary rounded-lg text-[13px] font-medium hover:opacity-90 transition-all active:scale-[0.97] disabled:opacity-40"
           >
             {fixLoading ? 'Buscando...' : 'Sincronizar'}
           </button>
@@ -163,7 +163,7 @@ export default function SuscripcionesPage() {
           <button
             onClick={fix}
             disabled={fixing}
-            className="px-4 py-2 bg-accent text-bg-primary rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity disabled:opacity-40"
+            className="px-4 py-2 bg-accent text-bg-primary rounded-lg text-[13px] font-medium hover:opacity-90 transition-all active:scale-[0.97] disabled:opacity-40"
           >
             {fixing ? 'Corrigiendo...' : `Corregir ${result.fixes.length} usuario${result.fixes.length !== 1 ? 's' : ''}`}
           </button>

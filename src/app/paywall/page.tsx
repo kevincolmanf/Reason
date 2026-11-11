@@ -101,7 +101,7 @@ export default function PaywallPage() {
 
             <Link
               href="/checkout?plan=annual"
-              className="block w-full text-center bg-accent text-bg-primary py-3 rounded-xl text-[14px] font-medium no-underline hover:opacity-90 transition-opacity mb-8"
+              className="block w-full text-center bg-accent text-bg-primary py-3 rounded-xl text-[14px] font-medium no-underline hover:opacity-90 transition-all active:scale-[0.97] mb-8"
             >
               Suscribirme
             </Link>

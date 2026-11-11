@@ -191,7 +191,7 @@ export default function CajaConfig({ orgId, methods, presets, areas, onMethods, 
                 placeholder="Agregar destino (ej. Cuenta Santander)"
                 className={inputCls + ' flex-1'}
               />
-              <button onClick={addMethod} disabled={busy} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 shrink-0">
+              <button onClick={addMethod} disabled={busy} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 active:scale-[0.97] disabled:opacity-40 shrink-0">
                 Agregar
               </button>
             </div>
@@ -226,7 +226,7 @@ function PresetForm({ draft, setDraft, areas, onSave, onCancel, busy, inputCls }
         )}
       </div>
       <div className="flex gap-2">
-        <button onClick={onSave} disabled={busy} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40">
+        <button onClick={onSave} disabled={busy} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 active:scale-[0.97] disabled:opacity-40">
           {busy ? 'Guardando…' : 'Guardar'}
         </button>
         <button onClick={onCancel} className="px-4 py-2 rounded-lg text-[13px] text-text-secondary hover:text-text-primary">Cancelar</button>

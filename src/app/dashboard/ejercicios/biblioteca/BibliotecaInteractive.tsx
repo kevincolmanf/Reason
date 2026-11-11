@@ -484,7 +484,7 @@ export default function BibliotecaInteractive({ equipments, userId, orgId }: { e
                 <button
                   onClick={handleAddExercise}
                   disabled={saving || !newName.trim()}
-                  className="w-full bg-accent text-bg-primary px-6 py-3 rounded-lg text-[14px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
+                  className="w-full bg-accent text-bg-primary px-6 py-3 rounded-lg text-[14px] font-medium hover:opacity-90 disabled:opacity-40 transition-all active:scale-[0.97]"
                 >
                   {saving ? 'Guardando...' : '+ Agregar'}
                 </button>
@@ -549,7 +549,7 @@ export default function BibliotecaInteractive({ equipments, userId, orgId }: { e
                         <button
                           onClick={() => handleSaveEdit(ex.id)}
                           disabled={savingEdit || !editNameInput.trim()}
-                          className="bg-accent text-bg-primary px-3 py-1.5 rounded-lg text-[12px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
+                          className="bg-accent text-bg-primary px-3 py-1.5 rounded-lg text-[12px] font-medium hover:opacity-90 disabled:opacity-40 transition-all active:scale-[0.97]"
                         >
                           {savingEdit ? 'Guardando...' : 'Guardar'}
                         </button>

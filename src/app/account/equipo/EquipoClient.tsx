@@ -339,7 +339,7 @@ Cualquier duda, avisame.`
             <button
               onClick={handleCreateOrg}
               disabled={orgLoading || !orgName.trim()}
-              className="bg-accent text-bg-primary px-5 py-3 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
+              className="bg-accent text-bg-primary px-5 py-3 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-all active:scale-[0.97]"
             >
               {orgLoading ? 'Creando...' : 'Crear'}
             </button>
@@ -455,7 +455,7 @@ Cualquier duda, avisame.`
             <button
               data-tour="equipo-agregar"
               onClick={() => setShowAddForm(true)}
-              className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity"
+              className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-all active:scale-[0.97]"
             >
               + Agregar integrante
             </button>
@@ -509,7 +509,7 @@ Cualquier duda, avisame.`
               <button
                 onClick={handleAddMember}
                 disabled={addLoading || !memberEmail.trim() || !memberName.trim()}
-                className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
+                className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-all active:scale-[0.97]"
               >
                 {addLoading ? 'Agregando...' : 'Agregar'}
               </button>
@@ -555,7 +555,7 @@ Cualquier duda, avisame.`
                       <button
                         onClick={() => handleSaveEdit(m.user_id)}
                         disabled={editLoading || !editName.trim()}
-                        className="bg-accent text-bg-primary px-3 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
+                        className="bg-accent text-bg-primary px-3 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-all active:scale-[0.97]"
                       >
                         {editLoading ? '...' : 'Guardar'}
                       </button>
@@ -734,7 +734,7 @@ Cualquier duda, avisame.`
               <button
                 onClick={handleDeleteOrg}
                 disabled={deletingOrg || deleteConfirmName.trim() !== org.name}
-                className="bg-[#A33D2D] text-white px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+                className="bg-[#A33D2D] text-white px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
               >
                 {deletingOrg ? 'Eliminando...' : 'Eliminar centro'}
               </button>
@@ -768,7 +768,7 @@ Cualquier duda, avisame.`
               <button
                 onClick={() => handleResetAccess(confirmResetMember, true)}
                 disabled={resettingId === confirmResetMember.id}
-                className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
+                className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-all active:scale-[0.97]"
               >
                 {resettingId === confirmResetMember.id ? 'Generando...' : 'Sí, generar nueva'}
               </button>

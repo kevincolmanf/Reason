@@ -67,7 +67,7 @@ export default function InscripcionForm({ token, eventTitle, startsAt, paymentIn
           className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg px-3 py-3 text-[15px] focus:outline-none focus:border-accent" />
         {error && <p className="text-[13px] text-red-400">{error}</p>}
         <button onClick={submit} disabled={submitting}
-          className="w-full bg-accent text-bg-primary py-3 rounded-lg text-[15px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity">
+          className="w-full bg-accent text-bg-primary py-3 rounded-lg text-[15px] font-medium hover:opacity-90 disabled:opacity-40 transition-all active:scale-[0.97]">
           {submitting ? 'Inscribiendo…' : 'Inscribirme'}
         </button>
         <p className="text-[11px] text-text-tertiary text-center">Al inscribirte aceptás que creemos tu cuenta en Reason con estos datos.</p>

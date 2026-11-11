@@ -1343,7 +1343,7 @@ export default function PlanEditor({ initialPlan, userId, orgId, initialEvents =
             {canBulkLoad && (
               <button
                 onClick={() => setShowBulkLoadModal(true)}
-                className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 w-full"
+                className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 active:scale-[0.97] w-full"
               >
                 Cargar plan al calendario
               </button>
@@ -1409,7 +1409,7 @@ export default function PlanEditor({ initialPlan, userId, orgId, initialEvents =
                 <button
                   onClick={() => window.print()}
                   disabled={printSheets.length === 0}
-                  className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 w-full disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 active:scale-[0.97] w-full disabled:opacity-40 disabled:cursor-not-allowed"
                   title="Planilla A4 apaisada con columnas por semana para anotar cargas. Ahorra tinta y hojas (Guardar como PDF)."
                 >
                   Imprimir planilla semanal (A4)
@@ -1626,7 +1626,7 @@ export default function PlanEditor({ initialPlan, userId, orgId, initialEvents =
                           ? 'bg-warning/10 border-warning/40 text-warning'
                           : sessionSaveStatus === 'saving'
                           ? 'bg-bg-secondary border-border text-text-secondary opacity-60'
-                          : 'bg-accent text-bg-primary border-accent hover:opacity-90'
+                          : 'bg-accent text-bg-primary border-accent hover:opacity-90 active:scale-[0.97]'
                       }`}
                     >
                       {sessionSaveStatus === 'saving' && 'Guardando...'}
@@ -1693,7 +1693,7 @@ export default function PlanEditor({ initialPlan, userId, orgId, initialEvents =
                   <div className="flex flex-wrap justify-center gap-2.5">
                     <button
                       onClick={() => createSession(selectedDate)}
-                      className="inline-flex items-center gap-2 bg-accent text-bg-primary px-4 py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity"
+                      className="inline-flex items-center gap-2 bg-accent text-bg-primary px-4 py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 transition-all active:scale-[0.97]"
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                       Crear sesión
@@ -2203,7 +2203,7 @@ export default function PlanEditor({ initialPlan, userId, orgId, initialEvents =
                   <button
                     onClick={handleCreateExercise}
                     disabled={creating || !createName.trim()}
-                    className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
+                    className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-all active:scale-[0.97]"
                   >
                     {creating ? 'Creando...' : 'Crear y agregar al bloque'}
                   </button>
@@ -2261,7 +2261,7 @@ export default function PlanEditor({ initialPlan, userId, orgId, initialEvents =
               <button
                 onClick={() => { const d = evalDate || todayStr; const k = evalModal.kind; const p = evalProtocol; setEvalModal(null); evalCompleteNow(k, p, d) }}
                 disabled={evalModal.kind === 'quest' && !evalProtocol}
-                className="flex-1 min-w-[130px] bg-accent text-bg-primary py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity">
+                className="flex-1 min-w-[130px] bg-accent text-bg-primary py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-all active:scale-[0.97]">
                 Completar ahora
               </button>
               <button
@@ -2287,7 +2287,7 @@ export default function PlanEditor({ initialPlan, userId, orgId, initialEvents =
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => completeSched(schedAction)}
-                className="flex-1 min-w-[130px] bg-accent text-bg-primary py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity">
+                className="flex-1 min-w-[130px] bg-accent text-bg-primary py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 transition-all active:scale-[0.97]">
                 Completar ahora
               </button>
               <button
@@ -2337,7 +2337,7 @@ export default function PlanEditor({ initialPlan, userId, orgId, initialEvents =
             </div>
             <div className="flex items-center gap-2 mt-5">
               <button onClick={saveEvent} disabled={edSaving || !edDate}
-                className="flex-1 bg-accent text-bg-primary py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity">
+                className="flex-1 bg-accent text-bg-primary py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-all active:scale-[0.97]">
                 {edSaving ? 'Guardando…' : (editEvent ? 'Guardar' : 'Agregar')}
               </button>
               {editEvent && <button onClick={deleteEditEvent} className="px-4 py-2.5 text-[13px] text-warning hover:opacity-80 transition-opacity">Borrar</button>}
@@ -2362,7 +2362,7 @@ export default function PlanEditor({ initialPlan, userId, orgId, initialEvents =
             <div className="flex flex-col gap-2">
               <button
                 onClick={() => router.push(`/dashboard/pacientes/${plan.patient_id}/rts?eval=${rtsAction.id}`)}
-                className="w-full text-white py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity"
+                className="w-full text-white py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 transition-all active:scale-[0.97]"
                 style={{ backgroundColor: RTS_COLOR }}>
                 Abrir / editar evaluación
               </button>
@@ -2392,7 +2392,7 @@ export default function PlanEditor({ initialPlan, userId, orgId, initialEvents =
             <div className="flex flex-col gap-2">
               <button
                 onClick={() => router.push(`/recursos/dinamometro?edit=${dynAction.id}&from=${planReturn}`)}
-                className="w-full text-white py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity"
+                className="w-full text-white py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 transition-all active:scale-[0.97]"
                 style={{ backgroundColor: DYN_COLOR }}>
                 Abrir / editar evaluación
               </button>
@@ -2422,7 +2422,7 @@ export default function PlanEditor({ initialPlan, userId, orgId, initialEvents =
             <div className="flex flex-col gap-2">
               <button
                 onClick={() => router.push(`/dashboard/pacientes/${plan.patient_id}/ficha`)}
-                className="w-full text-white py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity"
+                className="w-full text-white py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 transition-all active:scale-[0.97]"
                 style={{ backgroundColor: Q_COLOR }}>
                 Ver en la ficha
               </button>
@@ -2462,7 +2462,7 @@ export default function PlanEditor({ initialPlan, userId, orgId, initialEvents =
 
             <div className="flex gap-2">
               <button onClick={handleDuplicateWeek} disabled={dupState === 'loading' || dupState === 'done'}
-                className="flex-1 bg-accent text-bg-primary py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity">
+                className="flex-1 bg-accent text-bg-primary py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-all active:scale-[0.97]">
                 {dupState === 'loading' ? 'Duplicando…' : `Duplicar a ${dupWeeks} ${dupWeeks === 1 ? 'semana' : 'semanas'}`}
               </button>
               <button onClick={() => setShowDupWeek(false)} className="px-4 py-2.5 text-[13px] text-text-secondary hover:text-text-primary">Cancelar</button>
@@ -2491,7 +2491,7 @@ export default function PlanEditor({ initialPlan, userId, orgId, initialEvents =
                 <div className="flex gap-2">
                   <button
                     onClick={handleBulkLoad}
-                    className="flex-1 bg-accent text-bg-primary py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90"
+                    className="flex-1 bg-accent text-bg-primary py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 active:scale-[0.97]"
                   >
                     Cargar todo
                   </button>
@@ -2530,7 +2530,7 @@ export default function PlanEditor({ initialPlan, userId, orgId, initialEvents =
                   </p>
                   <button
                     onClick={closeBulkModal}
-                    className="bg-accent text-bg-primary px-6 py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90"
+                    className="bg-accent text-bg-primary px-6 py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 active:scale-[0.97]"
                   >
                     Cerrar
                   </button>

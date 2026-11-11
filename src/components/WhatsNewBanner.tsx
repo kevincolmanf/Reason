@@ -68,7 +68,7 @@ export default function WhatsNewBanner() {
         <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2.5">
           <Link
             href="/dashboard/pacientes"
-            className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity no-underline"
+            className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-all active:scale-[0.97] no-underline"
           >
             Ver un paciente
           </Link>

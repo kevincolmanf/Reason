@@ -150,7 +150,7 @@ export default function ActivarKineClient({ candidates, alreadyCount, initialDay
             <button
               onClick={activate}
               disabled={saving || loading || selectedCount === 0}
-              className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity disabled:opacity-40"
+              className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-all active:scale-[0.97] disabled:opacity-40"
             >
               {saving ? 'Activando…' : `Pasar ${selectedCount} a modo kine`}
             </button>

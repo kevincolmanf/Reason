@@ -99,11 +99,11 @@ export default async function Header() {
         <nav className="flex items-center gap-3 lg:gap-4 min-w-0">
           {/* Orden pensado por el flujo de trabajo real: primero el paciente y su
               agenda (lo clínico), después las bibliotecas de referencia. */}
-          <Link href="/dashboard/pacientes" className="hidden lg:inline whitespace-nowrap text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+          <Link href="/dashboard/pacientes" className="hidden lg:inline whitespace-nowrap text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline relative after:content-[''] after:absolute after:left-0 after:-bottom-1 after:h-[1px] after:w-0 after:bg-accent after:transition-all after:duration-200 hover:after:w-full">
             Pacientes
           </Link>
           {hasAgendaAccess ? (
-            <Link href="/dashboard/agenda" className="hidden lg:inline whitespace-nowrap text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+            <Link href="/dashboard/agenda" className="hidden lg:inline whitespace-nowrap text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline relative after:content-[''] after:absolute after:left-0 after:-bottom-1 after:h-[1px] after:w-0 after:bg-accent after:transition-all after:duration-200 hover:after:w-full">
               Agenda
             </Link>
           ) : (
@@ -114,22 +114,22 @@ export default async function Header() {
               </div>
             </div>
           )}
-          <Link href="/dashboard/ejercicios" className="hidden lg:inline whitespace-nowrap text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+          <Link href="/dashboard/ejercicios" className="hidden lg:inline whitespace-nowrap text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline relative after:content-[''] after:absolute after:left-0 after:-bottom-1 after:h-[1px] after:w-0 after:bg-accent after:transition-all after:duration-200 hover:after:w-full">
             Ejercicios
           </Link>
-          <Link href="/recursos" className="hidden lg:inline whitespace-nowrap text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+          <Link href="/recursos" className="hidden lg:inline whitespace-nowrap text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline relative after:content-[''] after:absolute after:left-0 after:-bottom-1 after:h-[1px] after:w-0 after:bg-accent after:transition-all after:duration-200 hover:after:w-full">
             Recursos
           </Link>
-          <Link href="/library" className="hidden lg:inline whitespace-nowrap text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+          <Link href="/library" className="hidden lg:inline whitespace-nowrap text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline relative after:content-[''] after:absolute after:left-0 after:-bottom-1 after:h-[1px] after:w-0 after:bg-accent after:transition-all after:duration-200 hover:after:w-full">
             Biblioteca
           </Link>
           {canManageTeam && (
-            <Link href="/account/equipo" className="hidden lg:inline whitespace-nowrap text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+            <Link href="/account/equipo" className="hidden lg:inline whitespace-nowrap text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline relative after:content-[''] after:absolute after:left-0 after:-bottom-1 after:h-[1px] after:w-0 after:bg-accent after:transition-all after:duration-200 hover:after:w-full">
               Equipo
             </Link>
           )}
           {isProOrAdmin ? (
-            <Link href="/account/crm" className="hidden lg:inline whitespace-nowrap text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+            <Link href="/account/crm" className="hidden lg:inline whitespace-nowrap text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline relative after:content-[''] after:absolute after:left-0 after:-bottom-1 after:h-[1px] after:w-0 after:bg-accent after:transition-all after:duration-200 hover:after:w-full">
               Panel de gestión
             </Link>
           ) : (
@@ -149,7 +149,7 @@ export default async function Header() {
           )}
 
           {canSeeCaja && (
-            <Link href="/dashboard/caja" className="hidden lg:inline whitespace-nowrap text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+            <Link href="/dashboard/caja" className="hidden lg:inline whitespace-nowrap text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline relative after:content-[''] after:absolute after:left-0 after:-bottom-1 after:h-[1px] after:w-0 after:bg-accent after:transition-all after:duration-200 hover:after:w-full">
               Caja
             </Link>
           )}
@@ -174,7 +174,7 @@ export default async function Header() {
               available={available}
             />
           ) : (
-            <Link href="/login" className="text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+            <Link href="/login" className="text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline relative after:content-[''] after:absolute after:left-0 after:-bottom-1 after:h-[1px] after:w-0 after:bg-accent after:transition-all after:duration-200 hover:after:w-full">
               Iniciar sesión
             </Link>
           )}

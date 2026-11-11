@@ -259,7 +259,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
             <button
               data-tour="pacientes-nuevo"
               onClick={() => setShowForm(true)}
-              className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity"
+              className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-all active:scale-[0.97]"
             >
               + Nuevo Paciente
             </button>
@@ -274,7 +274,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
             <p className="text-[14px] font-medium mb-0.5">Plan gratuito — 3 pacientes</p>
             <p className="text-[13px] text-text-secondary">Suscribite para agregar hasta 20 pacientes.</p>
           </div>
-          <Link href="/paywall" className="shrink-0 bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity">Ver planes</Link>
+          <Link href="/paywall" className="shrink-0 bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-all active:scale-[0.97]">Ver planes</Link>
         </div>
       )}
       {atSubscriberLimit && (
@@ -283,7 +283,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
             <p className="text-[14px] font-medium mb-0.5">Límite del plan individual — 20 pacientes</p>
             <p className="text-[13px] text-text-secondary">Con el Plan Pro tenés pacientes ilimitados.</p>
           </div>
-          <Link href="/paywall" className="shrink-0 bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity">Ver Plan Pro</Link>
+          <Link href="/paywall" className="shrink-0 bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-all active:scale-[0.97]">Ver Plan Pro</Link>
         </div>
       )}
 
@@ -359,7 +359,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
             )}
           </div>
           <div className="flex gap-3">
-            <button onClick={handleCreate} disabled={saving || !form.name.trim() || !form.dni.trim()} className="bg-accent text-bg-primary px-5 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity">
+            <button onClick={handleCreate} disabled={saving || !form.name.trim() || !form.dni.trim()} className="bg-accent text-bg-primary px-5 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-all active:scale-[0.97]">
               {saving ? 'Guardando...' : 'Guardar'}
             </button>
             <button onClick={closeForm} className="text-text-secondary px-4 py-2 rounded-lg text-[13px] hover:text-text-primary">Cancelar</button>
@@ -395,7 +395,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
                 autoFocus
                 className="flex-1 bg-bg-primary border-[0.5px] border-border-strong rounded-lg px-3 py-2.5 text-[13px] focus:outline-none focus:border-accent"
               />
-              <button onClick={handleAddSource} disabled={savingSource || !newSourceLabel.trim()} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity">
+              <button onClick={handleAddSource} disabled={savingSource || !newSourceLabel.trim()} className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-all active:scale-[0.97]">
                 {savingSource ? '...' : 'Agregar'}
               </button>
             </div>
@@ -413,7 +413,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
               : 'Creá tu primer paciente para empezar a trabajar clínicamente con Reason.'}
           </p>
           {!atFreeLimit && !atSubscriberLimit && (
-            <button onClick={() => setShowForm(true)} className="bg-accent text-bg-primary px-5 py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 inline-block">
+            <button onClick={() => setShowForm(true)} className="bg-accent text-bg-primary px-5 py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 active:scale-[0.97] inline-block">
               + Crear primer paciente
             </button>
           )}

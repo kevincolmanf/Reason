@@ -129,7 +129,7 @@ export default function QuickCajaSheet({ orgId, userId, patientId, patientName, 
           {savedMsg && <p className="text-[13px] text-[#6FAE7E]">{savedMsg}</p>}
 
           <button onClick={cargar} disabled={saving}
-            className="w-full bg-accent text-bg-primary py-3 rounded-lg text-[14px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity">
+            className="w-full bg-accent text-bg-primary py-3 rounded-lg text-[14px] font-medium hover:opacity-90 disabled:opacity-40 transition-all active:scale-[0.97]">
             {saving ? 'Cargando…' : 'Cargar ingreso'}
           </button>
         </div>

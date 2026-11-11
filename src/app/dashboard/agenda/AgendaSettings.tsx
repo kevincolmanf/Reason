@@ -484,7 +484,7 @@ export default function AgendaSettings({
           <button
             onClick={handleSave}
             disabled={saving}
-            className="bg-accent text-bg-primary px-5 py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
+            className="bg-accent text-bg-primary px-5 py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-all active:scale-[0.97]"
           >
             {saving ? 'Guardando...' : 'Guardar'}
           </button>

@@ -1346,7 +1346,7 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
 
         {/* Actions */}
         <div className="flex gap-3 mt-4">
-          <button onClick={handleSave} disabled={saving || !valid} className="bg-accent text-bg-primary px-5 py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity">
+          <button onClick={handleSave} disabled={saving || !valid} className="bg-accent text-bg-primary px-5 py-2.5 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-all active:scale-[0.97]">
             {saving ? 'Guardando...' : isEdit ? 'Guardar cambios' : 'Crear turno'}
           </button>
           <button onClick={onClose} className="text-text-secondary px-4 py-2.5 text-[13px] hover:text-text-primary">Cancelar</button>

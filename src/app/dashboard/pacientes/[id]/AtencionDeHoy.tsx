@@ -458,7 +458,7 @@ export default function AtencionDeHoy({ patientId, userId, initialAttentions = [
               ) : (
                 <div className="ml-auto flex items-center gap-2">
                   <button onClick={cancelEdit} className="text-[12px] text-text-secondary hover:text-text-primary">Cancelar</button>
-                  <button onClick={saveSession} disabled={savingSession} className="bg-accent text-bg-primary px-2.5 py-1 rounded text-[12px] font-medium hover:opacity-90 disabled:opacity-50">{savingSession ? 'Guardando…' : 'Guardar'}</button>
+                  <button onClick={saveSession} disabled={savingSession} className="bg-accent text-bg-primary px-2.5 py-1 rounded text-[12px] font-medium hover:opacity-90 active:scale-[0.97] disabled:opacity-50">{savingSession ? 'Guardando…' : 'Guardar'}</button>
                 </div>
               )}
             </div>
@@ -499,7 +499,7 @@ export default function AtencionDeHoy({ patientId, userId, initialAttentions = [
                 ? <>La próxima sesión está agendada para <b className="text-accent capitalize">{dateLabel(effPending.date)}</b>, pero el paciente vino hoy.</>
                 : <>No hay sesión para hoy. Podés traer la última (<span className="capitalize">{dateLabel(effPending.date)}</span>) al día de hoy.</>}
             </div>
-            <button onClick={bringToToday} disabled={bringing} className="ml-auto shrink-0 bg-accent text-bg-primary px-3 py-1.5 rounded-lg text-[12px] font-medium hover:opacity-90 disabled:opacity-50">
+            <button onClick={bringToToday} disabled={bringing} className="ml-auto shrink-0 bg-accent text-bg-primary px-3 py-1.5 rounded-lg text-[12px] font-medium hover:opacity-90 active:scale-[0.97] disabled:opacity-50">
               {bringing ? 'Trayendo…' : 'Traer a hoy'}
             </button>
           </div>
@@ -520,7 +520,7 @@ export default function AtencionDeHoy({ patientId, userId, initialAttentions = [
             {!todayBitacora && priorBitacora && (
               <div className="flex items-center gap-3 px-3 py-2.5 border-b-[0.5px] border-border" style={{ background: 'rgba(45,216,168,0.08)' }}>
                 <span className="text-[12.5px] text-text-primary">Sin bitácora hoy. Traer la de <span className="capitalize">{dateLabel(priorBitacora.activity_date)}</span>?</span>
-                <button onClick={bringBitacoraToToday} disabled={bringingBitacora} className="ml-auto shrink-0 bg-accent text-bg-primary px-3 py-1.5 rounded-lg text-[12px] font-medium hover:opacity-90 disabled:opacity-50">
+                <button onClick={bringBitacoraToToday} disabled={bringingBitacora} className="ml-auto shrink-0 bg-accent text-bg-primary px-3 py-1.5 rounded-lg text-[12px] font-medium hover:opacity-90 active:scale-[0.97] disabled:opacity-50">
                   {bringingBitacora ? 'Trayendo…' : 'Traer a hoy'}
                 </button>
               </div>
@@ -600,7 +600,7 @@ export default function AtencionDeHoy({ patientId, userId, initialAttentions = [
         <button
           onClick={register}
           disabled={saving}
-          className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+          className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-all active:scale-[0.97] disabled:opacity-50"
         >
           {saving ? 'Registrando…' : 'Registrar atención de hoy'}
         </button>

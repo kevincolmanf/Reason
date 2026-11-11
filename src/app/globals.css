@@ -22,6 +22,45 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Skeletons de loading.tsx: barrido de brillo en vez del pulso de opacidad
+   plano, para que la pantalla de carga se sienta "viva" en vez de congelada. */
+.skeleton {
+  background-image: linear-gradient(
+    100deg,
+    var(--color-border) 35%,
+    var(--color-border-strong) 50%,
+    var(--color-border) 65%
+  );
+  background-size: 250% 100%;
+  animation: skeleton-shimmer 1.8s ease-in-out infinite;
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: 150% 0; }
+  100% { background-position: -150% 0; }
+}
+
+/* Menú/dropdown contextual: entra con un leve pop en vez de aparecer de golpe. */
+@keyframes menu-pop-in {
+  0% { opacity: 0; transform: scale(0.96) translateY(-4px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+.animate-menu-pop-in {
+  animation: menu-pop-in 0.15s cubic-bezier(0.16, 1, 0.3, 1) both;
+  transform-origin: top right;
+}
+
+/* Transición de página (ver src/app/template.tsx): rápida y sutil — esto es
+   una herramienta de trabajo clínico, no una landing, así que no debe
+   notarse como "espera". */
+@keyframes page-enter {
+  0% { opacity: 0; transform: translateY(4px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.animate-page-enter {
+  animation: page-enter 0.22s ease-out both;
+}
+
 /* Inputs de fecha/hora: el picker nativo y su ícono usan el esquema oscuro,
    así el calendario no aparece en blanco chillón sobre el tema oscuro. */
 input[type="date"],
