@@ -662,6 +662,9 @@ Cualquier duda, avisame.`
                       >
                         {VINCULOS.map(v => <option key={v.value} value={v.value}>{v.label}</option>)}
                       </select>
+                      <Link href="/account/crm" className="text-[12px] text-accent hover:underline no-underline ml-auto">
+                        Ver en panel de gestión →
+                      </Link>
                     </div>
                     </>
                   )}

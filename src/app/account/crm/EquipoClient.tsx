@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import Link from 'next/link'
 
 export type TeamMember = {
   id: string
@@ -26,9 +27,10 @@ export type TeamMember = {
   planesMes: number
   evalsMes: number
   planesDesact: number
+  fichasPend: number
 }
 
-type SortKey = 'name' | 'activos' | 'nuevos' | 'horas' | 'pacDia' | 'pacHora' | 'ausenciaPct' | 'completanPct' | 'abandonoPct' | 'duracionSem' | 'fichasMes' | 'planesMes' | 'planesDesact' | 'evalsMes'
+type SortKey = 'name' | 'activos' | 'nuevos' | 'horas' | 'pacDia' | 'pacHora' | 'ausenciaPct' | 'completanPct' | 'abandonoPct' | 'duracionSem' | 'fichasMes' | 'planesMes' | 'planesDesact' | 'fichasPend' | 'evalsMes'
 
 // Textos de ayuda (globo al pasar el mouse por cada columna).
 const TIPS: Record<SortKey, string> = {
@@ -45,6 +47,7 @@ const TIPS: Record<SortKey, string> = {
   fichasMes: 'Fichas cargadas o actualizadas en el mes.',
   planesMes: 'Planes de ejercicio creados en el mes.',
   planesDesact: 'Pacientes activos con ≥7 días desde la consulta y sin plan cargado/actualizado.',
+  fichasPend: 'Pacientes activos con ≥7 días desde la consulta y SIN ninguna ficha abierta (ni siquiera empezada).',
   evalsMes: 'Evaluaciones del mes: cuestionarios + dinamometría + RTS.',
 }
 
@@ -61,7 +64,7 @@ const fmtSem = (v: number | null) => v == null ? '—' : `${v} sem`
 function flagged(m: TeamMember): boolean {
   return (m.ausenciaPct != null && m.ausenciaPct > 10) ||
     (m.completanPct != null && m.completanPct < 60) ||
-    m.planesDesact >= 7 || m.pacHora >= 3 ||
+    m.planesDesact >= 7 || m.fichasPend >= 7 || m.pacHora >= 3 ||
     (m.duracionSem != null && m.duracionSem < 6)
 }
 
@@ -102,6 +105,7 @@ export default function EquipoClient({ team, monthLabel }: { team: TeamMember[];
       fichasMes: avg(m => m.fichasMes),
       planesMes: avg(m => m.planesMes),
       planesDesact: avg(m => m.planesDesact),
+      fichasPend: avg(m => m.fichasPend),
       evalsMes: avg(m => m.evalsMes),
     }
   }, [team])
@@ -129,7 +133,7 @@ export default function EquipoClient({ team, monthLabel }: { team: TeamMember[];
   return (
     <div>
       <p className="text-[13px] text-text-secondary mb-4">
-        Un vistazo de cada profesional para conversar cara a cara. Tocá una fila para ver su resumen 1:1. Operación y trabajo clínico son del mes de <span className="text-text-primary">{monthLabel}</span>; retención y duración, sobre todo el historial. La categoría se edita en <span className="text-text-primary">Mi Equipo</span>.
+        Un vistazo de cada profesional para conversar cara a cara. Tocá una fila para ver su resumen 1:1. Operación y trabajo clínico son del mes de <span className="text-text-primary">{monthLabel}</span>; retención y duración, sobre todo el historial. La categoría se edita en <Link href="/account/equipo" className="text-accent hover:underline no-underline">Mi Equipo →</Link>.
       </p>
 
       {(hasHonorarios || hasTerciarizados) && (
@@ -166,6 +170,7 @@ export default function EquipoClient({ team, monthLabel }: { team: TeamMember[];
                 <H k="fichasMes" label="Fichas/mes" />
                 <H k="planesMes" label="Planes/mes" />
                 <H k="planesDesact" label="Planes desact." />
+                <H k="fichasPend" label="Fichas pend." />
                 <H k="evalsMes" label="Evals" />
               </tr>
             </thead>
@@ -199,6 +204,7 @@ export default function EquipoClient({ team, monthLabel }: { team: TeamMember[];
                   <td className="px-3 py-3 text-[13px] text-text-secondary text-right font-mono tabular-nums">{m.fichasMes}</td>
                   <td className="px-3 py-3 text-[13px] text-text-secondary text-right font-mono tabular-nums">{m.planesMes}</td>
                   <td className={`px-3 py-3 text-[13px] text-right font-mono tabular-nums ${cDesact(m.planesDesact)}`}>{m.planesDesact}</td>
+                  <td className={`px-3 py-3 text-[13px] text-right font-mono tabular-nums ${cDesact(m.fichasPend)}`}>{m.fichasPend}</td>
                   <td className="px-3 py-3 text-[13px] text-text-secondary text-right font-mono tabular-nums">{m.evalsMes}</td>
                 </tr>
               ))}
@@ -229,7 +235,7 @@ export default function EquipoClient({ team, monthLabel }: { team: TeamMember[];
 // ── Scorecard 1:1 ──
 function Scorecard({ m, center, monthLabel, onClose }: {
   m: TeamMember
-  center: { ausenciaPct: number | null; completanPct: number | null; abandonoPct: number | null; duracionSem: number | null; fichasMes: number | null; planesMes: number | null; planesDesact: number | null; evalsMes: number | null }
+  center: { ausenciaPct: number | null; completanPct: number | null; abandonoPct: number | null; duracionSem: number | null; fichasMes: number | null; planesMes: number | null; planesDesact: number | null; fichasPend: number | null; evalsMes: number | null }
   monthLabel: string
   onClose: () => void
 }) {
@@ -253,6 +259,7 @@ function Scorecard({ m, center, monthLabel, onClose }: {
     ['Fichas trabajadas (mes)', cmp(m.fichasMes, center.fichasMes, '', 'high')],
     ['Planes cargados (mes)', cmp(m.planesMes, center.planesMes, '', 'high')],
     ['Planes desactualizados', cmp(m.planesDesact, center.planesDesact, '', 'low')],
+    ['Fichas pendientes', cmp(m.fichasPend, center.fichasPend, '', 'low')],
     ['Evaluaciones (mes)', cmp(m.evalsMes, center.evalsMes, '', 'high')],
   ]
 
@@ -260,6 +267,8 @@ function Scorecard({ m, center, monthLabel, onClose }: {
   const talk: { sev: 'bad' | 'warn' | 'good'; t: string }[] = []
   if (m.planesDesact >= 7) talk.push({ sev: 'bad', t: `${m.planesDesact} pacientes con plan desactualizado (≥7 días de la consulta sin plan)` })
   else if (m.planesDesact >= 4) talk.push({ sev: 'warn', t: `${m.planesDesact} pacientes con plan desactualizado` })
+  if (m.fichasPend >= 7) talk.push({ sev: 'bad', t: `${m.fichasPend} pacientes atendidos sin ninguna ficha abierta` })
+  else if (m.fichasPend >= 4) talk.push({ sev: 'warn', t: `${m.fichasPend} pacientes sin ficha abierta` })
   if (m.completanPct != null && m.completanPct < 60) talk.push({ sev: 'bad', t: `Solo ${m.completanPct}% de sus pacientes completa el tratamiento (≥10 ses / 6 sem)` })
   else if (m.completanPct != null && m.completanPct >= 80) talk.push({ sev: 'good', t: `${m.completanPct}% de sus pacientes llega al tratamiento completo` })
   if (m.abandonoPct != null && m.abandonoPct > 30) talk.push({ sev: 'bad', t: `${m.abandonoPct}% de sus tratamientos terminados fueron abandono (${m.abandonos} de ${m.altas + m.abandonos})` })
