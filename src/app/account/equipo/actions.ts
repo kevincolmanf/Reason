@@ -396,3 +396,36 @@ export async function deleteOrganization(orgId: string, confirmName: string): Pr
   }
   return { success: true }
 }
+
+// QR de reseñas de Google: se imprime en una esquina de la planilla del plan
+// (PlanPrintSheet) para que el paciente lo escanee y deje una reseña. Es por
+// centro (no por integrante) — cualquiera que imprima un plan del equipo
+// imprime el mismo QR, pero solo el dueño lo configura.
+export async function updateGoogleReview(orgId: string, url: string, phrase: string): Promise<{ error?: string; success?: boolean }> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const { data: org } = await supabase
+    .from('organizations')
+    .select('owner_id')
+    .eq('id', orgId)
+    .single()
+
+  if (!org) return { error: 'El centro no existe.' }
+  if (org.owner_id !== user.id) return { error: 'Solo el dueño del centro puede configurar esto.' }
+
+  const trimmedUrl = url.trim()
+  if (trimmedUrl && !/^https?:\/\//i.test(trimmedUrl)) {
+    return { error: 'El link tiene que empezar con http:// o https://' }
+  }
+
+  const adminClient = createAdminClient()
+  const { error } = await adminClient
+    .from('organizations')
+    .update({ google_review_url: trimmedUrl || null, google_review_phrase: phrase.trim() || null })
+    .eq('id', orgId)
+
+  if (error) return { error: 'No se pudo guardar.' }
+  return { success: true }
+}

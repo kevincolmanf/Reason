@@ -2,6 +2,9 @@
 
 import { Fragment, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import QRCode from 'qrcode'
+
+const DEFAULT_GOOGLE_PHRASE = 'Dejanos tu comentario en Google, escaneando este QR!'
 
 // Planilla(s) de entrenamiento imprimible(s) (A4 apaisado, ahorro de tinta).
 // Se monta como hijo directo de <body> (portal) y está oculta en pantalla
@@ -41,7 +44,7 @@ function Wordmark() {
   return <span style={{ fontSize: '15px', fontWeight: 700, letterSpacing: '-0.02em' }}>reason<span style={{ fontWeight: 400 }}>.</span></span>
 }
 
-function SheetBody({ patientName, planName, session, weekSessions, weeks, startWeek, showLoads, isLast }: {
+function SheetBody({ patientName, planName, session, weekSessions, weeks, startWeek, showLoads, isLast, googleQr }: {
   patientName: string
   planName: string
   session: PrintSession
@@ -50,6 +53,7 @@ function SheetBody({ patientName, planName, session, weekSessions, weeks, startW
   startWeek: number
   showLoads: boolean
   isLast: boolean
+  googleQr?: { dataUrl: string; phrase: string } | null
 }) {
   const blocks = (session.session_data?.blocks ?? []).filter(b => b.exercises.length > 0)
 
@@ -133,7 +137,15 @@ function SheetBody({ patientName, planName, session, weekSessions, weeks, startW
 
       <div className="pp-foot">
         <span>{withLoads ? 'Cargas planificadas por semana (kg). PC = peso corporal.' : 'Anotá la carga usada (kg) en cada semana. Columna “Sup.” = superserie. PC = peso corporal.'}</span>
-        <Wordmark />
+        <div className="pp-foot-right">
+          {googleQr && (
+            <div className="pp-qr">
+              <span>{googleQr.phrase}</span>
+              <img src={googleQr.dataUrl} alt="QR reseña Google" />
+            </div>
+          )}
+          <Wordmark />
+        </div>
       </div>
     </section>
   )
@@ -146,6 +158,8 @@ export default function PlanPrintSheet({
   weeks = 6,
   startWeek = 1,
   showLoads = false,
+  googleReviewUrl = null,
+  googleReviewPhrase = null,
 }: {
   patientName: string
   planName: string
@@ -153,9 +167,28 @@ export default function PlanPrintSheet({
   weeks?: number
   startWeek?: number
   showLoads?: boolean
+  googleReviewUrl?: string | null
+  googleReviewPhrase?: string | null
 }) {
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
+
+  // QR de reseñas de Google (PRO con equipo, configurado en Mi Equipo): se
+  // genera una sola vez acá y se repite en la esquina de cada hoja impresa.
+  const [googleQrDataUrl, setGoogleQrDataUrl] = useState<string | null>(null)
+  useEffect(() => {
+    if (!googleReviewUrl) { setGoogleQrDataUrl(null); return }
+    let cancelled = false
+    QRCode.toDataURL(googleReviewUrl, { width: 120, margin: 0 })
+      .then(url => { if (!cancelled) setGoogleQrDataUrl(url) })
+      .catch(() => { if (!cancelled) setGoogleQrDataUrl(null) })
+    return () => { cancelled = true }
+  }, [googleReviewUrl])
+
+  const googleQr = googleQrDataUrl
+    ? { dataUrl: googleQrDataUrl, phrase: googleReviewPhrase?.trim() || DEFAULT_GOOGLE_PHRASE }
+    : null
+
   if (!mounted) return null
 
   const content = (
@@ -183,7 +216,11 @@ export default function PlanPrintSheet({
         #plan-print-sheet .pp-wk-dow { font-size: 10px; }
         #plan-print-sheet .pp-wk-sem { font-size: 8px; color: #666; font-weight: 400; }
         #plan-print-sheet .pp-rec { font-size: 8.5px; color: #555; font-style: italic; margin-top: 1px; }
-        #plan-print-sheet .pp-foot { font-size: 9px; color: #555; margin-top: 10px; display: flex; justify-content: space-between; align-items: center; }
+        #plan-print-sheet .pp-foot { font-size: 9px; color: #555; margin-top: 10px; display: flex; justify-content: space-between; align-items: flex-end; }
+        #plan-print-sheet .pp-foot-right { display: flex; align-items: center; gap: 10px; }
+        #plan-print-sheet .pp-qr { display: flex; align-items: center; gap: 6px; max-width: 160px; }
+        #plan-print-sheet .pp-qr span { font-size: 8px; line-height: 1.3; }
+        #plan-print-sheet .pp-qr img { width: 34px; height: 34px; flex-shrink: 0; }
       `}</style>
 
       <div id="plan-print-sheet" aria-hidden="true">
@@ -198,6 +235,7 @@ export default function PlanPrintSheet({
             startWeek={startWeek}
             showLoads={showLoads}
             isLast={i === sheets.length - 1}
+            googleQr={googleQr}
           />
         ))}
       </div>

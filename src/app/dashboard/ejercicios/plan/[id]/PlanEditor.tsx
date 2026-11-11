@@ -521,6 +521,24 @@ export default function PlanEditor({ initialPlan, userId, orgId, initialEvents =
   const planSaveRef = useRef<NodeJS.Timeout | null>(null)
   const sessionSaveRef = useRef<NodeJS.Timeout | null>(null)
 
+  // QR de reseñas de Google del equipo (configurado en Mi Equipo), para la
+  // esquina de la planilla imprimible. Solo aplica con org (PRO en equipo).
+  const [googleReview, setGoogleReview] = useState<{ url: string | null; phrase: string | null } | null>(null)
+  useEffect(() => {
+    if (!orgId) { setGoogleReview(null); return }
+    let cancelled = false
+    supabaseRef.current
+      .from('organizations')
+      .select('google_review_url, google_review_phrase')
+      .eq('id', orgId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled) return
+        if (data?.google_review_url) setGoogleReview({ url: data.google_review_url, phrase: data.google_review_phrase })
+      })
+    return () => { cancelled = true }
+  }, [orgId])
+
   // ─── Derived ───────────────────────────────────────────────────────────────
 
   const selectedSession = selectedDate
@@ -1459,6 +1477,8 @@ export default function PlanEditor({ initialPlan, userId, orgId, initialEvents =
               weeks={resolvedWeeks}
               startWeek={startWeekNumber}
               showLoads={printWithLoads}
+              googleReviewUrl={googleReview?.url ?? null}
+              googleReviewPhrase={googleReview?.phrase ?? null}
             />
           </div>
         </div>

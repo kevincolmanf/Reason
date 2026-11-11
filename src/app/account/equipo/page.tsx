@@ -23,7 +23,7 @@ export default async function EquipoPage() {
   // Check if user has an org (as admin)
   const { data: orgRows } = await supabase
     .from('organizations')
-    .select('id, name')
+    .select('id, name, google_review_url, google_review_phrase')
     .eq('owner_id', user.id)
     .order('created_at', { ascending: true })
     .limit(1)

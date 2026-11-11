@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createOrganization, addMember, removeMember, updateMemberName, resetMemberAccess, setMemberCashAccess, setMemberAgendaLevel, setMemberCategory, type AgendaLevel, type MemberCategory, deleteOrganization } from './actions'
+import { createOrganization, addMember, removeMember, updateMemberName, resetMemberAccess, setMemberCashAccess, setMemberAgendaLevel, setMemberCategory, type AgendaLevel, type MemberCategory, deleteOrganization, updateGoogleReview } from './actions'
+import QRCode from 'qrcode'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
@@ -30,6 +31,8 @@ const VINCULOS: { value: string; label: string }[] = [
 interface Org {
   id: string
   name: string
+  google_review_url?: string | null
+  google_review_phrase?: string | null
 }
 
 interface Props {
@@ -90,6 +93,37 @@ export default function EquipoClient({ userId, org: initialOrg, members: initial
   const [editName, setEditName] = useState('')
   const [editLoading, setEditLoading] = useState(false)
   const [editError, setEditError] = useState('')
+
+  // QR de reseñas de Google: se imprime en una esquina de la planilla del plan.
+  const DEFAULT_GOOGLE_PHRASE = 'Dejanos tu comentario en Google, escaneando este QR!'
+  const [googleUrl, setGoogleUrl] = useState(initialOrg?.google_review_url ?? '')
+  const [googlePhrase, setGooglePhrase] = useState(initialOrg?.google_review_phrase ?? '')
+  const [savingGoogle, setSavingGoogle] = useState(false)
+  const [googleError, setGoogleError] = useState('')
+  const [googleSaved, setGoogleSaved] = useState(false)
+  const [googleQrPreview, setGoogleQrPreview] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!googleUrl.trim()) { setGoogleQrPreview(null); return }
+    let cancelled = false
+    QRCode.toDataURL(googleUrl.trim(), { width: 160, margin: 1 })
+      .then(url => { if (!cancelled) setGoogleQrPreview(url) })
+      .catch(() => { if (!cancelled) setGoogleQrPreview(null) })
+    return () => { cancelled = true }
+  }, [googleUrl])
+
+  const handleSaveGoogleReview = async () => {
+    if (!org) return
+    setSavingGoogle(true); setGoogleError(''); setGoogleSaved(false)
+    const res = await updateGoogleReview(org.id, googleUrl, googlePhrase)
+    if (res?.error) {
+      setGoogleError(res.error)
+    } else {
+      setGoogleSaved(true)
+      setTimeout(() => setGoogleSaved(false), 2500)
+    }
+    setSavingGoogle(false)
+  }
 
   // Eliminar centro (destructivo): pide escribir el nombre exacto para confirmar.
   const [showDeleteOrg, setShowDeleteOrg] = useState(false)
@@ -684,6 +718,56 @@ Cualquier duda, avisame.`
           ¿Un integrante no puede entrar o perdió sus datos? Usá <span className="text-text-secondary">Reenviar acceso</span> para
           generar una contraseña nueva y compartírsela.
         </p>
+      </div>
+
+      {/* QR de reseñas de Google */}
+      <div className="bg-bg-secondary rounded-xl border-[0.5px] border-border p-6">
+        <h2 className="text-[15px] font-medium mb-1">Reseñas de Google</h2>
+        <p className="text-[13px] text-text-secondary mb-4 leading-[1.6] max-w-[560px]">
+          Pegá el link de reseñas de tu negocio en Google (lo generás desde tu perfil de Google Business) y se va a
+          imprimir como QR en una esquina de cada planilla de plan, con la frase que elijas. Lo ve cualquier
+          integrante que imprima un plan.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-4 items-start">
+          <div className="flex flex-col gap-3 max-w-[480px]">
+            <div>
+              <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Link de reseñas de Google</label>
+              <input
+                type="text"
+                value={googleUrl}
+                onChange={e => { setGoogleUrl(e.target.value); setGoogleSaved(false) }}
+                placeholder="https://g.page/r/..."
+                className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-2.5 text-[13px] focus:outline-none focus:border-accent"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Frase para el paciente</label>
+              <input
+                type="text"
+                value={googlePhrase}
+                onChange={e => { setGooglePhrase(e.target.value); setGoogleSaved(false) }}
+                placeholder={DEFAULT_GOOGLE_PHRASE}
+                className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-2.5 text-[13px] focus:outline-none focus:border-accent"
+              />
+            </div>
+            {googleError && <p className="text-[12px] text-warning">{googleError}</p>}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleSaveGoogleReview}
+                disabled={savingGoogle}
+                className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 active:scale-[0.97] disabled:opacity-40 w-fit"
+              >
+                {savingGoogle ? 'Guardando...' : 'Guardar'}
+              </button>
+              {googleSaved && <span className="text-[12px] text-[#4ade80]">✓ Guardado</span>}
+            </div>
+          </div>
+          {googleQrPreview && (
+            <div className="bg-white rounded-lg p-3 w-fit mx-auto sm:mx-0">
+              <img src={googleQrPreview} alt="Vista previa del QR" width={110} height={110} />
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Zona de riesgo: eliminar el centro */}
