@@ -86,7 +86,7 @@ const FICHA_STEPS: GuideStep[] = [
   {
     target: 'ficha-modo-kine',
     title: 'Modo kinesiología',
-    body: 'Prendé el modo kine para sumarle a este paciente la capa "Atención de hoy": pensada para rehabilitación, donde el plan se ajusta sesión a sesión según el síntoma.',
+    body: 'Desde "Configuración" prendés el modo kine para sumarle a este paciente la capa "Atención de hoy": pensada para rehabilitación, donde el plan se ajusta sesión a sesión según el síntoma.',
   },
   {
     target: 'ficha-atencion',

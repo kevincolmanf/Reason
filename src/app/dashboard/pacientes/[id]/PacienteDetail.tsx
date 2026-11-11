@@ -87,6 +87,20 @@ export default function PacienteDetail({ patient: initialPatient, userId, treatm
   const [sessionSheet, setSessionSheet] = useState(false)
   const [sessionSaved, setSessionSaved] = useState(false)
 
+  // Modo kinesiología, carga avanzada y plan de planificación — agrupados en
+  // un desplegable "Configuración" para que la fila de acciones del header no
+  // quede larguísima en tablet (eran 3 botones más, sumados a Registrar
+  // sesión/Editar/Eliminar).
+  const [configOpen, setConfigOpen] = useState(false)
+  const configRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (configRef.current && !configRef.current.contains(e.target as Node)) setConfigOpen(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
   const router = useRouter()
   const supabaseRef = useRef(createClient())
 
@@ -329,40 +343,60 @@ export default function PacienteDetail({ patient: initialPatient, userId, treatm
                   + Registrar sesión
                 </button>
               )}
-              <button
-                data-tour="ficha-modo-kine"
-                onClick={() => setKineMode(!(patient.kine_mode ?? false))}
-                disabled={kineSaving}
-                title="El modo kinesiología agrega la capa &quot;Atención de hoy&quot; (check de síntoma, sugerencia y continuidad) a este paciente. No afecta a los demás."
-                className={`px-4 py-2 rounded-lg text-[13px] border-[0.5px] transition-colors disabled:opacity-50 ${
-                  patient.kine_mode
-                    ? 'bg-accent/10 border-accent/40 text-accent hover:bg-accent/15'
-                    : 'bg-bg-secondary border-border text-text-secondary hover:text-text-primary'
-                }`}
-              >
-                {patient.kine_mode
-                  ? 'Modo kine activo'
-                  : (hasTurnos ? 'Activar modo kine · sugerido' : 'Activar modo kine')}
-              </button>
-              <button
-                onClick={() => setAdvancedLoadMode(!(patient.advanced_load_mode ?? false))}
-                disabled={advLoadSaving}
-                title="Monitoreo de carga avanzado: RPE, dolor y ACWR por sesión. Pensado para deportistas — no afecta a los demás pacientes."
-                className={`px-4 py-2 rounded-lg text-[13px] border-[0.5px] transition-colors disabled:opacity-50 ${
-                  patient.advanced_load_mode
-                    ? 'bg-accent/10 border-accent/40 text-accent hover:bg-accent/15'
-                    : 'bg-bg-secondary border-border text-text-secondary hover:text-text-primary'
-                }`}
-              >
-                {patient.advanced_load_mode ? 'Carga avanzada activa' : 'Activar carga avanzada'}
-              </button>
-              <button
-                onClick={() => setPlanMode((patient.plan_mode ?? 'detallado') === 'simple' ? 'detallado' : 'simple')}
-                title="Detallado: plan de ejercicio con series/reps en el calendario. Simple: bitácora de actividad, sin dosificación."
-                className="px-4 py-2 rounded-lg text-[13px] border-[0.5px] transition-colors bg-bg-secondary border-border text-text-secondary hover:text-text-primary"
-              >
-                {(patient.plan_mode ?? 'detallado') === 'simple' ? 'Bitácora simple' : 'Plan detallado'}
-              </button>
+              <div className="relative" ref={configRef}>
+                <button
+                  data-tour="ficha-modo-kine"
+                  onClick={() => setConfigOpen(v => !v)}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-[13px] border-[0.5px] transition-colors ${
+                    patient.kine_mode || patient.advanced_load_mode
+                      ? 'bg-accent/10 border-accent/40 text-accent hover:bg-accent/15'
+                      : 'bg-bg-secondary border-border text-text-secondary hover:text-text-primary'
+                  }`}
+                >
+                  Configuración
+                  {!patient.kine_mode && hasTurnos && <span className="text-[10.5px] opacity-80">· sugerido</span>}
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform ${configOpen ? 'rotate-180' : ''}`}><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+                {configOpen && (
+                  <div className="absolute right-0 mt-2 w-[280px] max-w-[calc(100vw-32px)] bg-bg-primary border-[0.5px] border-border rounded-xl shadow-lg py-2 z-20 animate-menu-pop-in">
+                    <button
+                      onClick={() => setKineMode(!(patient.kine_mode ?? false))}
+                      disabled={kineSaving}
+                      title="Agrega la capa &quot;Atención de hoy&quot; (check de síntoma, sugerencia y continuidad) a este paciente. No afecta a los demás."
+                      className="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left hover:bg-bg-secondary transition-colors disabled:opacity-50"
+                    >
+                      <span className="text-[13px] text-text-primary">Modo kinesiología</span>
+                      <span className={`text-[11px] px-2 py-0.5 rounded-full border-[0.5px] shrink-0 ${patient.kine_mode ? 'text-accent border-accent/40 bg-accent/10' : 'text-text-tertiary border-border'}`}>
+                        {patient.kine_mode ? 'Activo' : 'Inactivo'}
+                      </span>
+                    </button>
+                    <button
+                      onClick={() => setAdvancedLoadMode(!(patient.advanced_load_mode ?? false))}
+                      disabled={advLoadSaving}
+                      title="Monitoreo de carga avanzado: RPE, dolor y ACWR por sesión. Pensado para deportistas — no afecta a los demás pacientes."
+                      className="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left hover:bg-bg-secondary transition-colors disabled:opacity-50"
+                    >
+                      <span className="text-[13px] text-text-primary">Carga avanzada</span>
+                      <span className={`text-[11px] px-2 py-0.5 rounded-full border-[0.5px] shrink-0 ${patient.advanced_load_mode ? 'text-accent border-accent/40 bg-accent/10' : 'text-text-tertiary border-border'}`}>
+                        {patient.advanced_load_mode ? 'Activo' : 'Inactivo'}
+                      </span>
+                    </button>
+                    <div className="px-4 py-2.5 border-t-[0.5px] border-border mt-1">
+                      <div className="text-[13px] text-text-primary mb-1.5">Modo de planificación</div>
+                      <div className="flex items-center gap-1.5">
+                        <button type="button" onClick={() => setPlanMode('detallado')}
+                          className={`px-2.5 py-1 rounded-md text-[12px] font-medium border-[0.5px] transition-colors ${(patient.plan_mode ?? 'detallado') !== 'simple' ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-secondary border-border text-text-secondary hover:text-text-primary'}`}>
+                          Detallado
+                        </button>
+                        <button type="button" onClick={() => setPlanMode('simple')}
+                          className={`px-2.5 py-1 rounded-md text-[12px] font-medium border-[0.5px] transition-colors ${(patient.plan_mode ?? 'detallado') === 'simple' ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-secondary border-border text-text-secondary hover:text-text-primary'}`}>
+                          Simple
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
               <button onClick={() => setEditing(true)} className="bg-bg-secondary border-[0.5px] border-border text-text-secondary px-4 py-2 rounded-lg text-[13px] hover:text-text-primary transition-colors">Editar</button>
               {isOwner && <button onClick={handleDelete} className="bg-bg-secondary border-[0.5px] border-border text-text-secondary px-4 py-2 rounded-lg text-[13px] hover:text-warning transition-colors">Eliminar</button>}
             </div>
