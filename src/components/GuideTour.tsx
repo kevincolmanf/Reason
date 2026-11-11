@@ -11,10 +11,12 @@ import { createPortal } from 'react-dom'
 //   'pill'   → minimizada, como pastilla abajo a la derecha (queda disponible)
 //   'closed' → oculta (el usuario la eliminó con la ×; solo el "?" la reabre)
 //
-// Rendimiento: NO escuchamos el evento scroll (recalcular posiciones en cada
-// scroll trababa toda la página). Centramos el target una vez por paso con un
-// scroll instantáneo y solo recalculamos ante un resize. El spotlight es un
-// box-shadow sólido, sin blur, para que repinte barato.
+// El spotlight usa position:fixed con coordenadas del viewport — si no se
+// actualizan al scrollear, el agujero queda pegado a la pantalla mientras el
+// contenido real se desliza debajo (pantalla oscura "pegada" que no coincide
+// con lo que el usuario ve). Por eso sí escuchamos scroll, pero acotado a un
+// recálculo por frame (rAF) para no repetir el trabajo de recalcular
+// posiciones en cada evento, que es lo que trababa la página antes.
 //
 // La app es de tema oscuro: los colores del overlay están calibrados para eso.
 
@@ -62,9 +64,23 @@ export default function GuideTour({
     // Scroll instantáneo (no 'smooth': evita el repintado continuo del overlay).
     if (el) el.scrollIntoView({ block: 'center' })
     measure()
-    const onResize = () => measure()
-    window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
+
+    // Recalcula la posición del spotlight en cada scroll/resize, acotado a un
+    // recálculo por frame — si el usuario scrollea manualmente (buscando el
+    // elemento señalado, por ejemplo), el agujero lo sigue en vez de quedar
+    // pegado a su posición original en pantalla.
+    let ticking = false
+    const onScrollOrResize = () => {
+      if (ticking) return
+      ticking = true
+      requestAnimationFrame(() => { measure(); ticking = false })
+    }
+    window.addEventListener('resize', onScrollOrResize)
+    window.addEventListener('scroll', onScrollOrResize, { passive: true, capture: true })
+    return () => {
+      window.removeEventListener('resize', onScrollOrResize)
+      window.removeEventListener('scroll', onScrollOrResize, { capture: true })
+    }
   }, [state, step, measure])
 
   // Escape minimiza la guía completa.

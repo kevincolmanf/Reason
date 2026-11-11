@@ -67,7 +67,13 @@ export default function HeaderClient({ userMetadata, hasAgendaAccess, isProOrAdm
   useEffect(() => {
     if (!guideKey) { setGuideState('closed'); return }
     let flag: string | null = null
-    try { flag = localStorage.getItem(`reason_guide:${guideKey}`) } catch { /* no disponible */ }
+    let storageAvailable = true
+    try { flag = localStorage.getItem(`reason_guide:${guideKey}`) } catch { storageAvailable = false }
+    // Si el storage no está disponible (modo privado, tablet con cookies/storage
+    // restringido, etc.) no podemos recordar que ya se vio — mostrarla igual
+    // forzaría el tour completo en cada entrada a la sección, para siempre.
+    // Preferimos no mostrarla antes que insistir sin poder recordarlo.
+    if (!storageAvailable) { setGuideState('closed'); return }
     // 'off' = el usuario la eliminó; 'pill' (o '1' legacy) = ya vista → pastilla.
     if (flag === 'off') { setGuideState('closed'); return }
     if (flag === 'pill' || flag === '1') { setGuideState('pill'); return }
