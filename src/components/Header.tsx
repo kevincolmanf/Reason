@@ -22,6 +22,11 @@ export default async function Header() {
   // Caja diaria: visible en contexto de centro para el dueño o una secretaria
   // con permiso de registrar caja.
   let canSeeCaja = false
+  // Estadísticas clínicas: a diferencia del Panel de gestión (solo dueños Pro),
+  // esta la ve cualquiera en contexto personal (sus propios datos). En
+  // contexto de equipo, solo el dueño ve el agregado — un integrante no-dueño
+  // no tiene acceso.
+  let canSeeEstadisticas = false
 
   if (user) {
     const [activeCtx, ownedOrgsResult, memberOrgsResult, userDataResult] = await Promise.all([
@@ -55,6 +60,7 @@ export default async function Header() {
     // lo define agenda_access, no el role personal (que podría ser 'pro' propagado
     // por error). Solo cuenta como dueño la org que realmente le pertenece.
     const ownsThisOrg = isOrgCtx && !!ctx.orgId && ownedOrgs.some(o => o.id === ctx.orgId)
+    canSeeEstadisticas = !isOrgCtx || ownsThisOrg
     if (isOrgCtx && ctx.orgId) {
       // Dentro de una organización, el acceso al menú de Agenda debe coincidir con
       // el de la propia página (isActive = admin/pro/org, isOwner = admin/dueño):
@@ -102,6 +108,11 @@ export default async function Header() {
           <Link href="/dashboard/pacientes" className="hidden lg:inline whitespace-nowrap text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline relative after:content-[''] after:absolute after:left-0 after:-bottom-1 after:h-[1px] after:w-0 after:bg-accent after:transition-all after:duration-200 hover:after:w-full">
             Pacientes
           </Link>
+          {canSeeEstadisticas && (
+            <Link href="/dashboard/estadisticas" className="hidden lg:inline whitespace-nowrap text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline">
+              Estadísticas
+            </Link>
+          )}
           {hasAgendaAccess ? (
             <Link href="/dashboard/agenda" className="hidden lg:inline whitespace-nowrap text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline relative after:content-[''] after:absolute after:left-0 after:-bottom-1 after:h-[1px] after:w-0 after:bg-accent after:transition-all after:duration-200 hover:after:w-full">
               Agenda
