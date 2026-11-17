@@ -8,6 +8,7 @@ import { getResponseItems } from '@/lib/questionnaires'
 import QuickNoteField from '@/components/QuickNoteField'
 import { useConfirm, useToast } from '@/components/Dialogs'
 import { softDeleteRecord } from '@/lib/softDelete'
+import ClinicalProfilePanel from './ClinicalProfilePanel'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -218,6 +219,7 @@ export default function FichaClient({
   ficha: initialFicha,
   patientId,
   patientName,
+  orgId,
   questionnaireResults,
   dynamoResults,
   userId,
@@ -225,6 +227,7 @@ export default function FichaClient({
   ficha: PatientFicha
   patientId: string
   patientName: string
+  orgId: string | null
   questionnaireResults: QuestionnaireResult[]
   dynamoResults: DynamoResult[]
   userId: string
@@ -773,6 +776,8 @@ export default function FichaClient({
           </button>
         </div>
       </div>
+
+      <ClinicalProfilePanel patientId={patientId} userId={userId} orgId={orgId} />
 
       {/* ══════════ BLOQUE 1 · ANAMNESIS Y DIAGNÓSTICO ══════════ */}
       <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-8 mb-6 space-y-8">

@@ -18,7 +18,7 @@ export default async function FichaPage({ params }: { params: { id: string } }) 
 
   const { data: patient } = await supabase
     .from('patients')
-    .select('id, name, age, occupation')
+    .select('id, name, age, occupation, org_id')
     .eq('id', params.id)
     .single()
 
@@ -72,6 +72,7 @@ export default async function FichaPage({ params }: { params: { id: string } }) 
           ficha={ficha!}
           patientId={patient.id}
           patientName={patient.name}
+          orgId={patient.org_id}
           questionnaireResults={questionnaireResults ?? []}
           dynamoResults={dynamoResults ?? []}
           userId={user.id}
