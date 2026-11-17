@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
@@ -8,6 +8,9 @@ import { getResponseItems } from '@/lib/questionnaires'
 import QuickNoteField from '@/components/QuickNoteField'
 import { useConfirm, useToast } from '@/components/Dialogs'
 import { softDeleteRecord } from '@/lib/softDelete'
+import ClinicalProfilePanel from './ClinicalProfilePanel'
+import { fetchDiagnosisCatalog, fetchBodyRegions, createCustomDiagnosis, type DiagnosisOption, type BodyRegion } from '@/lib/clinicalCatalog'
+import CatalogCombobox from '@/components/CatalogCombobox'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -93,6 +96,10 @@ interface PatientFicha {
   id: string
   patient_id: string
   fecha: string | null
+  diagnosis_id: string | null
+  diagnosis_source: 'global' | 'custom' | null
+  mecanismo_lesion: 'traumatico' | 'sobreuso' | 'degenerativo' | null
+  lateralidad: 'derecha' | 'izquierda' | 'bilateral' | 'no_aplica' | null
   ficha_data: Partial<FichaData>
 }
 
@@ -218,6 +225,7 @@ export default function FichaClient({
   ficha: initialFicha,
   patientId,
   patientName,
+  orgId,
   questionnaireResults,
   dynamoResults,
   userId,
@@ -225,6 +233,7 @@ export default function FichaClient({
   ficha: PatientFicha
   patientId: string
   patientName: string
+  orgId: string | null
   questionnaireResults: QuestionnaireResult[]
   dynamoResults: DynamoResult[]
   userId: string
@@ -284,6 +293,34 @@ export default function FichaClient({
   const { confirm, confirmDialog } = useConfirm()
   const { notify, toast } = useToast()
 
+  const [diagnosisId, setDiagnosisId] = useState<string | null>(initialFicha.diagnosis_id)
+  const [diagnosisSource, setDiagnosisSource] = useState<'global' | 'custom' | null>(initialFicha.diagnosis_source)
+  const [mecanismoLesion, setMecanismoLesion] = useState<'traumatico' | 'sobreuso' | 'degenerativo' | null>(initialFicha.mecanismo_lesion)
+  const [lateralidad, setLateralidad] = useState<'derecha' | 'izquierda' | 'bilateral' | 'no_aplica' | null>(initialFicha.lateralidad)
+  const [diagnosisCatalog, setDiagnosisCatalog] = useState<DiagnosisOption[]>([])
+  const [bodyRegions, setBodyRegions] = useState<BodyRegion[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const [catalog, regions] = await Promise.all([
+        fetchDiagnosisCatalog(supabaseRef.current),
+        fetchBodyRegions(supabaseRef.current),
+      ])
+      if (!cancelled) { setDiagnosisCatalog(catalog); setBodyRegions(regions) }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  const diagnosisOptions = useMemo(
+    () => diagnosisCatalog.map(d => ({ id: d.id, nombre: d.nombre, sublabel: d.codigo_cie10 ?? undefined })),
+    [diagnosisCatalog],
+  )
+  const bodyRegionFieldOptions = useMemo(
+    () => bodyRegions.map(r => ({ value: r.id, label: r.nombre })),
+    [bodyRegions],
+  )
+
   // Navegación pendiente cuando hay cambios sin guardar (evita perder la ficha).
   // Valor especial '__back__' = el usuario apretó el botón/gesto "atrás".
   const [pendingNav, setPendingNav] = useState<string | null>(null)
@@ -295,7 +332,14 @@ export default function FichaClient({
     setSaveStatus('saving')
     const { error } = await supabaseRef.current
       .from('patient_fichas')
-      .update({ fecha: data.fecha || null, ficha_data: data })
+      .update({
+        fecha: data.fecha || null,
+        ficha_data: data,
+        diagnosis_id: diagnosisId,
+        diagnosis_source: diagnosisSource,
+        mecanismo_lesion: mecanismoLesion,
+        lateralidad: lateralidad,
+      })
       .eq('id', initialFicha.id)
     if (error) {
       setSaveStatus('error')
@@ -360,6 +404,11 @@ export default function FichaClient({
 
   const handleChange = (field: keyof FichaData, value: string) => {
     setFicha(prev => ({ ...prev, [field]: value }))
+    setHasChanges(true)
+    setSaveStatus('idle')
+  }
+
+  const handleEpisodeFieldChange = () => {
     setHasChanges(true)
     setSaveStatus('idle')
   }
@@ -774,6 +823,8 @@ export default function FichaClient({
         </div>
       </div>
 
+      <ClinicalProfilePanel patientId={patientId} userId={userId} orgId={orgId} />
+
       {/* ══════════ BLOQUE 1 · ANAMNESIS Y DIAGNÓSTICO ══════════ */}
       <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-8 mb-6 space-y-8">
         <div className="flex items-baseline gap-2 border-b-[0.5px] border-border pb-3">
@@ -793,7 +844,57 @@ export default function FichaClient({
 
         <div>
           <label className="block text-[12px] uppercase tracking-[0.05em] text-accent mb-2 font-medium">Diagnóstico Kinésico</label>
-          <textarea rows={3} value={ficha.diagnostico} onChange={e => handleChange('diagnostico', e.target.value)} placeholder="Conclusión de los hallazgos y diagnóstico de movimiento. (Se puede completar/editar en cualquier momento.)" className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y" />
+          <CatalogCombobox
+            value={diagnosisId}
+            onChange={id => {
+              const d = diagnosisCatalog.find(x => x.id === id)
+              setDiagnosisId(id)
+              setDiagnosisSource(d?.source ?? 'global')
+              handleEpisodeFieldChange()
+            }}
+            options={diagnosisOptions}
+            placeholder="Buscar diagnóstico…"
+            extraFieldLabel="Región corporal"
+            extraFieldOptions={bodyRegionFieldOptions}
+            onCreate={async (nombre, bodyRegionId) => {
+              const created = await createCustomDiagnosis(supabaseRef.current, {
+                nombre, bodyRegionId, userId, orgId,
+              })
+              setDiagnosisCatalog(prev => [...prev, created])
+              return { id: created.id, nombre: created.nombre, sublabel: created.codigo_cie10 ?? undefined }
+            }}
+          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3">
+            <div>
+              <label className="block text-[12px] text-text-secondary mb-1">Mecanismo de lesión</label>
+              <select
+                value={mecanismoLesion ?? ''}
+                onChange={e => { setMecanismoLesion((e.target.value || null) as typeof mecanismoLesion); handleEpisodeFieldChange() }}
+                className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-2.5 text-[14px] focus:outline-none focus:border-accent"
+              >
+                <option value="">Sin especificar</option>
+                <option value="traumatico">Traumático</option>
+                <option value="sobreuso">Por sobreuso</option>
+                <option value="degenerativo">Degenerativo</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-[12px] text-text-secondary mb-1">Lateralidad</label>
+              <select
+                value={lateralidad ?? ''}
+                onChange={e => { setLateralidad((e.target.value || null) as typeof lateralidad); handleEpisodeFieldChange() }}
+                className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-2.5 text-[14px] focus:outline-none focus:border-accent"
+              >
+                <option value="">Sin especificar</option>
+                <option value="derecha">Derecha</option>
+                <option value="izquierda">Izquierda</option>
+                <option value="bilateral">Bilateral</option>
+                <option value="no_aplica">No aplica</option>
+              </select>
+            </div>
+          </div>
+          <label className="block text-[12px] text-text-secondary mt-3 mb-1">Detalle clínico adicional (opcional)</label>
+          <textarea rows={2} value={ficha.diagnostico} onChange={e => handleChange('diagnostico', e.target.value)} placeholder="Ej: Lasègue positivo, compresión radicular L5 probable..." className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-3 text-[14px] focus:outline-none focus:border-accent resize-y" />
         </div>
 
         {/* Motivo de consulta + Historia de la enfermedad actual (agrupados) */}
