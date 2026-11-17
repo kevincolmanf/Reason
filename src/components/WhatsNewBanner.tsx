@@ -3,19 +3,19 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
-// Cartel de aparición única anunciando las novedades del "Historial del
-// paciente": atribución por turno, línea de tiempo unificada y reorganización
-// de la ficha. Se muestra una vez y se descarta para siempre (localStorage) —
-// mismo patrón que OnboardingGuide, pero sin colapsar: es una noticia, no una
-// guía a la que se vuelve.
+// Cartel de aparición única anunciando las novedades de datos clínicos
+// estructurados: catálogo de diagnósticos, perfil clínico del paciente y la
+// pantalla de estadísticas. Se muestra una vez y se descarta para siempre
+// (localStorage) — mismo patrón que OnboardingGuide, pero sin colapsar: es
+// una noticia, no una guía a la que se vuelve.
 
-const STORAGE_KEY = 'reason_whats_new_2026_11_historial'
+const STORAGE_KEY = 'reason_whats_new_2026_11_datos_clinicos'
 
 const ITEMS = [
-  { title: 'Historial', desc: 'Línea de tiempo única: turnos, bitácora, hitos, plan y carga, todo junto por fecha.' },
-  { title: 'Ficha reorganizada', desc: 'Hitos y Portal ahora son accesos propios en la barra, junto con Atención.' },
-  { title: 'Atribución real', desc: 'La continuidad ahora muestra quién atendió según el turno del día, no la sesión logueada.' },
-  { title: 'Carga avanzada', desc: 'Monitoreo de RPE/VAS/ACWR, ahora opcional — prendelo solo para deportistas.' },
+  { title: 'Diagnóstico de catálogo', desc: 'El diagnóstico de la ficha ahora se elige de una lista con código CIE-10 — nunca texto libre.' },
+  { title: 'Perfil del paciente', desc: 'Hábitos, comorbilidades, antropometría y datos sociodemográficos, en un panel que se completa una vez.' },
+  { title: 'Estadísticas', desc: 'Cruzá diagnóstico, categoría corporal y período contra los factores de riesgo de tus pacientes.' },
+  { title: 'Catálogo propio', desc: 'Si falta un diagnóstico u ocupación, lo creás vos — queda disponible para la próxima ficha.' },
 ]
 
 export default function WhatsNewBanner() {
@@ -45,7 +45,7 @@ export default function WhatsNewBanner() {
       <div className="flex items-start justify-between gap-3 px-4 sm:px-5 py-4">
         <div className="min-w-0">
           <span className="text-[10px] font-semibold tracking-[0.08em] uppercase text-accent">Novedades</span>
-          <p className="text-[13px] sm:text-[14px] font-medium text-text-primary mt-1">Historial del paciente y ficha reorganizada</p>
+          <p className="text-[13px] sm:text-[14px] font-medium text-text-primary mt-1">Diagnóstico de catálogo, perfil clínico y estadísticas</p>
         </div>
         <button
           onClick={dismiss}

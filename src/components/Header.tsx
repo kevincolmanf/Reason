@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import Link from 'next/link'
 import HeaderClient from './HeaderClient'
+import NavMoreMenu from './NavMoreMenu'
 import ContextBadge from './ContextBadge'
 import { getActiveContext } from '@/lib/context'
 import type { ActiveContext } from '@/lib/context'
@@ -128,42 +129,12 @@ export default async function Header() {
           <Link href="/dashboard/ejercicios" className="hidden lg:inline whitespace-nowrap text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline relative after:content-[''] after:absolute after:left-0 after:-bottom-1 after:h-[1px] after:w-0 after:bg-accent after:transition-all after:duration-200 hover:after:w-full">
             Ejercicios
           </Link>
-          <Link href="/recursos" className="hidden lg:inline whitespace-nowrap text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline relative after:content-[''] after:absolute after:left-0 after:-bottom-1 after:h-[1px] after:w-0 after:bg-accent after:transition-all after:duration-200 hover:after:w-full">
-            Recursos
-          </Link>
-          <Link href="/library" className="hidden lg:inline whitespace-nowrap text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline relative after:content-[''] after:absolute after:left-0 after:-bottom-1 after:h-[1px] after:w-0 after:bg-accent after:transition-all after:duration-200 hover:after:w-full">
-            Biblioteca
-          </Link>
-          {canManageTeam && (
-            <Link href="/account/equipo" className="hidden lg:inline whitespace-nowrap text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline relative after:content-[''] after:absolute after:left-0 after:-bottom-1 after:h-[1px] after:w-0 after:bg-accent after:transition-all after:duration-200 hover:after:w-full">
-              Equipo
-            </Link>
-          )}
-          {isProOrAdmin ? (
-            <Link href="/account/crm" className="hidden lg:inline whitespace-nowrap text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline relative after:content-[''] after:absolute after:left-0 after:-bottom-1 after:h-[1px] after:w-0 after:bg-accent after:transition-all after:duration-200 hover:after:w-full">
-              Panel de gestión
-            </Link>
-          ) : (
-            // Un Pro que todavía no creó su centro NO tiene métricas que mostrar
-            // (el CRM exige owner de una organización). En vez del engañoso
-            // "Disponible en Plan Pro" (¡ya es Pro!), lo guiamos a crear su centro.
-            <div className="relative group hidden lg:inline-block">
-              {canManageTeam ? (
-                <Link href="/account/equipo" className="whitespace-nowrap text-[13px] sm:text-[14px] text-[#c47c5a] no-underline">Panel de gestión</Link>
-              ) : (
-                <span className="whitespace-nowrap text-[13px] sm:text-[14px] text-[#c47c5a] cursor-default select-none">Panel de gestión</span>
-              )}
-              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-2.5 py-1.5 bg-bg-secondary border-[0.5px] border-border rounded-lg text-[11px] text-text-secondary whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 shadow-lg">
-                {canManageTeam ? 'Creá tu centro para verlo' : 'Disponible en Plan Pro'}
-              </div>
-            </div>
-          )}
 
-          {canSeeCaja && (
-            <Link href="/dashboard/caja" className="hidden lg:inline whitespace-nowrap text-[14px] text-text-secondary hover:text-text-primary transition-colors no-underline relative after:content-[''] after:absolute after:left-0 after:-bottom-1 after:h-[1px] after:w-0 after:bg-accent after:transition-all after:duration-200 hover:after:w-full">
-              Caja
-            </Link>
-          )}
+          {/* Recursos, Biblioteca, Equipo, Panel de gestión y Caja son accesos
+              ocasionales — agrupados en "Más" para no competir por espacio con
+              la navegación de uso diario. En mobile, HeaderClient ya los lista
+              planos dentro del menú hamburguesa. */}
+          <NavMoreMenu canManageTeam={canManageTeam} isProOrAdmin={isProOrAdmin} canSeeCaja={canSeeCaja} />
 
           {user && (
             <ContextBadge
@@ -180,6 +151,7 @@ export default async function Header() {
               isProOrAdmin={isProOrAdmin}
               canManageTeam={canManageTeam}
               canSeeCaja={canSeeCaja}
+              canSeeEstadisticas={canSeeEstadisticas}
               ctx={ctx}
               currentLabel={currentLabel}
               available={available}
