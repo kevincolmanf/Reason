@@ -10,13 +10,23 @@ import { ageBucket, type CaseRow } from './stats'
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Estadísticas | Reason' }
 
-type PatientRow = { id: string; birth_date: string | null; age: number | null }
+// fecha de nacimiento/edad viene embebida vía el join con patients — evita
+// traer la lista de pacientes aparte y filtrar fichas con `.in(patientIds)`
+// (con equipos grandes, esa lista pasa los ~8KB de límite de URL y Supabase
+// devuelve "Bad Request" — lo que rompía esta pantalla en producción para
+// cuentas con cientos de pacientes). Filtrar por patients.org_id/user_id
+// directamente en la query hace que Postgres resuelva el join, sin pasar
+// ningún id por la URL.
 type FichaRow = {
   patient_id: string
   fecha: string | null
   diagnosis_id: string | null
   mecanismo_lesion: CaseRow['mecanismoLesion']
   lateralidad: CaseRow['lateralidad']
+  // Sin tipos generados de Supabase, el embed se infiere como array aunque en
+  // runtime venga un solo objeto (patient_fichas.patient_id -> patients.id es
+  // many-to-one) — se toma patients[0] al consumirlo.
+  patients: { birth_date: string | null; age: number | null }[]
 }
 type ProfileRow = {
   patient_id: string
@@ -87,22 +97,29 @@ export default async function EstadisticasPage() {
     scopedClient = createAdminClient()
   }
 
-  const patients = await fetchAllRows<PatientRow>(() =>
-    isOrgCtx
-      ? scopedClient.from('patients').select('id, birth_date, age').eq('org_id', ctx.orgId!)
-      : scopedClient.from('patients').select('id, birth_date, age').eq('user_id', user.id).is('org_id', null)
-  )
-  const patientIds = patients.map(p => p.id)
-  const ageById = new Map(patients.map(p => [p.id, calcAge(p.birth_date, p.age)]))
-
   const [fichas, profiles, diagnosisGlobal, diagnosisCustom, occupationGlobal, occupationCustom, bodyRegions] = await Promise.all([
-    patientIds.length === 0 ? Promise.resolve([]) : fetchAllRows<FichaRow>(() =>
-      scopedClient.from('patient_fichas')
-        .select('patient_id, fecha, diagnosis_id, mecanismo_lesion, lateralidad')
-        .in('patient_id', patientIds)
-        .not('diagnosis_id', 'is', null)),
-    patientIds.length === 0 ? Promise.resolve([]) : fetchAllRows<ProfileRow>(() =>
-      scopedClient.from('patient_clinical_profile').select('*').in('patient_id', patientIds)),
+    isOrgCtx
+      ? fetchAllRows<FichaRow>(() =>
+          scopedClient.from('patient_fichas')
+            .select('patient_id, fecha, diagnosis_id, mecanismo_lesion, lateralidad, patients!inner(birth_date, age)')
+            .eq('patients.org_id', ctx.orgId!)
+            .not('diagnosis_id', 'is', null))
+      : fetchAllRows<FichaRow>(() =>
+          scopedClient.from('patient_fichas')
+            .select('patient_id, fecha, diagnosis_id, mecanismo_lesion, lateralidad, patients!inner(birth_date, age)')
+            .eq('patients.user_id', user.id)
+            .is('patients.org_id', null)
+            .not('diagnosis_id', 'is', null)),
+    isOrgCtx
+      ? fetchAllRows<ProfileRow>(() =>
+          scopedClient.from('patient_clinical_profile')
+            .select('patient_id, sexo, nivel_actividad_fisica, tabaquismo, consumo_alcohol, diabetes, hipertension, obesidad, enf_cardiovascular, osteoporosis, cirugia_previa, nivel_socioeconomico, occupation_id, patients!inner(org_id)')
+            .eq('patients.org_id', ctx.orgId!))
+      : fetchAllRows<ProfileRow>(() =>
+          scopedClient.from('patient_clinical_profile')
+            .select('patient_id, sexo, nivel_actividad_fisica, tabaquismo, consumo_alcohol, diabetes, hipertension, obesidad, enf_cardiovascular, osteoporosis, cirugia_previa, nivel_socioeconomico, occupation_id, patients!inner(org_id, user_id)')
+            .eq('patients.user_id', user.id)
+            .is('patients.org_id', null)),
     fetchAllRows<DiagnosisRow>(() =>
       scopedClient.from('diagnosis_catalog').select('id, nombre, codigo_cie10, body_region_id')),
     isOrgCtx
@@ -146,7 +163,7 @@ export default async function EstadisticasPage() {
       cirugiaPrevia: profile?.cirugia_previa ?? null,
       nivelSocioeconomico: profile?.nivel_socioeconomico ?? null,
       occupationNivelEsfuerzo: profile?.occupation_id ? occupationEsfuerzoById.get(profile.occupation_id) ?? null : null,
-      ageBucket: ageBucket(ageById.get(f.patient_id) ?? null),
+      ageBucket: ageBucket(calcAge(f.patients[0]?.birth_date ?? null, f.patients[0]?.age ?? null)),
     }
   })
 
