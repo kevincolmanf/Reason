@@ -1496,7 +1496,13 @@ export default function FichaClient({
       </div>
 
       {/* ── Footer ─────────────────────────────────────────────────────────── */}
-      <div className="sticky bottom-6 bg-bg-secondary/90 backdrop-blur-md border-[0.5px] border-border rounded-xl p-4 flex justify-between items-center gap-3 shadow-lg">
+      {/* Solo desktop: en mobile/tablet esta barra flota pegada al fondo de la
+          pantalla TODO el tiempo que se scrollea (es "sticky", no "aparece al
+          final"), tapando permanentemente ~15% de una pantalla de celular —
+          se sentía como que faltaban campos. El botón "Guardar" de arriba
+          (siempre visible al entrar) y el aviso de "cambios sin guardar" al
+          salir cubren el mismo caso sin tapar nada. */}
+      <div className="hidden lg:flex sticky bottom-6 bg-bg-secondary/90 backdrop-blur-md border-[0.5px] border-border rounded-xl p-4 justify-between items-center gap-3 shadow-lg">
         <div className="flex items-center gap-2">
           {hasChanges && <span className="text-[12px] text-warning">Cambios sin guardar</span>}
           {saveStatus === 'saved' && !hasChanges && <span className="text-[12px] text-[#3b82f6]">✓ Guardado</span>}
