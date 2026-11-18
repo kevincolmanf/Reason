@@ -101,6 +101,8 @@ interface PatientFicha {
   mecanismo_lesion: 'traumatico' | 'sobreuso' | 'degenerativo' | null
   lateralidad: 'derecha' | 'izquierda' | 'bilateral' | 'no_aplica' | null
   dolor_eva_inicial: number | null
+  duracion_sintomas: 'agudo' | 'subagudo' | 'cronico' | null
+  episodio_recurrente: boolean | null
   ficha_data: Partial<FichaData>
 }
 
@@ -298,6 +300,8 @@ export default function FichaClient({
   const [diagnosisSource, setDiagnosisSource] = useState<'global' | 'custom' | null>(initialFicha.diagnosis_source)
   const [mecanismoLesion, setMecanismoLesion] = useState<'traumatico' | 'sobreuso' | 'degenerativo' | null>(initialFicha.mecanismo_lesion)
   const [lateralidad, setLateralidad] = useState<'derecha' | 'izquierda' | 'bilateral' | 'no_aplica' | null>(initialFicha.lateralidad)
+  const [duracionSintomas, setDuracionSintomas] = useState<'agudo' | 'subagudo' | 'cronico' | null>(initialFicha.duracion_sintomas)
+  const [episodioRecurrente, setEpisodioRecurrente] = useState<boolean | null>(initialFicha.episodio_recurrente)
   const [diagnosisCatalog, setDiagnosisCatalog] = useState<DiagnosisOption[]>([])
   const [bodyRegions, setBodyRegions] = useState<BodyRegion[]>([])
 
@@ -345,6 +349,8 @@ export default function FichaClient({
         mecanismo_lesion: mecanismoLesion,
         lateralidad: lateralidad,
         dolor_eva_inicial: dolorEvaInicial,
+        duracion_sintomas: duracionSintomas,
+        episodio_recurrente: episodioRecurrente,
       })
       .eq('id', initialFicha.id)
     if (error) {
@@ -875,7 +881,7 @@ export default function FichaClient({
               return { id: created.id, nombre: created.nombre, sublabel: created.codigo_cie10 ?? undefined }
             }}
           />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-3">
             <div>
               <label className="block text-[12px] text-text-secondary mb-1">Mecanismo de lesión</label>
               <select
@@ -901,6 +907,31 @@ export default function FichaClient({
                 <option value="izquierda">Izquierda</option>
                 <option value="bilateral">Bilateral</option>
                 <option value="no_aplica">No aplica</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-[12px] text-text-secondary mb-1">Duración de síntomas</label>
+              <select
+                value={duracionSintomas ?? ''}
+                onChange={e => { setDuracionSintomas((e.target.value || null) as typeof duracionSintomas); handleEpisodeFieldChange() }}
+                className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-2.5 text-[14px] focus:outline-none focus:border-accent"
+              >
+                <option value="">Sin especificar</option>
+                <option value="agudo">Agudo (&lt; 6 semanas)</option>
+                <option value="subagudo">Subagudo (6-12 semanas)</option>
+                <option value="cronico">Crónico (&gt; 3 meses)</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-[12px] text-text-secondary mb-1">Primer episodio o recidiva</label>
+              <select
+                value={episodioRecurrente === null ? '' : String(episodioRecurrente)}
+                onChange={e => { setEpisodioRecurrente(e.target.value === '' ? null : e.target.value === 'true'); handleEpisodeFieldChange() }}
+                className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-2.5 text-[14px] focus:outline-none focus:border-accent"
+              >
+                <option value="">Sin especificar</option>
+                <option value="false">Primer episodio</option>
+                <option value="true">Recidiva</option>
               </select>
             </div>
           </div>
