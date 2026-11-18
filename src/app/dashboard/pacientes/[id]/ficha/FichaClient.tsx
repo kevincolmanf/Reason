@@ -844,6 +844,11 @@ export default function FichaClient({
 
         <div>
           <label className="block text-[12px] uppercase tracking-[0.05em] text-accent mb-2 font-medium">Diagnóstico Kinésico</label>
+          {!diagnosisId && ficha.diagnostico?.trim() && (
+            <p className="bg-accent/5 border-[0.5px] border-accent/20 rounded-lg px-3 py-2 mb-2 text-[12px] text-text-secondary">
+              💡 Tenías un diagnóstico escrito antes — quedó abajo en &quot;Detalle clínico adicional&quot;. Elegí el equivalente del catálogo acá para que sume a las estadísticas.
+            </p>
+          )}
           <CatalogCombobox
             value={diagnosisId}
             onChange={id => {
