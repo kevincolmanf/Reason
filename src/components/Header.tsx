@@ -28,6 +28,11 @@ export default async function Header() {
   // contexto de equipo, solo el dueño ve el agregado — un integrante no-dueño
   // no tiene acceso.
   let canSeeEstadisticas = false
+  // Chat de equipo: solo tiene sentido con organización activa (sin equipo no
+  // hay con quién hablar). El conteo de no leídos se pide aparte, una vez que
+  // sabemos el orgId — no se puede meter en el Promise.all de abajo porque
+  // depende de activeCtx, que es una de esas mismas promesas.
+  let unreadChatCount = 0
 
   if (user) {
     const [activeCtx, ownedOrgsResult, memberOrgsResult, userDataResult] = await Promise.all([
@@ -94,6 +99,9 @@ export default async function Header() {
     if (ctx.type === 'org' && ctx.orgId) {
       const found = available.find(a => a.orgId === ctx.orgId)
       if (found) currentLabel = found.label
+
+      const { data: count } = await supabase.rpc('team_chat_unread_count', { p_org_id: ctx.orgId })
+      unreadChatCount = typeof count === 'number' ? count : 0
     }
   }
 
@@ -135,6 +143,24 @@ export default async function Header() {
               la navegación de uso diario. En mobile, HeaderClient ya los lista
               planos dentro del menú hamburguesa. */}
           <NavMoreMenu canManageTeam={canManageTeam} isProOrAdmin={isProOrAdmin} canSeeCaja={canSeeCaja} />
+
+          {ctx.type === 'org' && ctx.orgId && (
+            <Link
+              href="/dashboard/chat"
+              aria-label="Chat del equipo"
+              title="Chat del equipo"
+              className="relative flex items-center justify-center w-8 h-8 rounded-full bg-bg-secondary border-[0.5px] border-border text-text-secondary hover:text-text-primary hover:border-border-strong transition-all shrink-0"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+              </svg>
+              {unreadChatCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-accent text-white text-[10px] font-medium flex items-center justify-center leading-none">
+                  {unreadChatCount > 9 ? '9+' : unreadChatCount}
+                </span>
+              )}
+            </Link>
+          )}
 
           {user && (
             <ContextBadge
