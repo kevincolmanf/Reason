@@ -23,6 +23,13 @@ export interface CaseRow {
   occupationNivelEsfuerzo: 'sedentaria' | 'de_pie' | 'esfuerzo_fisico' | null
   age: number | null
   ageBucket: string | null
+  dolorEvaInicial: number | null
+  // Último EVA cargado en un hito (Evaluación/Reevaluación/Control/Alta)
+  // posterior a esta ficha, antes de la ficha diagnosticada siguiente del
+  // mismo paciente (si la hay) — ver resolveDolorEvaSeguimiento en page.tsx.
+  dolorEvaSeguimiento: number | null
+  duracionSintomas: 'agudo' | 'subagudo' | 'cronico' | null
+  episodioRecurrente: boolean | null
 }
 
 export interface RankingItem {
@@ -54,6 +61,23 @@ export function rankingByCategory(
       pct: answered > 0 ? Math.round((count / answered) * 100) : 0,
     }))
     .sort((a, b) => b.count - a.count)
+}
+
+export interface AverageStat {
+  avg: number
+  n: number
+}
+
+// Promedio simple de un valor numérico (ej. EVA), ignorando los casos sin
+// dato. No es una comparación apareada — ver la nota en EstadisticasClient.
+export function averageStat(
+  rows: CaseRow[],
+  extractor: (row: CaseRow) => number | null,
+): AverageStat | null {
+  const values = rows.map(extractor).filter((v): v is number => v !== null)
+  if (values.length === 0) return null
+  const avg = values.reduce((sum, v) => sum + v, 0) / values.length
+  return { avg: Math.round(avg * 10) / 10, n: values.length }
 }
 
 export interface BooleanStat {
@@ -127,3 +151,4 @@ export const SEXO_LABELS: Record<string, string> = { masculino: 'Masculino', fem
 export const MECANISMO_LABELS: Record<string, string> = { traumatico: 'Traumático', sobreuso: 'Por sobreuso', degenerativo: 'Degenerativo' }
 export const LATERALIDAD_LABELS: Record<string, string> = { derecha: 'Derecha', izquierda: 'Izquierda', bilateral: 'Bilateral', no_aplica: 'No aplica' }
 export const ESFUERZO_LABELS: Record<string, string> = { sedentaria: 'Sedentaria', de_pie: 'De pie', esfuerzo_fisico: 'Esfuerzo físico' }
+export const DURACION_SINTOMAS_LABELS: Record<string, string> = { agudo: 'Agudo (< 6 sem.)', subagudo: 'Subagudo (6-12 sem.)', cronico: 'Crónico (> 3 meses)' }

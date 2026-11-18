@@ -18,16 +18,24 @@ export const metadata = { title: 'Estadísticas | Reason' }
 // directamente en la query hace que Postgres resuelva el join, sin pasar
 // ningún id por la URL.
 type FichaRow = {
+  id: string
   patient_id: string
   fecha: string | null
+  created_at: string
   diagnosis_id: string | null
   mecanismo_lesion: CaseRow['mecanismoLesion']
   lateralidad: CaseRow['lateralidad']
+  dolor_eva_inicial: number | null
+  duracion_sintomas: CaseRow['duracionSintomas']
+  episodio_recurrente: boolean | null
   // Sin tipos generados de Supabase, el embed se infiere como array aunque en
   // runtime venga un solo objeto (patient_fichas.patient_id -> patients.id es
   // many-to-one) — se toma patients[0] al consumirlo.
   patients: { birth_date: string | null; age: number | null }[]
 }
+// EVA cargado en un hito (Evaluación/Reevaluación/Control/Alta) — ver
+// resolveDolorEvaSeguimiento más abajo.
+type EventRow = { patient_id: string; event_date: string; eva_dolor: number }
 type ProfileRow = {
   patient_id: string
   sexo: CaseRow['sexo']
@@ -55,6 +63,40 @@ function calcAge(birth_date: string | null, fallback: number | null): number | n
     return a
   }
   return fallback
+}
+
+// Para cada ficha diagnosticada, busca el EVA de seguimiento más reciente:
+// el último hito con EVA cargado del mismo paciente, posterior a esta ficha
+// y anterior a la ficha diagnosticada siguiente de ese paciente (si la hay).
+// Heurística simple a propósito — un paciente con más de un diagnóstico
+// activo a la vez puede quedar con algún EVA mal atribuido, pero cubre el
+// caso común (una ficha por episodio) sin pedirle al profesional que elija
+// a qué diagnóstico corresponde cada hito.
+function resolveDolorEvaSeguimiento(fichas: FichaRow[], events: EventRow[]): Map<string, number> {
+  const fichasByPatient = new Map<string, FichaRow[]>()
+  for (const f of fichas) {
+    if (!f.fecha) continue
+    const list = fichasByPatient.get(f.patient_id) ?? []
+    list.push(f)
+    fichasByPatient.set(f.patient_id, list)
+  }
+  // created_at desempata cuando dos fichas del mismo paciente comparten
+  // `fecha` (es un date, sin hora) — si no, el orden entre ellas queda
+  // librado al orden de retorno de la consulta.
+  for (const list of Array.from(fichasByPatient.values())) {
+    list.sort((a, b) => a.fecha!.localeCompare(b.fecha!) || a.created_at.localeCompare(b.created_at))
+  }
+
+  const sortedEvents = [...events].sort((a, b) => a.event_date.localeCompare(b.event_date))
+  const result = new Map<string, number>()
+  for (const ev of sortedEvents) {
+    const patientFichas = fichasByPatient.get(ev.patient_id)
+    if (!patientFichas) continue
+    // Última ficha con fecha <= la del hito (recorre de más nueva a más vieja).
+    const ficha = [...patientFichas].reverse().find(f => f.fecha! <= ev.event_date)
+    if (ficha) result.set(ficha.id, ev.eva_dolor)
+  }
+  return result
 }
 
 // Supabase corta las respuestas en 1000 filas por defecto — paginamos en
@@ -98,19 +140,31 @@ export default async function EstadisticasPage() {
     scopedClient = createAdminClient()
   }
 
-  const [fichas, profiles, diagnosisGlobal, diagnosisCustom, occupationGlobal, occupationCustom, bodyRegions, patientRows] = await Promise.all([
+  const [fichas, eventsWithEva, profiles, diagnosisGlobal, diagnosisCustom, occupationGlobal, occupationCustom, bodyRegions, patientRows] = await Promise.all([
     isOrgCtx
       ? fetchAllRows<FichaRow>(() =>
           scopedClient.from('patient_fichas')
-            .select('patient_id, fecha, diagnosis_id, mecanismo_lesion, lateralidad, patients!inner(birth_date, age)')
+            .select('id, patient_id, fecha, created_at, diagnosis_id, mecanismo_lesion, lateralidad, dolor_eva_inicial, duracion_sintomas, episodio_recurrente, patients!inner(birth_date, age)')
             .eq('patients.org_id', ctx.orgId!)
             .not('diagnosis_id', 'is', null))
       : fetchAllRows<FichaRow>(() =>
           scopedClient.from('patient_fichas')
-            .select('patient_id, fecha, diagnosis_id, mecanismo_lesion, lateralidad, patients!inner(birth_date, age)')
+            .select('id, patient_id, fecha, created_at, diagnosis_id, mecanismo_lesion, lateralidad, dolor_eva_inicial, duracion_sintomas, episodio_recurrente, patients!inner(birth_date, age)')
             .eq('patients.user_id', user.id)
             .is('patients.org_id', null)
             .not('diagnosis_id', 'is', null)),
+    isOrgCtx
+      ? fetchAllRows<EventRow>(() =>
+          scopedClient.from('patient_events')
+            .select('patient_id, event_date, eva_dolor, patients!inner(org_id)')
+            .eq('patients.org_id', ctx.orgId!)
+            .not('eva_dolor', 'is', null))
+      : fetchAllRows<EventRow>(() =>
+          scopedClient.from('patient_events')
+            .select('patient_id, event_date, eva_dolor, patients!inner(org_id, user_id)')
+            .eq('patients.user_id', user.id)
+            .is('patients.org_id', null)
+            .not('eva_dolor', 'is', null)),
     isOrgCtx
       ? fetchAllRows<ProfileRow>(() =>
           scopedClient.from('patient_clinical_profile')
@@ -152,6 +206,7 @@ export default async function EstadisticasPage() {
   const diagnosisById = new Map([...diagnosisGlobal, ...diagnosisCustom].map(d => [d.id, d]))
   const occupationEsfuerzoById = new Map([...occupationGlobal, ...occupationCustom].map(o => [o.id, o.nivel_esfuerzo]))
   const profileByPatient = new Map(profiles.map(p => [p.patient_id, p]))
+  const dolorEvaSeguimientoByFicha = resolveDolorEvaSeguimiento(fichas, eventsWithEva)
 
   const cases: CaseRow[] = fichas.map(f => {
     const profile = profileByPatient.get(f.patient_id)
@@ -162,6 +217,10 @@ export default async function EstadisticasPage() {
       bodyRegionId: f.diagnosis_id ? diagnosisById.get(f.diagnosis_id)?.body_region_id ?? null : null,
       mecanismoLesion: f.mecanismo_lesion,
       lateralidad: f.lateralidad,
+      dolorEvaInicial: f.dolor_eva_inicial,
+      dolorEvaSeguimiento: dolorEvaSeguimientoByFicha.get(f.id) ?? null,
+      duracionSintomas: f.duracion_sintomas,
+      episodioRecurrente: f.episodio_recurrente,
       sexo: profile?.sexo ?? null,
       nivelActividadFisica: profile?.nivel_actividad_fisica ?? null,
       tabaquismo: profile?.tabaquismo ?? null,

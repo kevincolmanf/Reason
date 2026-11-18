@@ -2,10 +2,10 @@
 
 import { useMemo, useState } from 'react'
 import {
-  type CaseRow, type RankingItem, rankingByCategory, percentTrue, withinPeriod,
+  type CaseRow, type RankingItem, rankingByCategory, percentTrue, averageStat, withinPeriod,
   PERIOD_OPTIONS, MIN_SAMPLE_SIZE,
   ACTIVIDAD_LABELS, TABAQUISMO_LABELS, ALCOHOL_LABELS, SOCIOECONOMICO_LABELS,
-  SEXO_LABELS, MECANISMO_LABELS, LATERALIDAD_LABELS, ESFUERZO_LABELS,
+  SEXO_LABELS, MECANISMO_LABELS, LATERALIDAD_LABELS, ESFUERZO_LABELS, DURACION_SINTOMAS_LABELS,
 } from './stats'
 
 const ACCENT = '#c47c5a'
@@ -17,7 +17,9 @@ function csvCell(value: string | number | null | undefined): string {
 
 const CSV_HEADERS = [
   'id_caso', 'fecha_ficha', 'region_corporal', 'diagnostico', 'codigo_cie10',
-  'mecanismo_lesion', 'lateralidad', 'edad', 'rango_etario', 'sexo',
+  'mecanismo_lesion', 'lateralidad', 'duracion_sintomas', 'episodio_recurrente',
+  'eva_dolor_inicial', 'eva_dolor_seguimiento',
+  'edad', 'rango_etario', 'sexo',
   'nivel_actividad_fisica', 'tabaquismo', 'consumo_alcohol',
   'diabetes', 'hipertension', 'obesidad', 'enfermedad_cardiovascular',
   'osteoporosis', 'cirugia_previa', 'nivel_socioeconomico', 'nivel_esfuerzo_ocupacional',
@@ -47,6 +49,10 @@ function buildCasesCsv(cases: CaseRow[], diagnosisOptions: DiagnosisOption[], bo
       diag?.codigoCie10 ?? '',
       c.mecanismoLesion ? (MECANISMO_LABELS[c.mecanismoLesion] ?? c.mecanismoLesion) : '',
       c.lateralidad ? (LATERALIDAD_LABELS[c.lateralidad] ?? c.lateralidad) : '',
+      c.duracionSintomas ? (DURACION_SINTOMAS_LABELS[c.duracionSintomas] ?? c.duracionSintomas) : '',
+      boolLabel(c.episodioRecurrente),
+      c.dolorEvaInicial ?? '',
+      c.dolorEvaSeguimiento ?? '',
       c.age ?? '',
       c.ageBucket ?? '',
       c.sexo ? (SEXO_LABELS[c.sexo] ?? c.sexo) : '',
@@ -337,6 +343,14 @@ export default function EstadisticasClient({ cases, diagnosisOptions, bodyRegion
   const esfuerzo = useMemo(() => rankingByCategory(filtered, c => c.occupationNivelEsfuerzo, ESFUERZO_LABELS), [filtered])
   const mecanismo = useMemo(() => rankingByCategory(filtered, c => c.mecanismoLesion, MECANISMO_LABELS), [filtered])
   const lateralidad = useMemo(() => rankingByCategory(filtered, c => c.lateralidad, LATERALIDAD_LABELS), [filtered])
+  const duracionSintomas = useMemo(() => rankingByCategory(filtered, c => c.duracionSintomas, DURACION_SINTOMAS_LABELS), [filtered])
+  const episodio: RankingItem[] = useMemo(() => {
+    const stat = percentTrue(filtered, c => c.episodioRecurrente)
+    return stat.answered > 0 ? [{ label: 'Recidiva (no es el primer episodio)', count: stat.count, pct: stat.pct }] : []
+  }, [filtered])
+
+  const evaInicial = useMemo(() => averageStat(filtered, c => c.dolorEvaInicial), [filtered])
+  const evaSeguimiento = useMemo(() => averageStat(filtered, c => c.dolorEvaSeguimiento), [filtered])
 
   const comorbilidades: RankingItem[] = useMemo(() => ([
     { label: 'Diabetes', stat: percentTrue(filtered, c => c.diabetes) },
@@ -409,12 +423,33 @@ export default function EstadisticasClient({ cases, diagnosisOptions, bodyRegion
         </button>
       </div>
 
-      <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">
-        <div className="text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em] mb-3">Casos</div>
-        <div className="font-mono text-[32px] font-medium text-text-primary tracking-[-0.02em]">{total}</div>
-        {smallSample && (
-          <p className="text-[12px] text-amber-400 mt-2">⚠ Muestra chica — no representativa para una presentación.</p>
-        )}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">
+          <div className="text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em] mb-3">Casos</div>
+          <div className="font-mono text-[32px] font-medium text-text-primary tracking-[-0.02em]">{total}</div>
+          {smallSample && (
+            <p className="text-[12px] text-amber-400 mt-2">⚠ Muestra chica — no representativa para una presentación.</p>
+          )}
+        </div>
+        <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">
+          <div className="text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em] mb-3">EVA de dolor — promedio</div>
+          {!evaInicial && !evaSeguimiento ? (
+            <p className="text-[13px] text-text-secondary">Sin datos todavía.</p>
+          ) : (
+            <div className="flex items-baseline gap-4">
+              <div>
+                <div className="font-mono text-[32px] font-medium text-text-primary tracking-[-0.02em]">{evaInicial?.avg ?? '—'}</div>
+                <div className="text-[11px] text-text-secondary mt-0.5">inicial {evaInicial ? `(n=${evaInicial.n})` : ''}</div>
+              </div>
+              <div className="text-text-tertiary text-[20px]">→</div>
+              <div>
+                <div className="font-mono text-[32px] font-medium text-text-primary tracking-[-0.02em]">{evaSeguimiento?.avg ?? '—'}</div>
+                <div className="text-[11px] text-text-secondary mt-0.5">seguimiento {evaSeguimiento ? `(n=${evaSeguimiento.n})` : ''}</div>
+              </div>
+            </div>
+          )}
+          <p className="text-[11px] text-text-tertiary mt-3">Promedios independientes, no apareados por paciente — el seguimiento solo existe para los casos con un hito de EVA cargado.</p>
+        </div>
       </div>
 
       {total === 0 ? (
@@ -432,6 +467,8 @@ export default function EstadisticasClient({ cases, diagnosisOptions, bodyRegion
           <RankingSection title="Nivel de esfuerzo ocupacional" items={esfuerzo} />
           <RankingSection title="Mecanismo de lesión" items={mecanismo} />
           <RankingSection title="Lateralidad" items={lateralidad} />
+          <RankingSection title="Duración de síntomas al ingreso" items={duracionSintomas} />
+          <RankingSection title="Tipo de episodio — % sobre los que respondieron" items={episodio} />
           <RankingSection title="Comorbilidades — % que la tiene, sobre los preguntados" items={comorbilidades} />
         </div>
       )}
