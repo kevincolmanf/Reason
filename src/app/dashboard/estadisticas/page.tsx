@@ -4,7 +4,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { redirect } from 'next/navigation'
 import Header from '@/components/Header'
 import { getActiveContext } from '@/lib/context'
-import EstadisticasClient, { type DiagnosisOption, type BodyRegion } from './EstadisticasClient'
+import EstadisticasClient, { type DiagnosisOption, type BodyRegion, type PatientInfo } from './EstadisticasClient'
 import { ageBucket, type CaseRow } from './stats'
 
 export const dynamic = 'force-dynamic'
@@ -45,6 +45,7 @@ type ProfileRow = {
 }
 type DiagnosisRow = { id: string; nombre: string; codigo_cie10: string | null; body_region_id: string }
 type OccupationRow = { id: string; nivel_esfuerzo: 'sedentaria' | 'de_pie' | 'esfuerzo_fisico' }
+type PatientRow = { id: string; name: string; dni: string | null; created_at: string }
 
 function calcAge(birth_date: string | null, fallback: number | null): number | null {
   if (birth_date) {
@@ -97,7 +98,7 @@ export default async function EstadisticasPage() {
     scopedClient = createAdminClient()
   }
 
-  const [fichas, profiles, diagnosisGlobal, diagnosisCustom, occupationGlobal, occupationCustom, bodyRegions] = await Promise.all([
+  const [fichas, profiles, diagnosisGlobal, diagnosisCustom, occupationGlobal, occupationCustom, bodyRegions, patientRows] = await Promise.all([
     isOrgCtx
       ? fetchAllRows<FichaRow>(() =>
           scopedClient.from('patient_fichas')
@@ -136,6 +137,16 @@ export default async function EstadisticasPage() {
           scopedClient.from('occupation_catalog_custom').select('id, nivel_esfuerzo').eq('user_id', user.id)),
     fetchAllRows<BodyRegion>(() =>
       scopedClient.from('body_region_catalog').select('id, nombre')),
+    // Pacientes cargados en este contexto (todos, no solo los que tienen
+    // ficha con diagnóstico) — para que el dueño pueda revisar la lista antes
+    // de usar/exportar las estadísticas y detectar pacientes de prueba. Se
+    // trae por org_id/user_id directo, igual que arriba, para no repetir el
+    // bug de "Bad Request" por URL larga con `.in(ids)` en equipos grandes.
+    isOrgCtx
+      ? fetchAllRows<PatientRow>(() =>
+          scopedClient.from('patients').select('id, name, dni, created_at').eq('org_id', ctx.orgId!))
+      : fetchAllRows<PatientRow>(() =>
+          scopedClient.from('patients').select('id, name, dni, created_at').eq('user_id', user.id).is('org_id', null)),
   ])
 
   const diagnosisById = new Map([...diagnosisGlobal, ...diagnosisCustom].map(d => [d.id, d]))
@@ -171,15 +182,19 @@ export default async function EstadisticasPage() {
     id: d.id, nombre: d.nombre, codigoCie10: d.codigo_cie10, bodyRegionId: d.body_region_id,
   }))
 
+  const patients: PatientInfo[] = patientRows.map(p => ({
+    id: p.id, name: p.name, dni: p.dni, createdAt: p.created_at,
+  }))
+
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
       <Header />
       <main className="flex-grow w-full max-w-[1080px] mx-auto px-4 md:px-8 py-10">
         <h1 className="text-[28px] font-medium tracking-[-0.01em] mb-2">Estadísticas</h1>
         <p className="text-[14px] text-text-secondary mb-8">
-          {isOrgCtx ? 'Agregado de todos los casos del equipo.' : 'Agregado de tus casos.'} Solo conteos y porcentajes — nunca lista de pacientes.
+          {isOrgCtx ? 'Agregado de todos los casos del equipo.' : 'Agregado de tus casos.'} Los gráficos muestran solo conteos y porcentajes — para revisar qué pacientes los componen (y descartar pacientes de prueba) usá la lista al final de la página.
         </p>
-        <EstadisticasClient cases={cases} diagnosisOptions={diagnosisOptions} bodyRegions={bodyRegions} />
+        <EstadisticasClient cases={cases} diagnosisOptions={diagnosisOptions} bodyRegions={bodyRegions} patients={patients} />
       </main>
     </div>
   )

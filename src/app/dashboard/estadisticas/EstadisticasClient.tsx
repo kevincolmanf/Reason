@@ -22,6 +22,13 @@ export interface BodyRegion {
   nombre: string
 }
 
+export interface PatientInfo {
+  id: string
+  name: string
+  dni: string | null
+  createdAt: string
+}
+
 function RankingBar({ label, count, pct }: RankingItem) {
   return (
     <div>
@@ -50,10 +57,92 @@ function RankingSection({ title, items }: { title: string; items: RankingItem[] 
   )
 }
 
-export default function EstadisticasClient({ cases, diagnosisOptions, bodyRegions }: {
+type SortBy = 'casos' | 'nombre' | 'fecha'
+
+// Lista de solo lectura para que el dueño revise qué pacientes componen las
+// estadísticas antes de usarlas o exportarlas, y detecte pacientes de prueba.
+// No filtra ni excluye nada: es una herramienta de auditoría manual, separada
+// del agregado (que sigue siendo solo conteos y porcentajes).
+function PatientReviewSection({ patients, casosPorPaciente }: {
+  patients: PatientInfo[]
+  casosPorPaciente: Map<string, number>
+}) {
+  const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const [sortBy, setSortBy] = useState<SortBy>('casos')
+
+  const rows = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    const list = patients
+      .map(p => ({ ...p, casos: casosPorPaciente.get(p.id) ?? 0 }))
+      .filter(p => !q || p.name.toLowerCase().includes(q) || (p.dni ?? '').includes(q))
+    list.sort((a, b) => {
+      if (sortBy === 'nombre') return a.name.localeCompare(b.name)
+      if (sortBy === 'fecha') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      return b.casos - a.casos
+    })
+    return list
+  }, [patients, casosPorPaciente, search, sortBy])
+
+  const sinCasos = patients.filter(p => (casosPorPaciente.get(p.id) ?? 0) === 0).length
+
+  return (
+    <div className="bg-bg-primary border-[0.5px] border-border rounded-xl">
+      <button type="button" onClick={() => setOpen(o => !o)} className="w-full flex items-center justify-between gap-4 p-6 text-left">
+        <div>
+          <div className="text-[14px] font-medium text-text-primary">Revisar pacientes cargados</div>
+          <div className="text-[12px] text-text-secondary mt-0.5">
+            {patients.length} pacientes · {sinCasos} sin casos en las estadísticas — revisá antes de usar o exportar los datos
+          </div>
+        </div>
+        <span className="text-[12px] text-text-secondary whitespace-nowrap">{open ? 'Ocultar ▲' : 'Mostrar ▼'}</span>
+      </button>
+      {open && (
+        <div className="px-6 pb-6">
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Buscar por nombre o DNI..."
+            className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-2.5 text-[14px] mb-4 focus:outline-none focus:border-accent"
+          />
+          {rows.length === 0 ? (
+            <p className="text-[13px] text-text-secondary py-4 text-center">Sin resultados para &quot;{search}&quot;.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]">
+                <thead>
+                  <tr className="text-left text-text-secondary border-b-[0.5px] border-border">
+                    <th className="py-2 pr-4 font-normal cursor-pointer select-none" onClick={() => setSortBy('nombre')}>Paciente</th>
+                    <th className="py-2 pr-4 font-normal">DNI</th>
+                    <th className="py-2 pr-4 font-normal cursor-pointer select-none" onClick={() => setSortBy('fecha')}>Alta</th>
+                    <th className="py-2 pr-0 font-normal text-right cursor-pointer select-none" onClick={() => setSortBy('casos')}>Casos</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map(p => (
+                    <tr key={p.id} className="border-b-[0.5px] border-border/50 last:border-0">
+                      <td className="py-2 pr-4 text-text-primary">{p.name}</td>
+                      <td className="py-2 pr-4 text-text-secondary font-mono">{p.dni || '—'}</td>
+                      <td className="py-2 pr-4 text-text-secondary">{new Date(p.createdAt).toLocaleDateString('es-AR')}</td>
+                      <td className="py-2 pr-0 text-right font-mono text-text-primary">{p.casos}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default function EstadisticasClient({ cases, diagnosisOptions, bodyRegions, patients }: {
   cases: CaseRow[]
   diagnosisOptions: DiagnosisOption[]
   bodyRegions: BodyRegion[]
+  patients: PatientInfo[]
 }) {
   const [periodValue, setPeriodValue] = useState('todo')
   const [regionId, setRegionId] = useState('all')
@@ -99,6 +188,15 @@ export default function EstadisticasClient({ cases, diagnosisOptions, bodyRegion
     .filter(c => c.stat.answered > 0)
     .map(c => ({ label: c.label, count: c.stat.count, pct: c.stat.pct })),
     [filtered])
+
+  // Casos por paciente sobre el total (no sobre `filtered`): la lista de
+  // revisión es una auditoría de todo lo cargado, no de lo que esté filtrado
+  // arriba en los gráficos.
+  const casosPorPaciente = useMemo(() => {
+    const m = new Map<string, number>()
+    for (const c of cases) m.set(c.patientId, (m.get(c.patientId) ?? 0) + 1)
+    return m
+  }, [cases])
 
   return (
     <div className="space-y-8">
@@ -166,6 +264,8 @@ export default function EstadisticasClient({ cases, diagnosisOptions, bodyRegion
           <RankingSection title="Comorbilidades — % que la tiene, sobre los preguntados" items={comorbilidades} />
         </div>
       )}
+
+      <PatientReviewSection patients={patients} casosPorPaciente={casosPorPaciente} />
     </div>
   )
 }
