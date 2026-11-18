@@ -1,5 +1,6 @@
 /* eslint-disable @next/next/no-page-custom-font */
 import type { Metadata } from "next";
+import NextTopLoader from "nextjs-toploader";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -37,6 +38,11 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased font-sans text-text-primary bg-bg-primary">
+        {/* Señal visual de que la app está trabajando al navegar entre
+            pantallas — antes, en una consulta lenta, no había ninguna
+            indicación de que algo estuviera pasando. Barra arriba de todo +
+            spinner circular, en el color de acento de la app. */}
+        <NextTopLoader color="#C25A2C" height={3} showSpinner={true} shadow={false} />
         {children}
       </body>
     </html>
