@@ -26,7 +26,18 @@ const sections = [
     steps: [
       'Dentro de un paciente, abrí "Ficha Kinésica".',
       'Cargá anamnesis, diagnóstico, goniometría, cuestionarios validados y dinamometría.',
+      'En "Anamnesis y diagnóstico" también quedan el mecanismo de lesión, la lateralidad, la duración de los síntomas (agudo/subagudo/crónico) y si es primer episodio o recidiva — cargalos el día de la consulta, no después, porque alimentan directo las Estadísticas.',
+      'La intensidad del dolor (EVA 0-10) se carga en "Caracterización del dolor", dentro de Interrogatorio.',
       'Todo queda guardado de forma segura en la nube, asociado al paciente, y podés exportarlo a PDF.',
+    ],
+  },
+  {
+    title: 'Hitos del tratamiento',
+    description: 'La línea de tiempo del paciente: evaluaciones, controles, altas y más.',
+    steps: [
+      'Dentro de un paciente, abrí "Hitos" y tocá "+ Agregar hito".',
+      'Elegí el tipo (Evaluación, Reevaluación, RTP, Control, Alta, Objetivo, Competencia u Otro), la fecha y, si corresponde, un título o nota.',
+      'En Evaluación, Reevaluación, Control y Alta aparece un selector de EVA 0-10 (opcional): cargarlo ahí es lo que te deja ver cómo evolucionó el dolor del paciente de un vistazo, y es el dato de seguimiento que se compara contra el EVA inicial de la ficha en Estadísticas.',
     ],
   },
   {
@@ -80,7 +91,16 @@ const sections = [
     steps: [
       'Accedé a "Agenda" desde el menú superior (Plan Pro).',
       'Gestioná los turnos en una vista semanal, por profesional y por área en el modo equipo.',
-      'Enviá recordatorios por WhatsApp con un click, seguí las ausencias, y al dar "presente" podés registrar el cobro en la caja.',
+      'Enviá recordatorios por WhatsApp con un click, y al dar "presente" podés registrar el cobro en la caja.',
+      '"Más → Seguimiento de ausencias" te muestra quién hace X días que no viene y no tiene turno agendado, para perseguirlo antes de perderlo — configurable por área (tiene sentido en kinesiología, quizás no en nutrición).',
+    ],
+  },
+  {
+    title: 'Historial',
+    description: 'Todo lo que le pasó a un paciente, en una sola línea de tiempo.',
+    steps: [
+      'Dentro de un paciente, abrí "Historial".',
+      'Reúne fichas, sesiones de carga, hitos y evaluaciones en orden cronológico — para entender el caso completo sin saltar entre pantallas.',
     ],
   },
   {
@@ -93,12 +113,48 @@ const sections = [
     ],
   },
   {
+    title: 'Chat del equipo',
+    description: 'Coordinación rápida con quienes comparten tu centro, sin salir de Reason.',
+    steps: [
+      'Con un equipo activo, aparece un ícono de chat en el header (al lado del nombre del centro), con un punto rojo cuando hay mensajes sin leer.',
+      'Es un canal grupal único por centro: todos los integrantes ven los mismos mensajes, en vivo.',
+    ],
+  },
+  {
     title: 'Panel de gestión y Caja',
     description: 'La foto del centro y el control de plata del día.',
     steps: [
       'En "Panel de gestión" ves pacientes activos, turnos, ausentismo, ingresos y actividad del equipo.',
       'En "Caja" registrás ingresos y egresos del día; los cobros de la agenda caen acá solos.',
       'Ves el total por medio de pago y por área; el dueño ve el consolidado del centro.',
+    ],
+  },
+  {
+    title: 'Estadísticas',
+    description: 'El agregado clínico de tus casos — y cómo sacarlos para usarlos afuera.',
+    steps: [
+      'Entrá a "Estadísticas" desde el menú superior. Si estás en un centro, solo el dueño ve el agregado del equipo; en tu espacio personal, ves tus propios casos.',
+      'Los gráficos muestran conteos y porcentajes por diagnóstico, mecanismo de lesión, hábitos, comorbilidades, duración de síntomas y recidiva — nada identifica al paciente.',
+      'El card "EVA de dolor" compara el promedio inicial (cargado en la ficha) contra el de seguimiento (cargado en los hitos) — mientras más fichas y hitos completes con esos datos, más representa.',
+      'Al final de la página, "Revisar pacientes cargados" lista los pacientes agrupados por diagnóstico — abrí un grupo para confirmar que no hay pacientes de prueba inflando ese número antes de mostrarle los datos a alguien.',
+      '"Exportar CSV" baja todos los casos cargados (sin nombre ni DNI, listo para abrir en Excel o un software de estadística) — pensado para usar los datos en una publicación o presentación.',
+    ],
+  },
+  {
+    title: 'Eventos',
+    description: 'Organizá una charla, taller o curso y emití certificados.',
+    steps: [
+      'Entrá a "Eventos" desde el menú superior — está disponible aunque no tengas Plan Pro.',
+      'Cargá fecha, cupo y, si corresponde, precio; se genera una página pública para que la gente se anote.',
+      'Después del evento podés emitir certificados de asistencia a cada inscripto.',
+    ],
+  },
+  {
+    title: 'Papelera',
+    description: 'Red de seguridad: nada se borra de verdad al toque.',
+    steps: [
+      'Lo que eliminás (pacientes, fichas, turnos, hitos) va primero a "Papelera", no desaparece directo.',
+      'Tenés 30 días para restaurarlo desde ahí antes de que se borre en forma definitiva.',
     ],
   },
   {
