@@ -4,7 +4,7 @@ import { useState, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useConfirm, useToast } from '@/components/Dialogs'
 import { softDeleteRecord } from '@/lib/softDelete'
-import { EVENT_TYPES, eventMeta, type PatientEvent } from '@/lib/patientEvents'
+import { EVENT_TYPES, eventMeta, EVENT_TYPES_WITH_EVA, type PatientEvent } from '@/lib/patientEvents'
 
 export default function HitosClient({
   patientId, patientName, userId, initialEvents,
@@ -24,6 +24,7 @@ export default function HitosClient({
   const [evDate, setEvDate] = useState(() => new Date().toISOString().split('T')[0])
   const [evTitle, setEvTitle] = useState('')
   const [evNote, setEvNote] = useState('')
+  const [evEva, setEvEva] = useState('')
   const [evSaving, setEvSaving] = useState(false)
 
   const addEvent = async () => {
@@ -31,12 +32,16 @@ export default function HitosClient({
     setEvSaving(true)
     const { data, error } = await supabaseRef.current
       .from('patient_events')
-      .insert({ patient_id: patientId, user_id: userId, event_date: evDate, type: evType, title: evTitle.trim() || null, note: evNote.trim() || null })
-      .select('id, event_date, type, title, note')
+      .insert({
+        patient_id: patientId, user_id: userId, event_date: evDate, type: evType,
+        title: evTitle.trim() || null, note: evNote.trim() || null,
+        eva_dolor: EVENT_TYPES_WITH_EVA.has(evType) && evEva !== '' ? Number(evEva) : null,
+      })
+      .select('id, event_date, type, title, note, eva_dolor')
       .single()
     if (!error && data) {
       setEvents(prev => [...prev, data as PatientEvent].sort((a, b) => a.event_date.localeCompare(b.event_date)))
-      setEvTitle(''); setEvNote(''); setShowEventForm(false)
+      setEvTitle(''); setEvNote(''); setEvEva(''); setShowEventForm(false)
     }
     setEvSaving(false)
   }
@@ -92,6 +97,21 @@ export default function HitosClient({
               <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-1">Nota (opcional)</label>
               <input type="text" value={evNote} onChange={e => setEvNote(e.target.value)} placeholder="Detalle del hito…" className="w-full bg-bg-primary border-[0.5px] border-border rounded-lg p-2.5 text-[14px] focus:outline-none focus:border-accent" />
             </div>
+            {EVENT_TYPES_WITH_EVA.has(evType) && (
+              <div>
+                <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-2">Dolor en este momento (EVA 0-10, opcional)</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => {
+                    const sel = evEva === String(n)
+                    return (
+                      <button key={n} onClick={() => setEvEva(sel ? '' : String(n))}
+                        className={`w-9 h-9 rounded-lg text-[13px] font-medium border-[0.5px] transition-colors ${sel ? 'bg-accent text-bg-primary border-accent' : 'bg-bg-primary border-border-strong text-text-primary hover:border-accent'}`}
+                      >{n}</button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
             <button onClick={addEvent} disabled={evSaving || !evDate}
               className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-all active:scale-[0.97]">
               {evSaving ? 'Guardando…' : 'Agregar hito'}
@@ -117,6 +137,9 @@ export default function HitosClient({
                   <div className="min-w-0 flex-1">
                     <span className="text-[13px] font-medium" style={{ color: meta.color }}>{meta.label}</span>
                     {ev.title && <span className="text-[13px] text-text-primary"> · {ev.title}</span>}
+                    {ev.eva_dolor !== null && (
+                      <span className="text-[12px] text-text-secondary font-mono"> · EVA {ev.eva_dolor}/10</span>
+                    )}
                     {ev.note && <p className="text-[12px] text-text-secondary truncate">{ev.note}</p>}
                   </div>
                   <button onClick={() => deleteEvent(ev.id)} className="text-text-secondary hover:text-warning text-[14px] shrink-0 transition-colors" title="Eliminar hito">×</button>

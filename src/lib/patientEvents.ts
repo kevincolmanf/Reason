@@ -7,6 +7,7 @@ export interface PatientEvent {
   type: string
   title: string | null
   note: string | null
+  eva_dolor: number | null
 }
 
 export const EVENT_TYPES: { value: string; label: string; color: string }[] = [
@@ -23,3 +24,8 @@ export const EVENT_TYPES: { value: string; label: string; color: string }[] = [
 export function eventMeta(type: string) {
   return EVENT_TYPES.find(e => e.value === type) ?? EVENT_TYPES[EVENT_TYPES.length - 1]
 }
+
+// Hitos donde tiene sentido volver a preguntar el dolor: los que funcionan
+// como un chequeo clínico puntual. RTP/objetivo/competencia/otro quedan
+// afuera porque no son una medición del dolor en sí.
+export const EVENT_TYPES_WITH_EVA = new Set(['evaluacion', 'reevaluacion', 'control', 'alta'])

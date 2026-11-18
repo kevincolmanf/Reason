@@ -19,7 +19,7 @@ export default async function HitosPage({ params }: { params: { id: string } }) 
 
   const { data: events } = await supabase
     .from('patient_events')
-    .select('id, event_date, type, title, note')
+    .select('id, event_date, type, title, note, eva_dolor')
     .eq('patient_id', params.id)
     .order('event_date', { ascending: true })
 

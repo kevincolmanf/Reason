@@ -33,14 +33,14 @@ export default async function PlanEditorPage({ params }: { params: { id: string 
 
   // El plan es de un paciente: al volver, ir a su perfil (no a "Mis Planes").
   let patientName: string | null = null
-  let events: { id: string; event_date: string; type: string; title: string | null; note: string | null }[] = []
+  let events: { id: string; event_date: string; type: string; title: string | null; note: string | null; eva_dolor: number | null }[] = []
   let rtsEvals: { id: string; protocol_type: string; created_at: string; evaluation_date: string | null; affected_side: string | null }[] = []
   let dynEvals: { id: string; created_at: string; evaluation_date: string | null }[] = []
   let qEvals: { id: string; questionnaire_type: string; created_at: string; evaluation_date: string | null }[] = []
   if (plan.patient_id) {
     const [{ data: pt }, { data: evs }, { data: rts }, { data: dyn }, { data: quest }] = await Promise.all([
       supabase.from('patients').select('name').eq('id', plan.patient_id).single(),
-      supabase.from('patient_events').select('id, event_date, type, title, note').eq('patient_id', plan.patient_id).order('event_date', { ascending: true }),
+      supabase.from('patient_events').select('id, event_date, type, title, note, eva_dolor').eq('patient_id', plan.patient_id).order('event_date', { ascending: true }),
       supabase.from('rts_evaluations').select('id, protocol_type, created_at, evaluation_date, affected_side').eq('patient_id', plan.patient_id).order('created_at', { ascending: true }),
       supabase.from('dynamometer_results').select('id, created_at, evaluation_date').eq('patient_id', plan.patient_id).order('created_at', { ascending: true }),
       supabase.from('questionnaire_results').select('id, questionnaire_type, created_at, evaluation_date').eq('patient_id', plan.patient_id).order('created_at', { ascending: true }),
