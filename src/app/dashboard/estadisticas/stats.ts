@@ -21,6 +21,7 @@ export interface CaseRow {
   cirugiaPrevia: boolean | null
   nivelSocioeconomico: 'bajo' | 'medio' | 'alto' | null
   occupationNivelEsfuerzo: 'sedentaria' | 'de_pie' | 'esfuerzo_fisico' | null
+  age: number | null
   ageBucket: string | null
 }
 

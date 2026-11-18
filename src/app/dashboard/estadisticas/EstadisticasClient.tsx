@@ -10,6 +10,76 @@ import {
 
 const ACCENT = '#c47c5a'
 
+function csvCell(value: string | number | null | undefined): string {
+  const s = value === null || value === undefined ? '' : String(value)
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+}
+
+const CSV_HEADERS = [
+  'id_caso', 'fecha_ficha', 'region_corporal', 'diagnostico', 'codigo_cie10',
+  'mecanismo_lesion', 'lateralidad', 'edad', 'rango_etario', 'sexo',
+  'nivel_actividad_fisica', 'tabaquismo', 'consumo_alcohol',
+  'diabetes', 'hipertension', 'obesidad', 'enfermedad_cardiovascular',
+  'osteoporosis', 'cirugia_previa', 'nivel_socioeconomico', 'nivel_esfuerzo_ocupacional',
+]
+
+function boolLabel(v: boolean | null): string {
+  return v === null ? '' : (v ? 'Sí' : 'No')
+}
+
+// Export de investigación: TODOS los casos cargados (ignora los filtros de
+// arriba a propósito — para publicar hace falta la mayor cantidad de datos
+// posible, no un recorte) y sin ningún dato identificatorio del paciente
+// (nombre/DNI quedan afuera; `id_caso` es el id interno, sin valor por fuera
+// de esta base). Los valores categóricos se traducen con los mismos mapas de
+// labels que usa la pantalla, para que el CSV sea legible sin decodificar.
+function buildCasesCsv(cases: CaseRow[], diagnosisOptions: DiagnosisOption[], bodyRegions: BodyRegion[]): string {
+  const diagnosisById = new Map(diagnosisOptions.map(d => [d.id, d]))
+  const bodyRegionNameById = new Map(bodyRegions.map(r => [r.id, r.nombre]))
+
+  const rows = cases.map(c => {
+    const diag = c.diagnosisId ? diagnosisById.get(c.diagnosisId) : undefined
+    return [
+      c.patientId,
+      c.fichaFecha ?? '',
+      c.bodyRegionId ? bodyRegionNameById.get(c.bodyRegionId) ?? '' : '',
+      diag?.nombre ?? '',
+      diag?.codigoCie10 ?? '',
+      c.mecanismoLesion ? (MECANISMO_LABELS[c.mecanismoLesion] ?? c.mecanismoLesion) : '',
+      c.lateralidad ? (LATERALIDAD_LABELS[c.lateralidad] ?? c.lateralidad) : '',
+      c.age ?? '',
+      c.ageBucket ?? '',
+      c.sexo ? (SEXO_LABELS[c.sexo] ?? c.sexo) : '',
+      c.nivelActividadFisica ? (ACTIVIDAD_LABELS[c.nivelActividadFisica] ?? c.nivelActividadFisica) : '',
+      c.tabaquismo ? (TABAQUISMO_LABELS[c.tabaquismo] ?? c.tabaquismo) : '',
+      c.consumoAlcohol ? (ALCOHOL_LABELS[c.consumoAlcohol] ?? c.consumoAlcohol) : '',
+      boolLabel(c.diabetes),
+      boolLabel(c.hipertension),
+      boolLabel(c.obesidad),
+      boolLabel(c.enfCardiovascular),
+      boolLabel(c.osteoporosis),
+      boolLabel(c.cirugiaPrevia),
+      c.nivelSocioeconomico ? (SOCIOECONOMICO_LABELS[c.nivelSocioeconomico] ?? c.nivelSocioeconomico) : '',
+      c.occupationNivelEsfuerzo ? (ESFUERZO_LABELS[c.occupationNivelEsfuerzo] ?? c.occupationNivelEsfuerzo) : '',
+    ]
+  })
+
+  // BOM al inicio: sin esto, Excel en Windows abre los acentos del CSV rotos.
+  return '\uFEFF' + [CSV_HEADERS, ...rows].map(r => r.map(csvCell).join(',')).join('\r\n')
+}
+
+function downloadCsv(filename: string, content: string) {
+  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
 export interface DiagnosisOption {
   id: string
   nombre: string
@@ -280,44 +350,63 @@ export default function EstadisticasClient({ cases, diagnosisOptions, bodyRegion
     .map(c => ({ label: c.label, count: c.stat.count, pct: c.stat.pct })),
     [filtered])
 
+  // El export ignora a propósito los filtros de arriba (categoría/diagnóstico/
+  // período): para usar los datos en una publicación conviene llevarse todo lo
+  // cargado y filtrar después en el software de análisis, no de antemano acá.
+  const handleExport = () => {
+    const csv = buildCasesCsv(cases, diagnosisOptions, bodyRegions)
+    downloadCsv(`reason-casos-${new Date().toISOString().slice(0, 10)}.csv`, csv)
+  }
+
   return (
     <div className="space-y-8">
-      <div className="flex flex-wrap gap-4 items-end">
-        <div>
-          <label className="block text-[12px] text-text-secondary mb-1">Categoría corporal</label>
-          <select
-            value={regionId}
-            onChange={e => { setRegionId(e.target.value); setDiagnosisId('all') }}
-            className="bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-2.5 text-[14px] focus:outline-none focus:border-accent"
-          >
-            <option value="all">Todas</option>
-            {bodyRegions.map(r => <option key={r.id} value={r.id}>{r.nombre}</option>)}
-          </select>
+      <div className="flex flex-wrap gap-4 items-end justify-between">
+        <div className="flex flex-wrap gap-4 items-end">
+          <div>
+            <label className="block text-[12px] text-text-secondary mb-1">Categoría corporal</label>
+            <select
+              value={regionId}
+              onChange={e => { setRegionId(e.target.value); setDiagnosisId('all') }}
+              className="bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-2.5 text-[14px] focus:outline-none focus:border-accent"
+            >
+              <option value="all">Todas</option>
+              {bodyRegions.map(r => <option key={r.id} value={r.id}>{r.nombre}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-[12px] text-text-secondary mb-1">Diagnóstico</label>
+            <select
+              value={diagnosisId}
+              onChange={e => setDiagnosisId(e.target.value)}
+              disabled={regionId === 'all'}
+              className="bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-2.5 text-[14px] focus:outline-none focus:border-accent disabled:opacity-40"
+            >
+              <option value="all">Todos los de esta categoría</option>
+              {diagnosisInRegion.map(d => (
+                <option key={d.id} value={d.id}>{d.nombre}{d.codigoCie10 ? ` · ${d.codigoCie10}` : ''}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-[12px] text-text-secondary mb-1">Período</label>
+            <select
+              value={periodValue}
+              onChange={e => setPeriodValue(e.target.value)}
+              className="bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-2.5 text-[14px] focus:outline-none focus:border-accent"
+            >
+              {PERIOD_OPTIONS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+            </select>
+          </div>
         </div>
-        <div>
-          <label className="block text-[12px] text-text-secondary mb-1">Diagnóstico</label>
-          <select
-            value={diagnosisId}
-            onChange={e => setDiagnosisId(e.target.value)}
-            disabled={regionId === 'all'}
-            className="bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-2.5 text-[14px] focus:outline-none focus:border-accent disabled:opacity-40"
-          >
-            <option value="all">Todos los de esta categoría</option>
-            {diagnosisInRegion.map(d => (
-              <option key={d.id} value={d.id}>{d.nombre}{d.codigoCie10 ? ` · ${d.codigoCie10}` : ''}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-[12px] text-text-secondary mb-1">Período</label>
-          <select
-            value={periodValue}
-            onChange={e => setPeriodValue(e.target.value)}
-            className="bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-2.5 text-[14px] focus:outline-none focus:border-accent"
-          >
-            {PERIOD_OPTIONS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
-          </select>
-        </div>
+        <button
+          type="button"
+          onClick={handleExport}
+          disabled={cases.length === 0}
+          title="Exporta todos los casos cargados, sin nombre ni DNI — ignora los filtros de arriba"
+          className="shrink-0 px-4 py-2.5 rounded-lg text-[14px] font-medium border-[0.5px] border-border-strong text-text-primary hover:border-accent hover:text-accent transition-colors disabled:opacity-40 disabled:pointer-events-none"
+        >
+          Exportar CSV (todos los casos, sin identificar)
+        </button>
       </div>
 
       <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6">

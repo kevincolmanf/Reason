@@ -174,6 +174,7 @@ export default async function EstadisticasPage() {
       cirugiaPrevia: profile?.cirugia_previa ?? null,
       nivelSocioeconomico: profile?.nivel_socioeconomico ?? null,
       occupationNivelEsfuerzo: profile?.occupation_id ? occupationEsfuerzoById.get(profile.occupation_id) ?? null : null,
+      age: calcAge(f.patients[0]?.birth_date ?? null, f.patients[0]?.age ?? null),
       ageBucket: ageBucket(calcAge(f.patients[0]?.birth_date ?? null, f.patients[0]?.age ?? null)),
     }
   })
