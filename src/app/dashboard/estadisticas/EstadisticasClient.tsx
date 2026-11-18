@@ -57,34 +57,102 @@ function RankingSection({ title, items }: { title: string; items: RankingItem[] 
   )
 }
 
-type SortBy = 'casos' | 'nombre' | 'fecha'
+interface ReviewPatient {
+  id: string
+  name: string
+  dni: string | null
+  createdAt: string
+  casos: number
+}
+
+interface DiagnosisGroup {
+  key: string
+  label: string
+  totalCasos: number
+  patients: ReviewPatient[]
+}
 
 // Lista de solo lectura para que el dueño revise qué pacientes componen las
 // estadísticas antes de usarlas o exportarlas, y detecte pacientes de prueba.
-// No filtra ni excluye nada: es una herramienta de auditoría manual, separada
-// del agregado (que sigue siendo solo conteos y porcentajes).
-function PatientReviewSection({ patients, casosPorPaciente }: {
+// Agrupada por diagnóstico (no un listado plano): así se audita por bloques
+// chicos — "¿quién compone estos 12 casos de esguince de tobillo?" — en vez de
+// tener que repasar paciente por paciente. Los pacientes sin ningún caso con
+// diagnóstico quedan en un grupo aparte, al final. No filtra ni excluye nada:
+// es una herramienta de auditoría manual, separada del agregado (que sigue
+// siendo solo conteos y porcentajes).
+function PatientReviewSection({ patients, cases, diagnosisOptions }: {
   patients: PatientInfo[]
-  casosPorPaciente: Map<string, number>
+  cases: CaseRow[]
+  diagnosisOptions: DiagnosisOption[]
 }) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
-  const [sortBy, setSortBy] = useState<SortBy>('casos')
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
 
-  const rows = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    const list = patients
-      .map(p => ({ ...p, casos: casosPorPaciente.get(p.id) ?? 0 }))
-      .filter(p => !q || p.name.toLowerCase().includes(q) || (p.dni ?? '').includes(q))
-    list.sort((a, b) => {
-      if (sortBy === 'nombre') return a.name.localeCompare(b.name)
-      if (sortBy === 'fecha') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      return b.casos - a.casos
+  const diagnosisLabelById = useMemo(
+    () => new Map(diagnosisOptions.map(d => [d.id, d.nombre + (d.codigoCie10 ? ` · ${d.codigoCie10}` : '')])),
+    [diagnosisOptions],
+  )
+  const patientById = useMemo(() => new Map(patients.map(p => [p.id, p])), [patients])
+
+  const groups = useMemo((): DiagnosisGroup[] => {
+    const byDiagnosis = new Map<string, Map<string, number>>()
+    const withCase = new Set<string>()
+    for (const c of cases) {
+      if (!c.diagnosisId) continue
+      withCase.add(c.patientId)
+      let byPatient = byDiagnosis.get(c.diagnosisId)
+      if (!byPatient) { byPatient = new Map(); byDiagnosis.set(c.diagnosisId, byPatient) }
+      byPatient.set(c.patientId, (byPatient.get(c.patientId) ?? 0) + 1)
+    }
+
+    const result: DiagnosisGroup[] = []
+    for (const [diagnosisId, byPatient] of Array.from(byDiagnosis.entries())) {
+      const groupPatients: ReviewPatient[] = Array.from(byPatient.entries())
+        .map(([patientId, casos]): ReviewPatient | null => {
+          const p = patientById.get(patientId)
+          return p ? { id: p.id, name: p.name, dni: p.dni, createdAt: p.createdAt, casos } : null
+        })
+        .filter((p): p is ReviewPatient => p !== null)
+        .sort((a, b) => b.casos - a.casos || a.name.localeCompare(b.name))
+      result.push({
+        key: diagnosisId,
+        label: diagnosisLabelById.get(diagnosisId) ?? 'Diagnóstico',
+        totalCasos: groupPatients.reduce((sum, p) => sum + p.casos, 0),
+        patients: groupPatients,
+      })
+    }
+
+    const sinCasos: ReviewPatient[] = patients
+      .filter(p => !withCase.has(p.id))
+      .map(p => ({ id: p.id, name: p.name, dni: p.dni, createdAt: p.createdAt, casos: 0 }))
+      .sort((a, b) => a.name.localeCompare(b.name))
+    if (sinCasos.length > 0) {
+      result.push({ key: 'none', label: 'Sin casos en las estadísticas', totalCasos: 0, patients: sinCasos })
+    }
+
+    return result.sort((a, b) => {
+      if (a.key === 'none') return 1
+      if (b.key === 'none') return -1
+      return b.totalCasos - a.totalCasos
     })
-    return list
-  }, [patients, casosPorPaciente, search, sortBy])
+  }, [cases, patients, patientById, diagnosisLabelById])
 
-  const sinCasos = patients.filter(p => (casosPorPaciente.get(p.id) ?? 0) === 0).length
+  const q = search.trim().toLowerCase()
+  const visibleGroups = useMemo(() => {
+    if (!q) return groups
+    return groups
+      .map(g => ({ ...g, patients: g.patients.filter(p => p.name.toLowerCase().includes(q) || (p.dni ?? '').includes(q)) }))
+      .filter(g => g.patients.length > 0)
+  }, [groups, q])
+
+  const toggleGroup = (key: string) => setExpanded(prev => {
+    const next = new Set(prev)
+    if (next.has(key)) next.delete(key); else next.add(key)
+    return next
+  })
+
+  const sinCasosCount = groups.find(g => g.key === 'none')?.patients.length ?? 0
 
   return (
     <div className="bg-bg-primary border-[0.5px] border-border rounded-xl">
@@ -92,7 +160,8 @@ function PatientReviewSection({ patients, casosPorPaciente }: {
         <div>
           <div className="text-[14px] font-medium text-text-primary">Revisar pacientes cargados</div>
           <div className="text-[12px] text-text-secondary mt-0.5">
-            {patients.length} pacientes · {sinCasos} sin casos en las estadísticas — revisá antes de usar o exportar los datos
+            {patients.length} pacientes en {groups.length} grupo{groups.length === 1 ? '' : 's'} por diagnóstico
+            {sinCasosCount > 0 ? ` (${sinCasosCount} sin casos)` : ''} — revisá antes de usar o exportar los datos
           </div>
         </div>
         <span className="text-[12px] text-text-secondary whitespace-nowrap">{open ? 'Ocultar ▲' : 'Mostrar ▼'}</span>
@@ -106,30 +175,52 @@ function PatientReviewSection({ patients, casosPorPaciente }: {
             placeholder="Buscar por nombre o DNI..."
             className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-2.5 text-[14px] mb-4 focus:outline-none focus:border-accent"
           />
-          {rows.length === 0 ? (
+          {visibleGroups.length === 0 ? (
             <p className="text-[13px] text-text-secondary py-4 text-center">Sin resultados para &quot;{search}&quot;.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-[13px]">
-                <thead>
-                  <tr className="text-left text-text-secondary border-b-[0.5px] border-border">
-                    <th className="py-2 pr-4 font-normal cursor-pointer select-none" onClick={() => setSortBy('nombre')}>Paciente</th>
-                    <th className="py-2 pr-4 font-normal">DNI</th>
-                    <th className="py-2 pr-4 font-normal cursor-pointer select-none" onClick={() => setSortBy('fecha')}>Alta</th>
-                    <th className="py-2 pr-0 font-normal text-right cursor-pointer select-none" onClick={() => setSortBy('casos')}>Casos</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map(p => (
-                    <tr key={p.id} className="border-b-[0.5px] border-border/50 last:border-0">
-                      <td className="py-2 pr-4 text-text-primary">{p.name}</td>
-                      <td className="py-2 pr-4 text-text-secondary font-mono">{p.dni || '—'}</td>
-                      <td className="py-2 pr-4 text-text-secondary">{new Date(p.createdAt).toLocaleDateString('es-AR')}</td>
-                      <td className="py-2 pr-0 text-right font-mono text-text-primary">{p.casos}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="space-y-2">
+              {visibleGroups.map(g => {
+                const isOpen = q.length > 0 || expanded.has(g.key)
+                return (
+                  <div key={g.key} className="border-[0.5px] border-border rounded-lg overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => toggleGroup(g.key)}
+                      className="w-full flex items-center justify-between gap-3 px-3.5 py-2.5 text-left hover:bg-bg-secondary transition-colors"
+                    >
+                      <span className="text-[13px] text-text-primary truncate">{g.label}</span>
+                      <span className="text-[12px] text-text-secondary font-mono whitespace-nowrap shrink-0 flex items-center gap-2">
+                        {g.patients.length} pac. · {g.totalCasos} caso{g.totalCasos === 1 ? '' : 's'}
+                        <span className="text-text-tertiary">{isOpen ? '▲' : '▼'}</span>
+                      </span>
+                    </button>
+                    {isOpen && (
+                      <div className="overflow-x-auto border-t-[0.5px] border-border">
+                        <table className="w-full text-[13px]">
+                          <thead>
+                            <tr className="text-left text-text-secondary">
+                              <th className="py-2 pl-3.5 pr-4 font-normal">Paciente</th>
+                              <th className="py-2 pr-4 font-normal">DNI</th>
+                              <th className="py-2 pr-4 font-normal">Alta</th>
+                              <th className="py-2 pr-3.5 font-normal text-right">Casos</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {g.patients.map(p => (
+                              <tr key={p.id} className="border-t-[0.5px] border-border/50">
+                                <td className="py-2 pl-3.5 pr-4 text-text-primary">{p.name}</td>
+                                <td className="py-2 pr-4 text-text-secondary font-mono">{p.dni || '—'}</td>
+                                <td className="py-2 pr-4 text-text-secondary">{new Date(p.createdAt).toLocaleDateString('es-AR')}</td>
+                                <td className="py-2 pr-3.5 text-right font-mono text-text-primary">{p.casos}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>
@@ -188,15 +279,6 @@ export default function EstadisticasClient({ cases, diagnosisOptions, bodyRegion
     .filter(c => c.stat.answered > 0)
     .map(c => ({ label: c.label, count: c.stat.count, pct: c.stat.pct })),
     [filtered])
-
-  // Casos por paciente sobre el total (no sobre `filtered`): la lista de
-  // revisión es una auditoría de todo lo cargado, no de lo que esté filtrado
-  // arriba en los gráficos.
-  const casosPorPaciente = useMemo(() => {
-    const m = new Map<string, number>()
-    for (const c of cases) m.set(c.patientId, (m.get(c.patientId) ?? 0) + 1)
-    return m
-  }, [cases])
 
   return (
     <div className="space-y-8">
@@ -265,7 +347,7 @@ export default function EstadisticasClient({ cases, diagnosisOptions, bodyRegion
         </div>
       )}
 
-      <PatientReviewSection patients={patients} casosPorPaciente={casosPorPaciente} />
+      <PatientReviewSection patients={patients} cases={cases} diagnosisOptions={diagnosisOptions} />
     </div>
   )
 }
