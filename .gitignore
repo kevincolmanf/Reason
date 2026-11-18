@@ -39,3 +39,6 @@ next-env.d.ts
 .claude/worktrees/
 # claude code settings locales — pueden contener secretos, NO versionar
 .claude/settings.local*
+
+# credenciales de cuentas de prueba (QA) — nunca versionar
+.qa-test-accounts.md
