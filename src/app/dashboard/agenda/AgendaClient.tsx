@@ -511,73 +511,67 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
     if (error) { setLoading(false); return }
     const list: Turno[] = data ?? []
 
-    // Respaldo de teléfono para el recordatorio WA: para los turnos que no tienen
-    // teléfono copiado, buscamos el de la ficha del paciente en una consulta aparte.
-    // Es aditivo y no bloqueante: si falla, la agenda igual se muestra completa.
+    // Las siguientes 4 consultas sólo dependen de `list` (no entre sí), así que
+    // van en paralelo en vez de en cadena: antes cada vista de la agenda esperaba
+    // hasta 5 round-trips seguidos a la base, lo que la hacía sentir muy lenta.
     const missingIds = Array.from(new Set(
       list.filter(t => t.patient_id && !t.patient_phone).map(t => t.patient_id as string),
     ))
-    if (missingIds.length > 0) {
-      const { data: pts } = await supabaseRef.current
-        .from('patients')
-        .select('id, phone')
-        .in('id', missingIds)
-      if (pts && pts.length > 0) {
-        const phoneById = new Map(pts.map(p => [p.id as string, (p.phone as string | null) ?? null]))
-        for (const t of list) {
-          if (t.patient_id && !t.patient_phone) t.patient_phone = phoneById.get(t.patient_id) ?? null
-        }
+    const patIds = Array.from(new Set(list.filter(t => t.patient_id).map(t => t.patient_id as string)))
+    const turnoIds = list.filter(t => !t.is_blocked).map(t => t.id)
+
+    const [phoneRes, lsRes, kmRes, ceRes] = await Promise.all([
+      // Respaldo de teléfono para el recordatorio WA: para los turnos que no
+      // tienen teléfono copiado, buscamos el de la ficha del paciente aparte.
+      // Es aditivo y no bloqueante: si falla, la agenda igual se muestra completa.
+      missingIds.length > 0
+        ? supabaseRef.current.from('patients').select('id, phone').in('id', missingIds)
+        : Promise.resolve({ data: null }),
+      // Marca de "sesión registrada": sesiones de carga de los pacientes
+      // visibles en el rango. La RLS ya permite ver las del equipo.
+      patIds.length > 0
+        ? supabaseRef.current
+            .from('load_sessions')
+            .select('patient_id, session_date')
+            .in('patient_id', patIds)
+            .gte('session_date', from.slice(0, 10))
+            .lt('session_date', to.slice(0, 10))
+        : Promise.resolve({ data: null }),
+      // Marca de "modo kine" y "carga avanzada": qué pacientes visibles tienen
+      // cada modo prendido, para ofrecer los accesos rápidos correctos desde el
+      // turno sin entrar a la ficha.
+      patIds.length > 0
+        ? supabaseRef.current.from('patients').select('id, plan_mode, kine_mode, advanced_load_mode').in('id', patIds)
+        : Promise.resolve({ data: null }),
+      // Marca de "pago cargado" ($): cobros de caja enlazados a estos turnos
+      // (por turno_id, no por fecha: el cobro puede cargarse otro día). La RLS
+      // de cash_entries filtra según permiso; quien no puede ver caja no recibe filas.
+      canRegisterCash && turnoIds.length > 0
+        ? supabaseRef.current.from('cash_entries').select('turno_id').in('turno_id', turnoIds)
+        : Promise.resolve({ data: null }),
+    ])
+
+    const pts = phoneRes.data
+    if (pts && pts.length > 0) {
+      const phoneById = new Map(pts.map(p => [p.id as string, (p.phone as string | null) ?? null]))
+      for (const t of list) {
+        if (t.patient_id && !t.patient_phone) t.patient_phone = phoneById.get(t.patient_id) ?? null
       }
     }
 
     setTurnos(list)
     setLoading(false)
 
-    // Marca de "sesión registrada": buscamos las sesiones de carga de los
-    // pacientes visibles en el rango. La RLS ya permite ver las del equipo.
-    const patIds = Array.from(new Set(list.filter(t => t.patient_id).map(t => t.patient_id as string)))
-    if (patIds.length > 0) {
-      const { data: ls } = await supabaseRef.current
-        .from('load_sessions')
-        .select('patient_id, session_date')
-        .in('patient_id', patIds)
-        .gte('session_date', from.slice(0, 10))
-        .lt('session_date', to.slice(0, 10))
-      setRegisteredKeys(new Set((ls ?? []).map(r => `${r.patient_id}|${r.session_date}`)))
-    } else {
-      setRegisteredKeys(new Set())
-    }
+    const ls = lsRes.data
+    setRegisteredKeys(new Set((ls ?? []).map(r => `${r.patient_id}|${r.session_date}`)))
 
-    // Marca de "modo kine" y "carga avanzada": qué pacientes visibles tienen
-    // cada modo prendido, para ofrecer los accesos rápidos correctos desde el
-    // turno sin entrar a la ficha.
-    if (patIds.length > 0) {
-      const { data: km } = await supabaseRef.current
-        .from('patients')
-        .select('id, plan_mode, kine_mode, advanced_load_mode')
-        .in('id', patIds)
-      setKinePatientIds(new Set((km ?? []).filter(r => r.kine_mode).map(r => r.id as string)))
-      setAdvancedLoadPatientIds(new Set((km ?? []).filter(r => r.advanced_load_mode).map(r => r.id as string)))
-      setPlanModeByPatient(Object.fromEntries((km ?? []).map(r => [r.id as string, (r.plan_mode as string | null) ?? 'detallado'])))
-    } else {
-      setKinePatientIds(new Set())
-      setAdvancedLoadPatientIds(new Set())
-      setPlanModeByPatient({})
-    }
+    const km = kmRes.data
+    setKinePatientIds(new Set((km ?? []).filter(r => r.kine_mode).map(r => r.id as string)))
+    setAdvancedLoadPatientIds(new Set((km ?? []).filter(r => r.advanced_load_mode).map(r => r.id as string)))
+    setPlanModeByPatient(Object.fromEntries((km ?? []).map(r => [r.id as string, (r.plan_mode as string | null) ?? 'detallado'])))
 
-    // Marca de "pago cargado" ($): cobros de caja enlazados a estos turnos (por
-    // turno_id, no por fecha: el cobro puede cargarse otro día). La RLS de
-    // cash_entries filtra según permiso; quien no puede ver caja no recibe filas.
-    const turnoIds = list.filter(t => !t.is_blocked).map(t => t.id)
-    if (canRegisterCash && turnoIds.length > 0) {
-      const { data: ce } = await supabaseRef.current
-        .from('cash_entries')
-        .select('turno_id')
-        .in('turno_id', turnoIds)
-      setPaidTurnoIds(new Set((ce ?? []).map(r => r.turno_id).filter(Boolean) as string[]))
-    } else {
-      setPaidTurnoIds(new Set())
-    }
+    const ce = ceRes.data
+    setPaidTurnoIds(new Set((ce ?? []).map(r => r.turno_id).filter(Boolean) as string[]))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weekStart, selectedDay, view, orgId, userId, canRegisterCash])
 

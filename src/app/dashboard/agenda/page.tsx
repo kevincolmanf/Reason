@@ -67,35 +67,24 @@ export default async function AgendaPage() {
   // solo el dueño real edita; los integrantes entran en solo lectura.
   const isOwner = role === 'admin' || !orgId || isOrgOwner
 
-  // Lectura defensiva del horario visible (columnas nuevas). Si la migración no
-  // corrió aún, la consulta devuelve error y quedan los defaults 7–21.
-  {
-    const hoursTable = orgId ? 'organizations' : 'users'
-    const hoursId    = orgId ?? user.id
-    const { data: hrs, error: hrsErr } = await supabase
-      .from(hoursTable)
-      .select('agenda_day_start, agenda_day_end')
-      .eq('id', hoursId)
-      .single()
-    if (!hrsErr && hrs) {
-      if (typeof hrs.agenda_day_start === 'number') dayStart = hrs.agenda_day_start
-      if (typeof hrs.agenda_day_end === 'number')   dayEnd   = hrs.agenda_day_end
-    }
-  }
-
-  // Lectura defensiva del WhatsApp de contacto (columna nueva). Vive en la org
-  // (un número por clínica) o en el usuario (agenda personal). Si la migración no
-  // corrió aún, la consulta da error y queda null: el input aparece vacío.
+  // Lectura defensiva del horario visible y del WhatsApp de contacto (columnas
+  // nuevas). Ambas viven en la misma fila —la org (agenda de equipo) o el
+  // usuario (agenda personal)— así que van en una sola consulta en vez de dos.
+  // Si la migración no corrió aún, la consulta da error y quedan los defaults.
   let whatsapp: string | null = null
   {
-    const waTable = orgId ? 'organizations' : 'users'
-    const waId = orgId ?? user.id
-    const { data: wa, error: waErr } = await supabase
-      .from(waTable)
-      .select('whatsapp')
-      .eq('id', waId)
+    const settingsTable = orgId ? 'organizations' : 'users'
+    const settingsId    = orgId ?? user.id
+    const { data: settings, error: settingsErr } = await supabase
+      .from(settingsTable)
+      .select('agenda_day_start, agenda_day_end, whatsapp')
+      .eq('id', settingsId)
       .single()
-    if (!waErr && wa && typeof wa.whatsapp === 'string') whatsapp = wa.whatsapp
+    if (!settingsErr && settings) {
+      if (typeof settings.agenda_day_start === 'number') dayStart = settings.agenda_day_start
+      if (typeof settings.agenda_day_end === 'number')   dayEnd   = settings.agenda_day_end
+      if (typeof settings.whatsapp === 'string') whatsapp = settings.whatsapp
+    }
   }
 
   // Load org members — check access for non-owners, build professional filter
