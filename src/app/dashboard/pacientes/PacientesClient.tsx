@@ -75,17 +75,20 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
       ? sb.from('patients').select('id, name, dni, age, birth_date, phone, email, obra_social, occupation, source, created_at, user_id').eq('org_id', orgId).order('created_at', { ascending: true })
       : sb.from('patients').select('id, name, dni, age, birth_date, phone, email, obra_social, occupation, source, created_at, user_id').eq('user_id', userId).is('org_id', null).order('created_at', { ascending: true })
 
-    const { data } = await query
-    const rows = (data ?? []) as Patient[]
+    // Qué pacientes tienen plan: antes se armaba con `.in('patient_id', ids)`
+    // pasando TODOS los ids por la URL — con equipos grandes (cientos de
+    // pacientes) esa URL pasa el límite y Supabase devuelve "Bad Request" (lo
+    // que hacía fallar en silencio y volvía lenta/colgada esta pantalla). Se
+    // filtra por org_id/user_id directo vía el join con patients, igual que ya
+    // se resolvió este mismo problema en Estadísticas — y de paso va en
+    // paralelo con la consulta de pacientes, no después.
+    const plansQuery = isOrgContext
+      ? sb.from('exercise_plans').select('patient_id, patients!inner(org_id)').eq('patients.org_id', orgId)
+      : sb.from('exercise_plans').select('patient_id, patients!inner(org_id, user_id)').eq('patients.user_id', userId).is('patients.org_id', null)
 
-    // Una sola consulta para saber qué pacientes tienen plan (antes se hacía un
-    // count por paciente: N+1 que con cientos de pacientes volvía lenta la lista).
-    const ids = rows.map(r => r.id)
-    let plannedSet = new Set<string>()
-    if (ids.length > 0) {
-      const { data: plans } = await sb.from('exercise_plans').select('patient_id').in('patient_id', ids)
-      plannedSet = new Set((plans ?? []).map(p => p.patient_id as string))
-    }
+    const [{ data }, { data: plans }] = await Promise.all([query, plansQuery])
+    const rows = (data ?? []) as Patient[]
+    const plannedSet = new Set((plans ?? []).map(p => p.patient_id as string))
 
     setPatients(rows.map(p => ({ ...p, has_plan: plannedSet.has(p.id) })))
     setLoading(false)
