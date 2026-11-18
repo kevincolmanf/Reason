@@ -140,17 +140,21 @@ export default async function DashboardPage() {
 
   const milestones: WeekMilestone[] = []
   if (patientIds.length > 0) {
+    // Sin filtro por `.in('patient_id', patientIds)` a propósito: con equipos
+    // grandes (cientos de pacientes) esa lista pasa el límite de la URL y
+    // Supabase devuelve "Bad Request" (mismo bug que ya se resolvió en
+    // Estadísticas y en Pacientes). La RLS de ambas tablas ya restringe a
+    // pacientes accesibles (propios o de una org de la que sos miembro), así
+    // que no hace falta pasar los ids — da exactamente el mismo resultado.
     const [{ data: evs }, { data: sched }] = await Promise.all([
       // Hitos: toda la semana en curso (lun–dom)
       supabase.from('patient_events')
         .select('id, patient_id, event_date, type, title')
-        .in('patient_id', patientIds)
         .gte('event_date', mondayStr).lte('event_date', sundayStr),
       // Evaluaciones programadas pendientes: TODAS las no completadas (incluye
       // atrasadas de días pasados, que siguen recordándose hasta hacerlas o borrarlas).
       supabase.from('scheduled_evaluations')
         .select('id, patient_id, kind, protocol_type, scheduled_date')
-        .in('patient_id', patientIds)
         .eq('completed', false)
         .order('scheduled_date'),
     ])
