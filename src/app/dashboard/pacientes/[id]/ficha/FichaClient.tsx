@@ -100,6 +100,7 @@ interface PatientFicha {
   diagnosis_source: 'global' | 'custom' | null
   mecanismo_lesion: 'traumatico' | 'sobreuso' | 'degenerativo' | null
   lateralidad: 'derecha' | 'izquierda' | 'bilateral' | 'no_aplica' | null
+  dolor_eva_inicial: number | null
   ficha_data: Partial<FichaData>
 }
 
@@ -330,6 +331,10 @@ export default function FichaClient({
 
   const persistFicha = async (data: FichaData): Promise<boolean> => {
     setSaveStatus('saving')
+    // El EVA ya se carga en "Caracterización del dolor" (botón 0-10, más abajo
+    // en el form) — acá solo se espeja a una columna propia para que
+    // Estadísticas lo pueda leer sin parsear el jsonb de ficha_data.
+    const dolorEvaInicial = /^(10|[0-9])$/.test(data.dolorEva) ? Number(data.dolorEva) : null
     const { error } = await supabaseRef.current
       .from('patient_fichas')
       .update({
@@ -339,6 +344,7 @@ export default function FichaClient({
         diagnosis_source: diagnosisSource,
         mecanismo_lesion: mecanismoLesion,
         lateralidad: lateralidad,
+        dolor_eva_inicial: dolorEvaInicial,
       })
       .eq('id', initialFicha.id)
     if (error) {
