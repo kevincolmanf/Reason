@@ -6,10 +6,20 @@
 -- panel de gestión de su org nueva, métricas mezcladas con las de la otra
 -- organización de la que sigue siendo miembro.
 --
--- El código ya tiene un mitigante (src/app/account/crm/page.tsx solo muestra
--- profesionales que son organization_members de la org actual), pero esto
--- cierra el problema desde la base: las funciones ahora reciben p_org_id y
--- filtran explícitamente por organización, no solo por lo que la RLS deja ver.
+-- El código ya tiene un mitigante (solo muestra profesionales que son
+-- organization_members de la org actual), pero esto cierra el problema desde
+-- la base en dos capas:
+--   1) Las funciones ahora reciben p_org_id y filtran explícitamente por
+--      organización, no solo por lo que la RLS deja ver.
+--   2) "Panel de gestión" es información de GESTIÓN — solo para el DUEÑO de
+--      la organización, no para cualquier integrante. La RLS de turnos/
+--      patients/fichas permite a CUALQUIER integrante ver esos datos (porque
+--      los necesita para atender pacientes), así que confiar solo en esa RLS
+--      dejaría a un integrante llamar estas funciones directamente (no desde
+--      la pantalla, pero sí técnicamente) y obtener las métricas agregadas
+--      de todo el equipo. Por eso cada función ahora chequea explícitamente
+--      is_org_owner(p_org_id) o is_admin() y rechaza a cualquier otro llamante,
+--      sin importar qué le permita ver la RLS de las tablas de base.
 --
 -- Ejecutar en Supabase SQL Editor LO ANTES POSIBLE — es un fix de seguridad,
 -- no requiere coordinar un merge de rama.
@@ -18,7 +28,7 @@ DROP FUNCTION IF EXISTS public.panel_pro_operativo(timestamptz, timestamptz);
 DROP FUNCTION IF EXISTS public.panel_pro_retencion();
 DROP FUNCTION IF EXISTS public.panel_pro_clinico(timestamptz, timestamptz);
 
--- ── 1) Operativo del mes, por profesional (ahora filtrado por organización) ─
+-- ── 1) Operativo del mes, por profesional (org + solo-dueño) ────────────────
 CREATE OR REPLACE FUNCTION public.panel_pro_operativo(p_org_id uuid, p_from timestamptz, p_to timestamptz)
 RETURNS TABLE (
   professional_id   uuid,
@@ -32,8 +42,14 @@ RETURNS TABLE (
   dias              int,
   pacientes         int
 )
-LANGUAGE sql STABLE SECURITY INVOKER
+LANGUAGE plpgsql STABLE SECURITY INVOKER
 AS $$
+BEGIN
+  IF NOT (public.is_org_owner(p_org_id) OR public.is_admin()) THEN
+    RAISE EXCEPTION 'No autorizado';
+  END IF;
+
+  RETURN QUERY
   WITH base AS (
     SELECT t.professional_id, t.professional_name, t.status, t.appointment_type,
            t.patient_id, t.start_time, t.end_time
@@ -44,18 +60,18 @@ AS $$
       AND t.start_time >= p_from AND t.start_time < p_to
   ),
   perday AS (
-    SELECT professional_id, start_time::date AS d,
-      EXTRACT(EPOCH FROM (MAX(end_time) - MIN(start_time)))/3600.0 AS span_h
+    SELECT base.professional_id, base.start_time::date AS d,
+      EXTRACT(EPOCH FROM (MAX(base.end_time) - MIN(base.start_time)))/3600.0 AS span_h
     FROM base
-    WHERE status <> 'cancelado'
-    GROUP BY professional_id, start_time::date
+    WHERE base.status <> 'cancelado'
+    GROUP BY base.professional_id, base.start_time::date
   ),
   jornada AS (
-    SELECT professional_id,
-      ROUND(SUM(span_h)::numeric, 1) AS horas,
+    SELECT perday.professional_id,
+      ROUND(SUM(perday.span_h)::numeric, 1) AS horas,
       COUNT(*)::int AS dias
     FROM perday
-    GROUP BY professional_id
+    GROUP BY perday.professional_id
   )
   SELECT
     b.professional_id,
@@ -71,9 +87,10 @@ AS $$
   FROM base b
   LEFT JOIN jornada j ON j.professional_id = b.professional_id
   GROUP BY b.professional_id, j.horas, j.dias;
+END;
 $$;
 
--- ── 2) Retención / ciclo de vida, por profesional (filtrado por organización) ─
+-- ── 2) Retención / ciclo de vida, por profesional (org + solo-dueño) ────────
 CREATE OR REPLACE FUNCTION public.panel_pro_retencion(p_org_id uuid)
 RETURNS TABLE (
   professional_id uuid,
@@ -85,8 +102,14 @@ RETURNS TABLE (
   duracion_dias   numeric,
   en_riesgo       int
 )
-LANGUAGE sql STABLE SECURITY INVOKER
+LANGUAGE plpgsql STABLE SECURITY INVOKER
 AS $$
+BEGIN
+  IF NOT (public.is_org_owner(p_org_id) OR public.is_admin()) THEN
+    RAISE EXCEPTION 'No autorizado';
+  END IF;
+
+  RETURN QUERY
   WITH ses AS (
     SELECT
       t.patient_id,
@@ -108,23 +131,24 @@ AS $$
     FROM ses s JOIN public.patients p ON p.id = s.patient_id
   )
   SELECT
-    professional_id,
-    COUNT(*) FILTER (WHERE discharged_at IS NULL)::int AS activos,
-    COUNT(*) FILTER (WHERE discharged_at IS NOT NULL AND discharge_reason = 'alta')::int AS altas,
-    COUNT(*) FILTER (WHERE discharged_at IS NOT NULL AND discharge_reason = 'abandono')::int AS abandonos,
-    COUNT(*) FILTER (WHERE first_t <= now() - interval '6 weeks')::int AS oportunidad,
+    j.professional_id,
+    COUNT(*) FILTER (WHERE j.discharged_at IS NULL)::int AS activos,
+    COUNT(*) FILTER (WHERE j.discharged_at IS NOT NULL AND j.discharge_reason = 'alta')::int AS altas,
+    COUNT(*) FILTER (WHERE j.discharged_at IS NOT NULL AND j.discharge_reason = 'abandono')::int AS abandonos,
+    COUNT(*) FILTER (WHERE j.first_t <= now() - interval '6 weeks')::int AS oportunidad,
     COUNT(*) FILTER (
-      WHERE first_t <= now() - interval '6 weeks'
-        AND (sesiones >= 10 OR (last_t - first_t) >= interval '6 weeks')
+      WHERE j.first_t <= now() - interval '6 weeks'
+        AND (j.sesiones >= 10 OR (j.last_t - j.first_t) >= interval '6 weeks')
     )::int AS completan,
-    ROUND((AVG(EXTRACT(EPOCH FROM (discharged_at - first_t))/86400.0)
-      FILTER (WHERE discharge_reason = 'alta' AND discharged_at IS NOT NULL))::numeric, 1) AS duracion_dias,
-    COUNT(*) FILTER (WHERE discharged_at IS NULL AND futuros = 0 AND last_t <= now() - interval '7 days')::int AS en_riesgo
+    ROUND((AVG(EXTRACT(EPOCH FROM (j.discharged_at - j.first_t))/86400.0)
+      FILTER (WHERE j.discharge_reason = 'alta' AND j.discharged_at IS NOT NULL))::numeric, 1) AS duracion_dias,
+    COUNT(*) FILTER (WHERE j.discharged_at IS NULL AND j.futuros = 0 AND j.last_t <= now() - interval '7 days')::int AS en_riesgo
   FROM j
-  GROUP BY professional_id;
+  GROUP BY j.professional_id;
+END;
 $$;
 
--- ── 3) Clínico: fichas / planes / evaluaciones (filtrado por organización) ──
+-- ── 3) Clínico: fichas / planes / evaluaciones (org + solo-dueño) ───────────
 CREATE OR REPLACE FUNCTION public.panel_pro_clinico(p_org_id uuid, p_from timestamptz, p_to timestamptz)
 RETURNS TABLE (
   professional_id        uuid,
@@ -133,8 +157,14 @@ RETURNS TABLE (
   evals_mes              int,
   planes_desactualizados int
 )
-LANGUAGE sql STABLE SECURITY INVOKER
+LANGUAGE plpgsql STABLE SECURITY INVOKER
 AS $$
+BEGIN
+  IF NOT (public.is_org_owner(p_org_id) OR public.is_admin()) THEN
+    RAISE EXCEPTION 'No autorizado';
+  END IF;
+
+  RETURN QUERY
   WITH fichas AS (
     SELECT f.user_id AS pid, COUNT(*)::int AS n
     FROM public.patient_fichas f
@@ -210,4 +240,5 @@ AS $$
   LEFT JOIN evals  e ON e.pid = i.pid
   LEFT JOIN desact d ON d.pid = i.pid
   WHERE i.pid IS NOT NULL;
+END;
 $$;
