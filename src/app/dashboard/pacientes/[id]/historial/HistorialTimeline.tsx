@@ -127,12 +127,17 @@ export default function HistorialTimeline({
           <p className="text-[13px] text-text-secondary">Todavía no hay actividad registrada.</p>
         )}
 
-        {items.map((item) => {
+        {items.map((item, index) => {
+          // Separador entre días: antes solo quedaba la etiqueta chica, costaba
+          // ver dónde terminaba un día y empezaba otro. Una línea arriba de
+          // cada grupo (salvo el primero) marca el corte de un vistazo.
+          const dividerClass = index > 0 ? 'pt-[22px] border-t-[0.5px] border-border/70' : ''
+
           if ('kind' in item) {
             const key = `streak-${item.fromDate}-${item.toDate}`
             const expanded = expandedStreaks.has(key)
             return (
-              <div key={key} className="mb-[26px]">
+              <div key={key} className={`mb-[26px] ${dividerClass}`}>
                 <div className="relative">
                   <span className="absolute left-[-24px] top-[5px] w-[10px] h-[10px] rounded-full bg-bg-tertiary border-[1.5px] border-border-strong" />
                   <button
@@ -159,9 +164,16 @@ export default function HistorialTimeline({
             )
           }
 
+          const isToday = item.date === today
           return (
-            <div key={item.date} className="mb-[26px] last:mb-0">
-              <div className="text-[11px] font-medium text-text-tertiary uppercase tracking-[0.08em] mb-2.5">{dayLabel(item.date, item.date === today)}</div>
+            <div key={item.date} className={`mb-[26px] last:mb-0 ${dividerClass}`}>
+              <div
+                className={`inline-block text-[11px] font-medium uppercase tracking-[0.08em] mb-3 px-2 py-0.5 rounded-full border-[0.5px] ${
+                  isToday ? 'text-accent bg-accent/10 border-accent/30' : 'text-text-tertiary bg-bg-tertiary border-border'
+                }`}
+              >
+                {dayLabel(item.date, isToday)}
+              </div>
               <div className="space-y-3">
                 {item.rows.map(r => {
                   const color = rowColor(r)
