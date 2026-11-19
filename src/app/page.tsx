@@ -77,7 +77,7 @@ export default function LandingPage({
               </div>
               <ul className="list-none">
                 <li className="py-4 text-[15px] text-text-primary border-b-[0.5px] border-border">
-                  Agenda integrada con recordatorios por WhatsApp en un click <span className="text-[12px] text-accent">(Pro)</span>
+                  Agenda integrada con recordatorios por WhatsApp en un click
                 </li>
                 <li className="py-4 text-[15px] text-text-primary border-b-[0.5px] border-border">
                   Planes con 1800+ ejercicios en video y feedback en tiempo real
@@ -109,14 +109,13 @@ export default function LandingPage({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Agenda */}
             <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-8">
-              <div className="h-[48px] mb-5 flex items-center justify-between text-accent">
+              <div className="h-[48px] mb-5 flex items-center justify-start text-accent">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
                   <line x1="16" y1="2" x2="16" y2="6"></line>
                   <line x1="8" y1="2" x2="8" y2="6"></line>
                   <line x1="3" y1="10" x2="21" y2="10"></line>
                 </svg>
-                <span className="text-[10px] font-medium text-accent border-[0.5px] border-accent rounded px-2 py-0.5 tracking-[0.04em] uppercase">Pro</span>
               </div>
               <h3 className="text-[17px] font-medium mb-3 text-text-primary">Agenda de turnos</h3>
               <p className="text-[14px] text-text-secondary leading-[1.55]">
@@ -460,7 +459,7 @@ export default function LandingPage({
               Planes para cada práctica.
             </h2>
             <p className="text-[18px] text-text-secondary leading-[1.5]">
-              El plan individual es completo para un profesional independiente. El Pro agrega la capa de equipo y agenda para centros que trabajan con varios profesionales.
+              El plan Individual es completo para un profesional independiente, agenda incluida. El Pro agrega la capa de equipo para centros que trabajan con varios profesionales.
             </p>
           </div>
 
@@ -477,6 +476,9 @@ export default function LandingPage({
                 </div>
                 <div className="font-mono text-[13px] text-text-secondary mb-6">Hasta 20 pacientes · cancelás cuando querés</div>
                 <ul className="list-none mb-8 space-y-[10px]">
+                  <li className="text-[13px] text-text-secondary flex items-start gap-2">
+                    <span className="text-accent mt-[1px]">✓</span> Agenda, recordatorios por WhatsApp y seguimiento de ausencias
+                  </li>
                   <li className="text-[13px] text-text-secondary flex items-start gap-2">
                     <span className="text-accent mt-[1px]">✓</span> Constructor de planes con 1800+ ejercicios en video
                   </li>
@@ -543,36 +545,36 @@ export default function LandingPage({
                 <div>
                   <div className="text-[12px] font-medium text-text-secondary uppercase tracking-[0.05em] mb-2">Pro · Centros</div>
                   <div className="font-mono text-[36px] font-medium text-text-primary mb-1 tracking-[-0.02em]">
-                    <span className="text-[18px] text-text-secondary font-normal">ARS</span> 150.000<span className="text-[16px] text-text-secondary font-normal"> /mes</span>
+                    <span className="text-[18px] text-text-secondary font-normal">ARS</span> 53.900<span className="text-[16px] text-text-secondary font-normal"> /mes</span>
                   </div>
                   <div className="font-mono text-[13px] text-text-secondary mb-8">Pacientes ilimitados · todos los profesionales del centro incluidos</div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-[10px]">
                     <div>
-                      <div className="text-[11px] font-medium text-text-tertiary uppercase tracking-[0.04em] mb-3">Todo lo del plan individual, más:</div>
-                      <ul className="list-none space-y-[10px]">
-                        <li className="text-[13px] text-text-secondary flex items-start gap-2">
-                          <span className="text-accent mt-[1px]">✓</span> Agenda de turnos integrada
-                        </li>
-                        <li className="text-[13px] text-text-secondary flex items-start gap-2">
-                          <span className="text-accent mt-[1px]">✓</span> Recordatorios por WhatsApp con un click
-                        </li>
-                        <li className="text-[13px] text-text-secondary flex items-start gap-2">
-                          <span className="text-accent mt-[1px]">✓</span> Vista semanal de agenda por profesional
-                        </li>
-                      </ul>
-                    </div>
-                    <div>
-                      <div className="text-[11px] font-medium text-text-tertiary uppercase tracking-[0.04em] mb-3">Funciones de equipo:</div>
+                      <div className="text-[11px] font-medium text-text-tertiary uppercase tracking-[0.04em] mb-3">Todo lo del plan Individual, más:</div>
                       <ul className="list-none space-y-[10px]">
                         <li className="text-[13px] text-text-secondary flex items-start gap-2">
                           <span className="text-accent mt-[1px]">✓</span> Pacientes y planes compartidos entre profesionales
                         </li>
                         <li className="text-[13px] text-text-secondary flex items-start gap-2">
-                          <span className="text-accent mt-[1px]">✓</span> Historial permanente del equipo
+                          <span className="text-accent mt-[1px]">✓</span> Agenda propia para cada profesional del equipo
                         </li>
                         <li className="text-[13px] text-text-secondary flex items-start gap-2">
+                          <span className="text-accent mt-[1px]">✓</span> Historial permanente del equipo
+                        </li>
+                      </ul>
+                    </div>
+                    <div>
+                      <div className="text-[11px] font-medium text-text-tertiary uppercase tracking-[0.04em] mb-3">Gestión del centro:</div>
+                      <ul className="list-none space-y-[10px]">
+                        <li className="text-[13px] text-text-secondary flex items-start gap-2">
                           <span className="text-accent mt-[1px]">✓</span> Control de acceso por profesional
+                        </li>
+                        <li className="text-[13px] text-text-secondary flex items-start gap-2">
+                          <span className="text-accent mt-[1px]">✓</span> Caja diaria y chat del equipo
+                        </li>
+                        <li className="text-[13px] text-text-secondary flex items-start gap-2">
+                          <span className="text-accent mt-[1px]">✓</span> Panel de gestión y auditoría de accesos
                         </li>
                       </ul>
                     </div>
