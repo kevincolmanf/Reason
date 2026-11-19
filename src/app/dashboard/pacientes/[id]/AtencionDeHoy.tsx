@@ -22,7 +22,7 @@ export interface Attention {
   created_at: string
 }
 
-interface SessionExerciseLite { exercise_name?: string; sets?: string; reps?: string; load?: string }
+interface SessionExerciseLite { exercise_id?: string; exercise_name?: string; sets?: string; reps?: string; load?: string }
 interface SessionBlockLite { name?: string; exercises?: SessionExerciseLite[] }
 interface KineSessionData { blocks?: SessionBlockLite[] }
 export interface ScheduledSessionLite {
@@ -211,15 +211,44 @@ export default function AtencionDeHoy({ patientId, userId, initialAttentions = [
     }
   }
 
+  // Peso real por ejercicio (Progresión) — separado del draft de la
+  // prescripción: esto no ajusta el objetivo del plan, queda como historial
+  // en exercise_performance_logs para graficar progresión de peso.
+  const [weights, setWeights] = useState<Record<string, string>>({})
+  const [lastWeights, setLastWeights] = useState<Record<string, number>>({})
+
   const startEdit = () => {
     setDraft(JSON.parse(JSON.stringify(session?.session_data?.blocks ?? [])))
+    setWeights({})
     setEditing(true); setSessionErr(null)
+
+    const exerciseIds = Array.from(new Set(
+      (session?.session_data?.blocks ?? []).flatMap(b => (b.exercises ?? []).map(ex => ex.exercise_id).filter((id): id is string => !!id))
+    ))
+    if (exerciseIds.length > 0) {
+      const supabase = createClient()
+      supabase.from('exercise_performance_logs')
+        .select('exercise_id, weight, scheduled_date')
+        .eq('patient_id', patientId)
+        .in('exercise_id', exerciseIds)
+        .order('scheduled_date', { ascending: false })
+        .then(({ data }) => {
+          const map: Record<string, number> = {}
+          for (const row of (data ?? []) as { exercise_id: string; weight: number | null }[]) {
+            if (row.weight != null && !(row.exercise_id in map)) map[row.exercise_id] = row.weight
+          }
+          setLastWeights(map)
+        })
+    }
   }
-  const cancelEdit = () => { setEditing(false); setDraft(null) }
+  const cancelEdit = () => { setEditing(false); setDraft(null); setWeights({}) }
   const editEx = (bi: number, ei: number, field: 'sets' | 'reps' | 'load', value: string) => {
     setDraft(prev => prev?.map((b, i) => i !== bi ? b : ({
       ...b, exercises: (b.exercises ?? []).map((ex, j) => j !== ei ? ex : ({ ...ex, [field]: value })),
     })) ?? prev)
+  }
+  const editWeight = (bi: number, ei: number, value: string) => {
+    setWeights(prev => ({ ...prev, [`${bi}-${ei}`]: value }))
   }
   const saveSession = async () => {
     if (!session || !draft) return
@@ -233,6 +262,31 @@ export default function AtencionDeHoy({ patientId, userId, initialAttentions = [
       if (!res.ok) throw new Error()
       setSession(s => s ? { ...s, session_data: newData } : s)
       setSessionEdited(true); setEditing(false); setDraft(null)
+
+      if (planId) {
+        const logs = draft.flatMap((b, bi) => (b.exercises ?? []).flatMap((ex, ei) => {
+          const weightStr = weights[`${bi}-${ei}`]
+          const weight = weightStr ? parseFloat(weightStr) : NaN
+          if (!ex.exercise_id || isNaN(weight)) return []
+          return [{
+            patient_id: patientId,
+            plan_id: planId,
+            session_id: session.id,
+            exercise_id: ex.exercise_id,
+            exercise_name: ex.exercise_name ?? 'Ejercicio',
+            scheduled_date: session.scheduled_date,
+            sets: ex.sets ? parseInt(ex.sets) || null : null,
+            reps: ex.reps ? parseInt(ex.reps) || null : null,
+            weight,
+            user_id: userId,
+          }]
+        }))
+        if (logs.length > 0) {
+          const supabase = createClient()
+          await supabase.from('exercise_performance_logs').upsert(logs, { onConflict: 'session_id,exercise_id' })
+        }
+      }
+      setWeights({})
     } catch {
       setSessionErr('No se pudo guardar la sesión')
     } finally {
@@ -491,6 +545,16 @@ export default function AtencionDeHoy({ patientId, userId, initialAttentions = [
                           <span className="text-text-secondary text-[12px]">×</span>
                           <input value={ex.reps ?? ''} onChange={e => editEx(bi, ei, 'reps', e.target.value)} placeholder="reps" className="w-12 bg-bg-secondary border-[0.5px] border-border rounded px-1.5 py-1 text-[12px] text-text-primary text-center" />
                           <input value={ex.load ?? ''} onChange={e => editEx(bi, ei, 'load', e.target.value)} placeholder="carga" className="w-16 bg-bg-secondary border-[0.5px] border-border rounded px-1.5 py-1 text-[12px] text-text-primary text-center" />
+                          {ex.exercise_id && (
+                            <input
+                              type="number" inputMode="decimal" step="0.5"
+                              value={weights[`${bi}-${ei}`] ?? ''}
+                              onChange={e => editWeight(bi, ei, e.target.value)}
+                              placeholder={lastWeights[ex.exercise_id] != null ? `${lastWeights[ex.exercise_id]}kg` : 'peso kg'}
+                              title="Peso real usado hoy — queda en la progresión del ejercicio"
+                              className="w-16 bg-bg-secondary border-[0.5px] border-accent/30 rounded px-1.5 py-1 text-[12px] text-text-primary text-center placeholder:text-text-tertiary"
+                            />
+                          )}
                         </span>
                       ) : (
                         <span className="text-[12.5px] text-text-secondary">{[[ex.sets, ex.reps].filter(Boolean).join(' × '), ex.load].filter(Boolean).join(' · ')}</span>
@@ -503,7 +567,7 @@ export default function AtencionDeHoy({ patientId, userId, initialAttentions = [
             {sessionErr && <div className="text-[12px] text-warning px-3 py-2 border-t-[0.5px] border-border">{sessionErr}</div>}
             {manage && <div className="text-[12px] text-text-secondary px-3 py-2 border-t-[0.5px] border-border" style={{ background: 'rgba(248,113,113,0.08)' }}>Día de manejo de síntomas: no se carga. La progresión del plan no se rompe.</div>}
             <div className="text-[11px] text-text-secondary px-3 py-2 border-t-[0.5px] border-border">
-              {editing ? 'Editás series × reps · carga. Se guarda en la sesión del calendario del plan.' : 'Ajustá la carga acá o abrí el plan para cambios más finos (ejercicios, bloques).'}
+              {editing ? 'Series × reps · carga ajustan el plan hacia adelante. El peso (kg) queda como historial de progresión.' : 'Ajustá la carga acá o abrí el plan para cambios más finos (ejercicios, bloques).'}
             </div>
           </div>
         ) : effPending ? (

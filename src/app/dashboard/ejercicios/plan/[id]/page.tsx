@@ -1,6 +1,7 @@
 import Header from '@/components/Header'
 import Link from 'next/link'
 import PlanEditor from './PlanEditor'
+import ExerciseProgressionChart from './ExerciseProgressionChart'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { verifyPlanAccess } from '@/utils/patient-access'
@@ -37,19 +38,22 @@ export default async function PlanEditorPage({ params }: { params: { id: string 
   let rtsEvals: { id: string; protocol_type: string; created_at: string; evaluation_date: string | null; affected_side: string | null }[] = []
   let dynEvals: { id: string; created_at: string; evaluation_date: string | null }[] = []
   let qEvals: { id: string; questionnaire_type: string; created_at: string; evaluation_date: string | null }[] = []
+  let performanceLogs: { exercise_id: string; exercise_name: string; scheduled_date: string; weight: number | null }[] = []
   if (plan.patient_id) {
-    const [{ data: pt }, { data: evs }, { data: rts }, { data: dyn }, { data: quest }] = await Promise.all([
+    const [{ data: pt }, { data: evs }, { data: rts }, { data: dyn }, { data: quest }, { data: perf }] = await Promise.all([
       supabase.from('patients').select('name').eq('id', plan.patient_id).single(),
       supabase.from('patient_events').select('id, event_date, type, title, note, eva_dolor').eq('patient_id', plan.patient_id).order('event_date', { ascending: true }),
       supabase.from('rts_evaluations').select('id, protocol_type, created_at, evaluation_date, affected_side').eq('patient_id', plan.patient_id).order('created_at', { ascending: true }),
       supabase.from('dynamometer_results').select('id, created_at, evaluation_date').eq('patient_id', plan.patient_id).order('created_at', { ascending: true }),
       supabase.from('questionnaire_results').select('id, questionnaire_type, created_at, evaluation_date').eq('patient_id', plan.patient_id).order('created_at', { ascending: true }),
+      supabase.from('exercise_performance_logs').select('exercise_id, exercise_name, scheduled_date, weight').eq('plan_id', plan.id).order('scheduled_date', { ascending: true }),
     ])
     patientName = pt?.name ?? null
     events = evs ?? []
     rtsEvals = rts ?? []
     dynEvals = dyn ?? []
     qEvals = quest ?? []
+    performanceLogs = perf ?? []
   }
   const backHref = plan.patient_id ? `/dashboard/pacientes/${plan.patient_id}` : '/dashboard/pacientes'
   const backLabel = patientName ? `← Volver a ${patientName}` : '← Volver a Pacientes'
@@ -71,6 +75,12 @@ export default async function PlanEditorPage({ params }: { params: { id: string 
         </div>
 
         <PlanEditor initialPlan={plan} userId={user.id} orgId={orgId} initialEvents={events} rtsEvals={rtsEvals} dynEvals={dynEvals} qEvals={qEvals} />
+
+        {plan.patient_id && (
+          <div className="mt-8">
+            <ExerciseProgressionChart logs={performanceLogs} />
+          </div>
+        )}
       </main>
     </div>
   )
