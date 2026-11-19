@@ -3,7 +3,7 @@ import Link from 'next/link'
 import PatientFichaEditor from './PatientFichaEditor'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
-import { verifyPatientAccess } from '@/utils/patient-access'
+import { verifyPatientAccess, logFichaAccess } from '@/utils/patient-access'
 
 export const metadata = {
   title: 'Ficha Kinésica | Reason',
@@ -19,7 +19,7 @@ export default async function FichaPage({ params }: { params: { id: string, fich
 
   const { data: patient, error: patientError } = await supabase
     .from('patients')
-    .select('id, name')
+    .select('id, name, org_id')
     .eq('id', params.id)
     .single()
 
@@ -32,6 +32,8 @@ export default async function FichaPage({ params }: { params: { id: string, fich
     .single()
 
   if (fichaError || !ficha) redirect(`/dashboard/pacientes/${params.id}`)
+
+  logFichaAccess(ficha.id, patient.id, patient.org_id, user.id)
 
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">

@@ -79,7 +79,7 @@ export default async function AccountPage() {
             </div>
           )}
           {canSeeMetrics && (
-            <div className="p-8 bg-bg-primary flex justify-between items-center">
+            <div className="p-8 bg-bg-primary flex justify-between items-center border-b-[0.5px] border-border">
               <div>
                 <h2 className="text-[16px] font-medium mb-1">Panel de gestión</h2>
                 <p className="text-[13px] text-text-secondary">CRM de pacientes, analítica y métricas del centro</p>
@@ -89,6 +89,20 @@ export default async function AccountPage() {
                 className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium no-underline hover:opacity-90 transition-all active:scale-[0.97]"
               >
                 Ver panel
+              </Link>
+            </div>
+          )}
+          {canSeeMetrics && (
+            <div className="p-8 bg-bg-primary flex justify-between items-center">
+              <div>
+                <h2 className="text-[16px] font-medium mb-1">Auditoría de accesos</h2>
+                <p className="text-[13px] text-text-secondary">Quién accedió a cada ficha clínica y cuándo</p>
+              </div>
+              <Link
+                href="/account/auditoria"
+                className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium no-underline hover:opacity-90 transition-all active:scale-[0.97]"
+              >
+                Ver auditoría
               </Link>
             </div>
           )}

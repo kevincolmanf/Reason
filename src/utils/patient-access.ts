@@ -31,6 +31,21 @@ export async function verifyPatientAccess(patientId: string, userId: string): Pr
 }
 
 /**
+ * Registra en la auditoría que este usuario abrió esta ficha. No es una
+ * condición de acceso: si el insert falla (RLS, tabla no migrada), el error
+ * queda en el resultado sin interrumpir la carga de la página.
+ */
+export async function logFichaAccess(fichaId: string, patientId: string, orgId: string | null, userId: string): Promise<void> {
+  const supabase = createClient()
+  await supabase.from('ficha_access_log').insert({
+    ficha_id: fichaId,
+    patient_id: patientId,
+    org_id: orgId,
+    user_id: userId,
+  })
+}
+
+/**
  * Verifies the current user can access an exercise plan.
  * Covers: plan owner, org member accessing owner's plan, owner accessing member's plan,
  * and two members of the same org.

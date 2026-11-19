@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import FichaClient from './FichaClient'
-import { verifyPatientAccess } from '@/utils/patient-access'
+import { verifyPatientAccess, logFichaAccess } from '@/utils/patient-access'
 
 export const metadata = {
   title: 'Ficha Kinésica | Reason',
@@ -42,6 +42,8 @@ export default async function FichaPage({ params }: { params: { id: string } }) 
     if (!newFicha) redirect('/dashboard/pacientes')
     ficha = newFicha
   }
+
+  logFichaAccess(ficha.id, patient.id, patient.org_id, user.id)
 
   const [{ data: questionnaireResults }, { data: dynamoResults }] = await Promise.all([
     supabase
