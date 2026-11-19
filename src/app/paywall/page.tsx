@@ -2,30 +2,25 @@ import Link from 'next/link'
 
 const FEATURES_INDIVIDUAL = [
   'Hasta 20 pacientes',
+  'Agenda de turnos, recordatorios por WhatsApp y seguimiento de ausencias',
   'Constructor de planes con 1800+ ejercicios en video',
   'Monitoreo de carga sesión a sesión',
   'Protocolo RTS integrado al historial del paciente',
   'Ficha kinésica digital exportable a PDF',
-  'Calendario de sesiones por paciente',
   'Cuestionarios validados (NDI, DASH, Oswestry y más)',
   'Biblioteca clínica completa',
 ]
 
 const FEATURES_PRO_BASE = [
-  'Todo lo del plan individual incluido',
+  'Todo lo del plan Individual incluido',
   'Pacientes ilimitados con historial permanente',
-]
-
-const FEATURES_PRO_AGENDA = [
-  'Agenda de turnos integrada',
-  'Recordatorios por WhatsApp con un click',
-  'Vista semanal de agenda por profesional',
 ]
 
 const FEATURES_PRO_TEAM = [
   'Pacientes y planes compartidos entre profesionales',
-  'Historial permanente del equipo',
-  'Control de acceso por profesional',
+  'Control de acceso y agenda por profesional',
+  'Caja diaria y chat del equipo',
+  'Panel de gestión y auditoría de accesos',
 ]
 
 export default function PaywallPage() {
@@ -48,7 +43,7 @@ export default function PaywallPage() {
             Elegí tu plan
           </h1>
           <p className="text-[17px] text-text-secondary max-w-[560px] mx-auto leading-[1.5]">
-            Acceso completo a todas las herramientas clínicas. El Plan Pro agrega equipo y historial ilimitado — nunca perdés datos de un paciente.
+            Acceso completo a todas las herramientas clínicas, agenda incluida. El Plan Pro suma trabajar en equipo: pacientes compartidos, historial ilimitado y gestión del centro.
           </p>
         </div>
 
@@ -121,10 +116,10 @@ export default function PaywallPage() {
             <div className="mb-6">
               <p className="text-[12px] uppercase tracking-[0.08em] text-text-secondary mb-3">Pro · Equipos y Centros</p>
               <div className="flex items-end gap-2 mb-1">
-                <span className="text-[42px] font-medium tracking-[-0.02em] leading-none">$150.000</span>
+                <span className="text-[42px] font-medium tracking-[-0.02em] leading-none">$53.900</span>
                 <span className="text-[14px] text-text-secondary mb-1">/ mes</span>
               </div>
-              <p className="text-[13px] text-text-secondary">Usuarios ilimitados · $1.350.000 / año</p>
+              <p className="text-[13px] text-text-secondary">Usuarios ilimitados · $449.900 / año</p>
             </div>
 
             <div className="flex flex-col gap-2 mb-8">
@@ -151,17 +146,6 @@ export default function PaywallPage() {
                   </li>
                 ))}
               </ul>
-              <div>
-                <p className="text-[11px] font-medium text-text-tertiary uppercase tracking-[0.04em] mb-2">Agenda</p>
-                <ul className="space-y-3">
-                  {FEATURES_PRO_AGENDA.map(f => (
-                    <li key={f} className="flex items-start gap-2.5 text-[13px] text-text-secondary">
-                      <span className="text-accent mt-0.5 shrink-0">✓</span>
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-              </div>
               <div>
                 <p className="text-[11px] font-medium text-text-tertiary uppercase tracking-[0.04em] mb-2">Modo equipo</p>
                 <ul className="space-y-3">
