@@ -4,7 +4,7 @@ import { useState, useTransition, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { switchContext } from '@/app/actions/context'
 import type { ActiveContext } from '@/lib/context'
-import { workspaceSubtitle, type WorkspaceKind } from '@/lib/context/describe'
+import { workspaceSubtitle, WORKSPACE_GROUPS, type WorkspaceKind } from '@/lib/context/describe'
 
 export interface AvailableContext {
   type: 'personal' | 'org'
@@ -95,33 +95,41 @@ export default function ContextBadge({ current, currentLabel, available }: Props
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1.5 w-64 bg-bg-primary border-[0.5px] border-border rounded-xl shadow-lg py-2 z-30">
-          <p className="px-3 pt-1 pb-2 text-[10px] uppercase tracking-wider text-text-tertiary">
-            En qué workspace trabajás
-          </p>
-          {available.map(ctx => {
-            const isActive = ctx.type === current.type && ctx.orgId === current.orgId
+        <div className="absolute right-0 top-full mt-1.5 w-64 bg-bg-primary border-[0.5px] border-border rounded-xl shadow-lg py-2 z-30 max-h-[70vh] overflow-y-auto">
+          {WORKSPACE_GROUPS.map(({ key, label, kinds }) => {
+            const items = available.filter(a => kinds.includes(a.kind))
+            if (items.length === 0) return null
             return (
-              <button
-                key={ctx.orgId ?? 'personal'}
-                onClick={() => !isActive && handleSwitch(ctx)}
-                className={`w-full text-left px-3 py-2.5 flex items-start gap-2.5 transition-colors ${
-                  isActive ? 'cursor-default bg-bg-secondary' : 'hover:bg-bg-secondary'
-                }`}
-              >
-                <span className={`mt-0.5 shrink-0 ${ctx.kind === 'personal' ? 'text-text-secondary' : 'text-accent'}`}>
-                  <WorkspaceIcon kind={ctx.kind} />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className={`block text-[13px] font-medium truncate ${isActive ? 'text-accent' : 'text-text-primary'}`}>
-                    {ctx.label}
-                  </span>
-                  <span className="block text-[11px] text-text-tertiary leading-snug">
-                    {workspaceSubtitle(ctx.kind)}
-                  </span>
-                </span>
-                {isActive && <span className="text-[11px] text-accent shrink-0 mt-0.5">✓</span>}
-              </button>
+              <div key={key} className="mb-1 last:mb-0">
+                <p className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wider text-text-tertiary">
+                  {label}
+                </p>
+                {items.map(ctx => {
+                  const isActive = ctx.type === current.type && ctx.orgId === current.orgId
+                  return (
+                    <button
+                      key={ctx.orgId ?? 'personal'}
+                      onClick={() => !isActive && handleSwitch(ctx)}
+                      className={`w-full text-left px-3 py-2.5 flex items-start gap-2.5 transition-colors ${
+                        isActive ? 'cursor-default bg-bg-secondary' : 'hover:bg-bg-secondary'
+                      }`}
+                    >
+                      <span className={`mt-0.5 shrink-0 ${ctx.kind === 'personal' ? 'text-text-secondary' : 'text-accent'}`}>
+                        <WorkspaceIcon kind={ctx.kind} />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className={`block text-[13px] font-medium truncate ${isActive ? 'text-accent' : 'text-text-primary'}`}>
+                          {ctx.label}
+                        </span>
+                        <span className="block text-[11px] text-text-tertiary leading-snug">
+                          {workspaceSubtitle(ctx.kind)}
+                        </span>
+                      </span>
+                      {isActive && <span className="text-[11px] text-accent shrink-0 mt-0.5">✓</span>}
+                    </button>
+                  )
+                })}
+              </div>
             )
           })}
           <p className="px-3 pt-2 mt-1 border-t-[0.5px] border-border text-[11px] text-text-tertiary leading-snug">

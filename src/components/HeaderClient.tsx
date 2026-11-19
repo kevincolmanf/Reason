@@ -8,7 +8,7 @@ import type { ActiveContext } from '@/lib/context'
 import type { AvailableContext } from './ContextBadge'
 import GuideTour, { type GuideState } from './GuideTour'
 import { guideForPath } from '@/lib/guides'
-import { workspaceSubtitle } from '@/lib/context/describe'
+import { workspaceSubtitle, WORKSPACE_GROUPS } from '@/lib/context/describe'
 
 interface Props {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -179,22 +179,31 @@ export default function HeaderClient({ userMetadata, hasAgendaAccess, canSeePane
                 <span className="truncate">{isPending ? '…' : (currentLabel ?? 'Workspace')}</span>
                 <span className="text-[10px] opacity-40 ml-1">{showWorkspaces ? '▴' : '▾'}</span>
               </button>
-              {showWorkspaces && available?.map(avail => {
-                const isActive = avail.type === ctx?.type && avail.orgId === ctx?.orgId
+              {showWorkspaces && WORKSPACE_GROUPS.map(({ key, label, kinds }) => {
+                const items = (available ?? []).filter(a => kinds.includes(a.kind))
+                if (items.length === 0) return null
                 return (
-                  <button
-                    key={avail.orgId ?? 'personal'}
-                    onClick={() => !isActive && handleSwitch(avail)}
-                    className={`w-full text-left px-6 py-2 transition-colors flex items-start justify-between gap-2 ${
-                      isActive ? 'cursor-default bg-bg-secondary' : 'hover:bg-bg-secondary'
-                    }`}
-                  >
-                    <span className="min-w-0 flex-1">
-                      <span className={`block text-[13px] truncate ${isActive ? 'text-accent' : 'text-text-primary'}`}>{avail.label}</span>
-                      <span className="block text-[11px] text-text-tertiary leading-snug">{workspaceSubtitle(avail.kind)}</span>
-                    </span>
-                    {isActive && <span className="text-[10px] text-accent shrink-0 mt-0.5">✓</span>}
-                  </button>
+                  <div key={key}>
+                    <p className="px-6 pt-2 pb-1 text-[10px] uppercase tracking-wider text-text-tertiary">{label}</p>
+                    {items.map(avail => {
+                      const isActive = avail.type === ctx?.type && avail.orgId === ctx?.orgId
+                      return (
+                        <button
+                          key={avail.orgId ?? 'personal'}
+                          onClick={() => !isActive && handleSwitch(avail)}
+                          className={`w-full text-left px-6 py-2 transition-colors flex items-start justify-between gap-2 ${
+                            isActive ? 'cursor-default bg-bg-secondary' : 'hover:bg-bg-secondary'
+                          }`}
+                        >
+                          <span className="min-w-0 flex-1">
+                            <span className={`block text-[13px] truncate ${isActive ? 'text-accent' : 'text-text-primary'}`}>{avail.label}</span>
+                            <span className="block text-[11px] text-text-tertiary leading-snug">{workspaceSubtitle(avail.kind)}</span>
+                          </span>
+                          {isActive && <span className="text-[10px] text-accent shrink-0 mt-0.5">✓</span>}
+                        </button>
+                      )
+                    })}
+                  </div>
                 )
               })}
             </div>
