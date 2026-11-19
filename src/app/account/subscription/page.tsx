@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { cancelSubscription } from './actions'
 import Header from '@/components/Header'
+import OveragePanel from './OveragePanel'
 
 export default async function SubscriptionPage() {
   const supabase = createClient()
@@ -141,14 +142,7 @@ export default async function SubscriptionPage() {
           </div>
         </div>
 
-        {showOveragePanel && (
-          <div className="bg-bg-secondary rounded-xl border-[0.5px] border-border overflow-hidden mb-8 p-8">
-            <h2 className="text-[16px] font-medium mb-1">Pacientes extra</h2>
-            <p className="text-[13px] text-text-secondary">
-              Estamos por lanzar la opción de sumar pacientes extra a tu plan por un pequeño recargo. Todavía no está disponible — en breve vas a poder activarla desde acá.
-            </p>
-          </div>
-        )}
+        {showOveragePanel && <OveragePanel activeBlocksCount={activeBlocksCount} />}
 
         <p className="text-[13px] text-text-tertiary">
           Si tenés problemas con tu pago o suscripción, contactá a soporte.
