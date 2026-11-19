@@ -42,11 +42,13 @@ export default async function Header() {
       getActiveContext(user.id, supabase),
       supabase.from('organizations').select('id, name').eq('owner_id', user.id),
       supabase.from('organization_members').select('org_id, agenda_access, can_register_cash, organizations(id, name)').eq('user_id', user.id),
-      supabase.from('users').select('role').eq('id', user.id).single(),
+      supabase.from('users').select('role, trial_expires_at').eq('id', user.id).single(),
     ])
 
     ctx = activeCtx
     const role = userDataResult.data?.role
+    const trialExpiresAt = userDataResult.data?.trial_expires_at
+    const trialActive = trialExpiresAt ? new Date(trialExpiresAt) > new Date() : false
     const isOrgCtx = ctx.type === 'org' && !!ctx.orgId
 
     type MemberRow = { org_id: string; agenda_access: boolean | null; can_register_cash: boolean | null; organizations: { id: string; name: string } | null }
@@ -90,8 +92,9 @@ export default async function Header() {
         hasAgendaAccess = myMemberRow?.agenda_access ?? false
         agendaBlockedReason = 'member'
       }
-    } else if (role === 'pro' || role === 'admin') {
-      // Contexto personal (sin org): agenda propia para pro/admin.
+    } else if (role === 'pro' || role === 'admin' || role === 'subscriber' || trialActive) {
+      // Contexto personal (sin org): agenda propia — parte del plan Individual
+      // desde la auditoría de planes del 19/11/2026.
       hasAgendaAccess = true
     }
 
@@ -140,7 +143,7 @@ export default async function Header() {
             <div className="relative group hidden lg:inline-block">
               <span className="text-[13px] sm:text-[14px] text-[#c47c5a] cursor-default select-none">Agenda</span>
               <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-2.5 py-1.5 bg-bg-secondary border-[0.5px] border-border rounded-lg text-[11px] text-text-secondary whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 shadow-lg">
-                {agendaBlockedReason === 'member' ? 'Sin acceso habilitado' : 'Disponible en Plan Pro'}
+                {agendaBlockedReason === 'member' ? 'Sin acceso habilitado' : 'Suscribite para activarla'}
               </div>
             </div>
           )}

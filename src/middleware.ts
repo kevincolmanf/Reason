@@ -116,11 +116,11 @@ export async function middleware(request: NextRequest) {
 
   // Rutas que requieren suscripción activa (o trial vigente)
   // /dashboard/ejercicios/plan y /calendario son accesibles para free (hasta 3 pacientes)
-  const subscriberRoutes = ['/library', '/content', '/recursos', '/ficha', '/dashboard/ejercicios/biblioteca']
-
-  // Rutas exclusivas para Pro/admin o miembros de org (agenda)
-  const proRoutes = ['/dashboard/agenda']
-  const isProRoute = proRoutes.some(route => pathname.startsWith(route))
+  // Agenda es parte del plan Individual desde la auditoría de planes del
+  // 19/11/2026 — antes era exclusiva de Pro/equipo (ver supabase_* y el commit
+  // de esa fecha para el detalle). Ya no hay rutas exclusivas de Pro aparte de
+  // /account/equipo (ver isEquipoRoute más abajo).
+  const subscriberRoutes = ['/library', '/content', '/recursos', '/ficha', '/dashboard/ejercicios/biblioteca', '/dashboard/agenda']
   const isSubscriberRoute = subscriberRoutes.some(route => pathname.startsWith(route))
 
   // Módulos avanzados dentro del dashboard de pacientes — bloqueados para free sin trial.
@@ -148,7 +148,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // 2. Si está logueado → verificar acceso para rutas premium y admin
-  if (user && (isSubscriberRoute || isProRoute || isAdvancedModule || isAdminRoute || isEquipoRoute) && !isFreeContent) {
+  if (user && (isSubscriberRoute || isAdvancedModule || isAdminRoute || isEquipoRoute) && !isFreeContent) {
     const { data: userData } = await supabase
       .from('users')
       .select('role, trial_expires_at')
@@ -175,7 +175,6 @@ export async function middleware(request: NextRequest) {
     }
 
     const isActive = role === 'subscriber' || role === 'admin' || role === 'pro' || trialActive || isOrgMember
-    const isProActive = role === 'admin' || role === 'pro' || isOrgMember
 
     if (isAdminRoute && role !== 'admin') {
       const url = request.nextUrl.clone()
@@ -191,12 +190,6 @@ export async function middleware(request: NextRequest) {
     }
 
     if ((isSubscriberRoute || isAdvancedModule) && !isActive) {
-      const url = request.nextUrl.clone()
-      url.pathname = '/paywall'
-      return withCleanup(NextResponse.redirect(url))
-    }
-
-    if (isProRoute && !isProActive) {
       const url = request.nextUrl.clone()
       url.pathname = '/paywall'
       return withCleanup(NextResponse.redirect(url))

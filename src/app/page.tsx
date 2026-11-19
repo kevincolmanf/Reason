@@ -77,7 +77,7 @@ export default function LandingPage({
               </div>
               <ul className="list-none">
                 <li className="py-4 text-[15px] text-text-primary border-b-[0.5px] border-border">
-                  Agenda integrada con recordatorios por WhatsApp en un click <span className="text-[12px] text-accent">(Pro)</span>
+                  Agenda integrada con recordatorios por WhatsApp en un click
                 </li>
                 <li className="py-4 text-[15px] text-text-primary border-b-[0.5px] border-border">
                   Planes con 1800+ ejercicios en video y feedback en tiempo real
@@ -109,14 +109,13 @@ export default function LandingPage({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Agenda */}
             <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-8">
-              <div className="h-[48px] mb-5 flex items-center justify-between text-accent">
+              <div className="h-[48px] mb-5 flex items-center justify-start text-accent">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
                   <line x1="16" y1="2" x2="16" y2="6"></line>
                   <line x1="8" y1="2" x2="8" y2="6"></line>
                   <line x1="3" y1="10" x2="21" y2="10"></line>
                 </svg>
-                <span className="text-[10px] font-medium text-accent border-[0.5px] border-accent rounded px-2 py-0.5 tracking-[0.04em] uppercase">Pro</span>
               </div>
               <h3 className="text-[17px] font-medium mb-3 text-text-primary">Agenda de turnos</h3>
               <p className="text-[14px] text-text-secondary leading-[1.55]">
@@ -265,167 +264,42 @@ export default function LandingPage({
       {/* Contenido clínico — sample article */}
       <section className="py-[96px] bg-bg-secondary">
         <div className="w-full max-w-[1080px] mx-auto px-8">
-          <div className="mb-16 max-w-[720px]">
-            <h2 className="text-[40px] font-medium tracking-[-0.02em] leading-[1.15] mb-4">
-              Y además: contenido clínico que te hace pensar mejor.
-            </h2>
-            <p className="text-[18px] text-text-secondary leading-[1.5]">
-              Artículos de 2-3 minutos con criterio clínico aplicado. Diseñados para leer entre paciente y paciente. Con árboles de decisión cuando ayudan a pensar mejor que el texto.
-            </p>
-          </div>
-
-          <div className="bg-bg-primary border-[0.5px] border-border rounded-2xl p-12 mt-8">
-            <div className="flex gap-2 mb-6 flex-wrap">
-              <span className="bg-bg-secondary text-text-secondary text-[12px] py-[6px] px-3 rounded-md">
-                Aplicación clínica
-              </span>
-              <span className="bg-bg-secondary text-text-secondary text-[12px] py-[6px] px-3 rounded-md">
-                Lumbar
-              </span>
-              <span className="bg-bg-secondary text-text-secondary text-[12px] py-[6px] px-3 rounded-md">
-                3 min de lectura
-              </span>
-            </div>
-
-            <h3 className="text-[28px] font-medium leading-[1.2] mb-2 tracking-[-0.01em]">
-              Dolor lumbar inespecífico en primera consulta
-            </h3>
-            <p className="text-[18px] text-text-secondary mb-8">
-              Qué descartar y qué hacer
-            </p>
-
-            <div className="text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em] mt-8 mb-3">
-              Qué tenés que saber
-            </div>
-            <ul className="list-none mb-2">
-              <li className="py-[6px] pl-4 text-[15px] leading-[1.6] relative before:content-['·'] before:absolute before:left-0 before:text-text-secondary">
-                El 90% de las consultas por dolor lumbar son inespecíficas. No hay
-                estructura responsable y eso está bien.
-              </li>
-              <li className="py-[6px] pl-4 text-[15px] leading-[1.6] relative before:content-['·'] before:absolute before:left-0 before:text-text-secondary">
-                Las banderas rojas son raras pero hay que descartarlas siempre.
-              </li>
-              <li className="py-[6px] pl-4 text-[15px] leading-[1.6] relative before:content-['·'] before:absolute before:left-0 before:text-text-secondary">
-                La irradiación con déficit cambia el manejo, no lo invalida.
-              </li>
-              <li className="py-[6px] pl-4 text-[15px] leading-[1.6] relative before:content-['·'] before:absolute before:left-0 before:text-text-secondary">
-                Lo que más mejora el cuadro es lo más simple: educación, movimiento,
-                tiempo.
-              </li>
-            </ul>
-
-            <div className="text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em] mt-8 mb-3">
-              Interpretación clínica
-            </div>
-            <p className="text-[15px] leading-[1.65] mb-3">
-              Llega un paciente con resonancia de hace una semana. Trae la palabra
-              &quot;protrusión&quot; subrayada y los ojos lavados de tres noches sin dormir. Lo
-              más útil que vas a hacer en esa consulta probablemente no sea lo que
-              vino a buscar.
-            </p>
-            <p className="text-[15px] leading-[1.65] mb-3">
-              El dolor lumbar inespecífico es la categoría diagnóstica más
-              subestimada de la práctica musculoesquelética. &quot;Inespecífico&quot; suena a
-              &quot;no sabemos lo que tiene&quot;. En realidad significa otra cosa: no hay una
-              estructura claramente identificable como causa, y la evidencia muestra
-              que buscarla en exceso empeora los resultados clínicos. La resonancia no
-              predice mejor el pronóstico que una buena conversación.
-            </p>
-
-            <div className="bg-bg-secondary rounded-xl p-8 my-4">
-              <div className="text-[11px] font-medium text-text-secondary tracking-[0.05em] uppercase mb-1">
-                Aplicación práctica
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
+            <div>
+              <div className="text-[11px] font-medium text-accent tracking-[0.05em] uppercase mb-4">
+                De regalo, apenas entrás
               </div>
-              <div className="text-[13px] text-text-tertiary mb-6">
-                Árbol de decisión clínica
-              </div>
-              <svg viewBox="0 0 600 720" width="100%" className="block">
-                <defs>
-                  <marker
-                    id="chev"
-                    viewBox="0 0 10 10"
-                    refX="8"
-                    refY="5"
-                    markerWidth="6"
-                    markerHeight="6"
-                    orient="auto-start-reverse"
-                  >
-                    <path d="M2 1L8 5L2 9" fill="none" stroke="var(--color-text-primary)" strokeWidth="1" strokeLinecap="round" />
-                  </marker>
-                </defs>
-                <rect x="200" y="20" width="200" height="56" rx="8" fill="var(--color-bg-primary)" stroke="var(--color-border-strong)" strokeWidth="0.5" />
-                <text x="300" y="44" fontFamily="Geist, sans-serif" fontSize="14" fontWeight="500" fill="var(--color-text-primary)" textAnchor="middle">Paciente con dolor lumbar</text>
-                <text x="300" y="62" fontFamily="Geist, sans-serif" fontSize="12" fontWeight="400" fill="var(--color-text-secondary)" textAnchor="middle">Primera consulta</text>
-                <line x1="300" y1="76" x2="300" y2="120" stroke="var(--color-text-primary)" strokeWidth="1" markerEnd="url(#chev)" />
-                <rect x="180" y="120" width="240" height="56" rx="8" fill="var(--color-bg-primary)" stroke="var(--color-border-strong)" strokeWidth="0.5" />
-                <text x="300" y="144" fontFamily="Geist, sans-serif" fontSize="14" fontWeight="500" fill="var(--color-text-primary)" textAnchor="middle">¿Hay banderas rojas?</text>
-                <text x="300" y="162" fontFamily="Geist, sans-serif" fontSize="12" fontWeight="400" fill="var(--color-text-secondary)" textAnchor="middle">Trauma, fiebre, déficit, edad</text>
-                <text x="155" y="190" fontFamily="Geist, sans-serif" fontSize="11" fontWeight="400" fill="var(--color-text-secondary)" textAnchor="middle">Sí</text>
-                <line x1="240" y1="176" x2="135" y2="220" stroke="var(--color-text-primary)" strokeWidth="1" markerEnd="url(#chev)" />
-                <text x="445" y="190" fontFamily="Geist, sans-serif" fontSize="11" fontWeight="400" fill="var(--color-text-secondary)" textAnchor="middle">No</text>
-                <line x1="360" y1="176" x2="465" y2="220" stroke="var(--color-text-primary)" strokeWidth="1" markerEnd="url(#chev)" />
-                <rect x="40" y="220" width="200" height="56" rx="8" fill="var(--color-bg-primary)" stroke="var(--color-warning)" strokeWidth="0.5" />
-                <text x="140" y="244" fontFamily="Geist, sans-serif" fontSize="14" fontWeight="500" fill="var(--color-text-primary)" textAnchor="middle">Derivar a médico</text>
-                <text x="140" y="262" fontFamily="Geist, sans-serif" fontSize="12" fontWeight="400" fill="var(--color-text-secondary)" textAnchor="middle">No iniciar kinesiología sola</text>
-                <rect x="360" y="220" width="200" height="56" rx="8" fill="var(--color-bg-primary)" stroke="var(--color-border-strong)" strokeWidth="0.5" />
-                <text x="460" y="244" fontFamily="Geist, sans-serif" fontSize="14" fontWeight="500" fill="var(--color-text-primary)" textAnchor="middle">¿Hay irradiación neuro?</text>
-                <text x="460" y="262" fontFamily="Geist, sans-serif" fontSize="12" fontWeight="400" fill="var(--color-text-secondary)" textAnchor="middle">Déficit motor, sensitivo</text>
-                <text x="355" y="295" fontFamily="Geist, sans-serif" fontSize="11" fontWeight="400" fill="var(--color-text-secondary)" textAnchor="middle">Sí</text>
-                <line x1="420" y1="276" x2="320" y2="328" stroke="var(--color-text-primary)" strokeWidth="1" markerEnd="url(#chev)" />
-                <text x="505" y="350" fontFamily="Geist, sans-serif" fontSize="11" fontWeight="400" fill="var(--color-text-secondary)" textAnchor="middle">No</text>
-                <line x1="495" y1="276" x2="495" y2="430" stroke="var(--color-text-primary)" strokeWidth="1" markerEnd="url(#chev)" />
-                <rect x="200" y="328" width="240" height="56" rx="8" fill="var(--color-bg-primary)" stroke="var(--color-border-strong)" strokeWidth="0.5" />
-                <text x="320" y="352" fontFamily="Geist, sans-serif" fontSize="14" fontWeight="500" fill="var(--color-text-primary)" textAnchor="middle">Evaluar y monitorear déficit</text>
-                <text x="320" y="370" fontFamily="Geist, sans-serif" fontSize="12" fontWeight="400" fill="var(--color-text-secondary)" textAnchor="middle">Co-manejo con médico</text>
-                <rect x="380" y="430" width="220" height="56" rx="8" fill="rgba(194,90,44,0.08)" stroke="var(--color-accent)" strokeWidth="0.5" />
-                <text x="490" y="454" fontFamily="Geist, sans-serif" fontSize="14" fontWeight="500" fill="var(--color-text-primary)" textAnchor="middle">Dolor lumbar inespecífico</text>
-                <text x="490" y="472" fontFamily="Geist Mono, monospace" fontSize="12" fontWeight="400" fill="var(--color-text-secondary)" textAnchor="middle">≈90% de los casos</text>
-                <line x1="490" y1="486" x2="490" y2="540" stroke="var(--color-text-primary)" strokeWidth="1" markerEnd="url(#chev)" />
-                <rect x="320" y="540" width="280" height="80" rx="8" fill="rgba(194,90,44,0.08)" stroke="var(--color-accent)" strokeWidth="0.5" />
-                <text x="460" y="566" fontFamily="Geist, sans-serif" fontSize="14" fontWeight="500" fill="var(--color-text-primary)" textAnchor="middle">Educación + movimiento + tiempo</text>
-                <text x="460" y="588" fontFamily="Geist, sans-serif" fontSize="12" fontWeight="400" fill="var(--color-text-secondary)" textAnchor="middle">Tranquilizar, evitar reposo</text>
-                <text x="460" y="606" fontFamily="Geist, sans-serif" fontSize="12" fontWeight="400" fill="var(--color-text-secondary)" textAnchor="middle">Volver a actividad gradual</text>
-                <line x1="460" y1="620" x2="460" y2="660" stroke="var(--color-text-primary)" strokeWidth="1" markerEnd="url(#chev)" />
-                <rect x="320" y="660" width="280" height="56" rx="8" fill="var(--color-bg-primary)" stroke="var(--color-border-strong)" strokeWidth="0.5" />
-                <text x="460" y="684" fontFamily="Geist, sans-serif" fontSize="14" fontWeight="500" fill="var(--color-text-primary)" textAnchor="middle">{'¿Persiste > 6 semanas?'}</text>
-                <text x="460" y="702" fontFamily="Geist, sans-serif" fontSize="12" fontWeight="400" fill="var(--color-text-secondary)" textAnchor="middle">Reconsiderar factores contextuales</text>
-              </svg>
-            </div>
-
-            <div className="text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em] mt-8 mb-3">
-              Qué evitar
-            </div>
-            <ul className="list-none mb-2">
-              <li className="py-[6px] pl-4 text-[15px] leading-[1.6] relative before:content-['·'] before:absolute before:left-0 before:text-text-secondary">
-                Pedir resonancia de entrada en ausencia de banderas rojas. Es la
-                decisión que más cronifica casos.
-              </li>
-              <li className="py-[6px] pl-4 text-[15px] leading-[1.6] relative before:content-['·'] before:absolute before:left-0 before:text-text-secondary">
-                Tratar el dolor lumbar inespecífico como si fuera siempre lo mismo.
-              </li>
-              <li className="py-[6px] pl-4 text-[15px] leading-[1.6] relative before:content-['·'] before:absolute before:left-0 before:text-text-secondary">
-                Tranquilizar sin marco. &quot;No tenés nada&quot; deja al paciente con dolor real
-                y sin explicación.
-              </li>
-            </ul>
-
-            <div className="border-l-[3px] border-text-primary py-4 px-6 mt-8 bg-bg-secondary">
-              <div className="text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em] mb-2">
-                Conclusión accionable
-              </div>
-              <p className="text-[18px] leading-[1.5] font-medium">
-                En dolor lumbar inespecífico, el primer movimiento clínico no es buscar la causa. Es ordenar la conversación.
+              <h2 className="text-[40px] font-medium tracking-[-0.02em] leading-[1.15] mb-4">
+                Una biblioteca clínica completa.
+              </h2>
+              <p className="text-[18px] text-text-secondary leading-[1.5] mb-8">
+                Resúmenes comentados y aplicaciones clínicas de 2-3 minutos, con criterio aplicado — no relleno. Pensados para leer entre paciente y paciente, con árboles de decisión cuando ayudan a pensar mejor que el texto.
               </p>
+              <a
+                href="/login"
+                className="bg-accent text-bg-primary py-[16px] px-8 rounded-[10px] text-[15px] font-medium no-underline inline-block"
+              >
+                Entrar y ver la biblioteca
+              </a>
             </div>
-          </div>
 
-          <div className="text-center mt-12">
-            <a
-              href="/login"
-              className="bg-accent text-bg-primary py-[18px] px-9 rounded-[10px] text-[16px] font-medium no-underline inline-block"
-            >
-              Acceder al catálogo completo
-            </a>
+            <div className="bg-bg-primary border-[0.5px] border-border rounded-2xl p-8">
+              <div className="text-[11px] font-medium text-text-secondary uppercase tracking-[0.05em] mb-5">
+                Algunos de los títulos
+              </div>
+              <ul className="list-none space-y-4">
+                {[
+                  'Dolor lumbar inespecífico: qué descartar y qué hacer en primera consulta',
+                  'Aprendizaje motor: que hoy salga bien no significa que haya aprendido',
+                  '¿Qué tan confiable es diagnosticar puntos gatillo con palpación?',
+                  '¿Cuándo se lesionan los isquios durante el sprint? Lo que muestra la evidencia',
+                ].map(title => (
+                  <li key={title} className="text-[14px] text-text-primary leading-[1.5] pb-4 border-b-[0.5px] border-border last:border-0 last:pb-0">
+                    {title}
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
       </section>
@@ -460,7 +334,7 @@ export default function LandingPage({
               Planes para cada práctica.
             </h2>
             <p className="text-[18px] text-text-secondary leading-[1.5]">
-              El plan individual es completo para un profesional independiente. El Pro agrega la capa de equipo y agenda para centros que trabajan con varios profesionales.
+              El plan Individual es completo para un profesional independiente, agenda incluida. El Pro agrega la capa de equipo para centros que trabajan con varios profesionales.
             </p>
           </div>
 
@@ -477,6 +351,9 @@ export default function LandingPage({
                 </div>
                 <div className="font-mono text-[13px] text-text-secondary mb-6">Hasta 20 pacientes · cancelás cuando querés</div>
                 <ul className="list-none mb-8 space-y-[10px]">
+                  <li className="text-[13px] text-text-secondary flex items-start gap-2">
+                    <span className="text-accent mt-[1px]">✓</span> Agenda, recordatorios por WhatsApp y seguimiento de ausencias
+                  </li>
                   <li className="text-[13px] text-text-secondary flex items-start gap-2">
                     <span className="text-accent mt-[1px]">✓</span> Constructor de planes con 1800+ ejercicios en video
                   </li>
@@ -543,36 +420,36 @@ export default function LandingPage({
                 <div>
                   <div className="text-[12px] font-medium text-text-secondary uppercase tracking-[0.05em] mb-2">Pro · Centros</div>
                   <div className="font-mono text-[36px] font-medium text-text-primary mb-1 tracking-[-0.02em]">
-                    <span className="text-[18px] text-text-secondary font-normal">ARS</span> 150.000<span className="text-[16px] text-text-secondary font-normal"> /mes</span>
+                    <span className="text-[18px] text-text-secondary font-normal">ARS</span> 53.900<span className="text-[16px] text-text-secondary font-normal"> /mes</span>
                   </div>
                   <div className="font-mono text-[13px] text-text-secondary mb-8">Pacientes ilimitados · todos los profesionales del centro incluidos</div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-[10px]">
                     <div>
-                      <div className="text-[11px] font-medium text-text-tertiary uppercase tracking-[0.04em] mb-3">Todo lo del plan individual, más:</div>
-                      <ul className="list-none space-y-[10px]">
-                        <li className="text-[13px] text-text-secondary flex items-start gap-2">
-                          <span className="text-accent mt-[1px]">✓</span> Agenda de turnos integrada
-                        </li>
-                        <li className="text-[13px] text-text-secondary flex items-start gap-2">
-                          <span className="text-accent mt-[1px]">✓</span> Recordatorios por WhatsApp con un click
-                        </li>
-                        <li className="text-[13px] text-text-secondary flex items-start gap-2">
-                          <span className="text-accent mt-[1px]">✓</span> Vista semanal de agenda por profesional
-                        </li>
-                      </ul>
-                    </div>
-                    <div>
-                      <div className="text-[11px] font-medium text-text-tertiary uppercase tracking-[0.04em] mb-3">Funciones de equipo:</div>
+                      <div className="text-[11px] font-medium text-text-tertiary uppercase tracking-[0.04em] mb-3">Todo lo del plan Individual, más:</div>
                       <ul className="list-none space-y-[10px]">
                         <li className="text-[13px] text-text-secondary flex items-start gap-2">
                           <span className="text-accent mt-[1px]">✓</span> Pacientes y planes compartidos entre profesionales
                         </li>
                         <li className="text-[13px] text-text-secondary flex items-start gap-2">
-                          <span className="text-accent mt-[1px]">✓</span> Historial permanente del equipo
+                          <span className="text-accent mt-[1px]">✓</span> Agenda propia para cada profesional del equipo
                         </li>
                         <li className="text-[13px] text-text-secondary flex items-start gap-2">
+                          <span className="text-accent mt-[1px]">✓</span> Historial permanente del equipo
+                        </li>
+                      </ul>
+                    </div>
+                    <div>
+                      <div className="text-[11px] font-medium text-text-tertiary uppercase tracking-[0.04em] mb-3">Gestión del centro:</div>
+                      <ul className="list-none space-y-[10px]">
+                        <li className="text-[13px] text-text-secondary flex items-start gap-2">
                           <span className="text-accent mt-[1px]">✓</span> Control de acceso por profesional
+                        </li>
+                        <li className="text-[13px] text-text-secondary flex items-start gap-2">
+                          <span className="text-accent mt-[1px]">✓</span> Caja diaria y chat del equipo
+                        </li>
+                        <li className="text-[13px] text-text-secondary flex items-start gap-2">
+                          <span className="text-accent mt-[1px]">✓</span> Panel de gestión y auditoría de accesos
                         </li>
                       </ul>
                     </div>
