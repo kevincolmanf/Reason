@@ -9,6 +9,16 @@ import { PLAN_CONFIG } from '@/lib/planConfig'
 const BLOCK_SIZE = 10
 const BLOCK_USD = 5
 
+// Pausa temporal: el mecanismo (preApproval.update de auto_recurring.transaction_amount)
+// está implementado siguiendo la documentación oficial de Mercado Pago y el mismo
+// patrón que ya usa cancelSubscription en producción, pero todavía no se pudo
+// confirmar de punta a punta contra Mercado Pago real (el sandbox de ellos falló
+// repetidamente armando el par vendedor/comprador de prueba). Hasta tener esa
+// confirmación real, el server action corta acá — nadie puede disparar un cargo
+// sin que esto se haya verificado primero. Sacar este flag (y el aviso en la UI)
+// una vez confirmado.
+const OVERAGE_LIVE = false
+
 async function getActiveMonthlySubscriber(supabase: ReturnType<typeof createClient>) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('No autorizado')
@@ -30,6 +40,7 @@ async function getActiveMonthlySubscriber(supabase: ReturnType<typeof createClie
 // Solo calcula y muestra — no escribe nada en Mercado Pago ni en la base.
 // El profesional tiene que ver el monto exacto antes de aceptar.
 export async function previewAddOverageBlock() {
+  if (!OVERAGE_LIVE) throw new Error('Esta función todavía no está disponible — la estamos terminando de verificar.')
   const supabase = createClient()
   const { subscription } = await getActiveMonthlySubscriber(supabase)
 
@@ -45,6 +56,7 @@ export async function previewAddOverageBlock() {
 }
 
 export async function addOverageBlock() {
+  if (!OVERAGE_LIVE) throw new Error('Esta función todavía no está disponible — la estamos terminando de verificar.')
   const supabase = createClient()
   const { user, subscription } = await getActiveMonthlySubscriber(supabase)
 
@@ -77,6 +89,7 @@ export async function addOverageBlock() {
 }
 
 export async function removeOverageBlock() {
+  if (!OVERAGE_LIVE) throw new Error('Esta función todavía no está disponible — la estamos terminando de verificar.')
   const supabase = createClient()
   const { user, subscription } = await getActiveMonthlySubscriber(supabase)
 
