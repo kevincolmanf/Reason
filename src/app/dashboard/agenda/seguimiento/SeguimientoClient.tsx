@@ -69,7 +69,7 @@ export default function SeguimientoClient({ userId, orgId, orgName, thresholdDay
   const fetchRows = useCallback(async (p_areas: string[] | null) => {
     setLoading(true)
     const { data, error } = await supabaseRef.current
-      .rpc('get_lapsing_patients', { p_threshold_days: thresholdDays, p_areas })
+      .rpc('get_lapsing_patients', { p_threshold_days: thresholdDays, p_areas, p_org_id: orgId })
     if (error) {
       notify('No se pudo cargar el seguimiento: ' + error.message, 'error')
       setLoading(false)
@@ -77,7 +77,7 @@ export default function SeguimientoClient({ userId, orgId, orgName, thresholdDay
     }
     setRows((data ?? []) as LapsingPatient[])
     setLoading(false)
-  }, [thresholdDays, notify])
+  }, [thresholdDays, notify, orgId])
 
   // El primer render ya viene servido por el server (initialRows, con el mismo
   // areaParam efectivo) — se salta el primer fetch para no duplicar la carga.

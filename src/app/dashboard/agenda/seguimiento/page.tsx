@@ -75,7 +75,7 @@ export default async function SeguimientoPage() {
     ? null
     : trackedAreas
   const { data: initialRows } = await supabase
-    .rpc('get_lapsing_patients', { p_threshold_days: THRESHOLD_DAYS, p_areas: initialAreaParam })
+    .rpc('get_lapsing_patients', { p_threshold_days: THRESHOLD_DAYS, p_areas: initialAreaParam, p_org_id: orgId })
 
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">

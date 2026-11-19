@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Header from '@/components/Header'
 import ActivarKineClient, { type Candidate } from './ActivarKineClient'
+import { getActiveContext } from '@/lib/context'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Activar modo kine | Reason' }
@@ -12,10 +13,14 @@ export default async function ActivarKinePage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  // Candidatos = pacientes con turnos RECIENTES (últimos 30 días), para no traer
-  // a los que ya terminaron la kine y se quedaron entrenando. RPC con SECURITY
-  // INVOKER, ya scopeado por RLS.
-  const { data, error } = await supabase.rpc('get_kine_candidates', { p_days: 30 })
+  const ctx = await getActiveContext(user.id, supabase)
+  const orgId = ctx.type === 'org' ? ctx.orgId : null
+
+  // Candidatos = pacientes con turnos RECIENTES (últimos 30 días) de ESTE
+  // contexto (org activa o personal), para no traer a los que ya terminaron
+  // la kine y se quedaron entrenando ni mezclar con otra organización de la
+  // que el usuario también sea miembro.
+  const { data, error } = await supabase.rpc('get_kine_candidates', { p_days: 30, p_org_id: orgId })
   const rows = (error ? [] : (data ?? [])) as { patient_id: string; name: string; kine_mode: boolean; turno_count: number; last_turno: string | null }[]
 
   const candidates: Candidate[] = rows
@@ -44,7 +49,7 @@ export default async function ActivarKinePage() {
             No se pudo cargar la lista. Puede que falte correr la migración <code className="text-accent">get_kine_candidates</code>.
           </div>
         ) : (
-          <ActivarKineClient candidates={candidates} alreadyCount={alreadyCount} />
+          <ActivarKineClient candidates={candidates} alreadyCount={alreadyCount} orgId={orgId} />
         )}
       </main>
     </div>

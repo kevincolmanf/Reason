@@ -26,7 +26,7 @@ function lastTurnoLabel(iso: string | null): string {
 
 const WINDOWS = [30, 60, 90]
 
-export default function ActivarKineClient({ candidates, alreadyCount, initialDays = 30 }: { candidates: Candidate[]; alreadyCount: number; initialDays?: number }) {
+export default function ActivarKineClient({ candidates, alreadyCount, initialDays = 30, orgId = null }: { candidates: Candidate[]; alreadyCount: number; initialDays?: number; orgId?: string | null }) {
   const [days, setDays] = useState(initialDays)
   const [pending, setPending] = useState<Candidate[]>(candidates)
   const [already, setAlready] = useState(alreadyCount)
@@ -40,7 +40,7 @@ export default function ActivarKineClient({ candidates, alreadyCount, initialDay
     setDays(d); setLoading(true); setError(null); setMsg(null)
     try {
       const supabase = createClient()
-      const { data, error: rpcErr } = await supabase.rpc('get_kine_candidates', { p_days: d })
+      const { data, error: rpcErr } = await supabase.rpc('get_kine_candidates', { p_days: d, p_org_id: orgId })
       if (rpcErr) throw new Error(rpcErr.message)
       const rows = (data ?? []) as RpcRow[]
       const cands = rows.filter(r => !r.kine_mode).map(r => ({ id: r.patient_id, name: r.name, turnoCount: Number(r.turno_count), lastTurno: r.last_turno }))
