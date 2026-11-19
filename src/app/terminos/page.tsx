@@ -11,10 +11,11 @@ export default function TerminosPage() {
     <div className="min-h-screen bg-bg-primary text-text-primary flex flex-col font-sans">
       <main className="flex-grow w-full max-w-[800px] mx-auto px-8 py-24">
         {/* BORRADOR — no está linkeado desde ningún lado del sitio todavía a
-            propósito. Falta que un abogado lo revise (sobre todo las
-            secciones de responsabilidad, facturación y cancelación) antes de
-            conectarlo al link "Términos" del footer de la landing, que hoy
-            apunta a "#". No borrar este aviso hasta esa revisión. */}
+            propósito. Razón social, jurisdicción, reembolsos y fecha ya están
+            completos (19/11, con los datos que dio Kevin). Falta solo que un
+            abogado revise "Limitación de responsabilidad" antes de conectarlo
+            al link "Términos" del footer de la landing, que hoy apunta a "#".
+            No borrar este aviso hasta esa revisión. */}
         <div className="bg-accent/10 border-[0.5px] border-accent/40 rounded-xl px-5 py-4 mb-12 text-[13px] text-text-secondary">
           <strong className="text-text-primary font-medium">Borrador interno —</strong> todavía no fue revisado por un abogado ni está publicado. No compartir como versión final.
         </div>
@@ -32,7 +33,7 @@ export default function TerminosPage() {
 
         <div className="text-[16px] leading-[1.7] text-text-secondary space-y-6">
           <p>
-            Última actualización: [completar fecha]. Al crear una cuenta o usar Reason aceptás estos términos. Si no estás de acuerdo, no uses la plataforma.
+            Última actualización: 19 de noviembre de 2026. Al crear una cuenta o usar Reason aceptás estos términos. Si no estás de acuerdo, no uses la plataforma.
           </p>
 
           <h3 className="text-[20px] font-medium text-text-primary tracking-[-0.01em] mt-16 mb-4">Qué es Reason</h3>
@@ -68,10 +69,10 @@ export default function TerminosPage() {
 
           <h3 className="text-[20px] font-medium text-text-primary tracking-[-0.01em] mt-16 mb-4">Planes, precios y facturación</h3>
           <ul className="list-none pl-0 space-y-3 mb-6">
-            <li className="relative pl-6 before:content-['·'] before:absolute before:left-0 before:text-text-secondary">Los planes y precios vigentes están en [link a /paywall]. Podemos modificar precios a futuro; los cambios no aplican retroactivamente a un período ya pagado y se avisan con anticipación razonable.</li>
+            <li className="relative pl-6 before:content-['·'] before:absolute before:left-0 before:text-text-secondary">Los planes y precios vigentes están en <Link href="/paywall" className="text-accent no-underline hover:opacity-80">reason.com.ar/paywall</Link>. Podemos modificar precios a futuro; los cambios no aplican retroactivamente a un período ya pagado y se avisan con anticipación razonable.</li>
             <li className="relative pl-6 before:content-['·'] before:absolute before:left-0 before:text-text-secondary">Los pagos se procesan a través de Mercado Pago. Reason no almacena los datos de tu tarjeta.</li>
             <li className="relative pl-6 before:content-['·'] before:absolute before:left-0 before:text-text-secondary">Las suscripciones se renuevan automáticamente salvo que canceles. Podés cancelar en cualquier momento desde tu cuenta — sin permanencia.</li>
-            <li className="relative pl-6 before:content-['·'] before:absolute before:left-0 before:text-text-secondary">[Completar: política de reembolsos, si la hay — hoy no encontré una definida en el producto.]</li>
+            <li className="relative pl-6 before:content-['·'] before:absolute before:left-0 before:text-text-secondary">No ofrecemos reembolsos. Podés cancelar en cualquier momento para evitar el próximo cobro, pero los pagos ya realizados no se reembolsan.</li>
           </ul>
 
           <h3 className="text-[20px] font-medium text-text-primary tracking-[-0.01em] mt-16 mb-4">Datos de tus pacientes</h3>
@@ -82,7 +83,7 @@ export default function TerminosPage() {
 
           <h3 className="text-[20px] font-medium text-text-primary tracking-[-0.01em] mt-16 mb-4">Propiedad intelectual</h3>
           <ul className="list-none pl-0 space-y-3 mb-6">
-            <li className="relative pl-6 before:content-['·'] before:absolute before:left-0 before:text-text-secondary">Reason (el software, la marca, la biblioteca de ejercicios en video y el contenido clínico de referencia) es propiedad de [completar: razón social / titular]. Te damos una licencia de uso personal, no exclusiva e intransferible mientras tengas una cuenta activa.</li>
+            <li className="relative pl-6 before:content-['·'] before:absolute before:left-0 before:text-text-secondary">Reason (el software, la marca, la biblioteca de ejercicios en video y el contenido clínico de referencia) es propiedad de Kevin Colman (CUIT 20-38177041-0). Te damos una licencia de uso personal, no exclusiva e intransferible mientras tengas una cuenta activa.</li>
             <li className="relative pl-6 before:content-['·'] before:absolute before:left-0 before:text-text-secondary">La información que vos cargás sobre tus pacientes (fichas, planes, notas) es tuya. No la usamos para ningún fin propio fuera de prestarte el servicio.</li>
           </ul>
 
@@ -110,7 +111,7 @@ export default function TerminosPage() {
 
           <h3 className="text-[20px] font-medium text-text-primary tracking-[-0.01em] mt-16 mb-4">Ley aplicable</h3>
           <p>
-            Estos términos se rigen por las leyes de la República Argentina. [Completar con un abogado: jurisdicción para resolución de conflictos.]
+            Estos términos se rigen por las leyes de la República Argentina. Ante cualquier conflicto derivado de estos términos o del uso de Reason, las partes se someten a la jurisdicción de los tribunales ordinarios de la ciudad de La Plata, provincia de Buenos Aires, con renuncia expresa a cualquier otro fuero o jurisdicción que pudiera corresponder.
           </p>
 
           <h3 className="text-[20px] font-medium text-text-primary tracking-[-0.01em] mt-16 mb-4">Contacto</h3>
