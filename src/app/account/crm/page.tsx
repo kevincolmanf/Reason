@@ -153,7 +153,10 @@ export default async function CRMPage() {
   const cliById = new Map<string, CliRow>((cliRes.data ?? []).map((r: CliRow) => [r.professional_id, r]))
   const members = (membersRes.data ?? []) as unknown as MemberRow[]
 
-  // Nombre por id: del miembro o, si falta, del denormalizado de los turnos.
+  // Nombre por id: SOLO de members (ya viene filtrado por org_id). No se usa
+  // el professional_name denormalizado de las RPC como fallback — ver nota de
+  // seguridad más abajo sobre por qué esos resultados no son confiables para
+  // decidir quién pertenece a esta organización.
   const nameById = new Map<string, string>()
   const catById = new Map<string, { profession: string | null; specialty: string | null; vinculo: string }>()
   members.forEach(m => {
@@ -161,14 +164,15 @@ export default async function CRMPage() {
     if (m.users) nameById.set(id, m.users.full_name ?? m.users.email ?? 'Sin nombre')
     catById.set(id, { profession: m.profession ?? null, specialty: m.specialty ?? null, vinculo: m.vinculo ?? 'propio' })
   })
-  opById.forEach((r, id) => { if (!nameById.has(id) && r.professional_name) nameById.set(id, r.professional_name) })
 
-  // Universo de profesionales = miembros de la org + cualquiera con actividad.
-  const proIds = new Set<string>()
-  nameById.forEach((_v, id) => proIds.add(id))
-  opById.forEach((_v, id) => proIds.add(id))
-  retById.forEach((_v, id) => proIds.add(id))
-  cliById.forEach((_v, id) => proIds.add(id))
+  // Universo de profesionales = SOLO miembros de ESTA org (members, ya viene
+  // filtrado por org_id). panel_pro_operativo/retencion/clinico no filtran por
+  // organización en el SQL — devuelven todo lo que la RLS del usuario que
+  // consulta puede ver, que incluye CUALQUIER otra org de la que también sea
+  // miembro (ej. un profesional que trabajó en otro centro y sigue como
+  // integrante ahí). Sin este filtro, sus métricas se mezclan con las de esa
+  // otra organización. No confiar en los ids que devuelven las RPC por sí solos.
+  const proIds = new Set<string>(nameById.keys())
 
   const team = Array.from(proIds).map(id => {
     const o = opById.get(id); const r = retById.get(id); const c = cliById.get(id)
