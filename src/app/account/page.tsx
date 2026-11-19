@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Header from '@/components/Header'
 import ProfileEditor from './ProfileEditor'
+import DataExportSection from './DataExportSection'
+import { getActiveContext } from '@/lib/context'
 
 export default async function AccountPage() {
   const supabase = createClient()
@@ -11,6 +13,8 @@ export default async function AccountPage() {
   if (!user) {
     redirect('/login')
   }
+
+  const ctx = await getActiveContext(user.id, supabase)
 
   const { data: userData } = await supabase
     .from('users')
@@ -107,6 +111,8 @@ export default async function AccountPage() {
             </div>
           )}
         </div>
+
+        <DataExportSection orgId={ctx.type === 'org' ? ctx.orgId : null} userId={user.id} />
 
         <form action="/auth/signout" method="post">
           <button className="text-[14px] text-warning hover:opacity-80 transition-opacity bg-transparent border-none cursor-pointer">
