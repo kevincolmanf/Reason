@@ -497,7 +497,7 @@ export default function LandingPage({
               reason<span className="text-accent">.</span>
             </div>
             <div className="flex gap-6">
-              <a href="#" className="text-text-secondary text-[13px] no-underline">
+              <a href="/terminos" className="text-text-secondary text-[13px] no-underline">
                 Términos
               </a>
               <a href="/sobre-tus-datos" className="text-text-secondary text-[13px] no-underline">
