@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import ObraSocialField from '@/components/ObraSocialField'
+import DeletePatientModal from '@/components/DeletePatientModal'
 import Link from 'next/link'
 
 interface Patient {
@@ -209,19 +210,12 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
     <div>
       {/* Delete modal */}
       {patientToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-          <div className="bg-bg-secondary border-[0.5px] border-border rounded-2xl p-8 max-w-[420px] w-full shadow-xl">
-            <h3 className="text-[18px] font-medium mb-2">Eliminar paciente</h3>
-            <p className="text-[14px] text-text-secondary mb-1">Estás por eliminar a <strong className="text-text-primary">{patientToDelete.name}</strong>.</p>
-            <p className="text-[13px] text-warning mb-6">Esta acción es permanente e irreversible. Se borrarán todos sus planes y registros.</p>
-            <div className="flex gap-3">
-              <button onClick={() => handleDelete(deleteConfirm!)} disabled={deleting} className="bg-red-600 text-white px-5 py-2.5 rounded-lg text-[13px] font-medium hover:bg-red-700 disabled:opacity-50 transition-colors">
-                {deleting ? 'Eliminando...' : 'Sí, eliminar'}
-              </button>
-              <button onClick={() => setDeleteConfirm(null)} disabled={deleting} className="text-text-secondary px-4 py-2.5 text-[13px] hover:text-text-primary">Cancelar</button>
-            </div>
-          </div>
-        </div>
+        <DeletePatientModal
+          patient={patientToDelete}
+          deleting={deleting}
+          onConfirm={() => handleDelete(deleteConfirm!)}
+          onCancel={() => setDeleteConfirm(null)}
+        />
       )}
 
       {/* Top bar */}

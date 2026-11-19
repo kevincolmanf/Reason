@@ -7,7 +7,8 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import QuickSessionSheet from '@/components/QuickSessionSheet'
 import AtencionDeHoy, { type Attention, type KineSession } from './AtencionDeHoy'
-import { useConfirm, useToast } from '@/components/Dialogs'
+import { useToast } from '@/components/Dialogs'
+import DeletePatientModal from '@/components/DeletePatientModal'
 
 interface Patient {
   id: string
@@ -65,7 +66,6 @@ export default function PacienteDetail({ patient: initialPatient, userId, treatm
   // Señal para el bloque "primeros pasos" de un paciente recién creado.
   // hasPlan se infiere de treatmentStart (fecha del primer plan cargado).
   const hasPlan = !!treatmentStart
-  const { confirm, confirmDialog } = useConfirm()
   const { notify, toast } = useToast()
   const [patient, setPatient] = useState<Patient>(initialPatient)
   const [editing, setEditing] = useState(false)
@@ -217,16 +217,26 @@ export default function PacienteDetail({ patient: initialPatient, userId, treatm
     setSaving(false)
   }
 
-  const handleDelete = async () => {
-    if (!(await confirm({ title: 'Eliminar paciente', message: `¿Eliminar a ${patient.name}? Los planes asociados quedarán sin paciente asignado.`, danger: true, confirmLabel: 'Eliminar' }))) return
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deletingPatient, setDeletingPatient] = useState(false)
+  const confirmDeletePatient = async () => {
+    setDeletingPatient(true)
     const { error } = await supabaseRef.current.from('patients').delete().eq('id', patient.id)
-    if (!error) router.push('/dashboard/pacientes')
+    if (!error) { router.push('/dashboard/pacientes'); return }
+    setDeletingPatient(false)
   }
 
   return (
     <div>
-      {confirmDialog}
       {toast}
+      {showDeleteModal && (
+        <DeletePatientModal
+          patient={patient}
+          deleting={deletingPatient}
+          onConfirm={confirmDeletePatient}
+          onCancel={() => setShowDeleteModal(false)}
+        />
+      )}
       {/* HEADER */}
       <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-6 mb-6">
         {editing ? (
@@ -398,7 +408,7 @@ export default function PacienteDetail({ patient: initialPatient, userId, treatm
                 )}
               </div>
               <button onClick={() => setEditing(true)} className="bg-bg-secondary border-[0.5px] border-border text-text-secondary px-4 py-2 rounded-lg text-[13px] hover:text-text-primary transition-colors">Editar</button>
-              {isOwner && <button onClick={handleDelete} className="bg-bg-secondary border-[0.5px] border-border text-text-secondary px-4 py-2 rounded-lg text-[13px] hover:text-warning transition-colors">Eliminar</button>}
+              {isOwner && <button onClick={() => setShowDeleteModal(true)} className="bg-bg-secondary border-[0.5px] border-border text-text-secondary px-4 py-2 rounded-lg text-[13px] hover:text-warning transition-colors">Eliminar</button>}
             </div>
           </div>
         )}
