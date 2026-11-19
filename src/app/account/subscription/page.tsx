@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { cancelSubscription } from './actions'
 import Header from '@/components/Header'
+import OveragePanel from './OveragePanel'
 
 export default async function SubscriptionPage() {
   const supabase = createClient()
@@ -30,6 +31,20 @@ export default async function SubscriptionPage() {
 
   // Valores por defecto si no hay suscripción
   const status = subscription?.status || 'free'
+
+  // Recargo opt-in por pacientes extra: solo tiene sentido en el plan
+  // Individual mensual activo (Pro ya tiene pacientes ilimitados; anual
+  // queda afuera de esta fase, ver plan).
+  const showOveragePanel = userRow?.role === 'subscriber' && status === 'active' && subscription?.plan === 'monthly'
+  let activeBlocksCount = 0
+  if (showOveragePanel) {
+    const { count } = await supabase
+      .from('patient_overage_blocks')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+    activeBlocksCount = count ?? 0
+  }
   // La columna real es `plan` (monthly|annual), no `mp_plan_id`.
   const intervalName = subscription?.plan === 'annual' ? 'Anual' : 'Mensual'
   const planName = isPro ? `Pro · ${intervalName}` : intervalName
@@ -123,7 +138,9 @@ export default async function SubscriptionPage() {
             )}
           </div>
         </div>
-        
+
+        {showOveragePanel && <OveragePanel activeBlocksCount={activeBlocksCount} />}
+
         <p className="text-[13px] text-text-tertiary">
           Si tenés problemas con tu pago o suscripción, contactá a soporte.
         </p>

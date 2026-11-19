@@ -37,7 +37,18 @@ export async function POST(request: Request) {
     ? new Date(userData.trial_expires_at).getTime() > Date.now()
     : false
   // Un free con trial vigente usa el cupo del plan individual (20), no el del free (3).
-  const limit = role === 'free' && trialActive ? TRIAL_LIMIT : (LIMITS[role] ?? LIMITS.free)
+  let limit = role === 'free' && trialActive ? TRIAL_LIMIT : (LIMITS[role] ?? LIMITS.free)
+
+  // Pacientes extra: bloques de 10 que el profesional sumó desde /account/subscription.
+  if (role === 'subscriber') {
+    const { count: activeBlocks } = await admin
+      .from('patient_overage_blocks')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+    limit += (activeBlocks ?? 0) * 10
+  }
+
   const isOrgContext = !!orgId
 
   // Si se pide crear dentro de una organización, verificar que el usuario sea

@@ -5,15 +5,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { redirect } from 'next/navigation'
 import { MercadoPagoConfig, PreApproval } from 'mercadopago'
 import { sendEmail } from '@/lib/notify-email'
-
-type PlanType = 'monthly' | 'annual' | 'pro_monthly' | 'pro_annual'
-
-const PLAN_CONFIG: Record<PlanType, { reason: string; frequency: number; amount: number }> = {
-  monthly:     { reason: 'Suscripción Mensual Reason',     frequency: 1,  amount: 18000    },
-  annual:      { reason: 'Suscripción Anual Reason',       frequency: 12, amount: 150000   },
-  pro_monthly: { reason: 'Suscripción Pro Mensual Reason', frequency: 1,  amount: 150000   },
-  pro_annual:  { reason: 'Suscripción Pro Anual Reason',   frequency: 12, amount: 1350000  },
-}
+import { PLAN_CONFIG, type PlanType } from '@/lib/planConfig'
 
 // Descuento de campaña 50% x 3 meses, solo Suscriptor mensual, vigente del
 // 15/11/2026 al 30/11/2026 (contenido promocional sale el 15/11). Ver doc

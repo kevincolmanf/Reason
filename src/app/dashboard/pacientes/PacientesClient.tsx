@@ -42,10 +42,11 @@ interface Props {
   isPro: boolean
   orgId?: string | null
   orgName?: string | null
+  patientLimit?: number
   autoOpen?: boolean
 }
 
-export default function PacientesClient({ userId, isActiveUser, isPro, orgId, orgName, autoOpen = false }: Props) {
+export default function PacientesClient({ userId, isActiveUser, isPro, orgId, orgName, patientLimit = 20, autoOpen = false }: Props) {
   const [patients, setPatients] = useState<Patient[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(autoOpen)
@@ -65,7 +66,7 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
 
   const isOrgContext = !!orgId
   const atFreeLimit = !isActiveUser && patients.length >= 3
-  const atSubscriberLimit = isActiveUser && !isPro && !isOrgContext && patients.length >= 20
+  const atSubscriberLimit = isActiveUser && !isPro && !isOrgContext && patients.length >= patientLimit
 
   const fetchPatients = useCallback(async () => {
     setLoading(true)
@@ -284,10 +285,13 @@ export default function PacientesClient({ userId, isActiveUser, isPro, orgId, or
       {atSubscriberLimit && (
         <div className="bg-accent/5 border-[0.5px] border-accent/30 rounded-xl px-5 py-4 mb-6 flex items-center justify-between gap-4">
           <div>
-            <p className="text-[14px] font-medium mb-0.5">Límite del plan individual — 20 pacientes</p>
-            <p className="text-[13px] text-text-secondary">Con el Plan Pro tenés pacientes ilimitados.</p>
+            <p className="text-[14px] font-medium mb-0.5">Límite del plan individual — {patientLimit} pacientes</p>
+            <p className="text-[13px] text-text-secondary">Sumá un bloque de 10 pacientes más, o pasate al Plan Pro para pacientes ilimitados.</p>
           </div>
-          <Link href="/paywall" className="shrink-0 bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-all active:scale-[0.97]">Ver Plan Pro</Link>
+          <div className="shrink-0 flex items-center gap-2">
+            <Link href="/account/subscription" className="bg-bg-primary border-[0.5px] border-border text-text-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:border-accent/50 transition-colors">Sumar 10 pacientes</Link>
+            <Link href="/paywall" className="bg-accent text-bg-primary px-4 py-2 rounded-lg text-[13px] font-medium hover:opacity-90 transition-all active:scale-[0.97]">Ver Plan Pro</Link>
+          </div>
         </div>
       )}
 

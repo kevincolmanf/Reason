@@ -41,6 +41,18 @@ export default async function PacientesPage({ searchParams }: { searchParams: { 
   const isOrgMember = !!orgId
   const isActiveUser = isPro || role === 'subscriber' || trialActive || isOrgMember
 
+  // Pacientes extra: bloques de 10 que el profesional sumó desde /account/subscription.
+  // Solo aplica al plan Individual (subscriber), no a org/trial/pro.
+  let patientLimit = 20
+  if (role === 'subscriber' && !isOrgMember) {
+    const { count: activeBlocks } = await supabase
+      .from('patient_overage_blocks')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+    patientLimit = 20 + (activeBlocks ?? 0) * 10
+  }
+
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
       <Header />
@@ -63,7 +75,7 @@ export default async function PacientesPage({ searchParams }: { searchParams: { 
           </Link>
         </div>
 
-        <PacientesClient userId={user.id} isActiveUser={isActiveUser} isPro={isPro} orgId={orgId} orgName={orgName} autoOpen={searchParams.new === '1'} />
+        <PacientesClient userId={user.id} isActiveUser={isActiveUser} isPro={isPro} orgId={orgId} orgName={orgName} patientLimit={patientLimit} autoOpen={searchParams.new === '1'} />
       </main>
     </div>
   )
