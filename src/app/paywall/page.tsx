@@ -1,7 +1,7 @@
 import Link from 'next/link'
 
 const FEATURES_INDIVIDUAL = [
-  'Hasta 20 pacientes activos',
+  'Hasta 20 pacientes',
   'Constructor de planes con 1800+ ejercicios en video',
   'Monitoreo de carga sesión a sesión',
   'Protocolo RTS integrado al historial del paciente',
