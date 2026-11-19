@@ -18,13 +18,16 @@ export default async function SeguimientoPage() {
   if (!user) redirect('/login')
 
   const [{ data: userData }, ctx] = await Promise.all([
-    supabase.from('users').select('role').eq('id', user.id).single(),
+    supabase.from('users').select('role, trial_expires_at').eq('id', user.id).single(),
     getActiveContext(user.id, supabase),
   ])
 
   const role = userData?.role
   const isOrgContext = ctx.type === 'org' && !!ctx.orgId
-  const isActive = role === 'admin' || role === 'pro' || isOrgContext
+  const trialActive = userData?.trial_expires_at ? new Date(userData.trial_expires_at) > new Date() : false
+  // Agenda/seguimiento es parte del plan Individual (ya no exclusivo de
+  // Pro/equipo) — ver auditoría de planes del 19/11/2026.
+  const isActive = role === 'admin' || role === 'pro' || role === 'subscriber' || trialActive || isOrgContext
   if (!isActive) redirect('/paywall')
 
   let isOrgOwner = false

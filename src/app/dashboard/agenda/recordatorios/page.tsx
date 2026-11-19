@@ -15,13 +15,16 @@ export default async function RecordatoriosPage({ searchParams }: { searchParams
   if (!user) redirect('/login')
 
   const [{ data: userData }, ctx] = await Promise.all([
-    supabase.from('users').select('role, full_name, agenda_areas').eq('id', user.id).single(),
+    supabase.from('users').select('role, full_name, agenda_areas, trial_expires_at').eq('id', user.id).single(),
     getActiveContext(user.id, supabase),
   ])
 
   const role = userData?.role
   const isOrgContext = ctx.type === 'org' && !!ctx.orgId
-  const isActive = role === 'admin' || role === 'pro' || isOrgContext
+  const trialActive = userData?.trial_expires_at ? new Date(userData.trial_expires_at) > new Date() : false
+  // Agenda es parte del plan Individual (ya no exclusiva de Pro/equipo) — ver
+  // auditoría de planes del 19/11/2026.
+  const isActive = role === 'admin' || role === 'pro' || role === 'subscriber' || trialActive || isOrgContext
   if (!isActive) redirect('/paywall')
 
   let isOrgOwner = false
