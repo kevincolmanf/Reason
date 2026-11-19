@@ -6,6 +6,45 @@ import { useConfirm, useToast } from '@/components/Dialogs'
 import { softDeleteRecord } from '@/lib/softDelete'
 import { EVENT_TYPES, eventMeta, EVENT_TYPES_WITH_EVA, type PatientEvent } from '@/lib/patientEvents'
 
+// ─── Iconos por tipo de hito (mismo trazo que el resto de la app: 24x24,
+// stroke 2, puntas redondeadas) — para escanear la lista sin leer cada
+// etiqueta, igual que ya se hizo en Historial. ───
+function IconEvaluacion() {
+  return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3h8v2a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V3z" /><rect x="4" y="4" width="16" height="17" rx="2" /><path d="m9 14 2 2 4-4" /></svg>
+}
+function IconReevaluacion() {
+  return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4" /><path d="M21 3v6h-6" /></svg>
+}
+function IconRtp() {
+  return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 10 4 15l5 5" /><path d="M4 15h11a4 4 0 0 0 0-8h-1" /></svg>
+}
+function IconControl() {
+  return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="m8.5 12 2.5 2.5 5-5" /></svg>
+}
+function IconAlta() {
+  return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 3v18" /><path d="M5 4h10l-2 4 2 4H5" /></svg>
+}
+function IconObjetivo() {
+  return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="4" /><circle cx="12" cy="12" r="0.8" fill="currentColor" stroke="none" /></svg>
+}
+function IconCompetencia() {
+  return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 21h8" /><path d="M12 17v4" /><path d="M7 4h10v5a5 5 0 0 1-10 0V4z" /><path d="M7 5H4a2 2 0 0 0 0 4h1M17 5h3a2 2 0 0 1 0 4h-1" /></svg>
+}
+function IconOtro() {
+  return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 3 10 10-7 7L2 10V3h7z" /><circle cx="6.5" cy="6.5" r="1" fill="currentColor" stroke="none" /></svg>
+}
+
+const TYPE_ICON: Record<string, () => React.JSX.Element> = {
+  evaluacion: IconEvaluacion,
+  reevaluacion: IconReevaluacion,
+  rtp: IconRtp,
+  control: IconControl,
+  alta: IconAlta,
+  objetivo: IconObjetivo,
+  competencia: IconCompetencia,
+  otro: IconOtro,
+}
+
 export default function HitosClient({
   patientId, patientName, userId, initialEvents,
 }: {
@@ -73,14 +112,18 @@ export default function HitosClient({
             <div>
               <label className="block text-[11px] uppercase tracking-[0.05em] text-text-secondary mb-2">Tipo</label>
               <div className="flex flex-wrap gap-1.5">
-                {EVENT_TYPES.map(t => (
-                  <button key={t.value} onClick={() => setEvType(t.value)}
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[12px] font-medium border-[0.5px] transition-colors ${evType === t.value ? 'text-white' : 'bg-bg-primary border-border text-text-secondary hover:text-text-primary'}`}
-                    style={evType === t.value ? { backgroundColor: t.color, borderColor: t.color } : {}}>
-                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: evType === t.value ? '#fff' : t.color }} />
-                    {t.label}
-                  </button>
-                ))}
+                {EVENT_TYPES.map(t => {
+                  const Icon = TYPE_ICON[t.value]
+                  const sel = evType === t.value
+                  return (
+                    <button key={t.value} onClick={() => setEvType(t.value)}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[12px] font-medium border-[0.5px] transition-colors ${sel ? 'text-white' : 'bg-bg-primary border-border text-text-secondary hover:text-text-primary'}`}
+                      style={sel ? { backgroundColor: t.color, borderColor: t.color } : {}}>
+                      <Icon />
+                      {t.label}
+                    </button>
+                  )
+                })}
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -120,27 +163,39 @@ export default function HitosClient({
         )}
 
         {events.length === 0 ? (
-          <p className="text-[13px] text-text-secondary bg-bg-secondary border-[0.5px] border-dashed border-border rounded-xl px-4 py-5 text-center">
+          <div className="text-[13px] text-text-secondary bg-bg-secondary border-[0.5px] border-dashed border-border rounded-xl px-4 py-6 text-center">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-2 opacity-40"><path d="M5 3v18" /><path d="M5 4h10l-2 4 2 4H5" /></svg>
             Sin hitos todavía. Marcá evaluaciones, RTP, altas o competencias para ver el proceso completo del paciente.
-          </p>
+          </div>
         ) : (
           <div className="border-[0.5px] border-border rounded-xl overflow-hidden divide-y-[0.5px] divide-border">
             {events.map(ev => {
               const meta = eventMeta(ev.type)
+              const Icon = TYPE_ICON[ev.type] ?? IconOtro
               const past = ev.event_date < new Date().toISOString().split('T')[0]
               return (
-                <div key={ev.id} className={`flex items-center gap-3 px-4 py-3 ${past ? 'opacity-60' : ''}`}>
-                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: meta.color }} />
-                  <div className="w-[92px] shrink-0 text-[12px] text-text-secondary tabular-nums">
+                <div key={ev.id} className={`flex items-center gap-3 px-4 py-3 hover:bg-bg-secondary/60 transition-colors ${past ? 'opacity-60' : ''}`}>
+                  <span className="w-[10px] h-[10px] rounded-full border-[1.5px] shrink-0" style={{ backgroundColor: meta.color, borderColor: meta.color }} />
+                  <div className="w-[96px] shrink-0 text-[12px] text-text-secondary tabular-nums whitespace-nowrap">
                     {new Date(ev.event_date + 'T12:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: '2-digit' })}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <span className="text-[13px] font-medium" style={{ color: meta.color }}>{meta.label}</span>
-                    {ev.title && <span className="text-[13px] text-text-primary"> · {ev.title}</span>}
-                    {ev.eva_dolor !== null && (
-                      <span className="text-[12px] text-text-secondary font-mono"> · EVA {ev.eva_dolor}/10</span>
-                    )}
-                    {ev.note && <p className="text-[12px] text-text-secondary truncate">{ev.note}</p>}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span
+                        className="flex items-center gap-1 text-[10.5px] font-medium px-1.5 py-0.5 rounded-full border-[0.5px]"
+                        style={{ color: meta.color, backgroundColor: `${meta.color}1A`, borderColor: `${meta.color}4D` }}
+                      >
+                        <Icon />
+                        {meta.label}
+                      </span>
+                      {ev.title && <span className="text-[13px] text-text-primary">{ev.title}</span>}
+                      {ev.eva_dolor !== null && (
+                        <span className="text-[10.5px] font-mono font-medium text-text-secondary bg-bg-tertiary border-[0.5px] border-border px-1.5 py-0.5 rounded-full">
+                          EVA {ev.eva_dolor}/10
+                        </span>
+                      )}
+                    </div>
+                    {ev.note && <p className="text-[12px] text-text-secondary truncate mt-1">{ev.note}</p>}
                   </div>
                   <button onClick={() => deleteEvent(ev.id)} className="text-text-secondary hover:text-warning text-[14px] shrink-0 transition-colors" title="Eliminar hito">×</button>
                 </div>
