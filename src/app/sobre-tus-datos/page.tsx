@@ -50,6 +50,12 @@ export default function SobreTusDatosPage() {
             <li className="relative pl-6 before:content-['·'] before:absolute before:left-0 before:text-text-secondary">Podés exportar la información clínica a PDF y revocar en cualquier momento el acceso del portal del paciente.</li>
           </ul>
 
+          <h3 className="text-[20px] font-medium text-text-primary tracking-[-0.01em] mt-16 mb-4">Dónde viven tus datos</h3>
+          <ul className="list-none pl-0 space-y-3 mb-12">
+            <li className="relative pl-6 before:content-['·'] before:absolute before:left-0 before:text-text-secondary">La base de datos corre en infraestructura de <strong className="text-text-primary font-medium">AWS</strong>, en la región <strong className="text-text-primary font-medium">Ohio, Estados Unidos (us-east-2)</strong>.</li>
+            <li className="relative pl-6 before:content-['·'] before:absolute before:left-0 before:text-text-secondary">Se hace un <strong className="text-text-primary font-medium">backup automático todos los días</strong>, restaurable a cualquier fecha reciente si hiciera falta.</li>
+          </ul>
+
           <h3 className="text-[20px] font-medium text-text-primary tracking-[-0.01em] mt-16 mb-4">Qué no hacemos con tus datos</h3>
           <ul className="list-none pl-0 space-y-3 mb-12">
             <li className="relative pl-6 before:content-['·'] before:absolute before:left-0 before:text-text-secondary">No los vendemos ni los cedemos a terceros con fines comerciales.</li>
