@@ -142,9 +142,9 @@ export default async function CRMPage() {
   type MemberRow = { user_id: string; profession: string | null; specialty: string | null; vinculo: string | null; users: { id: string; full_name: string | null; email: string | null } | null }
 
   const [opRes, retRes, cliRes, membersRes] = await Promise.all([
-    supabase.rpc('panel_pro_operativo', { p_from: monthFrom, p_to: monthTo }),
-    supabase.rpc('panel_pro_retencion'),
-    supabase.rpc('panel_pro_clinico', { p_from: monthFrom, p_to: monthTo }),
+    supabase.rpc('panel_pro_operativo', { p_org_id: orgRow.id, p_from: monthFrom, p_to: monthTo }),
+    supabase.rpc('panel_pro_retencion', { p_org_id: orgRow.id }),
+    supabase.rpc('panel_pro_clinico', { p_org_id: orgRow.id, p_from: monthFrom, p_to: monthTo }),
     admin.from('organization_members').select('user_id, profession, specialty, vinculo, users(id, full_name, email)').eq('org_id', orgRow.id),
   ])
 
