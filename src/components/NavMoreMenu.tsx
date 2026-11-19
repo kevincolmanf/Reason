@@ -10,10 +10,11 @@ import Link from 'next/link'
 // para este mismo problema. Solo desktop (hidden lg:block): en mobile, el
 // menú hamburguesa de HeaderClient ya lista estos accesos planos.
 export default function NavMoreMenu({
-  canManageTeam, isProOrAdmin, canSeeCaja,
+  canManageTeam, canSeePanelGestion, ownsAnyOrg, canSeeCaja,
 }: {
   canManageTeam: boolean
-  isProOrAdmin: boolean
+  canSeePanelGestion: boolean
+  ownsAnyOrg: boolean
   canSeeCaja: boolean
 }) {
   const [open, setOpen] = useState(false)
@@ -53,10 +54,20 @@ export default function NavMoreMenu({
               Equipo
             </Link>
           )}
-          {isProOrAdmin ? (
+          {canSeePanelGestion ? (
             <Link href="/account/crm" onClick={close} className={itemClass}>
               Panel de gestión
             </Link>
+          ) : ownsAnyOrg ? (
+            // Tiene un centro propio, pero no es el workspace activo ahora mismo
+            // (está en su espacio personal o como invitado en otro centro) — el
+            // panel de ESE centro no tiene sentido acá. Lo mandamos a cambiar de
+            // workspace, no a /account/crm (que mostraría el de su propio centro
+            // igual, pero de forma confusa estando "parado" en otro lado).
+            <div className="block px-4 py-2">
+              <span className="block text-[14px] text-[#c47c5a]">Panel de gestión</span>
+              <span className="block text-[11px] text-text-tertiary mt-0.5">Cambiá a tu centro para verlo</span>
+            </div>
           ) : (
             // Un Pro que todavía no creó su centro NO tiene métricas que mostrar
             // (el CRM exige owner de una organización) — lo guiamos a crearlo en

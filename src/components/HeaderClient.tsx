@@ -14,7 +14,7 @@ interface Props {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   userMetadata: any
   hasAgendaAccess?: boolean
-  isProOrAdmin?: boolean
+  canSeePanelGestion?: boolean
   canManageTeam?: boolean
   canSeeCaja?: boolean
   canSeeEstadisticas?: boolean
@@ -23,7 +23,7 @@ interface Props {
   available?: AvailableContext[]
 }
 
-export default function HeaderClient({ userMetadata, hasAgendaAccess, isProOrAdmin, canManageTeam, canSeeCaja, canSeeEstadisticas, ctx, currentLabel, available }: Props) {
+export default function HeaderClient({ userMetadata, hasAgendaAccess, canSeePanelGestion, canManageTeam, canSeeCaja, canSeeEstadisticas, ctx, currentLabel, available }: Props) {
   const [isOpen, setIsOpen] = useState(false)
   const [showWorkspaces, setShowWorkspaces] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -162,7 +162,7 @@ export default function HeaderClient({ userMetadata, hasAgendaAccess, isProOrAdm
                 Mi equipo
               </Link>
             )}
-            {isProOrAdmin && (
+            {canSeePanelGestion && (
               <Link href="/account/crm" onClick={closeMenu} className="block px-4 py-2 text-[14px] text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline">
                 Panel de gestión
               </Link>

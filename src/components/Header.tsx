@@ -16,7 +16,10 @@ export default async function Header() {
   let ctx: ActiveContext = { type: 'personal', orgId: null }
   let hasAgendaAccess = false
   let agendaBlockedReason: 'plan' | 'member' = 'plan'
-  let isProOrAdmin = false
+  let canSeePanelGestion = false
+  // Para distinguir, cuando no se puede ver el panel, entre "no tenés centro
+  // todavía" y "tenés uno pero no es el workspace activo ahora" (NavMoreMenu).
+  let ownedOrgsCount = 0
   // Gestionar el equipo: mismo gate que /account/equipo (role pro/admin). Incluye
   // al Pro que todavía no creó su centro, para que pueda encontrar dónde armarlo.
   let canManageTeam = false
@@ -49,17 +52,13 @@ export default async function Header() {
     type MemberRow = { org_id: string; agenda_access: boolean | null; can_register_cash: boolean | null; organizations: { id: string; name: string } | null }
 
     const ownedOrgs = (ownedOrgsResult.data ?? []) as { id: string; name: string }[]
+    ownedOrgsCount = ownedOrgs.length
     const memberRows = (memberOrgsResult.data ?? []) as unknown as MemberRow[]
     const memberOrgs = memberRows
       .map(r => r.organizations)
       .filter((o): o is { id: string; name: string } => o !== null)
       .filter(o => !ownedOrgs.some(owned => owned.id === o.id))
 
-    // Analíticas/CRM (métricas del centro): solo el dueño real de una organización
-    // o un admin. Coincide con la protección de la propia página /account/crm
-    // (owner_id === user.id). Antes se basaba en role === 'pro', y un integrante
-    // con ese role veía el link (aunque la página lo expulsara).
-    isProOrAdmin = role === 'admin' || ownedOrgs.length > 0
     canManageTeam = role === 'pro' || role === 'admin'
 
     // En una org que NO es propia, el usuario es integrante: el acceso a la agenda
@@ -67,6 +66,17 @@ export default async function Header() {
     // por error). Solo cuenta como dueño la org que realmente le pertenece.
     const ownsThisOrg = isOrgCtx && !!ctx.orgId && ownedOrgs.some(o => o.id === ctx.orgId)
     canSeeEstadisticas = !isOrgCtx || ownsThisOrg
+
+    // Panel de gestión (métricas del centro, info sensible de negocio): solo
+    // tiene sentido DENTRO del workspace de la organización que el usuario
+    // realmente posee — no alcanza con ser dueño de OTRA org. Antes se
+    // mostraba con solo "sos dueño de alguna org en algún lado", así que un
+    // profesional que además es integrante de otro centro (o está en su
+    // espacio personal) seguía viendo el link, que siempre apunta al panel de
+    // SU org — confuso, y mezclaba workspaces en la cabeza del usuario aunque
+    // los datos ya estuvieran bien separados. Nunca se muestra en contexto
+    // personal: no hay "panel de centro" sin un centro activo.
+    canSeePanelGestion = role === 'admin' || ownsThisOrg
     if (isOrgCtx && ctx.orgId) {
       // Dentro de una organización, el acceso al menú de Agenda debe coincidir con
       // el de la propia página (isActive = admin/pro/org, isOwner = admin/dueño):
@@ -142,7 +152,7 @@ export default async function Header() {
               ocasionales — agrupados en "Más" para no competir por espacio con
               la navegación de uso diario. En mobile, HeaderClient ya los lista
               planos dentro del menú hamburguesa. */}
-          <NavMoreMenu canManageTeam={canManageTeam} isProOrAdmin={isProOrAdmin} canSeeCaja={canSeeCaja} />
+          <NavMoreMenu canManageTeam={canManageTeam} canSeePanelGestion={canSeePanelGestion} ownsAnyOrg={ownedOrgsCount > 0} canSeeCaja={canSeeCaja} />
 
           {ctx.type === 'org' && ctx.orgId && (
             <Link
@@ -174,7 +184,7 @@ export default async function Header() {
             <HeaderClient
               userMetadata={user.user_metadata}
               hasAgendaAccess={hasAgendaAccess}
-              isProOrAdmin={isProOrAdmin}
+              canSeePanelGestion={canSeePanelGestion}
               canManageTeam={canManageTeam}
               canSeeCaja={canSeeCaja}
               canSeeEstadisticas={canSeeEstadisticas}
