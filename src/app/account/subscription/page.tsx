@@ -34,16 +34,19 @@ export default async function SubscriptionPage() {
 
   // Recargo opt-in por pacientes extra: solo tiene sentido en el plan
   // Individual mensual activo (Pro ya tiene pacientes ilimitados; anual
-  // queda afuera de esta fase, ver plan).
-  const showOveragePanel = userRow?.role === 'subscriber' && status === 'active' && subscription?.plan === 'monthly'
+  // queda afuera de esta fase, ver plan). Y solo se muestra una vez que
+  // el profesional realmente llegó al límite de 20 — o si ya tiene bloques
+  // activos (para poder sacarlos aunque haya bajado de 20 pacientes).
+  const overageEligible = userRow?.role === 'subscriber' && status === 'active' && subscription?.plan === 'monthly'
   let activeBlocksCount = 0
-  if (showOveragePanel) {
-    const { count } = await supabase
-      .from('patient_overage_blocks')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', user.id)
-      .eq('status', 'active')
-    activeBlocksCount = count ?? 0
+  let showOveragePanel = false
+  if (overageEligible) {
+    const [{ count: blocksCount }, { count: patientsCount }] = await Promise.all([
+      supabase.from('patient_overage_blocks').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'active'),
+      supabase.from('patients').select('id', { count: 'exact', head: true }).eq('user_id', user.id).is('org_id', null),
+    ])
+    activeBlocksCount = blocksCount ?? 0
+    showOveragePanel = (patientsCount ?? 0) >= 20 || activeBlocksCount > 0
   }
   // La columna real es `plan` (monthly|annual), no `mp_plan_id`.
   const intervalName = subscription?.plan === 'annual' ? 'Anual' : 'Mensual'
