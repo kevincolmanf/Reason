@@ -64,7 +64,7 @@ export default async function DashboardPage() {
   tomorrow.setDate(tomorrow.getDate() + 1)
   const tomorrowStr = tomorrow.toISOString().split('T')[0]
 
-  const [{ data: latestContents }, { data: userData }, ctx, { data: upcomingSessions }] = await Promise.all([
+  const [{ data: latestContents }, { data: userData }, ctx] = await Promise.all([
     supabase
       .from('content')
       .select('id, title, subtitle, slug, category, tiempo_lectura_min, body_que_saber')
@@ -77,12 +77,6 @@ export default async function DashboardPage() {
       .eq('id', user.id)
       .single(),
     getActiveContext(user.id, supabase),
-    supabase
-      .from('scheduled_sessions')
-      .select('patient_id, scheduled_date')
-      .eq('user_id', user.id)
-      .eq('completed', false)
-      .gte('scheduled_date', todayStr),
   ])
 
   const contextOrgId: string | null = ctx.type === 'org' ? ctx.orgId : null
@@ -97,10 +91,25 @@ export default async function DashboardPage() {
     contextOrgName = orgData?.name ?? null
   }
 
-  // "Recientes" (según el contexto activo) y la lista completa de pacientes
-  // accesibles (para los hitos de la semana) son independientes entre sí → en
-  // paralelo, para bajar el TTFB del dashboard.
-  const [{ data: recentData }, { data: ctxPatients }] = await Promise.all([
+  // Todo lo que sigue está scopeado al workspace activo (equipo vs. personal):
+  // un integrante invitado a un equipo no debe ver recordatorios/pacientes
+  // propios mezclados con los del equipo (y viceversa), sin importar en qué
+  // pestaña esté parado.
+  const [{ data: upcomingSessions }, { data: recentData }, { data: ctxPatients }] = await Promise.all([
+    contextOrgId
+      ? supabase
+          .from('scheduled_sessions')
+          .select('patient_id, scheduled_date, patients!inner(org_id)')
+          .eq('completed', false)
+          .gte('scheduled_date', todayStr)
+          .eq('patients.org_id', contextOrgId)
+      : supabase
+          .from('scheduled_sessions')
+          .select('patient_id, scheduled_date, patients!inner(org_id, user_id)')
+          .eq('completed', false)
+          .gte('scheduled_date', todayStr)
+          .eq('patients.user_id', user.id)
+          .is('patients.org_id', null),
     contextOrgId
       ? supabase
           .from('patients')
@@ -115,12 +124,10 @@ export default async function DashboardPage() {
           .is('org_id', null)
           .order('created_at', { ascending: false })
           .limit(3),
-    // Pacientes accesibles (personales + de todas sus organizaciones). No se filtra
-    // por el contexto activo a propósito: el recordatorio junta los pendientes de
-    // TODOS los pacientes de Kevin, así lo que programa siempre aparece sin importar
-    // en qué pestaña (equipo/personal) esté parado. La RLS de patients ya limita a
-    // lo accesible (auth.uid() = user_id OR miembro de la org del paciente).
-    supabase.from('patients').select('id, name'),
+    // Pacientes del workspace activo (para los hitos de la semana).
+    contextOrgId
+      ? supabase.from('patients').select('id, name').eq('org_id', contextOrgId)
+      : supabase.from('patients').select('id, name').eq('user_id', user.id).is('org_id', null),
   ])
   const recentPatients = recentData ?? []
 
@@ -140,23 +147,37 @@ export default async function DashboardPage() {
 
   const milestones: WeekMilestone[] = []
   if (patientIds.length > 0) {
-    // Sin filtro por `.in('patient_id', patientIds)` a propósito: con equipos
-    // grandes (cientos de pacientes) esa lista pasa el límite de la URL y
-    // Supabase devuelve "Bad Request" (mismo bug que ya se resolvió en
-    // Estadísticas y en Pacientes). La RLS de ambas tablas ya restringe a
-    // pacientes accesibles (propios o de una org de la que sos miembro), así
-    // que no hace falta pasar los ids — da exactamente el mismo resultado.
+    // Filtramos por patients.org_id/user_id (join), no por `.in('patient_id',
+    // patientIds)`: con equipos grandes (cientos de pacientes) esa lista pasa
+    // el límite de la URL y Supabase devuelve "Bad Request" (mismo bug que ya
+    // se resolvió en Estadísticas y en Pacientes). El join además scopea al
+    // workspace activo, en vez de traer todo lo accesible por RLS.
     const [{ data: evs }, { data: sched }] = await Promise.all([
       // Hitos: toda la semana en curso (lun–dom)
-      supabase.from('patient_events')
-        .select('id, patient_id, event_date, type, title')
-        .gte('event_date', mondayStr).lte('event_date', sundayStr),
+      contextOrgId
+        ? supabase.from('patient_events')
+            .select('id, patient_id, event_date, type, title, patients!inner(org_id)')
+            .gte('event_date', mondayStr).lte('event_date', sundayStr)
+            .eq('patients.org_id', contextOrgId)
+        : supabase.from('patient_events')
+            .select('id, patient_id, event_date, type, title, patients!inner(org_id, user_id)')
+            .gte('event_date', mondayStr).lte('event_date', sundayStr)
+            .eq('patients.user_id', user.id)
+            .is('patients.org_id', null),
       // Evaluaciones programadas pendientes: TODAS las no completadas (incluye
       // atrasadas de días pasados, que siguen recordándose hasta hacerlas o borrarlas).
-      supabase.from('scheduled_evaluations')
-        .select('id, patient_id, kind, protocol_type, scheduled_date')
-        .eq('completed', false)
-        .order('scheduled_date'),
+      contextOrgId
+        ? supabase.from('scheduled_evaluations')
+            .select('id, patient_id, kind, protocol_type, scheduled_date, patients!inner(org_id)')
+            .eq('completed', false)
+            .order('scheduled_date')
+            .eq('patients.org_id', contextOrgId)
+        : supabase.from('scheduled_evaluations')
+            .select('id, patient_id, kind, protocol_type, scheduled_date, patients!inner(org_id, user_id)')
+            .eq('completed', false)
+            .order('scheduled_date')
+            .eq('patients.user_id', user.id)
+            .is('patients.org_id', null),
     ])
 
     for (const e of evs ?? []) {

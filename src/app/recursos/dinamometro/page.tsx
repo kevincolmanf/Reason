@@ -2,6 +2,7 @@ import Header from '@/components/Header'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
+import { getActiveContext } from '@/lib/context'
 import DinamometroClient from './DinamometroClient'
 
 export const metadata = {
@@ -12,6 +13,9 @@ export default async function DinamometroPage({ searchParams }: { searchParams: 
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+
+  const ctx = await getActiveContext(user.id, supabase)
+  const orgId = ctx.type === 'org' ? ctx.orgId : null
 
   // Retorno seguro al calendario del plan (solo rutas internas conocidas).
   const returnTo = searchParams?.from && /^\/dashboard\/ejercicios\/plan\/[\w-]+$/.test(searchParams.from)
@@ -34,6 +38,7 @@ export default async function DinamometroPage({ searchParams }: { searchParams: 
         </div>
         <DinamometroClient
           userId={user.id}
+          orgId={orgId}
           initialPatient={searchParams?.paciente ?? null}
           initialDate={searchParams?.date ?? null}
           editId={searchParams?.edit ?? null}

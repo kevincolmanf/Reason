@@ -2,6 +2,7 @@ import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Header from '@/components/Header'
+import { getActiveContext } from '@/lib/context'
 import BloqueAtencion, { type Bloque, type BloquePaciente } from './BloqueAtencion'
 
 export const dynamic = 'force-dynamic'
@@ -30,17 +31,23 @@ export default async function AtencionDelBloquePage({ searchParams }: { searchPa
 
   const day = searchParams.day && /^\d{4}-\d{2}-\d{2}$/.test(searchParams.day) ? searchParams.day : todayAR()
 
-  // Turnos del día que el usuario puede ver (la RLS ya limita por org y por área).
+  const ctx = await getActiveContext(user.id, supabase)
+  const orgId = ctx.type === 'org' ? ctx.orgId : null
+
+  // Turnos del día, scopeados al workspace activo (equipo vs. personal) — no
+  // alcanza con la RLS: un integrante de equipo no debe ver acá sus turnos
+  // personales mezclados con los del equipo, ni al revés.
   // Argentina es UTC-3 sin horario de verano.
   const from = `${day}T00:00:00-03:00`
   const to = `${day}T23:59:59-03:00`
-  const { data: turnos } = await supabase
+  let turnosQuery = supabase
     .from('turnos')
     .select('id, patient_id, patient_name, start_time, area, status, professional_name')
     .gte('start_time', from)
     .lte('start_time', to)
     .not('patient_id', 'is', null)
-    .order('start_time', { ascending: true })
+  turnosQuery = orgId ? turnosQuery.eq('org_id', orgId) : turnosQuery.eq('created_by', user.id)
+  const { data: turnos } = await turnosQuery.order('start_time', { ascending: true })
 
   const patientIds = Array.from(new Set((turnos ?? []).map(t => t.patient_id).filter(Boolean) as string[]))
 

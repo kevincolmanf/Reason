@@ -534,7 +534,7 @@ function LikertItem({
 
 // ─── Main Component ────────────────────────────────────────────────────────
 
-export default function QuestionariosClient({ userId, lockedPatient, initialDate, initialType, returnTo }: { userId: string; lockedPatient?: { id: string; name: string } | null; initialDate?: string | null; initialType?: string | null; returnTo?: string | null }) {
+export default function QuestionariosClient({ userId, orgId, lockedPatient, initialDate, initialType, returnTo }: { userId: string; orgId: string | null; lockedPatient?: { id: string; name: string } | null; initialDate?: string | null; initialType?: string | null; returnTo?: string | null }) {
   const router = useRouter()
   // Si viene un ?type= válido (p. ej. desde una evaluación programada), arranca
   // con ese cuestionario ya seleccionado.
@@ -622,13 +622,15 @@ export default function QuestionariosClient({ userId, lockedPatient, initialDate
   useEffect(() => {
     if (!patientsLoaded) {
       const supabase = createClient()
-      supabase.from('patients').select('id, name').eq('user_id', userId).order('name')
-        .then(({ data }) => {
-          if (data) setPatients(data)
-          setPatientsLoaded(true)
-        })
+      const query = orgId
+        ? supabase.from('patients').select('id, name').eq('org_id', orgId).order('name')
+        : supabase.from('patients').select('id, name').eq('user_id', userId).is('org_id', null).order('name')
+      query.then(({ data }) => {
+        if (data) setPatients(data)
+        setPatientsLoaded(true)
+      })
     }
-  }, [patientsLoaded, userId])
+  }, [patientsLoaded, userId, orgId])
 
   const handleSelect = (id: string) => {
     setSelected(id)
