@@ -405,7 +405,7 @@ export default function TurnoModal({ userId, orgId, orgName, professionals, area
         for (const t of terms) query = query.ilike('name', `%${t}%`)
       }
       if (orgId) query = query.eq('org_id', orgId)
-      else       query = query.eq('user_id', userId)
+      else       query = query.eq('user_id', userId).is('org_id', null)
       const { data } = await query
       setPatientResults(data ?? [])
     }, 250)

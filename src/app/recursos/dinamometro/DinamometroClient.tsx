@@ -75,8 +75,9 @@ function hqColor(hq: number | null): string {
 
 // ─── Main Component ─────────────────────────────────────────────────────────
 
-export default function DinamometroClient({ userId, initialPatient, initialDate, editId, returnTo }: {
+export default function DinamometroClient({ userId, orgId, initialPatient, initialDate, editId, returnTo }: {
   userId: string
+  orgId: string | null
   initialPatient?: string | null
   initialDate?: string | null
   editId?: string | null
@@ -99,11 +100,11 @@ export default function DinamometroClient({ userId, initialPatient, initialDate,
 
   useEffect(() => {
     const supabase = createClient()
-    // Sin filtrar por user_id: la RLS ya limita a los pacientes accesibles (propios
-    // y los compartidos del equipo), así que un integrante también los encuentra.
-    supabase.from('patients').select('id, name').order('name')
-      .then(({ data }) => { if (data) setPatients(data) })
-  }, [userId])
+    const query = orgId
+      ? supabase.from('patients').select('id, name').eq('org_id', orgId).order('name')
+      : supabase.from('patients').select('id, name').eq('user_id', userId).is('org_id', null).order('name')
+    query.then(({ data }) => { if (data) setPatients(data) })
+  }, [userId, orgId])
 
   // Editar una evaluación existente (se abre desde el calendario con ?edit=<id>).
   useEffect(() => {

@@ -2,6 +2,7 @@ import Header from '@/components/Header'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
+import { getActiveContext } from '@/lib/context'
 import QuestionariosClient from './QuestionariosClient'
 
 export const metadata = {
@@ -16,6 +17,9 @@ export default async function CuestionariosPage({
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+
+  const ctx = await getActiveContext(user.id, supabase)
+  const orgId = ctx.type === 'org' ? ctx.orgId : null
 
   // Si venimos desde la ficha de un paciente (?paciente=<id>), lo dejamos fijado
   // para guardar el resultado ahí sin tener que volver a elegirlo. La RLS de
@@ -49,7 +53,7 @@ export default async function CuestionariosPage({
             Completá el formulario y guardá el resultado vinculado al paciente.
           </p>
         </div>
-        <QuestionariosClient userId={user.id} lockedPatient={lockedPatient} initialDate={searchParams?.date ?? null} initialType={searchParams?.type ?? null} returnTo={returnTo} />
+        <QuestionariosClient userId={user.id} orgId={orgId} lockedPatient={lockedPatient} initialDate={searchParams?.date ?? null} initialType={searchParams?.type ?? null} returnTo={returnTo} />
       </main>
     </div>
   )
