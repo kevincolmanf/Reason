@@ -4,6 +4,9 @@ import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import FichaClient from './FichaClient'
 import { verifyPatientAccess, logFichaAccess } from '@/utils/patient-access'
+import { getOrgFeatureSetting } from '@/lib/featureSettings'
+import { FEATURE_KEY_ESTANDARES_CALIDAD, withEstandaresCalidadDefaults } from '@/lib/qualityStandards/defaults'
+import { DEFAULT_AREAS } from '@/lib/agendaAreas'
 
 export const metadata = {
   title: 'Ficha Kinésica | Reason',
@@ -45,6 +48,23 @@ export default async function FichaPage({ params }: { params: { id: string } }) 
 
   logFichaAccess(ficha.id, patient.id, patient.org_id, user.id)
 
+  // Estándares de calidad: apagado por defecto (espacio personal o centro sin
+  // el feature prendido) — en ese caso ninguna de las 3 piezas nuevas se monta.
+  const estandaresCalidad = patient.org_id
+    ? await getOrgFeatureSetting(patient.org_id, FEATURE_KEY_ESTANDARES_CALIDAD, supabase)
+    : { enabled: false, config: {} }
+  const estandaresCalidadConfig = withEstandaresCalidadDefaults(estandaresCalidad.config)
+
+  let agendaAreas: string[] = DEFAULT_AREAS
+  if (estandaresCalidad.enabled && patient.org_id) {
+    const { data: orgData } = await supabase
+      .from('organizations')
+      .select('agenda_areas')
+      .eq('id', patient.org_id)
+      .single()
+    agendaAreas = (orgData?.agenda_areas as string[] | null) ?? DEFAULT_AREAS
+  }
+
   const [{ data: questionnaireResults }, { data: dynamoResults }] = await Promise.all([
     supabase
       .from('questionnaire_results')
@@ -78,6 +98,9 @@ export default async function FichaPage({ params }: { params: { id: string } }) 
           questionnaireResults={questionnaireResults ?? []}
           dynamoResults={dynamoResults ?? []}
           userId={user.id}
+          estandaresCalidadEnabled={estandaresCalidad.enabled}
+          estandaresCalidadConfig={estandaresCalidadConfig}
+          agendaAreas={agendaAreas}
         />
       </main>
     </div>

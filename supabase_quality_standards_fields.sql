@@ -5,7 +5,7 @@
 -- de ningún centro. Reversible: DROP COLUMN / DROP TABLE si hiciera falta.
 --
 -- Ejecutar en Supabase SQL Editor ANTES de mergear
--- feature/estandares-calidad-m2-campos-nuevos.
+-- feature/estandares-calidad-m1-feature-settings.
 
 -- ── 1) Fecha de ingreso ──────────────────────────────────────────────────────
 -- Hoy la única fecha disponible es patients.created_at (cuándo se cargó el
