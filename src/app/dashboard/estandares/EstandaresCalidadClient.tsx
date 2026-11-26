@@ -148,6 +148,13 @@ export default function EstandaresCalidadClient({
         </div>
       ) : (
         <div className="space-y-12">
+          <div className="flex justify-end gap-3">
+            <a href={`/api/estandares/export?orgId=${orgId}&format=csv`}
+              className="text-[13px] text-accent hover:underline">Descargar CSV (última semana)</a>
+            <a href={`/api/estandares/export?orgId=${orgId}&format=json`}
+              className="text-[13px] text-accent hover:underline">Descargar JSON</a>
+          </div>
+
           <section>
             <h2 className="text-[18px] font-medium mb-4">Kinesiología</h2>
             {kineTeam.length === 0 ? (
