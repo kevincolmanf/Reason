@@ -5,10 +5,13 @@ import ContentCard from '@/components/ContentCard'
 import Header from '@/components/Header'
 import PlanningReminderBanner from '@/components/PlanningReminderBanner'
 import WeekMilestonesBanner, { type WeekMilestone } from '@/components/WeekMilestonesBanner'
+import PendientesCumplimientoBanner, { type PendienteItem } from '@/components/PendientesCumplimientoBanner'
 import OnboardingGuide from '@/components/OnboardingGuide'
 import WhatsNewBanner from '@/components/WhatsNewBanner'
 import { eventMeta } from '@/lib/patientEvents'
 import { getActiveContext } from '@/lib/context'
+import { getOrgFeatureSetting } from '@/lib/featureSettings'
+import { FEATURE_KEY_ESTANDARES_CALIDAD, withEstandaresCalidadDefaults } from '@/lib/qualityStandards/defaults'
 
 // Etiquetas y colores para los hitos de la semana
 const RTS_LABELS: Record<string, string> = {
@@ -82,6 +85,8 @@ export default async function DashboardPage() {
   const contextOrgId: string | null = ctx.type === 'org' ? ctx.orgId : null
   let contextOrgName: string | null = null
 
+  let pendientesCumplimiento: PendienteItem[] = []
+
   if (contextOrgId) {
     const { data: orgData } = await supabase
       .from('organizations')
@@ -89,6 +94,28 @@ export default async function DashboardPage() {
       .eq('id', contextOrgId)
       .single()
     contextOrgName = orgData?.name ?? null
+
+    // Vista B de "Estándares de calidad" (M5): solo si el centro prendió el
+    // feature. mis_pendientes_cumplimiento ya filtra a auth.uid() sola — acá
+    // solo resolvemos los umbrales configurados por el centro.
+    const estandaresCalidad = await getOrgFeatureSetting(contextOrgId, FEATURE_KEY_ESTANDARES_CALIDAD, supabase)
+    if (estandaresCalidad.enabled) {
+      const cfg = withEstandaresCalidadDefaults(estandaresCalidad.config)
+      const { data: pendientes } = await supabase.rpc('mis_pendientes_cumplimiento', {
+        p_org_id: contextOrgId,
+        p_dias_cuestionario: cfg.dias_max_cuestionario_ingreso,
+        p_dias_abierto: cfg.dias_paciente_abierto,
+        p_dias_plan: cfg.dias_max_plan_entrenamiento,
+        p_campos_obligatorios: cfg.campos_obligatorios_evaluacion_ingreso,
+      })
+      type PendienteRow = { kind: string; patient_id: string; patient_name: string; dias: number | null }
+      pendientesCumplimiento = ((pendientes ?? []) as PendienteRow[]).map(p => ({
+        kind: p.kind as PendienteItem['kind'],
+        patientId: p.patient_id,
+        patientName: p.patient_name,
+        dias: p.dias,
+      }))
+    }
   }
 
   // Todo lo que sigue está scopeado al workspace activo (equipo vs. personal):
@@ -304,6 +331,8 @@ export default async function DashboardPage() {
             </Link>
           </div>
         )}
+
+        <PendientesCumplimientoBanner items={pendientesCumplimiento} />
 
         <WeekMilestonesBanner milestones={milestones} />
 

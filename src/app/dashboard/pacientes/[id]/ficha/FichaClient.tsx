@@ -9,6 +9,10 @@ import QuickNoteField from '@/components/QuickNoteField'
 import { useConfirm, useToast } from '@/components/Dialogs'
 import { softDeleteRecord } from '@/lib/softDelete'
 import ClinicalProfilePanel from './ClinicalProfilePanel'
+import AltaPacienteControl from './AltaPacienteControl'
+import EvaluacionIngresoEntrenamiento from './EvaluacionIngresoEntrenamiento'
+import DerivarAreaAction from './DerivarAreaAction'
+import type { EstandaresCalidadConfig } from '@/lib/qualityStandards/defaults'
 import { fetchDiagnosisCatalog, fetchBodyRegions, createCustomDiagnosis, type DiagnosisOption, type BodyRegion } from '@/lib/clinicalCatalog'
 import CatalogCombobox from '@/components/CatalogCombobox'
 
@@ -232,6 +236,9 @@ export default function FichaClient({
   questionnaireResults,
   dynamoResults,
   userId,
+  estandaresCalidadEnabled = false,
+  estandaresCalidadConfig,
+  agendaAreas = [],
 }: {
   ficha: PatientFicha
   patientId: string
@@ -240,6 +247,9 @@ export default function FichaClient({
   questionnaireResults: QuestionnaireResult[]
   dynamoResults: DynamoResult[]
   userId: string
+  estandaresCalidadEnabled?: boolean
+  estandaresCalidadConfig?: EstandaresCalidadConfig
+  agendaAreas?: string[]
 }) {
   const [ficha, setFicha] = useState<FichaData>({
     ...emptyFicha,
@@ -836,6 +846,18 @@ export default function FichaClient({
       </div>
 
       <ClinicalProfilePanel patientId={patientId} userId={userId} orgId={orgId} />
+
+      {estandaresCalidadEnabled && (
+        <>
+          <AltaPacienteControl patientId={patientId} userId={userId} />
+          <EvaluacionIngresoEntrenamiento
+            patientId={patientId}
+            userId={userId}
+            requiredFields={estandaresCalidadConfig?.campos_obligatorios_evaluacion_ingreso ?? []}
+          />
+          <DerivarAreaAction patientId={patientId} userId={userId} areas={agendaAreas} />
+        </>
+      )}
 
       {/* ══════════ BLOQUE 1 · ANAMNESIS Y DIAGNÓSTICO ══════════ */}
       <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-8 mb-6 space-y-8">
