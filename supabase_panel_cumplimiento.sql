@@ -19,6 +19,12 @@
 -- "ahora" — así una vista de una semana pasada muestra lo que realmente
 -- estaba pendiente esa semana, no el estado actual.
 --
+-- NOTA: todas las referencias a professional_id dentro del cuerpo van
+-- calificadas con alias de tabla (ej. kp.professional_id), nunca "pelado" —
+-- plpgsql trata el nombre de columna de RETURNS TABLE como una variable en
+-- todo el cuerpo de la función, y una referencia sin calificar es ambigua
+-- entre esa variable y la columna de la query (error 42702).
+--
 -- Ejecutar en Supabase SQL Editor ANTES de mergear
 -- feature/estandares-calidad-m1-feature-settings.
 
@@ -87,10 +93,10 @@ BEGIN
     FULL OUTER JOIN load_days l ON a.patient_id = l.patient_id AND a.session_date = l.session_date
   ),
   ses_agg AS (
-    SELECT professional_id, COUNT(*)::int AS sesiones_total,
-      COUNT(*) FILTER (WHERE completa)::int AS sesiones_completas
-    FROM sessions WHERE professional_id IS NOT NULL
-    GROUP BY professional_id
+    SELECT ss.professional_id, COUNT(*)::int AS sesiones_total,
+      COUNT(*) FILTER (WHERE ss.completa)::int AS sesiones_completas
+    FROM sessions ss WHERE ss.professional_id IS NOT NULL
+    GROUP BY ss.professional_id
   ),
   nuevos AS (
     SELECT kp.id, kp.professional_id, kp.admission_date
@@ -114,15 +120,15 @@ BEGIN
     WHERE kp.discharged_at >= p_from AND kp.discharged_at < p_to
   ),
   altas_agg AS (
-    SELECT professional_id,
-      COUNT(*) FILTER (WHERE discharge_reason = 'alta')::int AS altas,
-      COUNT(*) FILTER (WHERE discharge_reason = 'derivacion')::int AS derivaciones,
-      COUNT(*) FILTER (WHERE discharge_reason = 'pausa_acordada')::int AS pausas,
-      COUNT(*) FILTER (WHERE discharge_reason = 'abandono')::int AS abandonos,
-      COUNT(*) FILTER (WHERE discharge_reason IS NULL
-        OR discharge_reason NOT IN ('alta','derivacion','pausa_acordada','abandono'))::int AS desconocido
-    FROM altas_periodo
-    GROUP BY professional_id
+    SELECT ap.professional_id,
+      COUNT(*) FILTER (WHERE ap.discharge_reason = 'alta')::int AS altas,
+      COUNT(*) FILTER (WHERE ap.discharge_reason = 'derivacion')::int AS derivaciones,
+      COUNT(*) FILTER (WHERE ap.discharge_reason = 'pausa_acordada')::int AS pausas,
+      COUNT(*) FILTER (WHERE ap.discharge_reason = 'abandono')::int AS abandonos,
+      COUNT(*) FILTER (WHERE ap.discharge_reason IS NULL
+        OR ap.discharge_reason NOT IN ('alta','derivacion','pausa_acordada','abandono'))::int AS desconocido
+    FROM altas_periodo ap
+    GROUP BY ap.professional_id
   ),
   visitas AS (
     SELECT t.patient_id,
@@ -151,11 +157,11 @@ BEGIN
     GROUP BY kp.professional_id
   ),
   ids AS (
-    SELECT professional_id FROM ses_agg
-    UNION SELECT professional_id FROM nuevos_agg
-    UNION SELECT professional_id FROM altas_agg
-    UNION SELECT professional_id FROM abiertos_agg
-    UNION SELECT professional_id FROM pases_agg
+    SELECT sa.professional_id FROM ses_agg sa
+    UNION SELECT na.professional_id FROM nuevos_agg na
+    UNION SELECT aa.professional_id FROM altas_agg aa
+    UNION SELECT ab.professional_id FROM abiertos_agg ab
+    UNION SELECT pg.professional_id FROM pases_agg pg
   )
   SELECT
     i.professional_id,
@@ -164,13 +170,13 @@ BEGIN
     COALESCE(al.altas, 0), COALESCE(al.derivaciones, 0), COALESCE(al.pausas, 0),
     COALESCE(al.abandonos, 0), COALESCE(al.desconocido, 0),
     COALESCE(ab.pacientes_abiertos, 0),
-    COALESCE(pa.pases_sin_informe, 0)
+    COALESCE(pg.pases_sin_informe, 0)
   FROM ids i
   LEFT JOIN ses_agg s ON s.professional_id = i.professional_id
   LEFT JOIN nuevos_agg n ON n.professional_id = i.professional_id
   LEFT JOIN altas_agg al ON al.professional_id = i.professional_id
   LEFT JOIN abiertos_agg ab ON ab.professional_id = i.professional_id
-  LEFT JOIN pases_agg pa ON pa.professional_id = i.professional_id
+  LEFT JOIN pases_agg pg ON pg.professional_id = i.professional_id
   WHERE i.professional_id IS NOT NULL;
 END;
 $$;
@@ -253,19 +259,19 @@ BEGIN
     GROUP BY tp.professional_id
   ),
   ids AS (
-    SELECT professional_id FROM nuevos_agg
-    UNION SELECT professional_id FROM incompletas_agg
-    UNION SELECT professional_id FROM pases_agg
+    SELECT na.professional_id FROM nuevos_agg na
+    UNION SELECT inc.professional_id FROM incompletas_agg inc
+    UNION SELECT pg.professional_id FROM pases_agg pg
   )
   SELECT
     i.professional_id,
     COALESCE(n.alumnos_nuevos, 0), COALESCE(n.nuevos_sin_plan, 0),
     COALESCE(inc.evaluaciones_incompletas, 0),
-    COALESCE(pa.pases_sin_informe, 0)
+    COALESCE(pg.pases_sin_informe, 0)
   FROM ids i
   LEFT JOIN nuevos_agg n ON n.professional_id = i.professional_id
   LEFT JOIN incompletas_agg inc ON inc.professional_id = i.professional_id
-  LEFT JOIN pases_agg pa ON pa.professional_id = i.professional_id
+  LEFT JOIN pases_agg pg ON pg.professional_id = i.professional_id
   WHERE i.professional_id IS NOT NULL;
 END;
 $$;
