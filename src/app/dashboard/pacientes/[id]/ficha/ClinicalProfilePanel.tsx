@@ -73,6 +73,7 @@ export default function ClinicalProfilePanel({
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const supabaseRef = useRef(createClient())
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const profileRef = useRef<ClinicalProfile>(emptyProfile)
 
   useEffect(() => {
     let cancelled = false
@@ -83,7 +84,9 @@ export default function ClinicalProfilePanel({
         fetchOccupationCatalog(supabase),
       ])
       if (cancelled) return
-      if (existing) setProfile({ ...emptyProfile, ...existing })
+      const loadedProfile = existing ? { ...emptyProfile, ...existing } : emptyProfile
+      profileRef.current = loadedProfile
+      setProfile(loadedProfile)
       setOccupations(occs)
       setLoaded(true)
     })()
@@ -102,7 +105,8 @@ export default function ClinicalProfilePanel({
   }
 
   const update = <K extends keyof ClinicalProfile>(key: K, value: ClinicalProfile[K]) => {
-    const next = { ...profile, [key]: value }
+    const next = { ...profileRef.current, [key]: value }
+    profileRef.current = next
     setProfile(next)
     persist(next)
   }
