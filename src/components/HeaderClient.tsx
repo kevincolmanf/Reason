@@ -167,6 +167,11 @@ export default function HeaderClient({ userMetadata, hasAgendaAccess, canSeePane
                 Panel de gestión
               </Link>
             )}
+            {canSeePanelGestion && (
+              <Link href="/dashboard/estandares" onClick={closeMenu} className="block px-4 py-2 text-[14px] text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline">
+                Estándares de calidad
+              </Link>
+            )}
           </div>
 
           {/* Workspace switcher (mobile-only) */}

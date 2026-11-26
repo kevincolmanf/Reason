@@ -86,6 +86,11 @@ export default function NavMoreMenu({
               Caja
             </Link>
           )}
+          {canSeePanelGestion && (
+            <Link href="/dashboard/estandares" onClick={close} className={itemClass}>
+              Estándares de calidad
+            </Link>
+          )}
         </div>
       )}
     </div>
