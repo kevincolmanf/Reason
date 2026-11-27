@@ -21,8 +21,10 @@ interface Member {
   users: { full_name: string | null; email: string }
 }
 
-// Sugerencias de profesión (el campo igual acepta texto libre).
-const PROFESSIONS = ['Kinesiólogo/a', 'Fisioterapeuta', 'Nutricionista', 'Médico/a', 'Terapista ocupacional', 'Fonoaudiólogo/a', 'Psicólogo/a', 'Entrenador/a', 'Preparador/a físico']
+// Sugerencias de profesión (el campo igual acepta texto libre). Incluye
+// roles no clínicos (secretaría/administración) — no todo integrante
+// invitado atiende pacientes.
+const PROFESSIONS = ['Kinesiólogo/a', 'Fisioterapeuta', 'Nutricionista', 'Médico/a', 'Terapista ocupacional', 'Fonoaudiólogo/a', 'Psicólogo/a', 'Entrenador/a', 'Preparador/a físico', 'Secretario/a', 'Administrativo/a']
 const VINCULOS: { value: string; label: string }[] = [
   { value: 'propio', label: 'Propio (staff)' },
   { value: 'honorarios', label: 'Honorarios (%)' },
