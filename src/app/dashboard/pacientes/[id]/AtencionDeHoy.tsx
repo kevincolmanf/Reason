@@ -55,7 +55,7 @@ const SUGG: Record<Symptom, { title: string; items: string[] }> = {
 
 const MODALITIES: { id: string; label: string }[] = [
   { id: 'manual', label: 'Terapia manual' },
-  { id: 'reeval', label: 'Reevaluación' },
+  { id: 'reeval', label: 'Reevaluación hoy' },
   { id: 'cuest', label: 'Cuestionario' },
 ]
 
@@ -590,7 +590,7 @@ export default function AtencionDeHoy({ patientId, userId, initialAttentions = [
                 {todayBitacora.exercises.map(ex => (
                   <span key={ex.name} className="inline-flex items-center rounded-full border-[0.5px] border-accent/35 bg-accent/10 overflow-hidden">
                     <span className="text-[12px] pl-2.5 pr-1.5 py-1 text-accent">{ex.name}</span>
-                    <button onClick={() => removeBitacoraExercise(ex.name)} className="text-[12px] leading-none px-1.5 py-1 text-accent/60 hover:text-warning transition-colors">×</button>
+                    <button onClick={() => removeBitacoraExercise(ex.name)} aria-label={`Quitar ${ex.name} de la bitácora de hoy`} title="Quitar de la bitácora de hoy" className="text-[12px] leading-none px-1.5 py-1 text-accent/60 hover:text-warning transition-colors">×</button>
                   </span>
                 ))}
               </div>
@@ -603,6 +603,7 @@ export default function AtencionDeHoy({ patientId, userId, initialAttentions = [
                 </button>
               </div>
             )}
+            <div className="text-[10.5px] uppercase tracking-[0.05em] text-text-secondary px-3 pt-2">Bitácora de hoy — ejercicios hechos, sin dosificación</div>
             <div className="flex items-center gap-2 px-3 py-2 bg-bg-primary">
               <input value={bq} onChange={e => setBq(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter' && bq.trim()) { e.preventDefault(); addBitacoraExercise() } }}
@@ -637,6 +638,7 @@ export default function AtencionDeHoy({ patientId, userId, initialAttentions = [
         </button>
       ) : (
         <>
+          <div className="text-[11px] uppercase tracking-[0.08em] text-text-secondary mb-2">Modalidades aplicadas hoy (opcional)</div>
           <div className="flex flex-wrap gap-2 mb-3">
             {MODALITIES.map(m => {
               const on = modalities.has(m.id)

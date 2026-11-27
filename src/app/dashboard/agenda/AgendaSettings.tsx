@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
-import { useToast } from '@/components/Dialogs'
+import { useToast, useConfirm } from '@/components/Dialogs'
 import { setMemberAgendaLevel, type AgendaLevel } from '@/app/account/equipo/actions'
 import { savePersonalAgendaConfig } from './actions'
 import { DEFAULT_AREAS } from '@/lib/agendaAreas'
@@ -68,6 +68,7 @@ export default function AgendaSettings({
   onSaved,
 }: Props) {
   const { notify, toast } = useToast()
+  const { confirm, confirmDialog } = useConfirm()
   const [areas, setAreas] = useState<string[]>(initialAreas)
   const [slotInterval, setSlotInterval] = useState(initialSlotInterval)
   const [areaDurations, setAreaDurations] = useState<Record<string, number>>(initialAreaDurations)
@@ -120,7 +121,15 @@ export default function AgendaSettings({
     })
   }
 
-  const resetAreas = () => { setAreas(DEFAULT_AREAS); setAreaDurations({}) }
+  const resetAreas = async () => {
+    if (!(await confirm({
+      title: 'Restablecer áreas',
+      message: 'Se borran todas las áreas y duraciones que configuraste, y se vuelve a la lista por defecto. Esto no se puede deshacer.',
+      confirmLabel: 'Restablecer',
+      danger: true,
+    }))) return
+    setAreas(DEFAULT_AREAS); setAreaDurations({})
+  }
 
   const copyLink = () => {
     if (!shareUrl) return
@@ -219,6 +228,7 @@ export default function AgendaSettings({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       {toast}
+      {confirmDialog}
       <div className="bg-bg-secondary border-[0.5px] border-border rounded-2xl p-6 w-full max-w-[480px] shadow-xl max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-5">
           <h2 className="text-[16px] font-medium">Configuración de agenda</h2>
@@ -285,7 +295,7 @@ export default function AgendaSettings({
 
         {/* Slot interval */}
         <div className="mb-6 border-t-[0.5px] border-border pt-5">
-          <label className="text-[11px] uppercase tracking-[0.05em] text-text-secondary block mb-3">Intervalo por defecto</label>
+          <label className="text-[11px] uppercase tracking-[0.05em] text-text-secondary block mb-3">Duración por defecto</label>
           <p className="text-[12px] text-text-secondary mb-3">Se usa en &quot;Todas las agendas&quot; y en las áreas que no tengan una duración propia arriba.</p>
           <div className="flex gap-2 flex-wrap">
             {[15, 20, 30, 40, 45, 60].map(interval => (
