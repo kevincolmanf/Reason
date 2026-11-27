@@ -299,9 +299,12 @@ export async function setMemberAgendaLevel(
   return { success: true }
 }
 
-// Categoría del profesional (profesión, especialidad, vínculo) desde Mi Equipo.
-// Son etiquetas para el panel de gestión; no cambian permisos.
-export type MemberCategory = { profession?: string | null; specialty?: string | null; vinculo?: string | null }
+// Categoría del profesional (profesión, especialidad, vínculo, área) desde Mi
+// Equipo. profession/specialty/vinculo son etiquetas para el panel de
+// gestión; area es el área principal del profesional dentro del equipo —
+// la que usa Estándares de calidad para agrupar sus indicadores cuando sus
+// pacientes todavía no tienen un área propia cargada. Ninguna cambia permisos.
+export type MemberCategory = { profession?: string | null; specialty?: string | null; vinculo?: string | null; area?: string | null }
 
 export async function setMemberCategory(
   orgId: string,
@@ -325,6 +328,7 @@ export async function setMemberCategory(
   if ('profession' in patch) update.profession = patch.profession?.trim() || null
   if ('specialty' in patch) update.specialty = patch.specialty?.trim() || null
   if ('vinculo' in patch && patch.vinculo) update.vinculo = patch.vinculo
+  if ('area' in patch) update.area = patch.area?.trim() || null
   if (Object.keys(update).length === 0) return { success: true }
 
   const adminClient = createAdminClient()

@@ -16,6 +16,7 @@ interface Member {
   profession: string | null
   specialty: string | null
   vinculo: string | null
+  area: string | null
   hasLoggedIn: boolean
   users: { full_name: string | null; email: string }
 }
@@ -39,6 +40,7 @@ interface Props {
   userId: string
   org: Org | null
   members: Member[]
+  agendaAreas: string[]
 }
 
 const ADMIN_CAN = [
@@ -58,7 +60,7 @@ const MEMBER_CAN = [
   'Acceder a la biblioteca clínica completa',
 ]
 
-export default function EquipoClient({ userId, org: initialOrg, members: initialMembers }: Props) {
+export default function EquipoClient({ userId, org: initialOrg, members: initialMembers, agendaAreas }: Props) {
   const router = useRouter()
   const [org] = useState(initialOrg)
   const [members, setMembers] = useState(initialMembers)
@@ -256,7 +258,7 @@ export default function EquipoClient({ userId, org: initialOrg, members: initial
   // optimista; si falla, revierte el campo tocado.
   const handleSetCategory = async (member: Member, patch: MemberCategory) => {
     if (!org) return
-    const prev: MemberCategory = { profession: member.profession, specialty: member.specialty, vinculo: member.vinculo }
+    const prev: MemberCategory = { profession: member.profession, specialty: member.specialty, vinculo: member.vinculo, area: member.area }
     setMembers(ms => ms.map(m => m.id === member.id ? { ...m, ...patch } : m))
     const res = await setMemberCategory(org.id, member.user_id, patch)
     if (res.error) setMembers(ms => ms.map(m => m.id === member.id ? { ...m, ...prev } : m))
@@ -696,6 +698,17 @@ Cualquier duda, avisame.`
                       >
                         {VINCULOS.map(v => <option key={v.value} value={v.value}>{v.label}</option>)}
                       </select>
+                      {agendaAreas.length > 0 && (
+                        <select
+                          value={m.area ?? ''}
+                          onChange={e => handleSetCategory(m, { area: e.target.value || null })}
+                          title="Área principal del profesional — se usa en Estándares de calidad para agrupar sus indicadores cuando sus pacientes todavía no tienen un área propia."
+                          className="text-[12px] bg-bg-primary border-[0.5px] border-border rounded-full px-2.5 py-1 focus:outline-none focus:border-accent text-text-secondary"
+                        >
+                          <option value="">Área: sin asignar</option>
+                          {agendaAreas.map(a => <option key={a} value={a}>{a}</option>)}
+                        </select>
+                      )}
                       <Link href="/account/crm" className="text-[12px] text-accent hover:underline no-underline ml-auto">
                         Ver en panel de gestión →
                       </Link>

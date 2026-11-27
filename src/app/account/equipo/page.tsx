@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import Header from '@/components/Header'
 import Link from 'next/link'
 import EquipoClient from './EquipoClient'
+import { DEFAULT_AREAS } from '@/lib/agendaAreas'
 
 export const metadata = { title: 'Mi Equipo | Reason' }
 
@@ -23,19 +24,20 @@ export default async function EquipoPage() {
   // Check if user has an org (as admin)
   const { data: orgRows } = await supabase
     .from('organizations')
-    .select('id, name, google_review_url, google_review_phrase')
+    .select('id, name, google_review_url, google_review_phrase, agenda_areas')
     .eq('owner_id', user.id)
     .order('created_at', { ascending: true })
     .limit(1)
 
   const org = orgRows?.[0] || null
+  const agendaAreas = (org?.agenda_areas as string[] | null) ?? DEFAULT_AREAS
 
-  let members: { id: string; user_id: string; role: string; can_register_cash: boolean; agenda_access: boolean; agenda_can_edit: boolean; profession: string | null; specialty: string | null; vinculo: string | null; hasLoggedIn: boolean; users: { full_name: string | null; email: string } }[] = []
+  let members: { id: string; user_id: string; role: string; can_register_cash: boolean; agenda_access: boolean; agenda_can_edit: boolean; profession: string | null; specialty: string | null; vinculo: string | null; area: string | null; hasLoggedIn: boolean; users: { full_name: string | null; email: string } }[] = []
 
   if (org) {
     const { data: membersData } = await supabase
       .from('organization_members')
-      .select('id, user_id, role, can_register_cash, agenda_access, agenda_can_edit, profession, specialty, vinculo, users(full_name, email)')
+      .select('id, user_id, role, can_register_cash, agenda_access, agenda_can_edit, profession, specialty, vinculo, area, users(full_name, email)')
       .eq('org_id', org.id)
       .order('created_at', { ascending: true })
 
@@ -76,6 +78,7 @@ export default async function EquipoPage() {
           userId={user.id}
           org={org || null}
           members={members}
+          agendaAreas={agendaAreas}
         />
       </main>
     </div>
