@@ -2,16 +2,18 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
-import { INTAKE_FIELD_CATALOG, QUALITY_OPTIONS, isIntakeComplete } from '@/lib/qualityStandards/intakeFields'
+import { QUALITY_OPTIONS, isIntakeComplete, type IntakeFieldDef } from '@/lib/qualityStandards/intakeFields'
+import AttributionPicker from '@/components/AttributionPicker'
 
 type IntakeData = Record<string, string>
 
-export default function EvaluacionIngresoEntrenamiento({
-  patientId, userId, requiredFields,
+export default function EvaluacionIngresoArea({
+  patientId, userId, area, fields,
 }: {
   patientId: string
   userId: string
-  requiredFields: string[]
+  area: string
+  fields: IntakeFieldDef[]
 }) {
   const [data, setData] = useState<IntakeData>({})
   const [loaded, setLoaded] = useState(false)
@@ -25,6 +27,7 @@ export default function EvaluacionIngresoEntrenamiento({
   // este ref) perdía el cambio anterior porque ambos leían el mismo `data`
   // desactualizado.
   const dataRef = useRef<IntakeData>({})
+  const actingAsRef = useRef(userId)
 
   useEffect(() => {
     let cancelled = false
@@ -32,6 +35,7 @@ export default function EvaluacionIngresoEntrenamiento({
       .from('training_intake_evaluations')
       .select('data')
       .eq('patient_id', patientId)
+      .eq('area', area)
       .maybeSingle()
       .then(({ data: existing }) => {
         if (cancelled) return
@@ -41,18 +45,20 @@ export default function EvaluacionIngresoEntrenamiento({
         setLoaded(true)
       })
     return () => { cancelled = true }
-  }, [patientId])
+  }, [patientId, area])
 
   const persist = (next: IntakeData) => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current)
     setSaveStatus('saving')
     timeoutRef.current = setTimeout(async () => {
-      // onConflict explícito: el conflicto real es la unicidad de patient_id,
-      // no la primary key (id) — sin esto Postgres no resuelve el choque con
-      // el UPDATE y devuelve 409 en cada upsert después del primero.
+      // onConflict explícito: el conflicto real es la unicidad de
+      // (patient_id, area), no la primary key (id).
       const { error } = await supabaseRef.current
         .from('training_intake_evaluations')
-        .upsert({ patient_id: patientId, user_id: userId, data: next }, { onConflict: 'patient_id' })
+        .upsert(
+          { patient_id: patientId, area, user_id: actingAsRef.current, data: next },
+          { onConflict: 'patient_id,area' }
+        )
       setSaveStatus(error ? 'error' : 'saved')
     }, 1500)
   }
@@ -64,17 +70,16 @@ export default function EvaluacionIngresoEntrenamiento({
     persist(next)
   }
 
-  if (!loaded || requiredFields.length === 0) return null
+  if (!loaded || fields.length === 0) return null
 
-  const fields = INTAKE_FIELD_CATALOG.filter(f => requiredFields.includes(f.key))
-  const complete = isIntakeComplete(data, requiredFields)
+  const complete = isIntakeComplete(data, fields)
 
   return (
     <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-8 mb-6">
       <div className="flex items-center justify-between mb-5">
         <div>
           <h2 className="text-[15px] font-medium tracking-[-0.01em] inline">Evaluación de ingreso</h2>
-          <span className="text-[11px] text-text-tertiary ml-2">entrenamiento</span>
+          <span className="text-[11px] text-text-tertiary ml-2">{area}</span>
         </div>
         <div className="flex items-center gap-3">
           {saveStatus === 'saving' && <span className="text-[12px] text-text-secondary">Guardando…</span>}
@@ -84,26 +89,31 @@ export default function EvaluacionIngresoEntrenamiento({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
         {fields.map(field => {
           const inputId = `intake-${field.key}`
           return (
             <div key={field.key}>
               <label htmlFor={inputId} className="block text-[12px] text-text-secondary mb-1">{field.label}</label>
-              {field.type === 'quality' ? (
+              {field.type === 'calidad' ? (
                 <select id={inputId} value={data[field.key] ?? ''} onChange={e => update(field.key, e.target.value)}
                   className="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded-lg p-2.5 text-[14px] focus:outline-none focus:border-accent">
                   <option value="">Sin evaluar</option>
                   {QUALITY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
-              ) : (
+              ) : field.type === 'numero' ? (
                 <input id={inputId} type="number" step="1" value={data[field.key] ?? ''} onChange={e => update(field.key, e.target.value)}
+                  className="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded-lg p-2.5 text-[14px] focus:outline-none focus:border-accent" />
+              ) : (
+                <input id={inputId} type="text" value={data[field.key] ?? ''} onChange={e => update(field.key, e.target.value)}
                   className="w-full bg-bg-secondary border-[0.5px] border-border-strong rounded-lg p-2.5 text-[14px] focus:outline-none focus:border-accent" />
               )}
             </div>
           )
         })}
       </div>
+
+      <AttributionPicker patientId={patientId} fallbackUserId={userId} onChange={p => { actingAsRef.current = p.id }} />
     </div>
   )
 }

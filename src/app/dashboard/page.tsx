@@ -97,20 +97,18 @@ export default async function DashboardPage() {
 
     // Vista B de "Estándares de calidad" (M5): solo si el centro prendió el
     // feature. mis_pendientes_cumplimiento ya filtra a auth.uid() sola — acá
-    // solo resolvemos los umbrales configurados por el centro.
+    // solo resolvemos la config por área del centro y se la pasamos tal cual.
     const estandaresCalidad = await getOrgFeatureSetting(contextOrgId, FEATURE_KEY_ESTANDARES_CALIDAD, supabase)
     if (estandaresCalidad.enabled) {
       const cfg = withEstandaresCalidadDefaults(estandaresCalidad.config)
       const { data: pendientes } = await supabase.rpc('mis_pendientes_cumplimiento', {
         p_org_id: contextOrgId,
-        p_dias_cuestionario: cfg.dias_max_cuestionario_ingreso,
-        p_dias_abierto: cfg.dias_paciente_abierto,
-        p_dias_plan: cfg.dias_max_plan_entrenamiento,
-        p_campos_obligatorios: cfg.campos_obligatorios_evaluacion_ingreso,
+        p_areas_config: cfg.areas,
       })
-      type PendienteRow = { kind: string; patient_id: string; patient_name: string; dias: number | null }
+      type PendienteRow = { kind: string; area: string; patient_id: string; patient_name: string; dias: number | null }
       pendientesCumplimiento = ((pendientes ?? []) as PendienteRow[]).map(p => ({
         kind: p.kind as PendienteItem['kind'],
+        area: p.area,
         patientId: p.patient_id,
         patientName: p.patient_name,
         dias: p.dias,

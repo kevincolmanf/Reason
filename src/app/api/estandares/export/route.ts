@@ -7,24 +7,21 @@ import { FEATURE_KEY_ESTANDARES_CALIDAD, withEstandaresCalidadDefaults } from '@
 // que un asistente lo lea y arme el resumen de los lunes del director, o para
 // bajarlo directo como CSV. Deliberadamente NO expone ningún dato de
 // paciente (nombre, DNI, teléfono, texto clínico): solo conteos por
-// profesional, que es exactamente todo lo que devuelven panel_cumplimiento_*
-// (M4) — nunca seleccionaron un campo de paciente para empezar.
+// profesional y área, que es exactamente todo lo que devuelve
+// panel_cumplimiento() — nunca seleccionó un campo de paciente para empezar.
 //
 // GET /api/estandares/export?orgId=...&from=YYYY-MM-DD&to=YYYY-MM-DD&format=csv|json
 // Solo el dueño del centro (o un admin de Reason) puede pedirlo — mismo gate
 // que /dashboard/estandares.
 
-type KineRow = {
+type PanelRow = {
   professional_id: string
+  area: string
   sesiones_total: number; sesiones_completas: number
   pacientes_nuevos: number; nuevos_sin_cuestionario: number
   altas: number; derivaciones: number; pausas: number; abandonos: number; desconocido: number
   pacientes_abiertos: number
-  pases_sin_informe: number
-}
-type EntrenoRow = {
-  professional_id: string
-  alumnos_nuevos: number; nuevos_sin_plan: number
+  nuevos_sin_plan: number
   evaluaciones_incompletas: number
   pases_sin_informe: number
 }
@@ -75,26 +72,19 @@ export async function GET(request: Request) {
   const setting = await getOrgFeatureSetting(orgId, FEATURE_KEY_ESTANDARES_CALIDAD, supabase)
   const config = withEstandaresCalidadDefaults(setting.config)
 
-  const [kineRes, entrenoRes, membersRes] = await Promise.all([
-    supabase.rpc('panel_cumplimiento_kinesiologia', {
+  const [panelRes, membersRes] = await Promise.all([
+    supabase.rpc('panel_cumplimiento', {
       p_org_id: orgId, p_from: from.toISOString(), p_to: to.toISOString(),
-      p_dias_cuestionario: config.dias_max_cuestionario_ingreso,
-      p_dias_abierto: config.dias_paciente_abierto,
-    }),
-    supabase.rpc('panel_cumplimiento_entrenamiento', {
-      p_org_id: orgId, p_from: from.toISOString(), p_to: to.toISOString(),
-      p_dias_plan: config.dias_max_plan_entrenamiento,
-      p_campos_obligatorios: config.campos_obligatorios_evaluacion_ingreso,
+      p_areas_config: config.areas,
     }),
     supabase.from('organization_members').select('user_id, users(id, full_name, email)').eq('org_id', orgId),
   ])
 
-  if (kineRes.error) return NextResponse.json({ error: kineRes.error.message }, { status: 400 })
-  if (entrenoRes.error) return NextResponse.json({ error: entrenoRes.error.message }, { status: 400 })
+  if (panelRes.error) return NextResponse.json({ error: panelRes.error.message }, { status: 400 })
 
   // Universo de profesionales = SOLO miembros de ESTE centro — mismo criterio
   // de seguridad que /account/crm y /dashboard/estandares: no confiar en los
-  // ids que devuelven las RPC por sí solos.
+  // ids que devuelve la RPC por sí sola.
   const members = (membersRes.data ?? []) as unknown as MemberRow[]
   const nameById = new Map<string, string>()
   members.forEach(m => {
@@ -103,8 +93,7 @@ export async function GET(request: Request) {
   })
   if (isOwner && !nameById.has(user.id)) nameById.set(user.id, 'Dueño del centro')
 
-  const kineRows = ((kineRes.data ?? []) as KineRow[]).filter(r => nameById.has(r.professional_id))
-  const entrenoRows = ((entrenoRes.data ?? []) as EntrenoRow[]).filter(r => nameById.has(r.professional_id))
+  const rows = ((panelRes.data ?? []) as PanelRow[]).filter(r => nameById.has(r.professional_id))
 
   const periodo = { desde: from.toISOString().split('T')[0], hasta: to.toISOString().split('T')[0] }
   const filenameBase = `estandares-calidad_${periodo.desde}_${periodo.hasta}`
@@ -113,17 +102,14 @@ export async function GET(request: Request) {
     return NextResponse.json({
       centro: orgData.name,
       periodo,
-      kinesiologia: kineRows.map(r => ({
+      equipo: rows.map(r => ({
         profesional: nameById.get(r.professional_id),
+        area: r.area,
         sesiones_completas: r.sesiones_completas, sesiones_total: r.sesiones_total,
         nuevos_sin_cuestionario: r.nuevos_sin_cuestionario,
         altas: r.altas, derivaciones: r.derivaciones, pausas: r.pausas, abandonos: r.abandonos, desconocido: r.desconocido,
         pacientes_abiertos: r.pacientes_abiertos,
-        pases_sin_informe: r.pases_sin_informe,
-      })),
-      entrenamiento: entrenoRows.map(r => ({
-        profesional: nameById.get(r.professional_id),
-        alumnos_nuevos: r.alumnos_nuevos, sin_plan: r.nuevos_sin_plan,
+        nuevos_sin_plan: r.nuevos_sin_plan,
         evaluaciones_incompletas: r.evaluaciones_incompletas,
         pases_sin_informe: r.pases_sin_informe,
       })),
@@ -136,19 +122,17 @@ export async function GET(request: Request) {
   lines.push(csvRow(['Centro', orgData.name]))
   lines.push(csvRow(['Período', `${periodo.desde} a ${periodo.hasta}`]))
   lines.push('')
-  lines.push('KINESIOLOGÍA')
-  lines.push(csvRow(['Profesional', 'Sesiones completas', 'Sesiones totales', 'Nuevos sin cuestionario', 'Altas', 'Derivaciones', 'Pausas', 'Abandonos', 'Desconocido', 'Pacientes abiertos', 'Pases sin informe']))
-  for (const r of kineRows) {
+  lines.push(csvRow([
+    'Área', 'Profesional', 'Sesiones completas', 'Sesiones totales', 'Nuevos sin cuestionario',
+    'Altas', 'Derivaciones', 'Pausas', 'Abandonos', 'Desconocido', 'Pacientes abiertos',
+    'Sin plan', 'Evaluaciones incompletas', 'Pases sin informe',
+  ]))
+  for (const r of rows) {
     lines.push(csvRow([
-      nameById.get(r.professional_id), r.sesiones_completas, r.sesiones_total, r.nuevos_sin_cuestionario,
-      r.altas, r.derivaciones, r.pausas, r.abandonos, r.desconocido, r.pacientes_abiertos, r.pases_sin_informe,
+      r.area, nameById.get(r.professional_id), r.sesiones_completas, r.sesiones_total, r.nuevos_sin_cuestionario,
+      r.altas, r.derivaciones, r.pausas, r.abandonos, r.desconocido, r.pacientes_abiertos,
+      r.nuevos_sin_plan, r.evaluaciones_incompletas, r.pases_sin_informe,
     ]))
-  }
-  lines.push('')
-  lines.push('ENTRENAMIENTO')
-  lines.push(csvRow(['Profesional', 'Alumnos nuevos', 'Sin plan', 'Evaluaciones incompletas', 'Pases sin informe']))
-  for (const r of entrenoRows) {
-    lines.push(csvRow([nameById.get(r.professional_id), r.alumnos_nuevos, r.nuevos_sin_plan, r.evaluaciones_incompletas, r.pases_sin_informe]))
   }
 
   return new NextResponse(lines.join('\n'), {

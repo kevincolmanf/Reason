@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useConfirm, useToast } from '@/components/Dialogs'
 import { dischargePatient, reopenPatient, DISCHARGE_REASON_LABELS, type DischargeReason } from '@/lib/patientDischarge'
+import AttributionPicker from '@/components/AttributionPicker'
 
 interface Status {
   discharged_at: string | null
@@ -23,6 +24,7 @@ export default function AltaPacienteControl({
   const [status, setStatus] = useState<Status | null>(null)
   const [busy, setBusy] = useState(false)
   const [pickingReason, setPickingReason] = useState(false)
+  const [actingAs, setActingAs] = useState(userId)
   const supabaseRef = useRef(createClient())
 
   useEffect(() => {
@@ -45,7 +47,7 @@ export default function AltaPacienteControl({
       danger: reason === 'abandono',
     }))) return
     setBusy(true)
-    const { error } = await dischargePatient(supabaseRef.current, patientId, userId, reason)
+    const { error } = await dischargePatient(supabaseRef.current, patientId, actingAs, reason)
     setBusy(false)
     if (error) { notify('No se pudo registrar: ' + error, 'error'); return }
     setStatus({ discharged_at: new Date().toISOString(), discharge_reason: reason })
@@ -69,42 +71,48 @@ export default function AltaPacienteControl({
     : null
 
   return (
-    <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-5 mb-6 flex items-center justify-between gap-3 flex-wrap">
+    <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-5 mb-6">
       {confirmDialog}
       {toast}
-      <div>
-        <span className="text-[12px] uppercase tracking-[0.05em] text-text-tertiary">Estado del tratamiento</span>
-        <p className="text-[14px] mt-0.5">
-          {status.discharged_at ? (
-            <>Cerrado · <span className="font-medium">{label ?? 'Sin motivo'}</span></>
-          ) : (
-            <span className="text-[#3b82f6] font-medium">Activo</span>
-          )}
-        </p>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <span className="text-[12px] uppercase tracking-[0.05em] text-text-tertiary">Estado del tratamiento</span>
+          <p className="text-[14px] mt-0.5">
+            {status.discharged_at ? (
+              <>Cerrado · <span className="font-medium">{label ?? 'Sin motivo'}</span></>
+            ) : (
+              <span className="text-[#3b82f6] font-medium">Activo</span>
+            )}
+          </p>
+        </div>
+
+        {status.discharged_at ? (
+          <button onClick={handleReopen} disabled={busy}
+            className="text-[13px] text-text-secondary hover:text-text-primary underline disabled:opacity-40">
+            Reabrir tratamiento
+          </button>
+        ) : (
+          <div className="relative">
+            <button onClick={() => setPickingReason(o => !o)} disabled={busy}
+              className="bg-bg-secondary border-[0.5px] border-border-strong rounded-lg px-3.5 py-2 text-[13px] font-medium hover:border-accent transition-colors disabled:opacity-40">
+              Cerrar tratamiento…
+            </button>
+            {pickingReason && (
+              <div className="absolute right-0 top-full mt-1.5 w-56 bg-bg-primary border-[0.5px] border-border rounded-xl shadow-lg py-1.5 z-20">
+                {REASON_ORDER.map(reason => (
+                  <button key={reason} onClick={() => handleDischarge(reason)}
+                    className="w-full text-left px-3.5 py-2 text-[13px] hover:bg-bg-secondary transition-colors">
+                    {DISCHARGE_REASON_LABELS[reason]}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {status.discharged_at ? (
-        <button onClick={handleReopen} disabled={busy}
-          className="text-[13px] text-text-secondary hover:text-text-primary underline disabled:opacity-40">
-          Reabrir tratamiento
-        </button>
-      ) : (
-        <div className="relative">
-          <button onClick={() => setPickingReason(o => !o)} disabled={busy}
-            className="bg-bg-secondary border-[0.5px] border-border-strong rounded-lg px-3.5 py-2 text-[13px] font-medium hover:border-accent transition-colors disabled:opacity-40">
-            Cerrar tratamiento…
-          </button>
-          {pickingReason && (
-            <div className="absolute right-0 top-full mt-1.5 w-56 bg-bg-primary border-[0.5px] border-border rounded-xl shadow-lg py-1.5 z-20">
-              {REASON_ORDER.map(reason => (
-                <button key={reason} onClick={() => handleDischarge(reason)}
-                  className="w-full text-left px-3.5 py-2 text-[13px] hover:bg-bg-secondary transition-colors">
-                  {DISCHARGE_REASON_LABELS[reason]}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+      {!status.discharged_at && (
+        <AttributionPicker patientId={patientId} fallbackUserId={userId} onChange={p => setActingAs(p.id)} />
       )}
     </div>
   )

@@ -10,9 +10,9 @@ import { useConfirm, useToast } from '@/components/Dialogs'
 import { softDeleteRecord } from '@/lib/softDelete'
 import ClinicalProfilePanel from './ClinicalProfilePanel'
 import AltaPacienteControl from './AltaPacienteControl'
-import EvaluacionIngresoEntrenamiento from './EvaluacionIngresoEntrenamiento'
+import EvaluacionIngresoArea from './EvaluacionIngresoArea'
 import DerivarAreaAction from './DerivarAreaAction'
-import type { EstandaresCalidadConfig } from '@/lib/qualityStandards/defaults'
+import type { IntakeFieldDef } from '@/lib/qualityStandards/intakeFields'
 import { fetchDiagnosisCatalog, fetchBodyRegions, createCustomDiagnosis, type DiagnosisOption, type BodyRegion } from '@/lib/clinicalCatalog'
 import CatalogCombobox from '@/components/CatalogCombobox'
 
@@ -237,7 +237,8 @@ export default function FichaClient({
   dynamoResults,
   userId,
   estandaresCalidadEnabled = false,
-  estandaresCalidadConfig,
+  patientArea,
+  areaIntakeFields = {},
   agendaAreas = [],
 }: {
   ficha: PatientFicha
@@ -248,9 +249,14 @@ export default function FichaClient({
   dynamoResults: DynamoResult[]
   userId: string
   estandaresCalidadEnabled?: boolean
-  estandaresCalidadConfig?: EstandaresCalidadConfig
+  patientArea?: string
+  areaIntakeFields?: Record<string, IntakeFieldDef[]>
   agendaAreas?: string[]
 }) {
+  // El área puede cambiar en el momento (DerivarAreaAction) sin recargar la
+  // página — el resto de los componentes de este feature reaccionan al valor
+  // vigente, no al que vino del server en el primer render.
+  const [currentArea, setCurrentArea] = useState<string | undefined>(patientArea)
   const [ficha, setFicha] = useState<FichaData>({
     ...emptyFicha,
     ...initialFicha.ficha_data,
@@ -850,12 +856,21 @@ export default function FichaClient({
       {estandaresCalidadEnabled && (
         <>
           <AltaPacienteControl patientId={patientId} userId={userId} />
-          <EvaluacionIngresoEntrenamiento
+          {currentArea && (
+            <EvaluacionIngresoArea
+              patientId={patientId}
+              userId={userId}
+              area={currentArea}
+              fields={areaIntakeFields[currentArea] ?? []}
+            />
+          )}
+          <DerivarAreaAction
             patientId={patientId}
             userId={userId}
-            requiredFields={estandaresCalidadConfig?.campos_obligatorios_evaluacion_ingreso ?? []}
+            areas={agendaAreas}
+            currentArea={currentArea ?? ''}
+            onAreaChange={setCurrentArea}
           />
-          <DerivarAreaAction patientId={patientId} userId={userId} areas={agendaAreas} />
         </>
       )}
 
