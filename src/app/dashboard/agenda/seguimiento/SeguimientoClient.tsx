@@ -273,32 +273,37 @@ export default function SeguimientoClient({ userId, orgId, orgName, thresholdDay
                     <span className="shrink-0 text-[11px] text-text-tertiary self-center">Sin teléfono</span>
                   )}
                 </div>
-                {/* Acciones secundarias */}
-                <div className="flex items-center gap-3 mt-2.5 pt-2.5 border-t-[0.5px] border-border">
-                  <button
-                    onClick={() => darDeAlta(p)}
-                    disabled={busy}
-                    className="text-[12px] text-text-secondary hover:text-text-primary disabled:opacity-40 transition-colors"
-                  >
-                    Dar de alta
-                  </button>
-                  <span className="text-border">·</span>
-                  <button
-                    onClick={() => marcarAbandono(p)}
-                    disabled={busy}
-                    className="text-[12px] text-text-secondary hover:text-warning disabled:opacity-40 transition-colors"
-                    title="Registra que el paciente abandonó el tratamiento"
-                  >
-                    Tratamiento abandonado
-                  </button>
-                  <span className="text-border">·</span>
+                {/* Acciones secundarias — las dos de la izquierda cierran el
+                    tratamiento (decisión clínica, queda registrada); "Pausar
+                    aviso" a la derecha es solo temporal y reversible, antes
+                    se veían las 3 idénticas sin ninguna jerarquía. */}
+                <div className="flex items-center justify-between gap-3 mt-2.5 pt-2.5 border-t-[0.5px] border-border">
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => darDeAlta(p)}
+                      disabled={busy}
+                      title="Cierra el tratamiento como alta clínica — queda registrado, no es reversible desde acá"
+                      className="text-[12px] font-medium text-text-secondary hover:text-text-primary disabled:opacity-40 transition-colors"
+                    >
+                      Dar de alta
+                    </button>
+                    <span className="text-border">·</span>
+                    <button
+                      onClick={() => marcarAbandono(p)}
+                      disabled={busy}
+                      className="text-[12px] font-medium text-text-secondary hover:text-warning disabled:opacity-40 transition-colors"
+                      title="Cierra el tratamiento como abandono — registra que el paciente abandonó, no es reversible desde acá"
+                    >
+                      Tratamiento abandonado
+                    </button>
+                  </div>
                   <button
                     onClick={() => pausar(p)}
                     disabled={busy}
-                    className="text-[12px] text-text-secondary hover:text-text-primary disabled:opacity-40 transition-colors"
-                    title={`No aparece por ${SNOOZE_DAYS} días`}
+                    className="text-[11.5px] text-text-tertiary hover:text-text-primary disabled:opacity-40 transition-colors shrink-0"
+                    title={`Deja de avisarte por ${SNOOZE_DAYS} días — no cierra el tratamiento, podés revertirlo`}
                   >
-                    Pausar aviso
+                    Pausar aviso ({SNOOZE_DAYS}d)
                   </button>
                 </div>
               </div>
