@@ -677,43 +677,50 @@ Cualquier duda, avisame.`
                         )}
                       </div>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t-[0.5px] border-border/60">
-                      <span className="text-[11px] uppercase tracking-[0.05em] text-text-tertiary mr-1">Categoría</span>
-                      <input
-                        list="professions-list"
-                        defaultValue={m.profession ?? ''}
-                        onBlur={e => { const v = e.target.value.trim(); if (v !== (m.profession ?? '')) handleSetCategory(m, { profession: v }) }}
-                        placeholder="Profesión"
-                        className="text-[12px] bg-bg-primary border-[0.5px] border-border rounded-full px-3 py-1 focus:outline-none focus:border-accent w-[150px]"
-                      />
-                      <input
-                        defaultValue={m.specialty ?? ''}
-                        onBlur={e => { const v = e.target.value.trim(); if (v !== (m.specialty ?? '')) handleSetCategory(m, { specialty: v }) }}
-                        placeholder="Especialidad"
-                        className="text-[12px] bg-bg-primary border-[0.5px] border-border rounded-full px-3 py-1 focus:outline-none focus:border-accent w-[160px]"
-                      />
-                      <select
-                        value={m.vinculo ?? 'propio'}
-                        onChange={e => handleSetCategory(m, { vinculo: e.target.value })}
-                        title="Vínculo con el centro (para el panel de gestión)"
-                        className="text-[12px] bg-bg-primary border-[0.5px] border-border rounded-full px-2.5 py-1 focus:outline-none focus:border-accent text-text-secondary"
-                      >
-                        {VINCULOS.map(v => <option key={v.value} value={v.value}>{v.label}</option>)}
-                      </select>
-                      {agendaAreas.length > 0 && (
+                    <div className="mt-3 pt-3 border-t-[0.5px] border-border/60 space-y-2.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[10px] uppercase tracking-[0.05em] text-text-tertiary w-full sm:w-auto sm:mr-1">Quién es</span>
+                        <input
+                          list="professions-list"
+                          defaultValue={m.profession ?? ''}
+                          onBlur={e => { const v = e.target.value.trim(); if (v !== (m.profession ?? '')) handleSetCategory(m, { profession: v }) }}
+                          placeholder="Profesión"
+                          title="Qué rol cumple en el centro — ej: Kinesiólogo/a, Secretario/a"
+                          className="text-[12px] bg-bg-primary border-[0.5px] border-border rounded-full px-3 py-1 focus:outline-none focus:border-accent w-[150px]"
+                        />
+                        <input
+                          defaultValue={m.specialty ?? ''}
+                          onBlur={e => { const v = e.target.value.trim(); if (v !== (m.specialty ?? '')) handleSetCategory(m, { specialty: v }) }}
+                          placeholder="Especialidad (opcional)"
+                          title="Detalle adicional sobre la profesión — ej: Traumatólogo, Deportiva"
+                          className="text-[12px] bg-bg-primary border-[0.5px] border-border rounded-full px-3 py-1 focus:outline-none focus:border-accent w-[160px]"
+                        />
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[10px] uppercase tracking-[0.05em] text-text-tertiary w-full sm:w-auto sm:mr-1">Para reportes</span>
                         <select
-                          value={m.area ?? ''}
-                          onChange={e => handleSetCategory(m, { area: e.target.value || null })}
-                          title="Área principal del profesional — se usa en Estándares de calidad para agrupar sus indicadores cuando sus pacientes todavía no tienen un área propia."
+                          value={m.vinculo ?? 'propio'}
+                          onChange={e => handleSetCategory(m, { vinculo: e.target.value })}
+                          title="Vínculo con el centro — se usa en el Panel de gestión"
                           className="text-[12px] bg-bg-primary border-[0.5px] border-border rounded-full px-2.5 py-1 focus:outline-none focus:border-accent text-text-secondary"
                         >
-                          <option value="">Área principal: sin asignar</option>
-                          {agendaAreas.map(a => <option key={a} value={a}>{a}</option>)}
+                          {VINCULOS.map(v => <option key={v.value} value={v.value}>{v.label}</option>)}
                         </select>
-                      )}
-                      <Link href="/account/crm" className="text-[12px] text-accent hover:underline no-underline ml-auto">
-                        Ver en panel de gestión →
-                      </Link>
+                        {agendaAreas.length > 0 && (
+                          <select
+                            value={m.area ?? ''}
+                            onChange={e => handleSetCategory(m, { area: e.target.value || null })}
+                            title="Área principal del profesional — se usa en Estándares de calidad para agrupar sus indicadores cuando sus pacientes todavía no tienen un área propia."
+                            className="text-[12px] bg-bg-primary border-[0.5px] border-border rounded-full px-2.5 py-1 focus:outline-none focus:border-accent text-text-secondary"
+                          >
+                            <option value="">Área principal: sin asignar</option>
+                            {agendaAreas.map(a => <option key={a} value={a}>{a}</option>)}
+                          </select>
+                        )}
+                        <Link href="/account/crm" className="text-[12px] text-accent hover:underline no-underline ml-auto">
+                          Ver en panel de gestión →
+                        </Link>
+                      </div>
                     </div>
                     </>
                   )}
