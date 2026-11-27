@@ -1543,6 +1543,16 @@ export default function PlanEditor({ initialPlan, userId, orgId, initialEvents =
             </button>
           </div>
 
+          {/* Qué significa cada marcador del calendario — antes solo se
+              entendía pasando el mouse día por día, uno por uno. */}
+          <div className="flex flex-wrap gap-x-3 gap-y-1 justify-center text-[10.5px] text-text-secondary mb-4">
+            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: '#5B6B78' }} />Hito del tratamiento (color según el tipo)</span>
+            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: RTS_COLOR }} />RTS</span>
+            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: DYN_COLOR }} />Dinamometría</span>
+            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: Q_COLOR }} />Cuestionario</span>
+            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full border-[0.5px] border-dashed shrink-0" style={{ borderColor: 'currentColor' }} />Programada (sin completar)</span>
+          </div>
+
           {/* Grilla */}
           <div className="grid grid-cols-7 gap-1 mb-1">
             {DAY_NAMES.map(d => (
