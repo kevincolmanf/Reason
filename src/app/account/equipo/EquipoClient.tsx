@@ -689,7 +689,7 @@ Cualquier duda, avisame.`
                       <input
                         defaultValue={m.specialty ?? ''}
                         onBlur={e => { const v = e.target.value.trim(); if (v !== (m.specialty ?? '')) handleSetCategory(m, { specialty: v }) }}
-                        placeholder="Especialidad / área"
+                        placeholder="Especialidad"
                         className="text-[12px] bg-bg-primary border-[0.5px] border-border rounded-full px-3 py-1 focus:outline-none focus:border-accent w-[160px]"
                       />
                       <select
@@ -707,7 +707,7 @@ Cualquier duda, avisame.`
                           title="Área principal del profesional — se usa en Estándares de calidad para agrupar sus indicadores cuando sus pacientes todavía no tienen un área propia."
                           className="text-[12px] bg-bg-primary border-[0.5px] border-border rounded-full px-2.5 py-1 focus:outline-none focus:border-accent text-text-secondary"
                         >
-                          <option value="">Área: sin asignar</option>
+                          <option value="">Área principal: sin asignar</option>
                           {agendaAreas.map(a => <option key={a} value={a}>{a}</option>)}
                         </select>
                       )}
