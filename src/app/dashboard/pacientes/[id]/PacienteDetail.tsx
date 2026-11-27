@@ -446,7 +446,7 @@ export default function PacienteDetail({ patient: initialPatient, userId, treatm
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
           Portal
         </Link>
-        <Link href={`/dashboard/pacientes/${patient.id}/rts`} className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-[13px] font-medium text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline whitespace-nowrap">
+        <Link href={`/dashboard/pacientes/${patient.id}/rts`} title="Protocolo de Retorno al Deporte" className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-[13px] font-medium text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors no-underline whitespace-nowrap">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>
           RTS
         </Link>
