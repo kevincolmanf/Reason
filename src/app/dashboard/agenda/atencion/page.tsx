@@ -119,7 +119,7 @@ export default async function AtencionDelBloquePage({ searchParams }: { searchPa
         </div>
 
         <div data-tour="atencion-bloques">
-          <BloqueAtencion bloques={bloques} />
+          <BloqueAtencion bloques={bloques} userId={user.id} />
         </div>
       </main>
     </div>

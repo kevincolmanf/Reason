@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import AttributionPicker, { type AttributedProfessional } from '@/components/AttributionPicker'
 
 // Vista de bloque del Modo Kinesiología: los pacientes de kine con turno en el
 // mismo horario, juntos, cada uno con un check rápido de síntoma para registrar
@@ -28,7 +29,7 @@ const SYM: { id: Symptom; label: string; color: string; soft: string }[] = [
   { id: 'mejor', label: 'Mejor', color: '#4ade80', soft: 'rgba(74,222,128,0.12)' },
 ]
 
-function PacienteCard({ p }: { p: BloquePaciente }) {
+function PacienteCard({ p, userId }: { p: BloquePaciente; userId: string }) {
   const [kineMode, setKineMode] = useState(p.kineMode)
   const [activating, setActivating] = useState(false)
   const [activateError, setActivateError] = useState(false)
@@ -36,6 +37,7 @@ function PacienteCard({ p }: { p: BloquePaciente }) {
   const [saving, setSaving] = useState(false)
   const [attended, setAttended] = useState(p.attended)
   const [error, setError] = useState(false)
+  const [attributed, setAttributed] = useState<AttributedProfessional | null>(null)
 
   const activateKine = async () => {
     setActivating(true); setActivateError(false)
@@ -89,7 +91,7 @@ function PacienteCard({ p }: { p: BloquePaciente }) {
       const res = await fetch('/api/pacientes/atencion', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ patientId: p.patientId, symptom, manageSymptoms: false, modalities: [], note: '' }),
+        body: JSON.stringify({ patientId: p.patientId, symptom, manageSymptoms: false, modalities: [], note: '', attributedProfessionalId: attributed?.id }),
       })
       if (!res.ok) throw new Error()
       setAttended(true)
@@ -118,6 +120,7 @@ function PacienteCard({ p }: { p: BloquePaciente }) {
 
       {!attended && (
         <>
+          <AttributionPicker patientId={p.patientId} fallbackUserId={userId} onChange={setAttributed} />
           <div className="grid grid-cols-3 gap-2 mb-2.5">
             {SYM.map(s => {
               const on = symptom === s.id
@@ -160,7 +163,7 @@ function PacienteCard({ p }: { p: BloquePaciente }) {
   )
 }
 
-export default function BloqueAtencion({ bloques }: { bloques: Bloque[] }) {
+export default function BloqueAtencion({ bloques, userId }: { bloques: Bloque[]; userId: string }) {
   const total = bloques.reduce((n, b) => n + b.pacientes.length, 0)
 
   if (total === 0) {
@@ -181,7 +184,7 @@ export default function BloqueAtencion({ bloques }: { bloques: Bloque[] }) {
             <span className="text-[12px] text-text-secondary">· {b.pacientes.length} {b.pacientes.length === 1 ? 'paciente' : 'en simultáneo'}</span>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
-            {b.pacientes.map(p => <PacienteCard key={p.patientId} p={p} />)}
+            {b.pacientes.map(p => <PacienteCard key={p.patientId} p={p} userId={userId} />)}
           </div>
         </section>
       ))}
