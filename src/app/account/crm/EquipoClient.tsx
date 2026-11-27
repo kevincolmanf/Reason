@@ -152,6 +152,11 @@ export default function EquipoClient({ team, monthLabel }: { team: TeamMember[];
         </div>
       )}
 
+      <p className="text-[11.5px] text-text-tertiary mb-2">
+        <span className="text-emerald-400">verde</span> bien · <span className="text-warning">ámbar</span> a vigilar · <span className="text-red-400">rojo</span> a conversar ·
+        {' '}<span className="text-text-primary">pasá el mouse por cada columna</span> para ver qué mide. Activos = en tratamiento (sin alta ni abandono); duración = hasta el alta; ausencia alerta &gt;10%.
+      </p>
+
       <div className="bg-bg-primary border-[0.5px] border-border rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1080px]">
@@ -184,8 +189,8 @@ export default function EquipoClient({ team, monthLabel }: { team: TeamMember[];
                   <td className="px-3 py-3 whitespace-nowrap">
                     <div className="text-[13px] font-medium text-text-primary">
                       {m.name}{flagged(m) && <span className="text-warning ml-1.5" title="A conversar">⚑</span>}
-                      {m.vinculo === 'terciarizado' && <span className="ml-2 text-[10px] uppercase tracking-[0.04em] text-warning border-[0.5px] border-warning/40 rounded px-1.5 py-0.5">Terc.</span>}
-                      {m.vinculo === 'honorarios' && <span className="ml-2 text-[10px] uppercase tracking-[0.04em] text-[#6690c0] border-[0.5px] border-[#6690c0]/40 rounded px-1.5 py-0.5">Hon.</span>}
+                      {m.vinculo === 'terciarizado' && <span title="Terciarizado" className="ml-2 text-[10px] uppercase tracking-[0.04em] text-warning border-[0.5px] border-warning/40 rounded px-1.5 py-0.5">Terc.</span>}
+                      {m.vinculo === 'honorarios' && <span title="Honorarios (%)" className="ml-2 text-[10px] uppercase tracking-[0.04em] text-[#6690c0] border-[0.5px] border-[#6690c0]/40 rounded px-1.5 py-0.5">Hon.</span>}
                       <span className="text-text-tertiary ml-1.5 text-[11px]">›</span>
                     </div>
                     {(m.profession || m.specialty) && (
@@ -212,11 +217,6 @@ export default function EquipoClient({ team, monthLabel }: { team: TeamMember[];
           </table>
         </div>
       </div>
-
-      <p className="text-[11.5px] text-text-tertiary mt-3">
-        <span className="text-emerald-400">verde</span> bien · <span className="text-warning">ámbar</span> a vigilar · <span className="text-red-400">rojo</span> a conversar ·
-        {' '}<span className="text-text-primary">pasá el mouse por cada columna</span> para ver qué mide. Activos = en tratamiento (sin alta ni abandono); duración = hasta el alta; ausencia alerta &gt;10%.
-      </p>
 
       {open && <Scorecard m={open} center={center} monthLabel={monthLabel} onClose={() => setOpen(null)} />}
 

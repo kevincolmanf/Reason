@@ -120,7 +120,8 @@ export default function PapeleraClient() {
                   <button
                     onClick={() => handlePurge(r)}
                     disabled={busyId === r.id}
-                    className="bg-bg-secondary border-[0.5px] border-border text-text-secondary px-3 py-2 rounded-lg text-[13px] hover:text-warning hover:border-warning disabled:opacity-40 transition-colors"
+                    title="Elimina definitivamente, ya no se puede restaurar"
+                    className="bg-bg-secondary border-[0.5px] border-warning/30 text-warning/80 px-3 py-2 rounded-lg text-[13px] hover:text-warning hover:border-warning disabled:opacity-40 transition-colors"
                   >
                     Eliminar
                   </button>
