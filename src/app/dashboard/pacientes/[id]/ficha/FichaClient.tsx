@@ -851,6 +851,15 @@ export default function FichaClient({
         </div>
       </div>
 
+      {/* Índice rápido — la ficha es una sola página larga; esto evita tener
+          que scrollear a ciegas para llegar a un bloque puntual. */}
+      <div className="flex flex-wrap gap-2 mb-6 text-[12.5px]">
+        <a href="#bloque-1" className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1.5 text-text-secondary hover:text-text-primary hover:border-accent transition-colors no-underline">1 · Anamnesis</a>
+        <a href="#bloque-2" className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1.5 text-text-secondary hover:text-text-primary hover:border-accent transition-colors no-underline">2 · Interrogatorio</a>
+        <a href="#bloque-3" className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1.5 text-text-secondary hover:text-text-primary hover:border-accent transition-colors no-underline">3 · Examen físico</a>
+        <a href="#bloque-4" className="bg-bg-secondary border-[0.5px] border-border rounded-full px-3 py-1.5 text-text-secondary hover:text-text-primary hover:border-accent transition-colors no-underline">4 · Plan y seguimiento</a>
+      </div>
+
       <ClinicalProfilePanel patientId={patientId} userId={userId} orgId={orgId} />
 
       {estandaresCalidadEnabled && (
@@ -875,7 +884,7 @@ export default function FichaClient({
       )}
 
       {/* ══════════ BLOQUE 1 · ANAMNESIS Y DIAGNÓSTICO ══════════ */}
-      <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-8 mb-6 space-y-8">
+      <div id="bloque-1" className="bg-bg-primary border-[0.5px] border-border rounded-xl p-8 mb-6 space-y-8 scroll-mt-20">
         <div className="flex items-baseline gap-2 border-b-[0.5px] border-border pb-3">
           <span className="text-[11px] font-semibold text-accent tabular-nums">1</span>
           <h2 className="text-[15px] font-medium tracking-[-0.01em]">Anamnesis y diagnóstico</h2>
@@ -918,6 +927,7 @@ export default function FichaClient({
               return { id: created.id, nombre: created.nombre, sublabel: created.codigo_cie10 ?? undefined }
             }}
           />
+          <p className="text-[11.5px] text-text-tertiary mt-3">Los 4 campos de abajo son opcionales — no hace falta completarlos para guardar la ficha. Alimentan Estadísticas, así que cuantos más pacientes los tengan, más útil es esa pantalla.</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-3">
             <div>
               <label className="block text-[12px] text-text-secondary mb-1">Mecanismo de lesión</label>
@@ -1001,7 +1011,7 @@ export default function FichaClient({
       </div>
 
       {/* ══════════ BLOQUE 2 · INTERROGATORIO ══════════ */}
-      <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-8 mb-6 space-y-6">
+      <div id="bloque-2" className="bg-bg-primary border-[0.5px] border-border rounded-xl p-8 mb-6 space-y-6 scroll-mt-20">
         <div className="flex items-baseline gap-2 border-b-[0.5px] border-border pb-3">
           <span className="text-[11px] font-semibold text-accent tabular-nums">2</span>
           <h2 className="text-[15px] font-medium tracking-[-0.01em]">Interrogatorio</h2>
@@ -1153,7 +1163,7 @@ export default function FichaClient({
       </div>
 
       {/* ══════════ BLOQUE 3 · EXAMEN FÍSICO ══════════ */}
-      <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-8 mb-6 space-y-6">
+      <div id="bloque-3" className="bg-bg-primary border-[0.5px] border-border rounded-xl p-8 mb-6 space-y-6 scroll-mt-20">
         <div className="flex items-baseline gap-2 border-b-[0.5px] border-border pb-3">
           <span className="text-[11px] font-semibold text-accent tabular-nums">3</span>
           <h2 className="text-[15px] font-medium tracking-[-0.01em]">Examen físico</h2>
@@ -1427,7 +1437,7 @@ export default function FichaClient({
       </div>
 
       {/* ══════════ BLOQUE 4 · PLAN Y SEGUIMIENTO ══════════ */}
-      <div className="bg-bg-primary border-[0.5px] border-border rounded-xl p-8 mb-6 space-y-8">
+      <div id="bloque-4" className="bg-bg-primary border-[0.5px] border-border rounded-xl p-8 mb-6 space-y-8 scroll-mt-20">
         <div className="flex items-baseline gap-2 border-b-[0.5px] border-border pb-3">
           <span className="text-[11px] font-semibold text-accent tabular-nums">4</span>
           <h2 className="text-[15px] font-medium tracking-[-0.01em]">Plan y seguimiento</h2>

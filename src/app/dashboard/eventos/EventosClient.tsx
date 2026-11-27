@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
+import { useConfirm } from '@/components/Dialogs'
 
 interface EventRow {
   id: string
@@ -49,6 +50,7 @@ const EMPTY = (date: string) => ({ title: '', description: '', location: '', cov
 
 export default function EventosClient({ userId, orgId, initialEvents, initialCounts }: Props) {
   const supabase = createClient()
+  const { confirm, confirmDialog } = useConfirm()
   const [events, setEvents] = useState<EventRow[]>(initialEvents)
   const [counts] = useState<Record<string, number>>(initialCounts)
   const today = new Date().toISOString().slice(0, 10)
@@ -113,7 +115,13 @@ export default function EventosClient({ userId, orgId, initialEvents, initialCou
     closeForm()
   }
 
-  const removeEvent = async (id: string) => {
+  const removeEvent = async (id: string, title: string) => {
+    if (!(await confirm({
+      title: 'Eliminar evento',
+      message: `Se borra "${title}" y queda inaccesible para quien ya se inscribió. Esto no se puede deshacer.`,
+      confirmLabel: 'Eliminar',
+      danger: true,
+    }))) return
     setEvents(prev => prev.filter(e => e.id !== id))
     await supabase.from('events').delete().eq('id', id)
   }
@@ -214,6 +222,7 @@ export default function EventosClient({ userId, orgId, initialEvents, initialCou
 
   return (
     <div>
+      {confirmDialog}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-[28px] font-medium tracking-[-0.02em]">Eventos</h1>
@@ -301,7 +310,7 @@ export default function EventosClient({ userId, orgId, initialEvents, initialCou
                     {counts[e.id] ?? 0} inscripto{(counts[e.id] ?? 0) === 1 ? '' : 's'}{e.capacity ? ` / ${e.capacity}` : ''}
                   </div>
                 </div>
-                <button onClick={() => removeEvent(e.id)} className="text-text-tertiary hover:text-red-400 text-[16px] leading-none shrink-0" title="Eliminar evento">×</button>
+                <button onClick={() => removeEvent(e.id, e.title)} className="text-text-tertiary hover:text-red-400 text-[16px] leading-none shrink-0" title="Eliminar evento">×</button>
               </div>
               <div className="flex flex-wrap items-center gap-2 px-4 pb-4">
                 <button onClick={() => copyLink(e.public_token)} className={chip}>{copied === e.public_token ? '¡Copiado!' : 'Copiar link de inscripción'}</button>

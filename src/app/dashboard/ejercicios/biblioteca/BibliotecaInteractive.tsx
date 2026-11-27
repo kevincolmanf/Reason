@@ -375,7 +375,7 @@ export default function BibliotecaInteractive({ equipments, userId, orgId }: { e
                   )}
 
                   <button
-                    onClick={() => notify('Para agregar al plan, abrí el Planificador de Sesiones.')}
+                    onClick={() => notify('Para agregar este ejercicio a un plan, entrá al paciente y abrí la pestaña "Plan".')}
                     className="text-text-primary bg-bg-secondary border-[0.5px] border-border px-3 py-1.5 rounded-lg text-[12px] font-medium hover:bg-border transition-colors"
                   >
                     + Plan

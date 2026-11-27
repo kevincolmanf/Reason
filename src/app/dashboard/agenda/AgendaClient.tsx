@@ -943,7 +943,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                 <Link
                   href={`/dashboard/agenda/atencion?day=${toDayParam(selectedDay)}`}
                   onClick={() => setToolsOpen(false)}
-                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left text-[13px] text-text-primary hover:bg-bg-secondary transition-colors no-underline"
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left text-[13px] text-text-primary hover:bg-bg-secondary transition-colors no-underline border-t-[0.5px] border-border mt-1 pt-[13px]"
                   title="Atención de hoy: los pacientes de kinesiología del bloque, con check rápido de síntoma"
                 >
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-text-secondary"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
@@ -968,7 +968,7 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
                     title="Pacientes que hace días no vienen y no tienen próximo turno"
                   >
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-text-secondary"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-                    Ausencias
+                    Seguimiento de ausencias
                   </Link>
                 )}
                 {isOwner && (
@@ -1220,6 +1220,31 @@ export default function AgendaClient({ userId, orgId, orgName, professionals, me
               {status}
             </span>
           ))}
+        </div>
+        {/* Qué significan los íconos/badges que aparecen sobre cada turno —
+            antes solo se explicaban al pasar el mouse (tooltip), invisible en
+            tablet/celular. */}
+        <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-[11px] text-text-secondary pt-1">
+          <span className="flex items-center gap-1.5">
+            <span className="text-[10px] font-bold leading-none rounded px-1 py-0.5 border-[0.5px] bg-emerald-500/30 text-emerald-200 border-emerald-400/50">C</span>
+            El paciente confirmó que asiste
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="text-[10px] font-bold leading-none rounded px-1 py-0.5 border-[0.5px] bg-red-500/30 text-red-200 border-red-400/50">A</span>
+            El paciente avisó que no asiste
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-green-400" />
+            Recordatorio enviado
+          </span>
+          <span className="flex items-center gap-1.5">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-sky-400"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            Sesión registrada
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="text-[#6FAE7E] font-bold">$</span>
+            Pago cargado a caja
+          </span>
         </div>
       </div>
 

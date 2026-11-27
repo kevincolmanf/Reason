@@ -109,7 +109,7 @@ export default async function InstructivoPage() {
               </div>
             </div>
             <p className="text-[12px] text-gray-400 mt-5 pt-5 border-t border-gray-200">
-              Podés cambiar tu contraseña en cualquier momento desde Mi Cuenta → Actualizar Contraseña.
+              Podés cambiar tu contraseña en cualquier momento desde Mi Cuenta → sección Contraseña.
             </p>
           </div>
         </div>
