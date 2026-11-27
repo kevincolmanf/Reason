@@ -362,24 +362,28 @@ export default function PacienteDetail({ patient: initialPatient, userId, treatm
                     <button
                       onClick={() => setKineMode(!(patient.kine_mode ?? false))}
                       disabled={kineSaving}
-                      title="Agrega la capa &quot;Atención de hoy&quot; (check de síntoma, sugerencia y continuidad) a este paciente. No afecta a los demás."
-                      className="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left hover:bg-bg-secondary transition-colors disabled:opacity-50"
+                      className="w-full text-left px-4 py-2.5 hover:bg-bg-secondary transition-colors disabled:opacity-50"
                     >
-                      <span className="text-[13px] text-text-primary">Modo kinesiología</span>
-                      <span className={`text-[11px] px-2 py-0.5 rounded-full border-[0.5px] shrink-0 ${patient.kine_mode ? 'text-accent border-accent/40 bg-accent/10' : 'text-text-tertiary border-border'}`}>
-                        {patient.kine_mode ? 'Activo' : 'Inactivo'}
+                      <span className="flex items-center justify-between gap-3">
+                        <span className="text-[13px] text-text-primary">Modo kinesiología</span>
+                        <span className={`text-[11px] px-2 py-0.5 rounded-full border-[0.5px] shrink-0 ${patient.kine_mode ? 'text-accent border-accent/40 bg-accent/10' : 'text-text-tertiary border-border'}`}>
+                          {patient.kine_mode ? 'Activo' : 'Inactivo'}
+                        </span>
                       </span>
+                      <span className="block text-[11px] text-text-tertiary mt-0.5 leading-snug">Agrega &quot;Atención de hoy&quot; (check de síntoma, sugerencia, continuidad) a este paciente. No afecta a los demás.</span>
                     </button>
                     <button
                       onClick={() => setAdvancedLoadMode(!(patient.advanced_load_mode ?? false))}
                       disabled={advLoadSaving}
-                      title="Monitoreo de carga avanzado: RPE, dolor y ACWR por sesión. Pensado para deportistas — no afecta a los demás pacientes."
-                      className="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left hover:bg-bg-secondary transition-colors disabled:opacity-50"
+                      className="w-full text-left px-4 py-2.5 hover:bg-bg-secondary transition-colors disabled:opacity-50"
                     >
-                      <span className="text-[13px] text-text-primary">Carga avanzada</span>
-                      <span className={`text-[11px] px-2 py-0.5 rounded-full border-[0.5px] shrink-0 ${patient.advanced_load_mode ? 'text-accent border-accent/40 bg-accent/10' : 'text-text-tertiary border-border'}`}>
-                        {patient.advanced_load_mode ? 'Activo' : 'Inactivo'}
+                      <span className="flex items-center justify-between gap-3">
+                        <span className="text-[13px] text-text-primary">Carga avanzada</span>
+                        <span className={`text-[11px] px-2 py-0.5 rounded-full border-[0.5px] shrink-0 ${patient.advanced_load_mode ? 'text-accent border-accent/40 bg-accent/10' : 'text-text-tertiary border-border'}`}>
+                          {patient.advanced_load_mode ? 'Activo' : 'Inactivo'}
+                        </span>
                       </span>
+                      <span className="block text-[11px] text-text-tertiary mt-0.5 leading-snug">Monitoreo de RPE, dolor y ACWR por sesión. Pensado para deportistas — no afecta a los demás pacientes.</span>
                     </button>
                     <div className="px-4 py-2.5 border-t-[0.5px] border-border mt-1">
                       <div className="text-[13px] text-text-primary mb-1.5">Modo de planificación</div>
@@ -393,6 +397,7 @@ export default function PacienteDetail({ patient: initialPatient, userId, treatm
                           Simple
                         </button>
                       </div>
+                      <p className="text-[11px] text-text-tertiary mt-1.5 leading-snug">Detallado: plan con series/reps en el calendario. Simple: bitácora de actividad, sin dosificación.</p>
                     </div>
                   </div>
                 )}
