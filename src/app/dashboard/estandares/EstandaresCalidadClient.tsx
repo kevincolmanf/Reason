@@ -99,7 +99,7 @@ export default function EstandaresCalidadClient({
           <div>
             <h2 className="text-[15px] font-medium">Función activa para este centro</h2>
             <p className="text-[12px] text-text-secondary mt-0.5">
-              {enabled ? 'Los profesionales ven sus propios pendientes en el dashboard.' : 'Apagada: nadie en este centro ve nada nuevo.'}
+              {enabled ? 'Los profesionales ven sus propios pendientes en el dashboard.' : 'Apagada: nadie en este centro ve nada nuevo, y la tabla de abajo queda oculta.'}
             </p>
           </div>
           <button
@@ -116,7 +116,7 @@ export default function EstandaresCalidadClient({
       <section className="mb-10">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-[18px] font-medium">Configuración por área</h2>
-          <Link href="/dashboard/agenda" className="text-[13px] text-accent hover:underline">¿Falta un área? Agregala en Agenda →</Link>
+          <Link href="/dashboard/agenda" className="text-[13px] text-accent hover:underline" title="Guardá los cambios de acá abajo antes de ir, si hiciste alguno">¿Falta un área? Agregala en Agenda →</Link>
         </div>
 
         {agendaAreas.length === 0 ? (
@@ -126,11 +126,15 @@ export default function EstandaresCalidadClient({
             {agendaAreas.map(area => {
               const areaCfg = cfg.areas[area] ?? {}
               const fields = areaCfg.campos_evaluacion_ingreso ?? []
+              const hasConfig = Object.keys(areaCfg).length > 0
               return (
-                <div key={area} className="bg-bg-secondary border-[0.5px] border-border rounded-xl p-6">
-                  <h3 className="text-[15px] font-medium mb-4">{area}</h3>
+                <details key={area} open={hasConfig} className="bg-bg-secondary border-[0.5px] border-border rounded-xl p-6">
+                  <summary className="text-[15px] font-medium mb-4 cursor-pointer select-none">
+                    {area}
+                    {!hasConfig && <span className="ml-2 text-[11px] font-normal text-text-tertiary">— sin configurar (usa los valores por defecto)</span>}
+                  </summary>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-1">
                     <div>
                       <label className="block text-[12px] text-text-secondary mb-1">Días máx. para cuestionario de ingreso</label>
                       <input type="number" placeholder="Sin verificar" value={areaCfg.dias_max_cuestionario_ingreso ?? ''}
@@ -150,6 +154,9 @@ export default function EstandaresCalidadClient({
                         className="w-full bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-2.5 text-[14px] focus:outline-none focus:border-accent" />
                     </div>
                   </div>
+                  <p className="text-[11px] text-text-tertiary mb-5">
+                    Vacío = no se verifica ese indicador para esta área, salvo &quot;paciente abierto&quot;, que si queda vacío usa 21 días igual.
+                  </p>
 
                   <div>
                     <label className="block text-[12px] text-text-secondary mb-2">Campos obligatorios de la evaluación de ingreso</label>
@@ -169,17 +176,18 @@ export default function EstandaresCalidadClient({
                         placeholder="Ej: Calidad de sentadilla"
                         className="flex-1 bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-2.5 text-[14px] focus:outline-none focus:border-accent" />
                       <select value={newFieldType[area] ?? 'texto'} onChange={e => setNewFieldType({ ...newFieldType, [area]: e.target.value as IntakeFieldType })}
+                        title="Texto o Número: se completa libre. Calidad: muestra las opciones Buena/Aceptable/Deficiente en la ficha."
                         className="bg-bg-primary border-[0.5px] border-border-strong rounded-lg p-2.5 text-[14px] focus:outline-none focus:border-accent">
                         <option value="texto">Texto</option>
                         <option value="numero">Número</option>
-                        <option value="calidad">Calidad</option>
+                        <option value="calidad">Calidad (Buena/Aceptable/Deficiente)</option>
                       </select>
                       <button onClick={() => addField(area)} className="bg-bg-primary border-[0.5px] border-border-strong rounded-lg px-4 text-[13px] font-medium hover:border-accent transition-colors">
                         + Agregar
                       </button>
                     </div>
                   </div>
-                </div>
+                </details>
               )
             })}
           </div>
@@ -222,7 +230,7 @@ export default function EstandaresCalidadClient({
                     <th className={th}>Derivaciones</th>
                     <th className={th}>Pausas</th>
                     <th className={th}>Abandonos</th>
-                    <th className={th}>Desconocido</th>
+                    <th className={th} title="Altas sin motivo registrado — generalmente de antes de usar este motivo de alta">Desconocido</th>
                     <th className={th}>Pacientes abiertos</th>
                     <th className={th}>Sin plan</th>
                     <th className={th}>Evaluaciones incompletas</th>
