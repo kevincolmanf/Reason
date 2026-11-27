@@ -1,11 +1,10 @@
-// Catálogo de campos estructurados disponibles para la "Evaluación de ingreso
-// de entrenamiento". Cada centro elige, en su config
-// (campos_obligatorios_evaluacion_ingreso), cuáles de estos campos son
-// obligatorios para sus alumnos — no son texto libre inventado por cada
-// centro, sino una lista curada que se puede ampliar acá cuando haga falta.
-// Build usa sentadilla_calidad + dorsiflexion_tobillo_der_deg/izq_deg.
+// Campos de evaluación de ingreso: 100% definidos por cada centro (no hay
+// catálogo fijo). Build puede definir "Calidad de sentadilla" o "Dorsiflexión
+// de tobillo"; otro centro define lo que le sirva a su propia práctica. Lo
+// único que Reason aporta es el TIPO de campo (cómo se renderiza y valida),
+// no el campo en sí.
 
-export type IntakeFieldType = 'quality' | 'degrees'
+export type IntakeFieldType = 'texto' | 'numero' | 'calidad'
 
 export interface IntakeFieldDef {
   key: string
@@ -13,28 +12,28 @@ export interface IntakeFieldDef {
   type: IntakeFieldType
 }
 
-// Mismo vocabulario que slsquat_quality en los protocolos RTS (good/
-// acceptable/poor) — consistencia con el resto de la app.
+// Vocabulario común para campos de tipo "calidad" (semáforo) — mismo usado en
+// los protocolos RTS (slsquat_quality: good/acceptable/poor), para
+// consistencia visual en toda la app.
 export const QUALITY_OPTIONS: { value: string; label: string }[] = [
   { value: 'good', label: 'Buena' },
   { value: 'acceptable', label: 'Aceptable' },
   { value: 'poor', label: 'Deficiente' },
 ]
 
-export const INTAKE_FIELD_CATALOG: IntakeFieldDef[] = [
-  { key: 'sentadilla_calidad', label: 'Calidad de sentadilla', type: 'quality' },
-  { key: 'dorsiflexion_tobillo_der_deg', label: 'Dorsiflexión de tobillo — derecha (°, goniómetro)', type: 'degrees' },
-  { key: 'dorsiflexion_tobillo_izq_deg', label: 'Dorsiflexión de tobillo — izquierda (°, goniómetro)', type: 'degrees' },
-]
-
-export function intakeFieldDef(key: string): IntakeFieldDef | undefined {
-  return INTAKE_FIELD_CATALOG.find(f => f.key === key)
-}
-
-// ¿Esta evaluación tiene todos los campos obligatorios del centro completos?
-export function isIntakeComplete(data: Record<string, unknown>, requiredKeys: string[]): boolean {
-  return requiredKeys.every(key => {
-    const v = data[key]
+// ¿Esta evaluación tiene todos los campos configurados para el área completos?
+export function isIntakeComplete(data: Record<string, unknown>, fields: IntakeFieldDef[]): boolean {
+  return fields.every(f => {
+    const v = data[f.key]
     return v !== null && v !== undefined && v !== ''
   })
+}
+
+const COMBINING_DIACRITICS = new RegExp('[̀-ͯ]', 'g')
+
+export function newFieldKey(label: string): string {
+  const base = label.trim().toLowerCase()
+    .normalize('NFD').replace(COMBINING_DIACRITICS, '') // sin tildes
+    .replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')
+  return base || `campo_${Date.now()}`
 }

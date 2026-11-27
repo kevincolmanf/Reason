@@ -1,33 +1,42 @@
-// Defaults de la app para la config del feature "estandares_calidad" — un
-// centro nuevo que prenda el feature arranca con estos valores razonables,
-// editables desde su propia fila en organization_feature_settings. Ningún
-// valor de acá es específico de Build: son el punto de partida genérico: Build
-// los ajustó a 7/10/21 y a sus campos de evaluación de ingreso, pero otro
-// centro puede dejarlos como están o cambiarlos todos.
-//
-// Mismo criterio que DEFAULT_AREAS en src/lib/agendaAreas.ts: el default vive
-// en código, lo específico de un centro vive en su config guardada.
+// Config del feature "estandares_calidad", por ÁREA — cada centro define sus
+// propias áreas (reusa organizations.agenda_areas, no hay catálogo nuevo) y,
+// para cada una, sus propios umbrales y campos de evaluación de ingreso. Un
+// área ausente de `areas` simplemente no calcula esos indicadores — no rompe,
+// no inventa un valor por Build. Mismo criterio que DEFAULT_AREAS en
+// src/lib/agendaAreas.ts: el centro arranca en blanco y arma lo suyo.
+import type { IntakeFieldDef } from './intakeFields'
 
 export const FEATURE_KEY_ESTANDARES_CALIDAD = 'estandares_calidad'
 
+export interface AreaConfig {
+  dias_max_cuestionario_ingreso?: number
+  dias_paciente_abierto?: number
+  dias_max_plan?: number
+  campos_evaluacion_ingreso?: IntakeFieldDef[]
+}
+
 export interface EstandaresCalidadConfig {
-  dias_max_cuestionario_ingreso: number
-  dias_max_plan_entrenamiento: number
-  dias_paciente_abierto: number
-  campos_obligatorios_evaluacion_ingreso: string[]
+  areas: Record<string, AreaConfig>
 }
 
-export const DEFAULT_ESTANDARES_CALIDAD_CONFIG: EstandaresCalidadConfig = {
-  dias_max_cuestionario_ingreso: 7,
-  dias_max_plan_entrenamiento: 10,
-  dias_paciente_abierto: 21,
-  campos_obligatorios_evaluacion_ingreso: [],
-}
+export const DEFAULT_ESTANDARES_CALIDAD_CONFIG: EstandaresCalidadConfig = { areas: {} }
 
-// Completa con el default cualquier clave ausente en la config guardada (p. ej.
-// un centro que prendió el feature antes de que se agregara un campo nuevo).
 export function withEstandaresCalidadDefaults(
-  config: Partial<EstandaresCalidadConfig> | null | undefined
+  config: Record<string, unknown> | null | undefined
 ): EstandaresCalidadConfig {
-  return { ...DEFAULT_ESTANDARES_CALIDAD_CONFIG, ...(config ?? {}) }
+  const areas = config && typeof config === 'object' && config.areas && typeof config.areas === 'object'
+    ? (config.areas as Record<string, AreaConfig>)
+    : {}
+  return { areas }
+}
+
+// "Paciente abierto" es universal (aplica a cualquier área aunque el centro
+// nunca la haya configurado) — por eso tiene un default (21) incluso si el
+// área no está en config.areas. Los demás umbrales son opt-in por área: si
+// no están configurados, ese indicador no se calcula para esa área (ver
+// supabase_panel_cumplimiento_v2.sql).
+export const DIAS_PACIENTE_ABIERTO_DEFAULT = 21
+
+export function areaConfig(config: EstandaresCalidadConfig, area: string): AreaConfig {
+  return config.areas[area] ?? {}
 }

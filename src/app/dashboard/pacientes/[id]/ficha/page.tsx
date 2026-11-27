@@ -6,6 +6,7 @@ import FichaClient from './FichaClient'
 import { verifyPatientAccess, logFichaAccess } from '@/utils/patient-access'
 import { getOrgFeatureSetting } from '@/lib/featureSettings'
 import { FEATURE_KEY_ESTANDARES_CALIDAD, withEstandaresCalidadDefaults } from '@/lib/qualityStandards/defaults'
+import type { IntakeFieldDef } from '@/lib/qualityStandards/intakeFields'
 import { DEFAULT_AREAS } from '@/lib/agendaAreas'
 
 export const metadata = {
@@ -21,7 +22,7 @@ export default async function FichaPage({ params }: { params: { id: string } }) 
 
   const { data: patient } = await supabase
     .from('patients')
-    .select('id, name, age, occupation, org_id')
+    .select('id, name, age, occupation, org_id, area, kine_mode')
     .eq('id', params.id)
     .single()
 
@@ -55,13 +56,21 @@ export default async function FichaPage({ params }: { params: { id: string } }) 
     : { enabled: false, config: {} }
   const estandaresCalidadConfig = withEstandaresCalidadDefaults(estandaresCalidad.config)
 
+  // Área efectiva del paciente para este feature: patients.area si el centro
+  // ya la usa; si no, el viejo binario kine_mode (compatibilidad total con
+  // centros que nunca tocaron el campo nuevo).
+  const patientArea = patient.area ?? (patient.kine_mode ? 'Kinesiología' : 'Entrenamiento')
+  const areaIntakeFields: Record<string, IntakeFieldDef[]> = {}
+  for (const [area, cfg] of Object.entries(estandaresCalidadConfig.areas)) {
+    areaIntakeFields[area] = cfg.campos_evaluacion_ingreso ?? []
+  }
+
+  // AttributionPicker (dentro de cada componente) resuelve "quién sos" solo
+  // — no hace falta traer la lista de integrantes acá.
   let agendaAreas: string[] = DEFAULT_AREAS
   if (estandaresCalidad.enabled && patient.org_id) {
     const { data: orgData } = await supabase
-      .from('organizations')
-      .select('agenda_areas')
-      .eq('id', patient.org_id)
-      .single()
+      .from('organizations').select('agenda_areas').eq('id', patient.org_id).single()
     agendaAreas = (orgData?.agenda_areas as string[] | null) ?? DEFAULT_AREAS
   }
 
@@ -99,7 +108,8 @@ export default async function FichaPage({ params }: { params: { id: string } }) 
           dynamoResults={dynamoResults ?? []}
           userId={user.id}
           estandaresCalidadEnabled={estandaresCalidad.enabled}
-          estandaresCalidadConfig={estandaresCalidadConfig}
+          patientArea={patientArea}
+          areaIntakeFields={areaIntakeFields}
           agendaAreas={agendaAreas}
         />
       </main>

@@ -3,6 +3,7 @@ import Link from 'next/link'
 export interface PendienteItem {
   kind: 'sesion_sin_registro' | 'cuestionario_pendiente' | 'paciente_abierto'
     | 'alumno_sin_plan' | 'evaluacion_incompleta' | 'pase_sin_informe'
+  area: string
   patientId: string
   patientName: string
   dias: number | null
@@ -24,11 +25,15 @@ const KIND_LABELS: Record<PendienteItem['kind'], { singular: string; plural: str
 export default function PendientesCumplimientoBanner({ items }: { items: PendienteItem[] }) {
   if (items.length === 0) return null
 
-  const groups = new Map<PendienteItem['kind'], PendienteItem[]>()
+  // Agrupado por (tipo, área) — un profesional que trabaja en más de un área
+  // ve cada una por separado ("Kinesiología: 2 sesiones..." / "Entrenamiento:
+  // 1 alumno...") en vez de mezclarlas en un solo número.
+  const groups = new Map<string, PendienteItem[]>()
   for (const item of items) {
-    const arr = groups.get(item.kind) ?? []
+    const groupKey = `${item.kind}::${item.area}`
+    const arr = groups.get(groupKey) ?? []
     arr.push(item)
-    groups.set(item.kind, arr)
+    groups.set(groupKey, arr)
   }
 
   return (
@@ -37,11 +42,14 @@ export default function PendientesCumplimientoBanner({ items }: { items: Pendien
         Tus pendientes de estándares de calidad
       </p>
       <div className="space-y-3">
-        {Array.from(groups.entries()).map(([kind, group]) => {
+        {Array.from(groups.entries()).map(([groupKey, group]) => {
+          const kind = group[0].kind
           const label = group.length === 1 ? KIND_LABELS[kind].singular : KIND_LABELS[kind].plural
           return (
-            <div key={kind}>
-              <p className="text-[12px] text-amber-700 mb-1.5">{group.length} {label}</p>
+            <div key={groupKey}>
+              <p className="text-[12px] text-amber-700 mb-1.5">
+                <span className="font-medium">{group[0].area}</span> · {group.length} {label}
+              </p>
               <div className="flex flex-wrap gap-2">
                 {group.map((item, i) => (
                   <Link
